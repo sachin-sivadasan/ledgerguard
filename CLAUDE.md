@@ -19,6 +19,8 @@ Update these files when relevant changes occur:
 | `prompts.md` | Log every prompt executed |
 | `future.md` | Postponed features/ideas |
 | `marketing/REQUIREMENTS.md` | Marketing site changes |
+| `frontend/REQUIREMENTS.md` | Frontend app changes |
+| `frontend/prompts.md` | Frontend-specific prompts |
 
 ### 2. Architecture Diagrams
 Update when architecture changes:
@@ -119,7 +121,62 @@ marketing/
 - **No authentication** – public landing page only
 - **Responsive** – mobile-first approach
 
-### 11. Risk Engine (Authoritative)
+### 11. Frontend App (Flutter + Bloc)
+```
+frontend/
+├── REQUIREMENTS.md           → App requirements, screens, flows
+├── prompts.md                → Frontend-specific prompts log
+├── docs/
+│   └── SCREENS.puml          → Screen flow diagram
+└── app/                      → Flutter application
+    └── lib/
+        ├── core/             → Constants, themes, utils
+        ├── data/
+        │   ├── datasources/  → API clients, local storage
+        │   ├── models/       → JSON serializable models
+        │   └── repositories/ → Repository implementations
+        ├── domain/
+        │   ├── entities/     → Business entities
+        │   ├── repositories/ → Repository interfaces
+        │   └── usecases/     → Business logic
+        └── presentation/
+            ├── blocs/        → Bloc state management
+            ├── pages/        → Screen widgets
+            └── widgets/      → Reusable components
+```
+
+**Architecture:**
+- **Clean Architecture** with domain, data, presentation layers
+- **Bloc** for state management (events → states)
+- **Dependency Injection** with get_it
+- **Firebase Auth** for authentication
+
+**Bloc Pattern:**
+```dart
+// Events
+abstract class AppEvent {}
+class LoadApps extends AppEvent {}
+
+// States
+abstract class AppState {}
+class AppLoading extends AppState {}
+class AppLoaded extends AppState { final List<App> apps; }
+class AppError extends AppState { final String message; }
+
+// Bloc
+class AppBloc extends Bloc<AppEvent, AppState> {
+  AppBloc() : super(AppInitial()) {
+    on<LoadApps>(_onLoadApps);
+  }
+}
+```
+
+**Testing:**
+- Unit tests for Blocs, UseCases, Repositories
+- Widget tests for UI components
+- Run: `flutter test`
+
+### 12. Risk Engine (Authoritative)
 ```go
 func ClassifyRisk(status string, expectedNextCharge time.Time, now time.Time) RiskState {
     if status == "ACTIVE" {
@@ -177,6 +234,9 @@ User Prompt
 - [ ] `docs/SEQUENCE_current.puml` – New flows?
 - [ ] `docs/C4_current.puml` – New containers/components?
 - [ ] `prompts.md` – Prompt logged?
+- [ ] `frontend/REQUIREMENTS.md` – Frontend changes documented?
+- [ ] `frontend/prompts.md` – Frontend prompt logged?
+- [ ] `frontend/docs/SCREENS.puml` – Screen flow updated?
 
 ### Prompt Improvement Rule
 Before executing any user prompt:
@@ -235,11 +295,25 @@ ledgerguard/
 │       ├── components/
 │       └── public/
 └── frontend/
-    └── lib/
-        ├── domain/
-        ├── data/
-        ├── application/
-        └── presentation/
+    ├── REQUIREMENTS.md       → App requirements, screens, flows
+    ├── prompts.md            → Frontend-specific prompts
+    ├── docs/
+    │   └── SCREENS.puml      → Screen flow diagram
+    └── app/                  → Flutter application
+        └── lib/
+            ├── core/         → Constants, themes, utils
+            ├── data/
+            │   ├── datasources/
+            │   ├── models/
+            │   └── repositories/
+            ├── domain/
+            │   ├── entities/
+            │   ├── repositories/
+            │   └── usecases/
+            └── presentation/
+                ├── blocs/
+                ├── pages/
+                └── widgets/
 ```
 
 ---
@@ -260,6 +334,15 @@ ledgerguard/
 | Dev server | `cd marketing/site && npm run dev` |
 | Build | `cd marketing/site && npm run build` |
 | Lint | `cd marketing/site && npm run lint` |
+
+### Frontend App (Flutter)
+| Action | Command |
+|--------|---------|
+| Run tests | `cd frontend/app && flutter test` |
+| Run app | `cd frontend/app && flutter run` |
+| Build APK | `cd frontend/app && flutter build apk` |
+| Build iOS | `cd frontend/app && flutter build ios` |
+| Analyze | `cd frontend/app && flutter analyze` |
 
 ---
 

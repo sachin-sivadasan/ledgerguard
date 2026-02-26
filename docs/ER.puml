@@ -1,0 +1,145 @@
+@startuml ER_LedgerGuard
+!theme plain
+skinparam linetype ortho
+
+title LedgerGuard - Entity Relationship Diagram
+
+entity "users" as users {
+  *id : UUID <<PK>>
+  --
+  *firebase_uid : VARCHAR(128) <<UNIQUE>>
+  *email : VARCHAR(255)
+  *role : VARCHAR(20) <<CHECK: OWNER, ADMIN>>
+  plan_tier : VARCHAR(20) <<DEFAULT: FREE>>
+  created_at : TIMESTAMPTZ
+}
+
+entity "partner_accounts" as partner_accounts {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK>>
+  *integration_type : VARCHAR(20) <<CHECK: OAUTH, MANUAL>>
+  *partner_id : VARCHAR(100)
+  *encrypted_access_token : BYTEA
+  created_at : TIMESTAMPTZ
+}
+
+entity "apps" as apps {
+  *id : UUID <<PK>>
+  --
+  *partner_account_id : UUID <<FK>>
+  *partner_app_id : VARCHAR(100)
+  *name : VARCHAR(255)
+  tracking_enabled : BOOLEAN <<DEFAULT: TRUE>>
+}
+
+entity "transactions" as transactions {
+  *id : UUID <<PK>>
+  --
+  *app_id : UUID <<FK>>
+  *shopify_gid : VARCHAR(255) <<UNIQUE>>
+  *myshopify_domain : VARCHAR(255)
+  *charge_type : VARCHAR(20) <<CHECK: RECURRING, USAGE, ONE_TIME, REFUND>>
+  *amount_cents : BIGINT
+  currency : VARCHAR(3) <<DEFAULT: USD>>
+  *transaction_date : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+}
+
+entity "subscriptions" as subscriptions {
+  *id : UUID <<PK>>
+  --
+  *app_id : UUID <<FK>>
+  *shopify_gid : VARCHAR(255) <<UNIQUE>>
+  *myshopify_domain : VARCHAR(255)
+  plan_name : VARCHAR(255)
+  *base_price_cents : BIGINT
+  currency : VARCHAR(3) <<DEFAULT: USD>>
+  billing_interval : VARCHAR(20) <<DEFAULT: MONTHLY>>
+  *status : VARCHAR(20) <<CHECK: ACTIVE, CANCELLED, FROZEN, PENDING>>
+  last_recurring_charge_date : TIMESTAMPTZ
+  expected_next_charge_date : TIMESTAMPTZ
+  *risk_state : VARCHAR(30) <<CHECK: SAFE, ONE_CYCLE_MISSED, TWO_CYCLE_MISSED, CHURNED>>
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "daily_metrics_snapshot" as snapshots {
+  *id : UUID <<PK>>
+  --
+  *app_id : UUID <<FK>>
+  *date : DATE
+  active_mrr_cents : BIGINT
+  renewal_success_rate : DECIMAL(5,2)
+  revenue_at_risk_cents : BIGINT
+  usage_revenue_cents : BIGINT
+  total_revenue_cents : BIGINT
+  safe_count : INT
+  one_cycle_missed_count : INT
+  two_cycle_missed_count : INT
+  churned_count : INT
+  created_at : TIMESTAMPTZ
+  <<UNIQUE: app_id, date>>
+}
+
+entity "daily_insight" as insights {
+  *id : UUID <<PK>>
+  --
+  *app_id : UUID <<FK>>
+  *date : DATE
+  *insight_text : TEXT
+  created_at : TIMESTAMPTZ
+  <<UNIQUE: app_id, date>>
+}
+
+entity "device_tokens" as device_tokens {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK>>
+  *device_token : VARCHAR(500)
+  *platform : VARCHAR(20) <<CHECK: ios, android, web>>
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "notification_preferences" as notification_prefs {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK, UNIQUE>>
+  critical_enabled : BOOLEAN <<DEFAULT: TRUE>>
+  daily_summary_enabled : BOOLEAN <<DEFAULT: TRUE>>
+  daily_summary_time : TIME <<DEFAULT: 08:00>>
+  slack_webhook_url : VARCHAR(500)
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+' Relationships
+users ||--o{ partner_accounts : "has"
+users ||--o{ device_tokens : "has"
+users ||--o| notification_prefs : "has"
+
+partner_accounts ||--o{ apps : "tracks"
+
+apps ||--o{ transactions : "earns"
+apps ||--o{ subscriptions : "manages"
+apps ||--o{ snapshots : "records"
+apps ||--o{ insights : "generates"
+
+note right of transactions
+  Immutable ledger
+  Append-only
+  12-month retention
+end note
+
+note right of snapshots
+  Immutable daily KPIs
+  Permanent retention
+end note
+
+note right of partner_accounts
+  Access tokens encrypted
+  with AES-256-GCM
+end note
+
+@enduml

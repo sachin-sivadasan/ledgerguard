@@ -1,0 +1,142 @@
+@startuml SEQUENCE_LedgerGuard
+!theme plain
+
+title LedgerGuard - Key Sequence Diagrams
+
+' ==========================================
+' 1. Authentication Flow
+' ==========================================
+newpage Authentication Flow
+
+actor User
+participant "Flutter App" as App
+participant "Firebase Auth" as Firebase
+participant "API Server" as API
+database "PostgreSQL" as DB
+
+User -> App: Login with Google
+App -> Firebase: signInWithGoogle()
+Firebase --> App: Firebase ID Token
+App -> API: GET /api/v1/auth/me\n[Authorization: Bearer <token>]
+API -> Firebase: verifyIdToken(token)
+Firebase --> API: { uid, email }
+API -> DB: SELECT * FROM users\nWHERE firebase_uid = ?
+alt User exists
+    DB --> API: User record
+else New user
+    API -> DB: INSERT INTO users\n(firebase_uid, email, role='OWNER')
+    DB --> API: New user record
+end
+API --> App: { user, role, plan_tier }
+
+' ==========================================
+' 2. Shopify OAuth Flow
+' ==========================================
+newpage Shopify Partner OAuth Flow
+
+actor User
+participant "Flutter App" as App
+participant "API Server" as API
+participant "Shopify Partners" as Shopify
+database "PostgreSQL" as DB
+
+User -> App: Click "Connect Shopify"
+App -> API: GET /api/v1/integrations/shopify/oauth
+API -> API: Generate state token
+API --> App: 302 Redirect to Shopify OAuth URL
+App -> Shopify: OAuth Authorization Page
+Shopify --> User: "Authorize LedgerGuard?"
+User -> Shopify: Approve
+Shopify --> App: Redirect to callback\nwith code & state
+App -> API: GET /api/v1/integrations/shopify/callback\n?code=xxx&state=yyy
+API -> API: Validate state token
+API -> Shopify: POST /oauth/access_token\n{ code, client_id, client_secret }
+Shopify --> API: { access_token, partner_id }
+API -> API: Encrypt token (AES-256-GCM)
+API -> DB: INSERT INTO partner_accounts\n(user_id, partner_id, encrypted_token)
+API --> App: { success: true }
+App --> User: "Connected successfully!"
+
+' ==========================================
+' 3. Sync Pipeline Flow
+' ==========================================
+newpage Sync Pipeline Flow
+
+participant "Scheduler" as Sched
+participant "API Server" as API
+participant "Shopify Partner API" as Shopify
+database "PostgreSQL" as DB
+participant "RiskEngine" as Risk
+participant "MetricsEngine" as Metrics
+participant "NotificationService" as Notify
+
+Sched -> API: Trigger sync job\n(every 12 hours)
+API -> DB: SELECT partner_accounts\nWHERE sync needed
+loop For each partner account
+    API -> API: Decrypt access token
+    API -> Shopify: GraphQL query\n(transactions, subscriptions)
+    Shopify --> API: Paginated results
+    API -> DB: UPSERT transactions\n(immutable, append-only)
+    API -> DB: UPSERT subscriptions
+end
+
+API -> Risk: ClassifyRisk(subscriptions)
+Risk -> Risk: Calculate days past due
+Risk --> API: Updated risk_states
+
+API -> Metrics: ComputeKPIs()
+Metrics -> DB: Aggregate transactions
+Metrics --> API: { mrr, at_risk, renewal_rate }
+
+API -> DB: INSERT INTO daily_metrics_snapshot\nON CONFLICT UPDATE
+
+API -> Notify: Check for alerts
+alt Risk state changed
+    Notify -> Notify: Send email/Slack alert
+end
+
+API -> DB: UPDATE sync_status = 'COMPLETE'
+
+' ==========================================
+' 4. Dashboard Data Flow
+' ==========================================
+newpage Dashboard Data Flow
+
+actor User
+participant "Flutter App" as App
+participant "API Server" as API
+database "PostgreSQL" as DB
+participant "AIInsightService" as AI
+
+User -> App: Open Dashboard
+App -> API: GET /api/v1/dashboard/kpis
+API -> DB: SELECT latest snapshot
+DB --> API: { mrr, at_risk, renewal_rate }
+API --> App: KPI data
+
+App -> API: GET /api/v1/dashboard/risk-summary
+API -> DB: SELECT subscriptions\nGROUP BY risk_state
+DB --> API: Risk breakdown
+API --> App: Risk summary
+
+App -> API: GET /api/v1/dashboard/trends?days=30
+API -> DB: SELECT * FROM daily_metrics_snapshot\nWHERE date >= NOW() - 30 days
+DB --> API: Historical snapshots
+API --> App: Trend data
+
+alt Pro tier user
+    App -> API: GET /api/v1/insights/today
+    API -> DB: SELECT insight FROM daily_insight\nWHERE date = TODAY
+    alt Insight exists
+        DB --> API: Cached insight
+    else Generate new
+        API -> AI: Generate insight\n(snapshot data)
+        AI --> API: AI-generated brief
+        API -> DB: INSERT INTO daily_insight
+    end
+    API --> App: Daily insight text
+end
+
+App --> User: Render dashboard
+
+@enduml

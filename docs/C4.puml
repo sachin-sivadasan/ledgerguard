@@ -1,0 +1,40 @@
+@startuml C4_LedgerGuard
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title LedgerGuard - System Context & Container Diagram
+
+' System Context
+Person(developer, "Shopify App Developer", "Uses LedgerGuard to monitor revenue health")
+Person(admin, "Admin User", "Manages integrations and team access")
+
+System_Boundary(ledgerguard, "LedgerGuard") {
+    Container(web_app, "Flutter Web App", "Flutter/Dart", "Dashboard UI for viewing KPIs, risk states, and insights")
+    Container(api_server, "API Server", "Go 1.22+", "Handles all business logic, sync, and KPI computation")
+    ContainerDb(postgres, "PostgreSQL", "PostgreSQL 15+", "Stores users, transactions, subscriptions, snapshots")
+    Container(redis, "Redis", "Redis", "Session cache, rate limiting")
+}
+
+' External Systems
+System_Ext(firebase, "Firebase Auth", "Authentication provider")
+System_Ext(shopify, "Shopify Partner API", "Transaction and subscription data")
+System_Ext(openai, "OpenAI API", "AI-powered daily insights (Pro)")
+System_Ext(email, "Email Service", "SendGrid/AWS SES for notifications")
+System_Ext(slack, "Slack", "Webhook notifications (Pro)")
+
+' Relationships - Context
+Rel(developer, web_app, "Views dashboard, triggers sync")
+Rel(admin, web_app, "Manages integrations, users")
+Rel(web_app, api_server, "REST API calls", "HTTPS")
+Rel(api_server, postgres, "Reads/writes data", "TCP/5432")
+Rel(api_server, redis, "Cache/sessions", "TCP/6379")
+
+' External relationships
+Rel(web_app, firebase, "Authenticates", "Firebase SDK")
+Rel(api_server, firebase, "Verifies tokens", "Admin SDK")
+Rel(api_server, shopify, "Fetches transactions", "GraphQL")
+Rel(api_server, openai, "Generates insights", "REST API")
+Rel(api_server, email, "Sends alerts", "SMTP/API")
+Rel(api_server, slack, "Sends notifications", "Webhook")
+
+SHOW_LEGEND()
+@enduml

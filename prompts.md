@@ -114,3 +114,25 @@
 - Updated DATABASE_SCHEMA.md with migrations section
 - Updated TEST_PLAN.md with auth test scenarios
 - All tests passing (9/9)
+
+### [2026-02-26] Config File Support
+**Original:**
+> read it from config file
+
+**Improved:**
+> Add config file support to configuration loader:
+> 1. Support YAML config file (config.yaml)
+> 2. Load order: defaults → config file → environment variables (env vars override)
+> 3. Add config file path via -config flag or CONFIG_PATH env var
+> 4. Add Firebase credentials path to config
+> 5. Write tests for config loading (TDD)
+> 6. Create config.example.yaml template
+> 7. Update .gitignore for local config files
+
+**Result:**
+- infrastructure/config/config.go - YAML file loading with env override
+- infrastructure/config/config_test.go - 5 tests
+- config.example.yaml - Template with all options
+- Updated main.go with -config flag and CONFIG_PATH env var
+- Updated .gitignore for config.yaml, config.local.yaml
+- All tests passing (14/14)

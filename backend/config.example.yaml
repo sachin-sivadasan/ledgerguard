@@ -1,0 +1,16 @@
+# LedgerGuard Configuration
+# Copy this file to config.yaml or config.local.yaml and update values
+
+server:
+  port: "8080"
+
+database:
+  host: "localhost"
+  port: "5432"
+  user: "postgres"
+  password: "your_password_here"
+  name: "ledgerguard"
+  sslmode: "disable"  # disable, require, verify-ca, verify-full
+
+firebase:
+  credentials_file: "/path/to/firebase-credentials.json"

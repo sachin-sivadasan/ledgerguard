@@ -27,6 +27,13 @@ dist/
 *.pem
 *.key
 
+# Config files (keep examples)
+config.yaml
+config.local.yaml
+backend/config.yaml
+backend/config.local.yaml
+**/firebase-credentials.json
+
 # macOS
 .DS_Store
 .AppleDouble

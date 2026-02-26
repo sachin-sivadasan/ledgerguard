@@ -33,9 +33,11 @@
 #### 1.2 Configuration
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
-| C-001 | Load config with defaults | Uses default values | Pending |
-| C-002 | Load config from env vars | Uses env var values | Pending |
-| C-003 | Generate valid DSN | Correct PostgreSQL connection string | Pending |
+| C-001 | Load config with defaults | Uses default values | ✓ |
+| C-002 | Load config from YAML file | Reads all values from file | ✓ |
+| C-003 | Env vars override file | Env takes precedence over file | ✓ |
+| C-004 | Load config from env vars only | Uses env var values | ✓ |
+| C-005 | Generate valid DSN | Correct PostgreSQL connection string | ✓ |
 
 ---
 

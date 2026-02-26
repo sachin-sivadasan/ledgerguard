@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -25,9 +26,22 @@ func main() {
 func run() error {
 	ctx := context.Background()
 
-	cfg, err := config.Load()
+	// Parse command line flags
+	configPath := flag.String("config", "", "Path to config file (yaml)")
+	flag.Parse()
+
+	// Allow CONFIG_PATH env var as fallback
+	if *configPath == "" {
+		*configPath = os.Getenv("CONFIG_PATH")
+	}
+
+	cfg, err := config.Load(*configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	if *configPath != "" {
+		log.Printf("Loaded config from: %s", *configPath)
 	}
 
 	var db *persistence.PostgresDB

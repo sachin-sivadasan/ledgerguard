@@ -461,6 +461,53 @@ Created AIInsightService for generating AI-powered daily executive briefs (Pro t
 
 ---
 
+## [2026-02-27] NotificationService Implementation
+
+**Commit:** Implement NotificationService with push notifications
+
+**Summary:**
+Created NotificationService for push notifications with device token management, critical alerts for risk state changes, and daily summary notifications.
+
+**Implemented:**
+
+1. **Domain Entities:**
+   - `DeviceToken` entity (ID, UserID, DeviceToken, Platform)
+   - `NotificationPreferences` entity (CriticalEnabled, DailySummaryEnabled, DailySummaryTime, SlackWebhookURL)
+   - `Platform` value object (ios, android, web)
+
+2. **Repository Interfaces:**
+   - `DeviceTokenRepository` - CRUD for device tokens
+   - `NotificationPreferencesRepository` - CRUD with upsert for preferences
+
+3. **Application Service - NotificationService:**
+   - `RegisterDevice(userID, deviceToken, platform)` - Register push token
+   - `UnregisterDevice(userID, deviceToken)` - Remove push token
+   - `SendCriticalAlert(userID, appName, storeDomain, oldState, newState)` - Risk change alert
+   - `SendDailySummary(userID, appName, snapshot)` - Daily metrics summary
+   - `GetPreferences(userID)` - Get notification settings
+   - `UpdatePreferences(prefs)` - Update notification settings
+
+4. **Interfaces:**
+   - `PushNotificationProvider` - Interface for FCM/APNs (mockable)
+
+5. **Infrastructure Layer:**
+   - `PostgresDeviceTokenRepository` implementation
+   - `PostgresNotificationPreferencesRepository` implementation
+
+6. **Migrations:**
+   - `000008_create_device_tokens_table` - Device tokens with platform
+   - `000009_create_notification_preferences_table` - User notification settings
+
+7. **Behavior:**
+   - Respects user preferences before sending notifications
+   - Handles device token transfer between users
+   - Creates default preferences on first device registration
+   - Sends to all registered devices for a user
+
+**Tests:** 15 new tests (total: 109 top-level, 128 with subtests)
+
+---
+
 ## Test Summary
 
 | Package | Tests |
@@ -469,10 +516,10 @@ Created AIInsightService for generating AI-powered daily executive briefs (Pro t
 | infrastructure/external | 7 |
 | interfaces/http/handler | 42 |
 | interfaces/http/middleware | 11 |
-| application/service | 10 |
-| domain/service | 30 |
+| application/service | 16 |
+| domain/service | 23 |
 | pkg/crypto | 5 |
-| **Total** | **103** |
+| **Total** | **109** |
 
 ---
 
@@ -487,6 +534,8 @@ Created AIInsightService for generating AI-powered daily executive briefs (Pro t
 | 000005_create_subscriptions_table | Subscription state with risk tracking | ✓ |
 | 000006_create_daily_metrics_snapshot_table | Daily KPI snapshots | ✓ |
 | 000007_create_daily_insight_table | AI-generated daily insights (Pro only) | ✓ |
+| 000008_create_device_tokens_table | Push notification device tokens | ✓ |
+| 000009_create_notification_preferences_table | User notification preferences | ✓ |
 
 ---
 
@@ -495,17 +544,17 @@ Created AIInsightService for generating AI-powered daily executive briefs (Pro t
 ```
 cmd/server/main.go              → Entry point only
 internal/domain/
-  ├── entity/                   → User, PartnerAccount, App, Transaction, Subscription, DailyMetricsSnapshot, DailyInsight
-  ├── valueobject/              → Role, PlanTier, IntegrationType, ChargeType, RiskState, BillingInterval
-  ├── repository/               → Interfaces (UserRepo, PartnerAccountRepo, AppRepo, TransactionRepo, SubscriptionRepo, DailyMetricsSnapshotRepo, DailyInsightRepo)
+  ├── entity/                   → User, PartnerAccount, App, Transaction, Subscription, DailyMetricsSnapshot, DailyInsight, DeviceToken, NotificationPreferences
+  ├── valueobject/              → Role, PlanTier, IntegrationType, ChargeType, RiskState, BillingInterval, Platform
+  ├── repository/               → Interfaces (UserRepo, PartnerAccountRepo, AppRepo, TransactionRepo, SubscriptionRepo, DailyMetricsSnapshotRepo, DailyInsightRepo, DeviceTokenRepo, NotificationPreferencesRepo)
   └── service/                  → LedgerService, RiskEngine, MetricsEngine
 internal/application/
-  ├── service/                  → SyncService, AIInsightService
+  ├── service/                  → SyncService, AIInsightService, NotificationService
   └── scheduler/                → SyncScheduler
 internal/infrastructure/
   ├── config/                   → YAML + env config loading
   ├── persistence/              → PostgreSQL implementations
-  └── external/                 → Firebase, Shopify OAuth, Shopify Partner Client
+  └── external/                 → Firebase, Shopify OAuth, Shopify Partner Client, PushNotificationProvider
 internal/interfaces/http/
   ├── handler/                  → Health, OAuth, ManualToken, App, Sync
   ├── middleware/               → Auth, Role

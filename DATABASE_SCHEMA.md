@@ -336,6 +336,8 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000005_create_subscriptions_table | Create subscriptions table with risk state tracking | ✓ Implemented |
 | 000006_create_daily_metrics_snapshot_table | Create daily_metrics_snapshot for KPI storage | ✓ Implemented |
 | 000007_create_daily_insight_table | Create daily_insight for AI-generated summaries | ✓ Implemented |
+| 000008_create_device_tokens_table | Create device_tokens for push notifications | ✓ Implemented |
+| 000009_create_notification_preferences_table | Create notification_preferences for user settings | ✓ Implemented |
 
 ---
 

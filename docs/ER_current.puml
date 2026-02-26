@@ -96,8 +96,32 @@ entity "daily_insight" as daily_insight {
   <<UNIQUE: app_id, date>>
 }
 
+entity "device_tokens" as device_tokens {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK>>
+  *device_token : TEXT <<UNIQUE>>
+  *platform : VARCHAR(20) <<CHECK: ios, android, web>>
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "notification_preferences" as notification_preferences {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK, UNIQUE>>
+  critical_enabled : BOOLEAN <<DEFAULT: TRUE>>
+  daily_summary_enabled : BOOLEAN <<DEFAULT: TRUE>>
+  daily_summary_time : TIME <<DEFAULT: 08:00>>
+  slack_webhook_url : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
 ' Relationships
 users ||--o{ partner_accounts : "has"
+users ||--o{ device_tokens : "registers"
+users ||--o| notification_preferences : "configures"
 partner_accounts ||--o{ apps : "tracks"
 apps ||--o{ transactions : "records"
 apps ||--o{ subscriptions : "has"
@@ -180,6 +204,28 @@ note right of daily_insight
 
   Indexes:
   - idx_daily_insight_app_date
+end note
+
+note right of device_tokens
+  Migration: 000008_create_device_tokens_table
+  - Push notification tokens (FCM/APNs)
+  - Supports iOS, Android, Web
+  - Transferred on user change
+
+  Indexes:
+  - idx_device_tokens_user_id
+  - idx_device_tokens_token
+end note
+
+note right of notification_preferences
+  Migration: 000009_create_notification_preferences_table
+  - One per user (UNIQUE user_id)
+  - Critical alerts for risk state changes
+  - Daily summary with configurable time
+  - Slack webhook (Pro tier)
+
+  Indexes:
+  - idx_notification_preferences_user_id
 end note
 
 @enduml

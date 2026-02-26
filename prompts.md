@@ -421,3 +421,43 @@
 - Updated IMPLEMENTATION_LOG.md with AIInsightService implementation
 - Updated docs/ER_current.puml with daily_insight entity
 - All tests passing (103/103)
+
+### [2026-02-27] Implement NotificationService
+**Original:**
+> Implement NotificationService.
+> - Critical alerts (state change)
+> - Daily summary
+> - Device token support
+
+**Improved:**
+> Implement NotificationService for push notifications:
+> 1. Create DeviceToken entity (id, user_id, device_token, platform)
+> 2. Create NotificationPreferences entity (critical_enabled, daily_summary_enabled, daily_summary_time)
+> 3. Create DeviceTokenRepository and NotificationPreferencesRepository interfaces
+> 4. Create NotificationService in application/service with:
+>    - SendCriticalAlert(userID, appID, oldState, newState)
+>    - SendDailySummary(userID, snapshot)
+>    - RegisterDevice(userID, token, platform)
+>    - UnregisterDevice(userID, token)
+> 5. Create PushNotificationProvider interface for FCM/APNs (mockable)
+> 6. Create migrations 000008_create_device_tokens_table, 000009_create_notification_preferences_table
+> 7. Respect user preferences before sending
+> 8. Write tests first (TDD)
+> 9. Update documentation (Pre-Commit Checklist)
+
+**Result:**
+- domain/entity/device_token.go - DeviceToken entity with Platform value object
+- domain/entity/notification_preferences.go - NotificationPreferences entity
+- domain/repository/device_token_repository.go - Repository interface
+- domain/repository/notification_preferences_repository.go - Repository interface
+- application/service/notification_service.go - NotificationService with all methods
+- application/service/notification_service_test.go - Tests (15 test cases)
+- infrastructure/persistence/device_token_repository.go - PostgreSQL implementation
+- infrastructure/persistence/notification_preferences_repository.go - PostgreSQL implementation
+- migrations/000008_create_device_tokens_table.up.sql / .down.sql
+- migrations/000009_create_notification_preferences_table.up.sql / .down.sql
+- Updated TEST_PLAN.md with NotificationService test scenarios
+- Updated DATABASE_SCHEMA.md with migrations 000008, 000009
+- Updated IMPLEMENTATION_LOG.md with NotificationService implementation
+- Updated docs/ER_current.puml with device_tokens and notification_preferences entities
+- All tests passing (109/109)

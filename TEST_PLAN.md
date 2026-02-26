@@ -181,7 +181,26 @@
 | AI-004 | User not found | Error returned | ✓ |
 | AI-005 | Build prompt | Contains key metrics | ✓ |
 
-#### 4.3 Revenue Classification
+#### 4.5 Notification Service
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| NS-001 | Register device success | Token stored, preferences created | ✓ |
+| NS-002 | Register device invalid platform | ErrInvalidPlatform | ✓ |
+| NS-003 | Register device duplicate same user | No error, no duplicate | ✓ |
+| NS-004 | Register device transfers to new user | Token moved to new user | ✓ |
+| NS-005 | Unregister device success | Token removed | ✓ |
+| NS-006 | Unregister device not found | ErrDeviceTokenNotFound | ✓ |
+| NS-007 | Unregister other user's token | ErrDeviceTokenNotFound | ✓ |
+| NS-008 | Send critical alert success | Notification sent to all devices | ✓ |
+| NS-009 | Send critical alert disabled | No notification sent | ✓ |
+| NS-010 | Send critical alert no devices | No error, no notification | ✓ |
+| NS-011 | Send daily summary success | Summary sent to all devices | ✓ |
+| NS-012 | Send daily summary disabled | No notification sent | ✓ |
+| NS-013 | Get preferences existing | Returns user preferences | ✓ |
+| NS-014 | Get preferences not found | Returns default preferences | ✓ |
+| NS-015 | Update preferences success | Preferences updated | ✓ |
+
+#### 4.6 Revenue Classification
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
 | RC-001 | AppSubscriptionSale | RECURRING | ✓ |

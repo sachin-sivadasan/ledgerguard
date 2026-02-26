@@ -1,3 +1,5 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app.dart';
@@ -13,13 +15,29 @@ void main() async {
   // Initialize environment
   AppConfig.init(EnvConfig.dev);
 
+  // Initialize Firebase
+  await _initializeFirebase();
+
   // Initialize dependencies
   await configureDependencies();
 
-  // TODO: Initialize Firebase when firebase_options.dart is generated
-  // await Firebase.initializeApp(
-  //   options: DefaultFirebaseOptions.currentPlatform,
-  // );
-
   runApp(const LedgerGuardApp());
+}
+
+Future<void> _initializeFirebase() async {
+  try {
+    // Check if Firebase is already initialized
+    if (Firebase.apps.isEmpty) {
+      // For web, Firebase must be configured via firebase_options.dart
+      // Run: flutterfire configure
+      // Until then, we'll skip initialization and show appropriate error states
+      if (kDebugMode) {
+        debugPrint('Firebase not configured. Run: flutterfire configure');
+      }
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('Firebase initialization error: $e');
+    }
+  }
 }

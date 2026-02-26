@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../domain/entities/user_entity.dart';
@@ -6,23 +7,55 @@ import '../../domain/repositories/auth_repository.dart';
 
 /// Firebase implementation of AuthRepository
 class FirebaseAuthRepository implements AuthRepository {
-  final FirebaseAuth _firebaseAuth;
-  final GoogleSignIn _googleSignIn;
+  FirebaseAuth? _firebaseAuth;
+  GoogleSignIn? _googleSignIn;
 
   FirebaseAuthRepository({
     FirebaseAuth? firebaseAuth,
     GoogleSignIn? googleSignIn,
-  })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+  })  : _firebaseAuth = firebaseAuth,
+        _googleSignIn = googleSignIn;
+
+  /// Check if Firebase is initialized and available
+  bool get _isFirebaseAvailable => Firebase.apps.isNotEmpty;
+
+  /// Get FirebaseAuth instance, returns null if Firebase not initialized
+  FirebaseAuth? get _auth {
+    if (!_isFirebaseAvailable) return null;
+    _firebaseAuth ??= FirebaseAuth.instance;
+    return _firebaseAuth;
+  }
+
+  /// Get GoogleSignIn instance
+  GoogleSignIn get _google {
+    _googleSignIn ??= GoogleSignIn();
+    return _googleSignIn!;
+  }
 
   @override
   Stream<UserEntity?> get authStateChanges {
-    return _firebaseAuth.authStateChanges().map(_mapFirebaseUser);
+    final auth = _auth;
+    if (auth == null) {
+      // Firebase not initialized - return stream with null (unauthenticated)
+      return Stream.value(null);
+    }
+    try {
+      return auth.authStateChanges().map(_mapFirebaseUser);
+    } catch (e) {
+      // Return empty stream if Firebase has issues
+      return Stream.value(null);
+    }
   }
 
   @override
   UserEntity? get currentUser {
-    return _mapFirebaseUser(_firebaseAuth.currentUser);
+    final auth = _auth;
+    if (auth == null) return null;
+    try {
+      return _mapFirebaseUser(auth.currentUser);
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
@@ -30,8 +63,15 @@ class FirebaseAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
+    final auth = _auth;
+    if (auth == null) {
+      throw const AuthException(
+        'Firebase not configured. Run: flutterfire configure',
+        code: 'firebase-not-configured',
+      );
+    }
     try {
-      final credential = await _firebaseAuth.signInWithEmailAndPassword(
+      final credential = await auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -41,14 +81,26 @@ class FirebaseAuthRepository implements AuthRepository {
       }
       return user;
     } on FirebaseAuthException catch (e) {
-      throw _mapFirebaseAuthException(e);
+      throw _mapFirebaseException(e);
+    } on FirebaseException catch (e) {
+      throw _mapFirebaseException(e);
+    } catch (e) {
+      // Handle JavaScript interop errors on web
+      throw AuthException('Authentication failed: ${e.runtimeType}');
     }
   }
 
   @override
   Future<UserEntity> signInWithGoogle() async {
+    final auth = _auth;
+    if (auth == null) {
+      throw const AuthException(
+        'Firebase not configured. Run: flutterfire configure',
+        code: 'firebase-not-configured',
+      );
+    }
     try {
-      final googleUser = await _googleSignIn.signIn();
+      final googleUser = await _google.signIn();
       if (googleUser == null) {
         throw const GoogleSignInCancelledException();
       }
@@ -59,35 +111,52 @@ class FirebaseAuthRepository implements AuthRepository {
         idToken: googleAuth.idToken,
       );
 
-      final userCredential =
-          await _firebaseAuth.signInWithCredential(credential);
+      final userCredential = await auth.signInWithCredential(credential);
       final user = _mapFirebaseUser(userCredential.user);
       if (user == null) {
         throw const AuthException('Failed to sign in with Google');
       }
       return user;
     } on FirebaseAuthException catch (e) {
-      throw _mapFirebaseAuthException(e);
+      throw _mapFirebaseException(e);
+    } on FirebaseException catch (e) {
+      throw _mapFirebaseException(e);
+    } catch (e) {
+      // Handle JavaScript interop errors on web
+      throw AuthException('Google sign-in failed: ${e.runtimeType}');
     }
   }
 
   @override
   Future<void> signOut() async {
+    final auth = _auth;
+    if (auth == null) return; // Nothing to sign out from
     try {
       await Future.wait([
-        _firebaseAuth.signOut(),
-        _googleSignIn.signOut(),
+        auth.signOut(),
+        _google.signOut(),
       ]);
     } on FirebaseAuthException catch (e) {
-      throw _mapFirebaseAuthException(e);
+      throw _mapFirebaseException(e);
+    } on FirebaseException catch (e) {
+      throw _mapFirebaseException(e);
+    } catch (e) {
+      // Handle JavaScript interop errors on web
+      throw AuthException('Sign out failed: ${e.runtimeType}');
     }
   }
 
   @override
   Future<String?> getIdToken() async {
-    final user = _firebaseAuth.currentUser;
-    if (user == null) return null;
-    return user.getIdToken();
+    final auth = _auth;
+    if (auth == null) return null;
+    try {
+      final user = auth.currentUser;
+      if (user == null) return null;
+      return user.getIdToken();
+    } catch (e) {
+      return null;
+    }
   }
 
   UserEntity? _mapFirebaseUser(User? firebaseUser) {
@@ -101,8 +170,11 @@ class FirebaseAuthRepository implements AuthRepository {
     );
   }
 
-  AuthException _mapFirebaseAuthException(FirebaseAuthException e) {
-    switch (e.code) {
+  AuthException _mapFirebaseException(FirebaseException e) {
+    final code = e.code;
+    final message = e.message;
+
+    switch (code) {
       case 'user-not-found':
         return const UserNotFoundException();
       case 'wrong-password':
@@ -113,7 +185,7 @@ class FirebaseAuthRepository implements AuthRepository {
       case 'email-already-in-use':
         return const EmailAlreadyInUseException();
       default:
-        return AuthException(e.message ?? 'Authentication failed', code: e.code);
+        return AuthException(message ?? 'Authentication failed', code: code);
     }
   }
 }

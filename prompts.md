@@ -386,3 +386,38 @@
 - Updated DATABASE_SCHEMA.md with migration 000006
 - Updated IMPLEMENTATION_LOG.md with MetricsEngine implementation
 - All tests passing (98/98)
+
+### [2026-02-26] Implement AIInsightService
+**Original:**
+> Implement AIInsightService.
+> - Input structured snapshot JSON
+> - Output 80–120 word executive brief
+> - Gate by plan_tier
+> - Store daily_insight
+
+**Improved:**
+> Implement AIInsightService for AI-generated daily summaries:
+> 1. Create DailyInsight entity in domain/entity
+> 2. Create DailyInsightRepository interface and PostgreSQL implementation
+> 3. Create AIInsightService in application/service with:
+>    - GenerateInsight(userID, appID, snapshot, now) - Generate 80-120 word brief
+>    - Uses AIProvider interface for LLM calls (mockable)
+>    - Gate by user's plan_tier (PRO only, return ErrProTierRequired for FREE)
+> 4. Create migration 000007_create_daily_insight_table
+> 5. Write tests first (TDD)
+> 6. Update documentation (with Pre-Commit Checklist)
+
+**Result:**
+- domain/entity/daily_insight.go - DailyInsight entity
+- domain/repository/daily_insight_repository.go - Repository interface
+- application/service/ai_insight_service.go - AIInsightService with plan tier gating
+- application/service/ai_insight_service_test.go - Tests (5 test cases)
+- infrastructure/persistence/daily_insight_repository.go - PostgreSQL implementation
+- domain/repository/user_repository.go - Added FindByID method
+- infrastructure/persistence/user_repository.go - Added FindByID implementation
+- migrations/000007_create_daily_insight_table.up.sql / .down.sql
+- Updated TEST_PLAN.md with AIInsightService test scenarios
+- Updated DATABASE_SCHEMA.md with migration 000007
+- Updated IMPLEMENTATION_LOG.md with AIInsightService implementation
+- Updated docs/ER_current.puml with daily_insight entity
+- All tests passing (103/103)

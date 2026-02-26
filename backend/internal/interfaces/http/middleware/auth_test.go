@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
@@ -26,6 +27,10 @@ type mockUserRepository struct {
 	findErr   error
 	createErr error
 	created   *entity.User
+}
+
+func (m *mockUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
+	return m.user, m.findErr
 }
 
 func (m *mockUserRepository) FindByFirebaseUID(ctx context.Context, firebaseUID string) (*entity.User, error) {

@@ -421,6 +421,46 @@ Created MetricsEngine domain service for KPI computation and daily metrics snaps
 
 ---
 
+## [2026-02-26] AIInsightService Implementation
+
+**Commit:** Implement AIInsightService with plan tier gating
+
+**Summary:**
+Created AIInsightService for generating AI-powered daily executive briefs (Pro tier only).
+
+**Implemented:**
+
+1. **Domain Entity - DailyInsight:**
+   - AI-generated daily summary (80-120 words)
+   - One insight per app per day
+   - Stored for audit trail
+
+2. **Application Service - AIInsightService:**
+   - `GenerateInsight(userID, appID, snapshot, now)` - Generate AI brief
+   - `BuildPrompt(snapshot)` - Construct LLM prompt from metrics
+   - Plan tier gating (returns `ErrProTierRequired` for FREE users)
+   - Uses `AIProvider` interface for mockable LLM calls
+
+3. **Interfaces:**
+   - `AIProvider` - Interface for LLM API (OpenAI, Claude, etc.)
+   - `DailyInsightRepository` - Repository interface
+
+4. **Repository:**
+   - `PostgresDailyInsightRepository` implementation
+   - Upsert with ON CONFLICT for idempotency
+
+5. **Migration:**
+   - `000007_create_daily_insight_table`
+   - UNIQUE constraint on (app_id, date)
+
+6. **UserRepository Enhancement:**
+   - Added `FindByID(id uuid.UUID)` method
+   - Updated PostgreSQL implementation
+
+**Tests:** 5 new tests (total: 103)
+
+---
+
 ## Test Summary
 
 | Package | Tests |
@@ -429,10 +469,10 @@ Created MetricsEngine domain service for KPI computation and daily metrics snaps
 | infrastructure/external | 7 |
 | interfaces/http/handler | 42 |
 | interfaces/http/middleware | 11 |
-| application/service | 5 |
+| application/service | 10 |
 | domain/service | 30 |
 | pkg/crypto | 5 |
-| **Total** | **98** |
+| **Total** | **103** |
 
 ---
 
@@ -446,6 +486,7 @@ Created MetricsEngine domain service for KPI computation and daily metrics snaps
 | 000004_create_transactions_table | Immutable transaction ledger | ✓ |
 | 000005_create_subscriptions_table | Subscription state with risk tracking | ✓ |
 | 000006_create_daily_metrics_snapshot_table | Daily KPI snapshots | ✓ |
+| 000007_create_daily_insight_table | AI-generated daily insights (Pro only) | ✓ |
 
 ---
 
@@ -454,12 +495,12 @@ Created MetricsEngine domain service for KPI computation and daily metrics snaps
 ```
 cmd/server/main.go              → Entry point only
 internal/domain/
-  ├── entity/                   → User, PartnerAccount, App, Transaction, Subscription, DailyMetricsSnapshot
+  ├── entity/                   → User, PartnerAccount, App, Transaction, Subscription, DailyMetricsSnapshot, DailyInsight
   ├── valueobject/              → Role, PlanTier, IntegrationType, ChargeType, RiskState, BillingInterval
-  ├── repository/               → Interfaces (UserRepo, PartnerAccountRepo, AppRepo, TransactionRepo, SubscriptionRepo, DailyMetricsSnapshotRepo)
+  ├── repository/               → Interfaces (UserRepo, PartnerAccountRepo, AppRepo, TransactionRepo, SubscriptionRepo, DailyMetricsSnapshotRepo, DailyInsightRepo)
   └── service/                  → LedgerService, RiskEngine, MetricsEngine
 internal/application/
-  ├── service/                  → SyncService (with LedgerRebuilder integration)
+  ├── service/                  → SyncService, AIInsightService
   └── scheduler/                → SyncScheduler
 internal/infrastructure/
   ├── config/                   → YAML + env config loading

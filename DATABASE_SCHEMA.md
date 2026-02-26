@@ -335,6 +335,7 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000004_create_transactions_table | Create transactions table for immutable ledger | ✓ Implemented |
 | 000005_create_subscriptions_table | Create subscriptions table with risk state tracking | ✓ Implemented |
 | 000006_create_daily_metrics_snapshot_table | Create daily_metrics_snapshot for KPI storage | ✓ Implemented |
+| 000007_create_daily_insight_table | Create daily_insight for AI-generated summaries | ✓ Implemented |
 
 ---
 

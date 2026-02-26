@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -17,6 +18,39 @@ type PostgresUserRepository struct {
 
 func NewPostgresUserRepository(pool *pgxpool.Pool) *PostgresUserRepository {
 	return &PostgresUserRepository{pool: pool}
+}
+
+func (r *PostgresUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
+	query := `
+		SELECT id, firebase_uid, email, role, plan_tier, created_at
+		FROM users
+		WHERE id = $1
+	`
+
+	var user entity.User
+	var role string
+	var planTier string
+
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&user.ID,
+		&user.FirebaseUID,
+		&user.Email,
+		&role,
+		&planTier,
+		&user.CreatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, middleware.ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	user.Role = valueobject.Role(role)
+	user.PlanTier = valueobject.PlanTier(planTier)
+
+	return &user, nil
 }
 
 func (r *PostgresUserRepository) FindByFirebaseUID(ctx context.Context, firebaseUID string) (*entity.User, error) {

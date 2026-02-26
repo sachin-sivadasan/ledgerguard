@@ -172,6 +172,15 @@
 | ME-009 | Compute all metrics | Returns complete snapshot | ✓ |
 | ME-010 | Compute metrics empty inputs | Returns zeros | ✓ |
 
+#### 4.4 AI Insight Service
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| AI-001 | Generate insight Pro tier | 80-120 word brief returned | ✓ |
+| AI-002 | Generate insight Free tier | ErrProTierRequired | ✓ |
+| AI-003 | AI provider error | Error returned | ✓ |
+| AI-004 | User not found | Error returned | ✓ |
+| AI-005 | Build prompt | Contains key metrics | ✓ |
+
 #### 4.3 Revenue Classification
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|

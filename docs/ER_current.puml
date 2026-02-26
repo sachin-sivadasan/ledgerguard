@@ -86,12 +86,23 @@ entity "daily_metrics_snapshot" as daily_metrics_snapshot {
   <<UNIQUE: app_id, date>>
 }
 
+entity "daily_insight" as daily_insight {
+  *id : UUID <<PK>>
+  --
+  *app_id : UUID <<FK>>
+  *date : DATE
+  *insight_text : TEXT
+  created_at : TIMESTAMPTZ
+  <<UNIQUE: app_id, date>>
+}
+
 ' Relationships
 users ||--o{ partner_accounts : "has"
 partner_accounts ||--o{ apps : "tracks"
 apps ||--o{ transactions : "records"
 apps ||--o{ subscriptions : "has"
 apps ||--o{ daily_metrics_snapshot : "snapshots"
+apps ||--o{ daily_insight : "insights"
 
 note right of users
   Migration: 000001_create_users_table
@@ -159,6 +170,16 @@ note right of daily_metrics_snapshot
   Indexes:
   - idx_daily_metrics_app_date
   - idx_daily_metrics_app_latest
+end note
+
+note right of daily_insight
+  Migration: 000007_create_daily_insight_table
+  - AI-generated executive briefs (80-120 words)
+  - Pro tier only (gated by plan_tier)
+  - Generated from DailyMetricsSnapshot
+
+  Indexes:
+  - idx_daily_insight_app_date
 end note
 
 @enduml

@@ -576,6 +576,49 @@ go test ./... -race
 | FW-143 | Hides Add KPI when at max | Button hidden | ✓ |
 | FW-144 | Shows saving indicator | CircularProgressIndicator in button | ✓ |
 
+#### F4.12 RiskBloc
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FB-090 | Initial state | RiskInitial | ✓ |
+| FB-091 | Load success | [Loading, Loaded] | ✓ |
+| FB-092 | Load returns null | [Loading, Empty] | ✓ |
+| FB-093 | Load returns empty data | [Loading, Empty] | ✓ |
+| FB-094 | Load fails | [Loading, Error] | ✓ |
+| FB-095 | Refresh success | [Loaded(refreshing), Loaded] | ✓ |
+| FB-096 | Refresh fails | [Loaded(refreshing), Loaded] with original data | ✓ |
+| FB-097 | Refresh when not loaded | Triggers load | ✓ |
+
+#### F4.13 RiskSummary Entity
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FE-010 | totalSubscriptions calculation | Sum of all counts | ✓ |
+| FE-011 | percentFor calculation | Correct percentage | ✓ |
+| FE-012 | atRiskCount calculation | oneCycle + twoCycles | ✓ |
+| FE-013 | formattedRevenueAtRisk | Currency format | ✓ |
+| FE-014 | hasData check | true when total > 0 | ✓ |
+
+#### F4.14 RiskBreakdownPage
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-150 | Shows loading state | CircularProgressIndicator visible | ✓ |
+| FW-151 | Shows empty state | "No Risk Data" message | ✓ |
+| FW-152 | Shows error with retry | Error message and retry button | ✓ |
+| FW-153 | Shows app bar title | "Risk Breakdown" visible | ✓ |
+| FW-154 | Shows total subscriptions | Count displayed | ✓ |
+| FW-155 | Shows revenue at risk | Currency value displayed | ✓ |
+| FW-156 | Shows distribution section | Section header visible | ✓ |
+| FW-157 | Shows breakdown by state | Section header visible | ✓ |
+| FW-158 | Shows all risk states | SAFE, ONE_CYCLE_MISSED, etc. | ✓ |
+| FW-159 | Shows legend items | Color legend visible | ✓ |
+| FW-160 | Shows refresh button | Refresh icon in app bar | ✓ |
+| FW-161 | Dispatches refresh on tap | RefreshRiskSummaryRequested | ✓ |
+| FW-162 | Shows loading when refreshing | Progress indicator in app bar | ✓ |
+| FW-163 | Shows pie chart | CustomPaint widget visible | ✓ |
+| FW-164 | Shows risk state descriptions | Description text visible | ✓ |
+
 ---
 
 ### F5. RoleBloc Tests

@@ -256,3 +256,36 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (168/168)
 
 ---
+
+## Prompt 010 – Risk Breakdown Screen
+**Date:** 2024-01-XX
+**Status:** Complete
+
+**Prompt:**
+> Create Risk Breakdown screen. Display: SAFE count, ONE_CYCLE_MISSED count, TWO_CYCLE_MISSED count, CHURNED count. Include: Simple bar or pie chart, Clean professional layout. Connect to backend risk summary endpoint.
+
+**Changes:**
+- Domain layer:
+  - Created `domain/entities/risk_summary.dart` - `RiskLevel` enum, `RiskSummary` class
+  - Created `domain/repositories/risk_repository.dart` - Repository interface + exceptions
+- Data layer:
+  - Created `data/repositories/api_risk_repository.dart` - Uses `/api/v1/apps/{appId}/metrics/latest`
+  - Created `data/repositories/mock_risk_repository.dart` - Mock implementation
+- Presentation layer:
+  - Created `presentation/blocs/risk/risk_bloc.dart` - RiskBloc with Load/Refresh events
+  - Created `presentation/blocs/risk/risk_event.dart` - Load and Refresh events
+  - Created `presentation/blocs/risk/risk_state.dart` - Initial, Loading, Loaded, Empty, Error states
+  - Created `presentation/pages/risk_breakdown_page.dart` - Page with:
+    - Summary card (total subscriptions, revenue at risk)
+    - Donut pie chart with legend
+    - Breakdown list with progress bars and descriptions
+  - Updated `presentation/widgets/risk_distribution_chart.dart` - Made clickable, navigates to /risk-breakdown
+  - Updated `presentation/router/app_router.dart` - Added /risk-breakdown route
+- Updated `app.dart` - Added RiskBloc provider
+- Updated `core/di/injection.config.dart` - Registered RiskBloc and repository
+- Tests:
+  - Created `test/presentation/blocs/risk_bloc_test.dart` - 13 tests (8 bloc + 5 entity)
+  - Created `test/presentation/pages/risk_breakdown_page_test.dart` - 15 tests
+- All tests passing (196/196)
+
+---

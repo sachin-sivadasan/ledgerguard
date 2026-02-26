@@ -8,6 +8,7 @@ import '../pages/app_selection_page.dart';
 import '../pages/dashboard_page.dart';
 import '../pages/login_page.dart';
 import '../pages/partner_integration_page.dart';
+import '../pages/risk_breakdown_page.dart';
 import '../pages/signup_page.dart';
 import '../pages/placeholder_page.dart';
 
@@ -78,6 +79,11 @@ class AppRouter {
         path: '/admin/manual-integration',
         name: 'manual-integration',
         builder: (context, state) => const ManualIntegrationPage(),
+      ),
+      GoRoute(
+        path: '/risk-breakdown',
+        name: 'risk-breakdown',
+        builder: (context, state) => const RiskBreakdownPage(),
       ),
     ],
   );

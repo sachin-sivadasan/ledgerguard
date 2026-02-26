@@ -321,6 +321,14 @@ CREATE TRIGGER notification_preferences_updated_at
 
 ---
 
+## Migrations
+
+| Migration | Description | Status |
+|-----------|-------------|--------|
+| 000001_create_users_table | Create users table with Firebase UID, role, plan_tier | ✓ Implemented |
+
+---
+
 ## Notes
 
 1. **Immutability:** `transactions` and `daily_metrics_snapshot` are append-only

@@ -84,3 +84,33 @@
 - Added ADR-005 for DDD decision
 - Updated CLAUDE.md with new folder structure
 - All tests passing (3/3)
+
+### [2026-02-26] Firebase Auth Middleware
+**Original:**
+> Implement Firebase ID token verification middleware. Verify Firebase token, Extract firebase_uid, Auto-create user if first login, Assign OWNER role by default. Write tests first. Update DATABASE_SCHEMA.md.
+
+**Improved:**
+> Implement Firebase Authentication middleware:
+> 1. Create User entity in domain/entity (ID, FirebaseUID, Email, Role, PlanTier, CreatedAt)
+> 2. Create Role, PlanTier value objects in domain/valueobject
+> 3. Create UserRepository interface in domain/repository
+> 4. Create PostgresUserRepository in infrastructure/persistence
+> 5. Create FirebaseAuthService in infrastructure/external
+> 6. Create AuthMiddleware in interfaces/http/middleware
+> 7. Write tests first (TDD): mock Firebase client, test token extraction, user creation
+> 8. Add first SQL migration (000001_create_users_table)
+> 9. Update DATABASE_SCHEMA.md and TEST_PLAN.md
+
+**Result:**
+- domain/entity/user.go - User entity
+- domain/valueobject/role.go - Role (OWNER, ADMIN)
+- domain/valueobject/plan_tier.go - PlanTier (FREE, PRO)
+- domain/service/auth_service.go - AuthTokenVerifier interface
+- domain/repository/user_repository.go - UserRepository interface
+- infrastructure/persistence/user_repository.go - PostgreSQL implementation
+- infrastructure/external/firebase_auth.go - Firebase Admin SDK integration
+- interfaces/http/middleware/auth.go + auth_test.go - Auth middleware (6 tests)
+- migrations/000001_create_users_table.up.sql / .down.sql
+- Updated DATABASE_SCHEMA.md with migrations section
+- Updated TEST_PLAN.md with auth test scenarios
+- All tests passing (9/9)

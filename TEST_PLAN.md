@@ -39,15 +39,17 @@
 
 ---
 
-### 2. Authentication (Future)
+### 2. Authentication
 
-#### 2.1 Firebase Token Verification
+#### 2.1 Auth Middleware
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
-| A-001 | Valid Firebase token | 200, user extracted | Pending |
-| A-002 | Expired token | 401, unauthorized | Pending |
-| A-003 | Invalid token | 401, unauthorized | Pending |
-| A-004 | Missing token | 401, unauthorized | Pending |
+| A-001 | Missing Authorization header | 401, unauthorized | ✓ |
+| A-002 | Invalid Authorization format | 401, unauthorized | ✓ |
+| A-003 | Invalid/expired token | 401, unauthorized | ✓ |
+| A-004 | Valid token, existing user | 200, user in context | ✓ |
+| A-005 | Valid token, new user | 200, user auto-created with OWNER role | ✓ |
+| A-006 | Valid token, user creation fails | 500, internal error | ✓ |
 
 ---
 

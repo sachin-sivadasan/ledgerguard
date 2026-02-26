@@ -326,9 +326,12 @@ go test ./... -race
 #### F1.3 DashboardBloc
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
-| FB-030 | Load metrics success | Emit metrics loaded | Pending |
-| FB-031 | Load metrics failure | Emit error state | Pending |
-| FB-032 | Refresh metrics | Re-fetch and emit updated | Pending |
+| FB-030 | Initial state | DashboardInitial | ✓ |
+| FB-031 | Load metrics success | [Loading, Loaded] | ✓ |
+| FB-032 | Load metrics failure | [Loading, Error] | ✓ |
+| FB-033 | Refresh metrics success | [Loaded(refreshing), Loaded] | ✓ |
+| FB-034 | Refresh metrics failure | [Loaded(refreshing), Loaded] keeps data | ✓ |
+| FB-035 | Refresh when not loaded | Triggers load | ✓ |
 
 #### F1.4 SubscriptionBloc
 | ID | Scenario | Expected Result | Status |
@@ -502,6 +505,29 @@ go test ./... -race
 | FW-092 | Shows saving indicator | "Saving..." text visible | ✓ |
 | FW-093 | Disables selection when saving | Taps don't dispatch events | ✓ |
 | FW-094 | Shows selected app indicator | Check icon visible | ✓ |
+
+#### F4.9 DashboardPage
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-100 | Renders page title | "Executive Dashboard" visible | ✓ |
+| FW-101 | Fetches metrics on init | LoadDashboardRequested dispatched | ✓ |
+| FW-102 | Shows loading indicator | CircularProgressIndicator when loading | ✓ |
+| FW-103 | Shows error message | Error text when error state | ✓ |
+| FW-104 | Dispatches LoadDashboard on retry | Event added on retry tap | ✓ |
+| FW-105 | Displays Renewal Success Rate | Rate percentage visible | ✓ |
+| FW-106 | Displays Active MRR | MRR value visible | ✓ |
+| FW-107 | Displays Revenue at Risk | Risk value visible | ✓ |
+| FW-108 | Displays Churned metrics | Churned value and count visible | ✓ |
+| FW-109 | Displays Usage Revenue | Usage value visible | ✓ |
+| FW-110 | Displays Revenue Mix chart | Recurring/Usage/One-time visible | ✓ |
+| FW-111 | Displays Risk Distribution chart | Safe/At Risk/Critical visible | ✓ |
+| FW-112 | Displays risk counts | Count numbers visible | ✓ |
+| FW-113 | Shows refresh button | Refresh icon in app bar | ✓ |
+| FW-114 | Dispatches Refresh on tap | RefreshDashboardRequested dispatched | ✓ |
+| FW-115 | Shows loading when refreshing | Progress indicator when refreshing | ✓ |
+| FW-116 | Disables refresh when refreshing | Refresh icon hidden | ✓ |
+| FW-117 | Displays Primary KPIs header | Section header visible | ✓ |
+| FW-118 | Displays Revenue & Risk header | Section header visible | ✓ |
 
 ---
 

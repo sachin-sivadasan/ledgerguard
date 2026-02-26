@@ -6,6 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'presentation/blocs/app_selection/app_selection.dart';
 import 'presentation/blocs/auth/auth.dart';
+import 'presentation/blocs/dashboard/dashboard.dart';
 import 'presentation/blocs/partner_integration/partner_integration.dart';
 import 'presentation/blocs/role/role.dart';
 import 'presentation/router/app_router.dart';
@@ -23,6 +24,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
   late final RoleBloc _roleBloc;
   late final PartnerIntegrationBloc _partnerIntegrationBloc;
   late final AppSelectionBloc _appSelectionBloc;
+  late final DashboardBloc _dashboardBloc;
   late final AppRouter _appRouter;
   late final AuthRepository _authRepository;
 
@@ -34,6 +36,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
     _roleBloc = getIt<RoleBloc>();
     _partnerIntegrationBloc = getIt<PartnerIntegrationBloc>();
     _appSelectionBloc = getIt<AppSelectionBloc>();
+    _dashboardBloc = getIt<DashboardBloc>();
     _appRouter = AppRouter(authBloc: _authBloc);
 
     // Check auth state on startup
@@ -46,6 +49,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
     _roleBloc.close();
     _partnerIntegrationBloc.close();
     _appSelectionBloc.close();
+    _dashboardBloc.close();
     super.dispose();
   }
 
@@ -70,6 +74,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
         BlocProvider<RoleBloc>.value(value: _roleBloc),
         BlocProvider<PartnerIntegrationBloc>.value(value: _partnerIntegrationBloc),
         BlocProvider<AppSelectionBloc>.value(value: _appSelectionBloc),
+        BlocProvider<DashboardBloc>.value(value: _dashboardBloc),
       ],
       child: BlocListener<AuthBloc, AuthState>(
         listener: _onAuthStateChanged,

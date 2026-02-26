@@ -169,3 +169,34 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (107/107)
 
 ---
+
+## Prompt 007 – Executive Dashboard Layout
+**Date:** 2024-01-XX
+**Status:** Complete
+
+**Prompt:**
+> Create Executive Dashboard layout. Top Section (Primary KPIs): Renewal Success Rate, Active MRR, Revenue at Risk, Churn. Secondary Section: Usage Revenue, Revenue Mix chart, Risk Distribution. Use placeholder/mock data. Do NOT connect to backend yet.
+
+**Changes:**
+- Domain layer:
+  - `domain/entities/dashboard_metrics.dart` - DashboardMetrics, RevenueMix, RiskDistribution
+  - `domain/repositories/dashboard_repository.dart` - Repository interface + exceptions
+- Data layer:
+  - `data/repositories/mock_dashboard_repository.dart` - Mock implementation with sample data
+- Presentation layer:
+  - `presentation/blocs/dashboard/dashboard_bloc.dart` - DashboardBloc
+  - `presentation/blocs/dashboard/dashboard_event.dart` - LoadDashboardRequested, RefreshDashboardRequested
+  - `presentation/blocs/dashboard/dashboard_state.dart` - Initial, Loading, Loaded, Error
+  - `presentation/pages/dashboard_page.dart` - Dashboard page with responsive layout
+  - `presentation/widgets/kpi_card.dart` - KpiCard, KpiCardCompact
+  - `presentation/widgets/revenue_mix_chart.dart` - Revenue mix horizontal bar chart
+  - `presentation/widgets/risk_distribution_chart.dart` - Risk distribution 2x2 grid
+- Updated `app.dart` - DashboardBloc integration
+- Updated `core/di/injection.config.dart` - Registered new dependencies
+- Updated `presentation/router/app_router.dart` - Dashboard route uses DashboardPage
+- Tests:
+  - `test/presentation/blocs/dashboard_bloc_test.dart` - 6 tests
+  - `test/presentation/pages/dashboard_page_test.dart` - 19 tests
+- All tests passing (132/132)
+
+---

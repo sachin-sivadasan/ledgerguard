@@ -1,0 +1,255 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+
+import 'package:ledgerguard/domain/entities/dashboard_metrics.dart';
+import 'package:ledgerguard/presentation/blocs/dashboard/dashboard.dart';
+import 'package:ledgerguard/presentation/pages/dashboard_page.dart';
+
+class MockDashboardBloc extends Mock implements DashboardBloc {}
+
+class FakeDashboardEvent extends Fake implements DashboardEvent {}
+
+void main() {
+  late MockDashboardBloc mockBloc;
+
+  const testMetrics = DashboardMetrics(
+    renewalSuccessRate: 94.2,
+    activeMrr: 12450000,
+    revenueAtRisk: 1850000,
+    churnedRevenue: 320000,
+    churnedCount: 12,
+    usageRevenue: 2340000,
+    revenueMix: RevenueMix(
+      recurring: 12450000,
+      usage: 2340000,
+      oneTime: 450000,
+    ),
+    riskDistribution: RiskDistribution(
+      safe: 842,
+      atRisk: 45,
+      critical: 18,
+      churned: 12,
+    ),
+  );
+
+  setUpAll(() {
+    registerFallbackValue(FakeDashboardEvent());
+  });
+
+  setUp(() {
+    mockBloc = MockDashboardBloc();
+  });
+
+  Widget buildTestWidget({DashboardState? state}) {
+    when(() => mockBloc.state).thenReturn(state ?? const DashboardInitial());
+    when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
+    when(() => mockBloc.add(any())).thenReturn(null);
+
+    return MaterialApp(
+      home: BlocProvider<DashboardBloc>.value(
+        value: mockBloc,
+        child: const DashboardPage(),
+      ),
+    );
+  }
+
+  Future<void> setLargeScreen(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+  }
+
+  group('DashboardPage', () {
+    testWidgets('renders page title', (tester) async {
+      await tester.pumpWidget(buildTestWidget(
+        state: DashboardLoaded(metrics: testMetrics),
+      ));
+
+      expect(find.text('Executive Dashboard'), findsOneWidget);
+    });
+
+    testWidgets('fetches metrics on init when in initial state', (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+
+      verify(() => mockBloc.add(const LoadDashboardRequested())).called(1);
+    });
+
+    testWidgets('shows loading indicator when loading', (tester) async {
+      await tester.pumpWidget(buildTestWidget(
+        state: const DashboardLoading(),
+      ));
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('shows error message when error state', (tester) async {
+      await tester.pumpWidget(buildTestWidget(
+        state: const DashboardError('Network error'),
+      ));
+
+      expect(find.text('Failed to load dashboard'), findsOneWidget);
+      expect(find.text('Network error'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+    });
+
+    testWidgets('dispatches LoadDashboardRequested on retry tap', (tester) async {
+      await tester.pumpWidget(buildTestWidget(
+        state: const DashboardError('Network error'),
+      ));
+
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+
+      verify(() => mockBloc.add(const LoadDashboardRequested())).called(1);
+    });
+
+    group('Primary KPIs', () {
+      testWidgets('displays Renewal Success Rate', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        expect(find.text('Renewal Success Rate'), findsOneWidget);
+        expect(find.text('94.2%'), findsOneWidget);
+      });
+
+      testWidgets('displays Active MRR', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        expect(find.text('Active MRR'), findsOneWidget);
+        expect(find.text('\$124.5K'), findsOneWidget);
+      });
+
+      testWidgets('displays Revenue at Risk', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        expect(find.text('Revenue at Risk'), findsOneWidget);
+        expect(find.text('\$18.5K'), findsOneWidget);
+      });
+
+      testWidgets('displays Churned metrics', (tester) async {
+        await setLargeScreen(tester);
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        // 'Churned' appears in both primary KPI and risk distribution
+        expect(find.text('Churned'), findsAtLeastNWidgets(1));
+        expect(find.text('\$3.2K'), findsOneWidget);
+        expect(find.text('12 subscriptions'), findsOneWidget);
+      });
+    });
+
+    group('Secondary Section', () {
+      testWidgets('displays Usage Revenue', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        expect(find.text('Usage Revenue'), findsOneWidget);
+        expect(find.text('\$23.4K'), findsOneWidget);
+      });
+
+      testWidgets('displays Revenue Mix chart', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        expect(find.text('Revenue Mix'), findsOneWidget);
+        expect(find.text('Recurring'), findsOneWidget);
+        expect(find.text('Usage'), findsOneWidget);
+        expect(find.text('One-time'), findsOneWidget);
+      });
+
+      testWidgets('displays Risk Distribution chart', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        expect(find.text('Risk Distribution'), findsOneWidget);
+        expect(find.text('Safe'), findsOneWidget);
+        expect(find.text('At Risk'), findsOneWidget);
+        expect(find.text('Critical'), findsOneWidget);
+        // Note: 'Churned' appears in both primary KPI and risk distribution
+      });
+
+      testWidgets('displays risk counts', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        expect(find.text('842'), findsOneWidget); // Safe
+        expect(find.text('45'), findsOneWidget); // At Risk
+        expect(find.text('18'), findsOneWidget); // Critical
+      });
+    });
+
+    group('Refresh functionality', () {
+      testWidgets('shows refresh button in app bar', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        expect(find.byIcon(Icons.refresh), findsOneWidget);
+      });
+
+      testWidgets('dispatches RefreshDashboardRequested on refresh tap',
+          (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        await tester.tap(find.byIcon(Icons.refresh));
+        await tester.pump();
+
+        verify(() => mockBloc.add(const RefreshDashboardRequested())).called(1);
+      });
+
+      testWidgets('shows loading indicator when refreshing', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics, isRefreshing: true),
+        ));
+
+        // Should show a small progress indicator in the app bar
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      });
+
+      testWidgets('disables refresh button when refreshing', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics, isRefreshing: true),
+        ));
+
+        // Find the refresh icon button - it should be disabled
+        final refreshButton = find.byIcon(Icons.refresh);
+        expect(refreshButton, findsNothing); // Icon is replaced by progress
+      });
+    });
+
+    group('Section headers', () {
+      testWidgets('displays Primary KPIs section header', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        expect(find.text('Primary KPIs'), findsOneWidget);
+      });
+
+      testWidgets('displays Revenue & Risk section header', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        expect(find.text('Revenue & Risk'), findsOneWidget);
+      });
+    });
+  });
+}

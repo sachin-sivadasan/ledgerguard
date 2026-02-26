@@ -366,6 +366,76 @@ Created App Selection page for choosing which Shopify app to track revenue for a
 
 ---
 
+## [2026-02-27] Executive Dashboard Layout
+
+**Commit:** Create Executive Dashboard with KPI cards and metrics display
+
+**Summary:**
+Created Executive Dashboard page with primary KPIs (Renewal Success Rate, Active MRR, Revenue at Risk, Churn) and secondary section (Usage Revenue, Revenue Mix chart, Risk Distribution chart) using mock data.
+
+**Implemented:**
+
+1. **Domain Layer:**
+   - `DashboardMetrics` entity with renewalSuccessRate, activeMrr, revenueAtRisk, churnedRevenue, churnedCount, usageRevenue
+   - `RevenueMix` entity with recurring, usage, oneTime breakdown
+   - `RiskDistribution` entity with safe, atRisk, critical, churned counts
+   - `DashboardRepository` interface
+   - `DashboardException` for error handling
+   - Formatting methods for currency display
+
+2. **Data Layer:**
+   - `MockDashboardRepository` - Mock implementation with sample data
+   - $124,500 MRR, 94.2% renewal rate sample metrics
+
+3. **Presentation Layer (Bloc):**
+   - **DashboardBloc** - Manages dashboard state
+   - **Events:**
+     - `LoadDashboardRequested` - Load metrics
+     - `RefreshDashboardRequested` - Refresh metrics
+   - **States:**
+     - `DashboardInitial` - Before load
+     - `DashboardLoading` - Loading metrics
+     - `DashboardLoaded` - Metrics loaded with isRefreshing flag
+     - `DashboardError` - Error occurred
+
+4. **Dashboard Page:**
+   - Responsive layout (4-column, 2x2, single column)
+   - Primary KPIs section with 4 KpiCard widgets
+   - Secondary section with Usage Revenue, Revenue Mix chart, Risk Distribution chart
+   - Pull-to-refresh functionality
+   - Refresh button in app bar
+   - Error state with retry
+   - Route: `/dashboard`
+
+5. **Widgets:**
+   - `KpiCard` - Large card for primary KPIs with icon, title, value, subtitle
+   - `KpiCardCompact` - Compact version for secondary metrics
+   - `RevenueMixChart` - Horizontal bar chart with recurring/usage/one-time legend
+   - `RiskDistributionChart` - 2x2 grid showing safe/at-risk/critical/churned counts
+
+**Tests (TDD):**
+- DashboardBloc: 6 tests (initial state, load success/failure, refresh success/failure)
+- DashboardPage: 19 tests (rendering, events, states, KPIs, charts, refresh)
+
+**Files Created/Modified:**
+- `lib/domain/entities/dashboard_metrics.dart`
+- `lib/domain/repositories/dashboard_repository.dart`
+- `lib/data/repositories/mock_dashboard_repository.dart`
+- `lib/presentation/blocs/dashboard/` - Bloc, events, states, barrel
+- `lib/presentation/pages/dashboard_page.dart`
+- `lib/presentation/widgets/kpi_card.dart`
+- `lib/presentation/widgets/revenue_mix_chart.dart`
+- `lib/presentation/widgets/risk_distribution_chart.dart`
+- `lib/presentation/router/app_router.dart` (updated)
+- `lib/app.dart` (updated)
+- `lib/core/di/injection.config.dart` (updated)
+- `test/presentation/blocs/dashboard_bloc_test.dart`
+- `test/presentation/pages/dashboard_page_test.dart`
+
+**Tests:** 132 passing
+
+---
+
 ## Test Summary
 
 | Layer | Tests |
@@ -374,14 +444,16 @@ Created App Selection page for choosing which Shopify app to track revenue for a
 | presentation/blocs/role | 11 |
 | presentation/blocs/partner_integration | 10 |
 | presentation/blocs/app_selection | 12 |
+| presentation/blocs/dashboard | 6 |
 | presentation/pages/login | 9 |
 | presentation/pages/signup | 8 |
 | presentation/pages/manual_integration | 4 |
 | presentation/pages/partner_integration | 16 |
 | presentation/pages/app_selection | 15 |
+| presentation/pages/dashboard | 19 |
 | presentation/widgets/role_guard | 10 |
 | widget | 1 |
-| **Total** | **107** |
+| **Total** | **132** |
 
 ---
 
@@ -398,14 +470,14 @@ frontend/app/lib/
 ├── data/
 │   ├── datasources/    → API clients, local storage
 │   ├── models/         → JSON serializable models
-│   └── repositories/   → FirebaseAuthRepository, ApiUserProfileRepository, MockPartnerIntegrationRepository, MockAppRepository
+│   └── repositories/   → FirebaseAuthRepository, ApiUserProfileRepository, MockPartnerIntegrationRepository, MockAppRepository, MockDashboardRepository
 ├── domain/
-│   ├── entities/       → UserEntity, UserProfile, PartnerIntegration, ShopifyApp
-│   ├── repositories/   → AuthRepository, UserProfileRepository, PartnerIntegrationRepository, AppRepository
+│   ├── entities/       → UserEntity, UserProfile, PartnerIntegration, ShopifyApp, DashboardMetrics
+│   ├── repositories/   → AuthRepository, UserProfileRepository, PartnerIntegrationRepository, AppRepository, DashboardRepository
 │   └── usecases/       → Business logic
 └── presentation/
-    ├── blocs/          → AuthBloc, RoleBloc, PartnerIntegrationBloc, AppSelectionBloc
-    ├── pages/          → LoginPage, SignupPage, ManualIntegrationPage, PartnerIntegrationPage, AppSelectionPage
-    ├── widgets/        → RoleGuard, ProGuard
+    ├── blocs/          → AuthBloc, RoleBloc, PartnerIntegrationBloc, AppSelectionBloc, DashboardBloc
+    ├── pages/          → LoginPage, SignupPage, ManualIntegrationPage, PartnerIntegrationPage, AppSelectionPage, DashboardPage
+    ├── widgets/        → RoleGuard, ProGuard, KpiCard, RevenueMixChart, RiskDistributionChart
     └── router/         → GoRouter with auth/role redirects
 ```

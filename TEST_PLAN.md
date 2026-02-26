@@ -143,11 +143,20 @@
 #### 4.2 Risk Engine
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
-| R-001 | Active subscription | SAFE | ✓ |
-| R-002 | 0-30 days past due | SAFE (grace period) | ✓ |
-| R-003 | 31-60 days past due | ONE_CYCLE_MISSED | ✓ |
-| R-004 | 61-90 days past due | TWO_CYCLES_MISSED | ✓ |
-| R-005 | >90 days past due | CHURNED | ✓ |
+| RE-001 | Active with future charge date | SAFE | ✓ |
+| RE-002 | 0-30 days past due (grace period) | SAFE | ✓ |
+| RE-003 | 31-60 days past due | ONE_CYCLE_MISSED | ✓ |
+| RE-004 | 61-90 days past due | TWO_CYCLES_MISSED | ✓ |
+| RE-005 | >90 days past due | CHURNED | ✓ |
+| RE-006 | No expected charge date | SAFE (default) | ✓ |
+| RE-007 | DaysPastDue nil charge date | Returns 0 | ✓ |
+| RE-008 | DaysPastDue future charge date | Returns 0 | ✓ |
+| RE-009 | DaysPastDue past charge date | Returns correct days | ✓ |
+| RE-010 | RiskStateFromDaysPastDue boundary | Correct state at boundaries | ✓ |
+| RE-011 | ClassifyAll batch operation | All subscriptions classified | ✓ |
+| RE-012 | CalculateRiskSummary | Correct counts per state | ✓ |
+| RE-013 | CalculateRevenueAtRisk | ONE_CYCLE + TWO_CYCLES MRR | ✓ |
+| RE-014 | IsAtRisk helper | true for ONE/TWO CYCLE MISSED | ✓ |
 
 #### 4.3 Revenue Classification
 | ID | Scenario | Expected Result | Status |

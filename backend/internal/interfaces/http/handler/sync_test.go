@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
@@ -118,6 +119,25 @@ func (m *mockSyncDecryptor) Decrypt(ciphertext []byte) ([]byte, error) {
 	return m.decrypted, m.err
 }
 
+type mockSyncLedgerRebuilder struct {
+	result *domainservice.LedgerRebuildResult
+	err    error
+}
+
+func (m *mockSyncLedgerRebuilder) RebuildFromTransactions(ctx context.Context, appID uuid.UUID, now time.Time) (*domainservice.LedgerRebuildResult, error) {
+	if m.result != nil {
+		return m.result, m.err
+	}
+	return &domainservice.LedgerRebuildResult{
+		AppID:                appID,
+		SubscriptionsUpdated: 0,
+		TotalMRRCents:        0,
+		TotalUsageCents:      0,
+		RiskSummary:          domainservice.RiskSummary{},
+		RebuildAt:            now,
+	}, m.err
+}
+
 func TestSyncHandler_SyncAllApps_Success(t *testing.T) {
 	partnerAccountID := uuid.New()
 	appID := uuid.New()
@@ -149,8 +169,9 @@ func TestSyncHandler_SyncAllApps_Success(t *testing.T) {
 	appRepo := &mockSyncAppRepo{app: app, apps: []*entity.App{app}}
 	partnerRepo := &mockSyncPartnerRepo{account: partnerAccount}
 	decryptor := &mockSyncDecryptor{decrypted: []byte("token")}
+	ledger := &mockSyncLedgerRebuilder{}
 
-	syncService := service.NewSyncService(fetcher, txRepo, appRepo, partnerRepo, decryptor)
+	syncService := service.NewSyncService(fetcher, txRepo, appRepo, partnerRepo, decryptor, ledger)
 	handler := NewSyncHandler(syncService, partnerRepo)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/sync", nil)
@@ -236,8 +257,9 @@ func TestSyncHandler_SyncApp_Success(t *testing.T) {
 	appRepo := &mockSyncAppRepo{app: app}
 	partnerRepo := &mockSyncPartnerRepo{account: partnerAccount}
 	decryptor := &mockSyncDecryptor{decrypted: []byte("token")}
+	ledger := &mockSyncLedgerRebuilder{}
 
-	syncService := service.NewSyncService(fetcher, txRepo, appRepo, partnerRepo, decryptor)
+	syncService := service.NewSyncService(fetcher, txRepo, appRepo, partnerRepo, decryptor, ledger)
 	handler := NewSyncHandler(syncService, partnerRepo)
 
 	// Create router to handle URL params

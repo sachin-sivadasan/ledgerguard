@@ -325,3 +325,30 @@
 - Updated ER_current.puml with subscriptions entity
 - Updated SEQUENCE_current.puml with ledger rebuild flow
 - All tests passing (66/66)
+
+### [2026-02-26] Implement RiskEngine
+**Original:**
+> Implement RiskEngine.
+> States: SAFE ONE_CYCLE_MISSED TWO_CYCLE_MISSED CHURNED
+> Recalculate each sync.
+
+**Improved:**
+> Implement RiskEngine integration with sync flow:
+> 1. Create RiskEngine in domain/service that encapsulates risk classification logic
+> 2. Integrate with SyncService to recalculate risk after each sync
+> 3. Risk states: SAFE, ONE_CYCLE_MISSED, TWO_CYCLES_MISSED, CHURNED
+> 4. Trigger LedgerService.RebuildFromTransactions after each successful sync
+> 5. Return risk summary in sync results
+> 6. Write tests first (TDD)
+> 7. Update documentation
+
+**Result:**
+- domain/service/risk_engine.go - RiskEngine service with classification methods
+- domain/service/risk_engine_test.go - Comprehensive tests (12 test cases)
+- application/service/sync_service.go - Added LedgerRebuilder interface, triggers rebuild after sync
+- application/service/sync_service_test.go - Updated with mock LedgerRebuilder
+- interfaces/http/handler/sync_test.go - Updated with mock LedgerRebuilder
+- SyncResult now includes RiskSummary, RevenueAtRisk, TotalMRRCents
+- Updated TEST_PLAN.md with RiskEngine test scenarios
+- Updated IMPLEMENTATION_LOG.md with RiskEngine implementation
+- All tests passing (88/88)

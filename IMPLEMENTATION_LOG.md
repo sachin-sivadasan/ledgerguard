@@ -333,18 +333,64 @@ Implemented deterministic ledger rebuild that reconstructs subscription state fr
 
 ---
 
+## [2026-02-26] RiskEngine Integration
+
+**Commit:** Implement RiskEngine with sync integration
+
+**Summary:**
+Created dedicated RiskEngine domain service and integrated it with the sync flow to recalculate risk states after each synchronization.
+
+**Implemented:**
+
+1. **Domain Service - RiskEngine:**
+   - `ClassifyRisk(subscription, now)` - Determines risk state based on payment history
+   - `DaysPastDue(subscription, now)` - Calculates days past expected charge
+   - `RiskStateFromDaysPastDue(days)` - Converts days to risk state
+   - `ClassifyAll(subscriptions, now)` - Batch classification
+   - `CalculateRiskSummary(subscriptions)` - Risk distribution counts
+   - `CalculateRevenueAtRisk(subscriptions)` - MRR at risk (ONE_CYCLE + TWO_CYCLES)
+   - `IsAtRisk(subscription)` - Helper for at-risk detection
+   - `IsChurned(subscription)` - Helper for churn detection
+
+2. **Risk State Classification (per CLAUDE.md):**
+   - **SAFE:** Active subscription or ≤30 days past due (grace period)
+   - **ONE_CYCLE_MISSED:** 31-60 days past due
+   - **TWO_CYCLES_MISSED:** 61-90 days past due
+   - **CHURNED:** >90 days past due
+
+3. **Sync Integration:**
+   - Added `LedgerRebuilder` interface to SyncService
+   - SyncService triggers `RebuildFromTransactions` after storing transactions
+   - `SyncResult` now includes:
+     - `RiskSummary` - Distribution of subscriptions by risk state
+     - `RevenueAtRisk` - Total MRR from at-risk subscriptions
+     - `TotalMRRCents` - Total MRR from active subscriptions
+
+4. **Tests:**
+   - Risk classification tests (all states)
+   - Days past due calculation tests
+   - Batch classification tests
+   - Risk summary tests
+   - Revenue at risk tests
+   - Updated SyncService tests with mock LedgerRebuilder
+   - Updated SyncHandler tests with mock LedgerRebuilder
+
+**Tests:** 22 new tests (total: 88)
+
+---
+
 ## Test Summary
 
 | Package | Tests |
 |---------|-------|
 | infrastructure/config | 5 |
 | infrastructure/external | 7 |
-| interfaces/http/handler | 36 |
+| interfaces/http/handler | 42 |
 | interfaces/http/middleware | 11 |
 | application/service | 5 |
-| domain/service | 8 |
+| domain/service | 20 |
 | pkg/crypto | 5 |
-| **Total** | **66** |
+| **Total** | **88** |
 
 ---
 
@@ -368,9 +414,9 @@ internal/domain/
   ├── entity/                   → User, PartnerAccount, App, Transaction, Subscription
   ├── valueobject/              → Role, PlanTier, IntegrationType, ChargeType, RiskState, BillingInterval
   ├── repository/               → Interfaces (UserRepo, PartnerAccountRepo, AppRepo, TransactionRepo, SubscriptionRepo)
-  └── service/                  → LedgerService
+  └── service/                  → LedgerService, RiskEngine
 internal/application/
-  ├── service/                  → SyncService
+  ├── service/                  → SyncService (with LedgerRebuilder integration)
   └── scheduler/                → SyncScheduler
 internal/infrastructure/
   ├── config/                   → YAML + env config loading

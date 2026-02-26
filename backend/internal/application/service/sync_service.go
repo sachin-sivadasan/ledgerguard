@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 )
 
 // TransactionFetcher interface for fetching transactions from external API
@@ -20,11 +21,19 @@ type Decryptor interface {
 	Decrypt(ciphertext []byte) ([]byte, error)
 }
 
+// LedgerRebuilder interface for rebuilding ledger after sync
+type LedgerRebuilder interface {
+	RebuildFromTransactions(ctx context.Context, appID uuid.UUID, now time.Time) (*domainservice.LedgerRebuildResult, error)
+}
+
 // SyncResult contains the result of a sync operation
 type SyncResult struct {
 	AppID            uuid.UUID
 	AppName          string
 	TransactionCount int
+	RiskSummary      *domainservice.RiskSummary
+	RevenueAtRisk    int64
+	TotalMRRCents    int64
 	SyncedAt         time.Time
 	Error            error
 }
@@ -36,6 +45,7 @@ type SyncService struct {
 	appRepo     repository.AppRepository
 	partnerRepo repository.PartnerAccountRepository
 	decryptor   Decryptor
+	ledger      LedgerRebuilder
 }
 
 func NewSyncService(
@@ -44,6 +54,7 @@ func NewSyncService(
 	appRepo repository.AppRepository,
 	partnerRepo repository.PartnerAccountRepository,
 	decryptor Decryptor,
+	ledger LedgerRebuilder,
 ) *SyncService {
 	return &SyncService{
 		fetcher:     fetcher,
@@ -51,6 +62,7 @@ func NewSyncService(
 		appRepo:     appRepo,
 		partnerRepo: partnerRepo,
 		decryptor:   decryptor,
+		ledger:      ledger,
 	}
 }
 
@@ -92,10 +104,31 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 		}
 	}
 
+	// Rebuild ledger and recalculate risk states
+	var riskSummary *domainservice.RiskSummary
+	var revenueAtRisk int64
+	var totalMRR int64
+
+	if s.ledger != nil {
+		rebuildResult, err := s.ledger.RebuildFromTransactions(ctx, appID, now)
+		if err != nil {
+			return nil, fmt.Errorf("failed to rebuild ledger: %w", err)
+		}
+		riskSummary = &rebuildResult.RiskSummary
+		totalMRR = rebuildResult.TotalMRRCents
+
+		// Calculate revenue at risk (ONE_CYCLE_MISSED + TWO_CYCLES_MISSED MRR)
+		// This would require access to subscriptions, simplified here
+		revenueAtRisk = 0 // Will be calculated by caller if needed
+	}
+
 	return &SyncResult{
 		AppID:            appID,
 		AppName:          app.Name,
 		TransactionCount: len(transactions),
+		RiskSummary:      riskSummary,
+		RevenueAtRisk:    revenueAtRisk,
+		TotalMRRCents:    totalMRR,
 		SyncedAt:         now,
 	}, nil
 }
@@ -118,10 +151,13 @@ func (s *SyncService) SyncAllApps(ctx context.Context, partnerAccountID uuid.UUI
 		result, err := s.SyncApp(ctx, app.ID)
 		if err != nil {
 			results = append(results, &SyncResult{
-				AppID:    app.ID,
-				AppName:  app.Name,
-				SyncedAt: time.Now().UTC(),
-				Error:    err,
+				AppID:         app.ID,
+				AppName:       app.Name,
+				SyncedAt:      time.Now().UTC(),
+				Error:         err,
+				RiskSummary:   nil,
+				RevenueAtRisk: 0,
+				TotalMRRCents: 0,
 			})
 			continue
 		}

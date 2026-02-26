@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
@@ -119,6 +120,26 @@ func (m *mockDecryptorForSync) Decrypt(ciphertext []byte) ([]byte, error) {
 	return m.decrypted, m.err
 }
 
+type mockLedgerRebuilder struct {
+	result *domainservice.LedgerRebuildResult
+	err    error
+}
+
+func (m *mockLedgerRebuilder) RebuildFromTransactions(ctx context.Context, appID uuid.UUID, now time.Time) (*domainservice.LedgerRebuildResult, error) {
+	if m.result != nil {
+		return m.result, m.err
+	}
+	// Return default result
+	return &domainservice.LedgerRebuildResult{
+		AppID:                appID,
+		SubscriptionsUpdated: 0,
+		TotalMRRCents:        0,
+		TotalUsageCents:      0,
+		RiskSummary:          domainservice.RiskSummary{},
+		RebuildAt:            now,
+	}, m.err
+}
+
 func TestSyncService_SyncApp_Success(t *testing.T) {
 	appID := uuid.New()
 	partnerAccountID := uuid.New()
@@ -164,8 +185,9 @@ func TestSyncService_SyncApp_Success(t *testing.T) {
 	appRepo := &mockAppRepoForSync{app: app}
 	partnerRepo := &mockPartnerRepoForSync{account: partnerAccount}
 	decryptor := &mockDecryptorForSync{decrypted: []byte("decrypted-token")}
+	ledger := &mockLedgerRebuilder{}
 
-	service := NewSyncService(fetcher, txRepo, appRepo, partnerRepo, decryptor)
+	service := NewSyncService(fetcher, txRepo, appRepo, partnerRepo, decryptor, ledger)
 
 	result, err := service.SyncApp(context.Background(), appID)
 	if err != nil {
@@ -183,7 +205,7 @@ func TestSyncService_SyncApp_Success(t *testing.T) {
 
 func TestSyncService_SyncApp_AppNotFound(t *testing.T) {
 	appRepo := &mockAppRepoForSync{err: errors.New("not found")}
-	service := NewSyncService(nil, nil, appRepo, nil, nil)
+	service := NewSyncService(nil, nil, appRepo, nil, nil, nil)
 
 	_, err := service.SyncApp(context.Background(), uuid.New())
 	if err == nil {
@@ -210,7 +232,7 @@ func TestSyncService_SyncApp_FetchError(t *testing.T) {
 	partnerRepo := &mockPartnerRepoForSync{account: partnerAccount}
 	decryptor := &mockDecryptorForSync{decrypted: []byte("token")}
 
-	service := NewSyncService(fetcher, nil, appRepo, partnerRepo, decryptor)
+	service := NewSyncService(fetcher, nil, appRepo, partnerRepo, decryptor, nil)
 
 	_, err := service.SyncApp(context.Background(), appID)
 	if err == nil {
@@ -237,8 +259,9 @@ func TestSyncService_SyncApp_NoTransactions(t *testing.T) {
 	appRepo := &mockAppRepoForSync{app: app}
 	partnerRepo := &mockPartnerRepoForSync{account: partnerAccount}
 	decryptor := &mockDecryptorForSync{decrypted: []byte("token")}
+	ledger := &mockLedgerRebuilder{}
 
-	service := NewSyncService(fetcher, txRepo, appRepo, partnerRepo, decryptor)
+	service := NewSyncService(fetcher, txRepo, appRepo, partnerRepo, decryptor, ledger)
 
 	result, err := service.SyncApp(context.Background(), appID)
 	if err != nil {
@@ -279,8 +302,9 @@ func TestSyncService_SyncAllApps(t *testing.T) {
 	appRepo := &mockAppRepoForSync{app: app}
 	partnerRepo := &mockPartnerRepoForSync{account: partnerAccount}
 	decryptor := &mockDecryptorForSync{decrypted: []byte("token")}
+	ledger := &mockLedgerRebuilder{}
 
-	service := NewSyncService(fetcher, txRepo, appRepo, partnerRepo, decryptor)
+	service := NewSyncService(fetcher, txRepo, appRepo, partnerRepo, decryptor, ledger)
 
 	results, err := service.SyncAllApps(context.Background(), partnerAccountID)
 	if err != nil {

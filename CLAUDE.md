@@ -18,6 +18,7 @@ Update these files when relevant changes occur:
 | `TEST_PLAN.md` | New test scenarios |
 | `prompts.md` | Log every prompt executed |
 | `future.md` | Postponed features/ideas |
+| `marketing/REQUIREMENTS.md` | Marketing site changes |
 
 ### 2. Architecture Diagrams
 Update when architecture changes:
@@ -104,7 +105,21 @@ ON CONFLICT (app_id, date) DO UPDATE SET ...
 - **Never delete** – permanent audit trail
 - Used for trends, AI insights, reconciliation
 
-### 10. Risk Engine (Authoritative)
+### 10. Marketing Site (Next.js)
+```
+marketing/
+├── REQUIREMENTS.md           → Site requirements and copy
+└── site/                     → Next.js 14+ App Router
+    ├── app/                  → Pages and layouts
+    ├── components/           → Reusable UI components
+    └── public/               → Static assets
+```
+- **TailwindCSS** for styling
+- **Minimal professional design** – clean, focused
+- **No authentication** – public landing page only
+- **Responsive** – mobile-first approach
+
+### 11. Risk Engine (Authoritative)
 ```go
 func ClassifyRisk(status string, expectedNextCharge time.Time, now time.Time) RiskState {
     if status == "ACTIVE" {
@@ -213,6 +228,12 @@ ledgerguard/
 │   │           └── router/
 │   ├── pkg/
 │   └── migrations/
+├── marketing/
+│   ├── REQUIREMENTS.md
+│   └── site/                 → Next.js marketing site
+│       ├── app/
+│       ├── components/
+│       └── public/
 └── frontend/
     └── lib/
         ├── domain/
@@ -225,12 +246,20 @@ ledgerguard/
 
 ## QUICK REFERENCE
 
+### Backend (Go)
 | Action | Command |
 |--------|---------|
 | Run tests | `go test ./... -v` |
 | Run server | `go run ./cmd/server` |
 | Format code | `go fmt ./...` |
 | Lint | `golangci-lint run` |
+
+### Marketing Site (Next.js)
+| Action | Command |
+|--------|---------|
+| Dev server | `cd marketing/site && npm run dev` |
+| Build | `cd marketing/site && npm run build` |
+| Lint | `cd marketing/site && npm run lint` |
 
 ---
 

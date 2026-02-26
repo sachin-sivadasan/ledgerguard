@@ -484,3 +484,33 @@
 - Updated TEST_PLAN.md with Slack test scenarios
 - Updated IMPLEMENTATION_LOG.md with SlackNotificationProvider implementation
 - All tests passing (112/112)
+
+### [2026-02-27] Create Marketing Site
+**Original:**
+> Create a Next.js marketing site for LedgerGuard.
+> Sections: Hero section, Problem statement, Renewal Success Rate explanation, Revenue at Risk explanation, AI Daily Revenue Brief section, Pricing tiers, CTA: Connect Shopify Partner
+> Use TailwindCSS. Keep minimal professional design. No Firebase.
+
+**Improved:**
+> Create a Next.js marketing site for LedgerGuard:
+> 1. Create marketing/ folder with REQUIREMENTS.md
+> 2. Initialize Next.js 14+ with App Router and TailwindCSS
+> 3. Create landing page with sections:
+>    - Hero (headline, subheadline, CTA)
+>    - Problem statement (Shopify app developer pain points)
+>    - Renewal Success Rate explanation
+>    - Revenue at Risk explanation
+>    - AI Daily Revenue Brief (Pro feature)
+>    - Pricing tiers (FREE vs PRO)
+>    - Final CTA: Connect Shopify Partner
+> 4. Minimal professional design, responsive
+> 5. No Firebase
+> 6. Update CLAUDE.md with marketing site structure
+
+**Result:**
+- Updated CLAUDE.md with marketing site documentation and structure
+- marketing/REQUIREMENTS.md - Site requirements, copy, design specs
+- marketing/site/ - Next.js 14+ project with TailwindCSS
+- Components: Header, Hero, Problem, RenewalRate, RevenueAtRisk, AIBrief, Pricing, FinalCTA, Footer
+- SEO metadata configured
+- Build successful

@@ -538,6 +538,47 @@ Created SlackNotificationProvider for sending notifications to Slack via webhook
 
 ---
 
+## [2026-02-27] Marketing Site Implementation
+
+**Commit:** Create Next.js marketing site for LedgerGuard
+
+**Summary:**
+Created a public-facing marketing landing page for LedgerGuard using Next.js 14+ with TailwindCSS.
+
+**Implemented:**
+
+1. **Documentation:**
+   - `marketing/REQUIREMENTS.md` - Site requirements, copy, and design specs
+
+2. **Next.js Site (`marketing/site/`):**
+   - Next.js 14+ with App Router
+   - TailwindCSS for styling
+   - Inter font from Google Fonts
+   - Responsive, mobile-first design
+
+3. **Components:**
+   - `Header.tsx` - Fixed navigation with logo and CTA
+   - `Hero.tsx` - Main headline, subheadline, dual CTAs
+   - `Problem.tsx` - 3 pain point cards
+   - `RenewalRate.tsx` - Key metric explanation with visual
+   - `RevenueAtRisk.tsx` - Key metric with breakdown visual
+   - `AIBrief.tsx` - Pro feature showcase with example brief
+   - `Pricing.tsx` - Free vs Pro tier comparison
+   - `FinalCTA.tsx` - Conversion-focused closing section
+   - `Footer.tsx` - Simple footer with copyright
+
+4. **SEO:**
+   - Meta title and description
+   - Semantic HTML structure
+   - Smooth scroll behavior
+
+**Files Created:**
+- `marketing/REQUIREMENTS.md`
+- `marketing/site/` - Full Next.js project
+- 9 React components
+
+---
+
 ## Test Summary
 
 | Package | Tests |

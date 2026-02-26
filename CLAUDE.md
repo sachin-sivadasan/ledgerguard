@@ -130,7 +130,11 @@ frontend/
 │   └── SCREENS.puml          → Screen flow diagram
 └── app/                      → Flutter application
     └── lib/
-        ├── core/             → Constants, themes, utils
+        ├── core/
+        │   ├── config/       → Environment configs (dev/prod)
+        │   ├── constants/    → App constants
+        │   ├── theme/        → App theme
+        │   └── utils/        → Utilities
         ├── data/
         │   ├── datasources/  → API clients, local storage
         │   ├── models/       → JSON serializable models
@@ -142,31 +146,53 @@ frontend/
         └── presentation/
             ├── blocs/        → Bloc state management
             ├── pages/        → Screen widgets
-            └── widgets/      → Reusable components
+            ├── widgets/      → Reusable components
+            └── router/       → GoRouter configuration
 ```
 
 **Architecture:**
 - **Clean Architecture** with domain, data, presentation layers
 - **Bloc** for state management (events → states)
-- **Dependency Injection** with get_it
+- **GoRouter** for navigation
+- **get_it** for dependency injection
 - **Firebase Auth** for authentication
 
 **Bloc Pattern:**
 ```dart
 // Events
-abstract class AppEvent {}
-class LoadApps extends AppEvent {}
+abstract class AppsEvent {}
+class LoadApps extends AppsEvent {}
+class RefreshApps extends AppsEvent {}
 
 // States
-abstract class AppState {}
-class AppLoading extends AppState {}
-class AppLoaded extends AppState { final List<App> apps; }
-class AppError extends AppState { final String message; }
+abstract class AppsState {}
+class AppsInitial extends AppsState {}
+class AppsLoading extends AppsState {}
+class AppsLoaded extends AppsState {
+  final List<App> apps;
+  AppsLoaded(this.apps);
+}
+class AppsError extends AppsState {
+  final String message;
+  AppsError(this.message);
+}
 
 // Bloc
-class AppBloc extends Bloc<AppEvent, AppState> {
-  AppBloc() : super(AppInitial()) {
+class AppsBloc extends Bloc<AppsEvent, AppsState> {
+  final GetAppsUseCase getAppsUseCase;
+
+  AppsBloc(this.getAppsUseCase) : super(AppsInitial()) {
     on<LoadApps>(_onLoadApps);
+  }
+
+  Future<void> _onLoadApps(LoadApps event, Emitter<AppsState> emit) async {
+    emit(AppsLoading());
+    try {
+      final apps = await getAppsUseCase.execute();
+      emit(AppsLoaded(apps));
+    } catch (e) {
+      emit(AppsError(e.toString()));
+    }
   }
 }
 ```

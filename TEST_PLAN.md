@@ -294,3 +294,114 @@ go test ./... -race
 | internal/delivery/http | 70% | - |
 | internal/repository | 70% | - |
 | Overall | 75% | - |
+
+---
+
+## Frontend Tests (Flutter)
+
+### F1. Unit Tests (Bloc)
+
+#### F1.1 AuthBloc
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FB-001 | Login event success | Emit authenticated state | Pending |
+| FB-002 | Login event failure | Emit error state | Pending |
+| FB-003 | Logout event | Emit unauthenticated state | Pending |
+| FB-004 | Check auth on startup | Emit correct state | Pending |
+
+#### F1.2 OnboardingBloc
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FB-010 | Connect Shopify Partner | Navigate to app selection | Pending |
+| FB-011 | Select app success | Emit app selected state | Pending |
+| FB-012 | Select app failure | Emit error state | Pending |
+
+#### F1.3 DashboardBloc
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FB-020 | Load metrics success | Emit metrics loaded | Pending |
+| FB-021 | Load metrics failure | Emit error state | Pending |
+| FB-022 | Refresh metrics | Re-fetch and emit updated | Pending |
+
+#### F1.4 SubscriptionBloc
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FB-030 | Load subscriptions | Emit list of subscriptions | Pending |
+| FB-031 | Filter by risk state | Emit filtered list | Pending |
+| FB-032 | View subscription detail | Emit detail state | Pending |
+
+---
+
+### F2. UseCases
+
+#### F2.1 Authentication
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FU-001 | GetCurrentUser | Returns user or null | Pending |
+| FU-002 | SignInWithEmail | Returns user on success | Pending |
+| FU-003 | SignOut | Clears user session | Pending |
+
+#### F2.2 Metrics
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FU-010 | GetDashboardMetrics | Returns KPI snapshot | Pending |
+| FU-011 | GetSubscriptions | Returns subscription list | Pending |
+| FU-012 | GetSubscriptionDetail | Returns single subscription | Pending |
+
+---
+
+### F3. Repository Tests
+
+#### F3.1 AuthRepository
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FR-001 | Sign in with Firebase | Returns user data | Pending |
+| FR-002 | Token refresh | New token fetched | Pending |
+| FR-003 | Sign out | Session cleared | Pending |
+
+#### F3.2 MetricsRepository
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FR-010 | Fetch metrics from API | Returns parsed metrics | Pending |
+| FR-011 | API error handling | Throws domain exception | Pending |
+
+---
+
+### F4. Widget Tests
+
+#### F4.1 Core Widgets
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-001 | MetricCard renders | Shows value and label | Pending |
+| FW-002 | RiskBadge colors | Correct color per state | Pending |
+| FW-003 | SubscriptionTile | Shows subscription info | Pending |
+
+---
+
+### Running Frontend Tests
+
+```bash
+# Run all frontend tests
+cd frontend/app && flutter test
+
+# Run with coverage
+flutter test --coverage
+
+# Run specific test file
+flutter test test/blocs/auth_bloc_test.dart
+
+# Watch mode
+flutter test --watch
+```
+
+---
+
+### Frontend Coverage Goals
+
+| Layer | Target | Current |
+|-------|--------|---------|
+| Blocs | 90% | - |
+| UseCases | 90% | - |
+| Repositories | 80% | - |
+| Widgets | 70% | - |
+| Overall | 80% | - |

@@ -136,3 +136,24 @@
 - Updated main.go with -config flag and CONFIG_PATH env var
 - Updated .gitignore for config.yaml, config.local.yaml
 - All tests passing (14/14)
+
+### [2026-02-26] Role-Based Access Middleware
+**Original:**
+> Implement role-based access middleware. Roles: OWNER, ADMIN. Restrict manual partner integration to ADMIN only. Add tests.
+
+**Improved:**
+> Implement role-based access control (RBAC) middleware:
+> 1. Create RoleMiddleware in interfaces/http/middleware
+> 2. Support multiple allowed roles per route
+> 3. Return 403 Forbidden if user lacks required role
+> 4. OWNER has all permissions (superset of ADMIN)
+> 5. Create helper function RequireRoles(roles ...Role)
+> 6. Write tests first (TDD)
+
+**Result:**
+- interfaces/http/middleware/role.go - RequireRoles middleware
+- interfaces/http/middleware/role_test.go - 5 tests
+- OWNER can access all routes (superset)
+- ADMIN can only access ADMIN-allowed routes
+- Updated TEST_PLAN.md with role middleware tests
+- All tests passing (19/19)

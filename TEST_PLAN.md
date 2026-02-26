@@ -53,6 +53,15 @@
 | A-005 | Valid token, new user | 200, user auto-created with OWNER role | ✓ |
 | A-006 | Valid token, user creation fails | 500, internal error | ✓ |
 
+#### 2.2 Role Middleware
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| R-001 | No user in context | 401, unauthorized | ✓ |
+| R-002 | ADMIN accessing ADMIN route | 200, allowed | ✓ |
+| R-003 | OWNER accessing ADMIN route | 200, allowed (OWNER is superset) | ✓ |
+| R-004 | ADMIN accessing OWNER-only route | 403, forbidden | ✓ |
+| R-005 | Multiple roles allowed | 200, allowed if user has any | ✓ |
+
 ---
 
 ### 3. Domain (Future)

@@ -288,3 +288,40 @@
 - Updated ER_current.puml with transactions entity
 - Updated SEQUENCE_current.puml with sync flow
 - All tests passing (58/58)
+
+### [2026-02-26] Implement Deterministic Ledger Rebuild
+**Original:**
+> Implement deterministic ledger rebuild.
+> - Separate RECURRING and USAGE
+> - Compute expected renewal date
+> - Store last_recurring_charge_date
+
+**Improved:**
+> Implement deterministic ledger rebuild service:
+> 1. Create Subscription entity in domain/entity (with last_recurring_charge_date, expected_next_charge_date, risk_state)
+> 2. Create RiskState and BillingInterval value objects
+> 3. Create SubscriptionRepository interface and PostgreSQL implementation
+> 4. Create migration 000005_create_subscriptions_table
+> 5. Create LedgerService in domain/service with:
+>    - RebuildFromTransactions(appID) - Rebuild subscription state from transactions
+>    - Separate RECURRING revenue (for MRR) from USAGE revenue
+>    - Compute expected_next_charge_date based on billing_interval (MONTHLY +1 month, ANNUAL +1 year)
+>    - Update last_recurring_charge_date from most recent RECURRING transaction
+>    - Classify risk state based on days past due
+> 6. Ensure deterministic: same input → same output
+> 7. Write tests first (TDD)
+> 8. Update diagrams, documentation
+
+**Result:**
+- domain/valueobject/risk_state.go - RiskState (SAFE, ONE_CYCLE_MISSED, TWO_CYCLES_MISSED, CHURNED)
+- domain/valueobject/billing_interval.go - BillingInterval (MONTHLY, ANNUAL) with NextChargeDate()
+- domain/entity/subscription.go - Subscription entity with risk classification
+- domain/repository/subscription_repository.go - SubscriptionRepository interface
+- infrastructure/persistence/subscription_repository.go - PostgreSQL implementation
+- domain/service/ledger_service.go + ledger_service_test.go - LedgerService (8 tests)
+- migrations/000005_create_subscriptions_table.up.sql / .down.sql
+- Updated TEST_PLAN.md with ledger and risk tests
+- Updated DATABASE_SCHEMA.md with subscriptions migration
+- Updated ER_current.puml with subscriptions entity
+- Updated SEQUENCE_current.puml with ledger rebuild flow
+- All tests passing (66/66)

@@ -48,10 +48,29 @@ entity "transactions" as transactions {
   created_at : TIMESTAMPTZ
 }
 
+entity "subscriptions" as subscriptions {
+  *id : UUID <<PK>>
+  --
+  *app_id : UUID <<FK>>
+  *shopify_gid : VARCHAR(255) <<UNIQUE>>
+  *myshopify_domain : VARCHAR(255)
+  plan_name : VARCHAR(255)
+  *base_price_cents : BIGINT
+  currency : VARCHAR(3) <<DEFAULT: USD>>
+  billing_interval : VARCHAR(20) <<CHECK: MONTHLY, ANNUAL>>
+  *status : VARCHAR(20) <<CHECK: ACTIVE, CANCELLED, FROZEN, PENDING>>
+  last_recurring_charge_date : TIMESTAMPTZ
+  expected_next_charge_date : TIMESTAMPTZ
+  *risk_state : VARCHAR(30) <<CHECK: SAFE, ONE_CYCLE_MISSED, TWO_CYCLES_MISSED, CHURNED>>
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
 ' Relationships
 users ||--o{ partner_accounts : "has"
 partner_accounts ||--o{ apps : "tracks"
 apps ||--o{ transactions : "records"
+apps ||--o{ subscriptions : "has"
 
 note right of users
   Migration: 000001_create_users_table
@@ -88,6 +107,20 @@ note right of transactions
   - idx_transactions_app_date
   - idx_transactions_domain
   - idx_transactions_type
+end note
+
+note right of subscriptions
+  Migration: 000005_create_subscriptions_table
+  - Rebuilt from transactions (deterministic)
+  - Tracks last_recurring_charge_date
+  - Computes expected_next_charge_date
+  - Risk classification
+
+  Indexes:
+  - idx_subscriptions_app_status
+  - idx_subscriptions_app_risk
+  - idx_subscriptions_domain
+  - idx_subscriptions_expected_charge
 end note
 
 @enduml

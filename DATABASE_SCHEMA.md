@@ -333,6 +333,7 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000002_create_partner_accounts_table | Create partner_accounts table with encrypted tokens | ✓ Implemented |
 | 000003_create_apps_table | Create apps table for tracking Shopify apps | ✓ Implemented |
 | 000004_create_transactions_table | Create transactions table for immutable ledger | ✓ Implemented |
+| 000005_create_subscriptions_table | Create subscriptions table with risk state tracking | ✓ Implemented |
 
 ---
 

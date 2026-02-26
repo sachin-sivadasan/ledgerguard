@@ -126,24 +126,36 @@
 
 ---
 
-### 4. Domain (Future)
+### 4. Domain
 
-#### 4.1 Risk Engine
+#### 4.1 LedgerService
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
-| R-001 | Active subscription | SAFE | Pending |
-| R-002 | 0-30 days past due | SAFE | Pending |
-| R-003 | 31-60 days past due | ONE_CYCLE_MISSED | Pending |
-| R-004 | 61-90 days past due | TWO_CYCLE_MISSED | Pending |
-| R-005 | >90 days past due | CHURNED | Pending |
+| LS-001 | Rebuild from transactions success | Subscriptions created, MRR calculated | ✓ |
+| LS-002 | Separates RECURRING and USAGE | MRR = RECURRING only, Usage separate | ✓ |
+| LS-003 | Computes expected renewal date | next_charge = last_charge + interval | ✓ |
+| LS-004 | Classifies risk state | 31-60 days past due = ONE_CYCLE_MISSED | ✓ |
+| LS-005 | Separate revenue by type | Returns recurring/usage arrays | ✓ |
+| LS-006 | Deterministic rebuild | Same input → same output | ✓ |
+| LS-007 | No transactions | Returns empty result | ✓ |
+| LS-008 | Detects annual billing | 365-day pattern = ANNUAL | ✓ |
 
-#### 4.2 Revenue Classification
+#### 4.2 Risk Engine
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
-| RC-001 | AppSubscriptionSale | RECURRING | Pending |
-| RC-002 | AppUsageSale | USAGE | Pending |
-| RC-003 | AppOneTimeSale | ONE_TIME | Pending |
-| RC-004 | AppRefund | REFUND | Pending |
+| R-001 | Active subscription | SAFE | ✓ |
+| R-002 | 0-30 days past due | SAFE (grace period) | ✓ |
+| R-003 | 31-60 days past due | ONE_CYCLE_MISSED | ✓ |
+| R-004 | 61-90 days past due | TWO_CYCLES_MISSED | ✓ |
+| R-005 | >90 days past due | CHURNED | ✓ |
+
+#### 4.3 Revenue Classification
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| RC-001 | AppSubscriptionSale | RECURRING | ✓ |
+| RC-002 | AppUsageSale | USAGE | ✓ |
+| RC-003 | AppOneTimeSale | ONE_TIME | ✓ |
+| RC-004 | AppRefund | REFUND | ✓ |
 
 ---
 

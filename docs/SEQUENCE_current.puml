@@ -296,4 +296,53 @@ end
 
 Sync -> Sync: Log results
 
+' ==========================================
+' 7. Ledger Rebuild Flow
+' ==========================================
+newpage Ledger Rebuild Flow
+
+participant "LedgerService" as Ledger
+database "PostgreSQL" as DB
+
+note over Ledger
+  Deterministic rebuild:
+  Same transactions → Same subscriptions
+end note
+
+== Rebuild From Transactions ==
+
+Ledger -> DB: SELECT transactions\nWHERE app_id = ? AND date >= 12_months_ago
+DB --> Ledger: All transactions
+
+Ledger -> Ledger: Group by myshopify_domain
+
+loop For each store domain
+    Ledger -> Ledger: Filter RECURRING transactions
+    Ledger -> Ledger: Sort by transaction_date
+    Ledger -> Ledger: Get most recent charge
+    Ledger -> Ledger: Detect billing interval\n(MONTHLY vs ANNUAL)
+    Ledger -> Ledger: Calculate expected_next_charge_date\n(last_charge + interval)
+    Ledger -> Ledger: Classify risk state
+end
+
+Ledger -> DB: DELETE subscriptions\nWHERE app_id = ?
+DB --> Ledger: Cleared
+
+loop For each subscription
+    Ledger -> DB: INSERT subscription\n(ON CONFLICT DO UPDATE)
+    DB --> Ledger: Saved
+end
+
+Ledger -> Ledger: Calculate totals:\n- MRR (RECURRING only)\n- Usage Revenue (USAGE only)\n- Risk summary counts
+
+Ledger --> Ledger: LedgerRebuildResult
+
+note over Ledger
+  Risk Classification:
+  - 0-30 days past due: SAFE
+  - 31-60 days past due: ONE_CYCLE_MISSED
+  - 61-90 days past due: TWO_CYCLES_MISSED
+  - >90 days past due: CHURNED
+end note
+
 @enduml

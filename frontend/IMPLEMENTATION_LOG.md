@@ -298,6 +298,74 @@ Created Partner Integration page for connecting Shopify Partner account via OAut
 
 ---
 
+## [2026-02-27] App Selection Screen
+
+**Commit:** Create App Selection screen with radio list and local storage
+
+**Summary:**
+Created App Selection page for choosing which Shopify app to track revenue for after partner connection.
+
+**Implemented:**
+
+1. **Domain Layer:**
+   - `ShopifyApp` entity with id, name, iconUrl, description, installCount
+   - `AppRepository` interface for app operations
+   - `AppException`, `NoAppsFoundException`, `FetchAppsException`
+
+2. **Data Layer:**
+   - `MockAppRepository` - Mock implementation with sample apps
+   - Simulates fetch with configurable delay
+   - Local storage for selected app (in-memory for now)
+
+3. **Presentation Layer (Bloc):**
+   - **AppSelectionBloc** - Manages app selection state
+   - **Events:**
+     - `FetchAppsRequested` - Load apps from backend
+     - `AppSelected(app)` - User selected an app
+     - `ConfirmSelectionRequested` - Save selection
+     - `LoadSelectedAppRequested` - Load previous selection
+   - **States:**
+     - `AppSelectionInitial` - Before fetch
+     - `AppSelectionLoading` - Fetching apps
+     - `AppSelectionLoaded(apps, selectedApp)` - Ready for selection
+     - `AppSelectionSaving` - Saving selection
+     - `AppSelectionConfirmed(app)` - Selection saved
+     - `AppSelectionError(message)` - Error occurred
+
+4. **App Selection Page:**
+   - Radio selection list with app tiles
+   - App name, description, install count display
+   - Visual selection indicator (radio + check icon)
+   - "Confirm Selection" button when app selected
+   - Loading state with progress indicator
+   - Error state with retry button
+   - Navigates to dashboard after confirmation
+   - Route: `/app-selection`
+
+5. **Partner Integration Update:**
+   - Navigates to `/app-selection` after successful connection
+
+**Tests (TDD):**
+- AppSelectionBloc: 12 tests (fetch, select, confirm, load)
+- AppSelectionPage: 15 tests (rendering, events, states)
+
+**Files Created/Modified:**
+- `lib/domain/entities/shopify_app.dart`
+- `lib/domain/repositories/app_repository.dart`
+- `lib/data/repositories/mock_app_repository.dart`
+- `lib/presentation/blocs/app_selection/` - Bloc, events, states, barrel
+- `lib/presentation/pages/app_selection_page.dart`
+- `lib/presentation/pages/partner_integration_page.dart` (updated)
+- `lib/presentation/router/app_router.dart` (updated)
+- `lib/app.dart` (updated)
+- `lib/core/di/injection.config.dart` (updated)
+- `test/presentation/blocs/app_selection_bloc_test.dart`
+- `test/presentation/pages/app_selection_page_test.dart`
+
+**Tests:** 107 passing
+
+---
+
 ## Test Summary
 
 | Layer | Tests |
@@ -305,13 +373,15 @@ Created Partner Integration page for connecting Shopify Partner account via OAut
 | presentation/blocs/auth | 11 |
 | presentation/blocs/role | 11 |
 | presentation/blocs/partner_integration | 10 |
+| presentation/blocs/app_selection | 12 |
 | presentation/pages/login | 9 |
 | presentation/pages/signup | 8 |
 | presentation/pages/manual_integration | 4 |
 | presentation/pages/partner_integration | 16 |
+| presentation/pages/app_selection | 15 |
 | presentation/widgets/role_guard | 10 |
 | widget | 1 |
-| **Total** | **80** |
+| **Total** | **107** |
 
 ---
 
@@ -328,14 +398,14 @@ frontend/app/lib/
 ├── data/
 │   ├── datasources/    → API clients, local storage
 │   ├── models/         → JSON serializable models
-│   └── repositories/   → FirebaseAuthRepository, ApiUserProfileRepository, MockPartnerIntegrationRepository
+│   └── repositories/   → FirebaseAuthRepository, ApiUserProfileRepository, MockPartnerIntegrationRepository, MockAppRepository
 ├── domain/
-│   ├── entities/       → UserEntity, UserProfile, PartnerIntegration
-│   ├── repositories/   → AuthRepository, UserProfileRepository, PartnerIntegrationRepository
+│   ├── entities/       → UserEntity, UserProfile, PartnerIntegration, ShopifyApp
+│   ├── repositories/   → AuthRepository, UserProfileRepository, PartnerIntegrationRepository, AppRepository
 │   └── usecases/       → Business logic
 └── presentation/
-    ├── blocs/          → AuthBloc, RoleBloc, PartnerIntegrationBloc
-    ├── pages/          → LoginPage, SignupPage, ManualIntegrationPage, PartnerIntegrationPage
+    ├── blocs/          → AuthBloc, RoleBloc, PartnerIntegrationBloc, AppSelectionBloc
+    ├── pages/          → LoginPage, SignupPage, ManualIntegrationPage, PartnerIntegrationPage, AppSelectionPage
     ├── widgets/        → RoleGuard, ProGuard
     └── router/         → GoRouter with auth/role redirects
 ```

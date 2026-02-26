@@ -75,6 +75,8 @@ class _PartnerIntegrationPageState extends State<PartnerIntegrationPage> {
                 backgroundColor: AppTheme.success,
               ),
             );
+            // Navigate to app selection after successful connection
+            context.go('/app-selection');
           }
         },
         builder: (context, state) {

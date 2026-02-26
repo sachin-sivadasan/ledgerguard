@@ -140,3 +140,32 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (80/80)
 
 ---
+
+## Prompt 006 – App Selection Screen
+**Date:** 2024-01-XX
+**Status:** Complete
+
+**Prompt:**
+> After partner connection: Fetch list of apps from backend. Display: List of apps, Radio selection, Confirm selection button. Store selected app locally. Add loading and error handling.
+
+**Changes:**
+- Domain layer:
+  - `domain/entities/shopify_app.dart` - ShopifyApp entity
+  - `domain/repositories/app_repository.dart` - Repository interface + exceptions
+- Data layer:
+  - `data/repositories/mock_app_repository.dart` - Mock implementation with sample apps
+- Presentation layer:
+  - `presentation/blocs/app_selection/app_selection_bloc.dart` - AppSelectionBloc
+  - `presentation/blocs/app_selection/app_selection_event.dart` - FetchApps, AppSelected, ConfirmSelection, LoadSelectedApp
+  - `presentation/blocs/app_selection/app_selection_state.dart` - Initial, Loading, Loaded, Saving, Confirmed, Error
+  - `presentation/pages/app_selection_page.dart` - App selection page with radio list
+- Updated `app.dart` - AppSelectionBloc integration
+- Updated `core/di/injection.config.dart` - Registered new dependencies
+- Updated router with /app-selection route
+- Updated partner_integration_page.dart - Navigate to app selection after success
+- Tests:
+  - `test/presentation/blocs/app_selection_bloc_test.dart` - 12 tests
+  - `test/presentation/pages/app_selection_page_test.dart` - 15 tests
+- All tests passing (107/107)
+
+---

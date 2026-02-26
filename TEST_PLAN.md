@@ -351,6 +351,22 @@ go test ./... -race
 | FB-078 | Disconnect success | [Loading, NotConnected] | ✓ |
 | FB-079 | Disconnect failure | [Loading, Error] | ✓ |
 
+#### F1.6 AppSelectionBloc
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FB-080 | Initial state | AppSelectionInitial | ✓ |
+| FB-081 | FetchApps success | [Loading, Loaded] | ✓ |
+| FB-082 | FetchApps with previous selection | [Loading, Loaded(selectedApp)] | ✓ |
+| FB-083 | FetchApps no apps | [Loading, Error] | ✓ |
+| FB-084 | FetchApps failure | [Loading, Error] | ✓ |
+| FB-085 | AppSelected updates state | Loaded with selectedApp | ✓ |
+| FB-086 | AppSelected in wrong state | No change | ✓ |
+| FB-087 | ConfirmSelection success | [Saving, Confirmed] | ✓ |
+| FB-088 | ConfirmSelection failure | [Saving, Error] | ✓ |
+| FB-089 | ConfirmSelection no selection | No change | ✓ |
+| FB-090 | LoadSelectedApp exists | [Confirmed] | ✓ |
+| FB-091 | LoadSelectedApp not exists | No change | ✓ |
+
 ---
 
 ### F2. UseCases
@@ -467,6 +483,25 @@ go test ./... -race
 | FW-073 | Shows success state | Connected card visible | ✓ |
 | FW-074 | Hides buttons when loading | Connect buttons not visible | ✓ |
 | FW-075 | Checks status on init | Event added on page load | ✓ |
+
+#### F4.8 AppSelectionPage
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-080 | Renders page title | "Select App" visible | ✓ |
+| FW-081 | Fetches apps on init | FetchAppsRequested dispatched | ✓ |
+| FW-082 | Shows loading indicator | CircularProgressIndicator when loading | ✓ |
+| FW-083 | Shows error message | Error text when error state | ✓ |
+| FW-084 | Dispatches FetchApps on retry | Event added on retry tap | ✓ |
+| FW-085 | Shows list of apps | App names visible | ✓ |
+| FW-086 | Shows app descriptions | Description text visible | ✓ |
+| FW-087 | Shows install counts | Install count visible | ✓ |
+| FW-088 | Dispatches AppSelected on tap | Event added with app | ✓ |
+| FW-089 | Shows Confirm button when selected | "Confirm Selection" visible | ✓ |
+| FW-090 | Hides Confirm button when not selected | Button not visible | ✓ |
+| FW-091 | Dispatches ConfirmSelection | Event added on confirm tap | ✓ |
+| FW-092 | Shows saving indicator | "Saving..." text visible | ✓ |
+| FW-093 | Disables selection when saving | Taps don't dispatch events | ✓ |
+| FW-094 | Shows selected app indicator | Check icon visible | ✓ |
 
 ---
 

@@ -40,7 +40,7 @@ func TestRoleMiddleware_AdminAccessingAdminRoute(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req = req.WithContext(setUserContext(req.Context(), user))
+	req = req.WithContext(SetUserContext(req.Context(), user))
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -69,7 +69,7 @@ func TestRoleMiddleware_OwnerAccessingAdminRoute(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req = req.WithContext(setUserContext(req.Context(), user))
+	req = req.WithContext(SetUserContext(req.Context(), user))
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -96,7 +96,7 @@ func TestRoleMiddleware_AdminAccessingOwnerOnlyRoute(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req = req.WithContext(setUserContext(req.Context(), user))
+	req = req.WithContext(SetUserContext(req.Context(), user))
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -121,7 +121,7 @@ func TestRoleMiddleware_MultipleRolesAllowed(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req = req.WithContext(setUserContext(req.Context(), user))
+	req = req.WithContext(SetUserContext(req.Context(), user))
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)

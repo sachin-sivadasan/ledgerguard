@@ -290,6 +290,10 @@ CREATE INDEX idx_subscriptions_domain ON subscriptions(myshopify_domain);
 -- snapshots: time-series queries
 CREATE INDEX idx_snapshots_app_date ON daily_metrics_snapshot(app_id, date DESC);
 
+-- partner_accounts: user and partner lookups
+CREATE INDEX idx_partner_accounts_user_id ON partner_accounts(user_id);
+CREATE INDEX idx_partner_accounts_partner_id ON partner_accounts(partner_id);
+
 -- device_tokens: push notifications
 CREATE INDEX idx_device_tokens_user ON device_tokens(user_id);
 
@@ -326,6 +330,7 @@ CREATE TRIGGER notification_preferences_updated_at
 | Migration | Description | Status |
 |-----------|-------------|--------|
 | 000001_create_users_table | Create users table with Firebase UID, role, plan_tier | ✓ Implemented |
+| 000002_create_partner_accounts_table | Create partner_accounts table with encrypted tokens | ✓ Implemented |
 
 ---
 

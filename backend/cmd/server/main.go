@@ -56,7 +56,11 @@ func run() error {
 	}
 
 	healthHandler := handler.NewHealthHandler(db)
-	r := router.New(healthHandler)
+	r := router.New(router.Config{
+		HealthHandler: healthHandler,
+		OAuthHandler:  nil, // TODO: Wire up OAuth handler
+		AuthMW:        nil, // TODO: Wire up auth middleware
+	})
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

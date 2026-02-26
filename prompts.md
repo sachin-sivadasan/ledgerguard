@@ -157,3 +157,36 @@
 - ADMIN can only access ADMIN-allowed routes
 - Updated TEST_PLAN.md with role middleware tests
 - All tests passing (19/19)
+
+### [2026-02-26] Shopify Partner OAuth Flow
+**Original:**
+> Implement Shopify Partner OAuth flow. - Redirect endpoint - Callback endpoint - Exchange code for access_token - Encrypt token before saving - Store partner_account. Write tests.
+
+**Improved:**
+> Implement Shopify Partner OAuth flow:
+> 1. Create IntegrationType value object (OAUTH, MANUAL)
+> 2. Create PartnerAccount entity
+> 3. Create PartnerAccountRepository interface
+> 4. Create PostgresPartnerAccountRepository implementation
+> 5. Create AES-256-GCM encryption in pkg/crypto with tests
+> 6. Create ShopifyOAuthService for token exchange with tests
+> 7. Create OAuthHandler with StartOAuth and Callback endpoints
+> 8. Add migration 000002_create_partner_accounts_table
+> 9. Update config with Shopify and Encryption settings
+> 10. Update router with OAuth routes
+> 11. Write tests first (TDD)
+
+**Result:**
+- domain/valueobject/integration_type.go - IntegrationType (OAUTH, MANUAL)
+- domain/entity/partner_account.go - PartnerAccount entity
+- domain/repository/partner_account_repository.go - Repository interface
+- infrastructure/persistence/partner_account_repository.go - PostgreSQL implementation
+- infrastructure/external/shopify_oauth.go + shopify_oauth_test.go - OAuth service (3 tests)
+- interfaces/http/handler/oauth.go + oauth_test.go - OAuth handlers (4 tests)
+- pkg/crypto/aes.go + aes_test.go - AES-256-GCM encryption (5 tests)
+- migrations/000002_create_partner_accounts_table.up.sql / .down.sql
+- Updated config with Shopify and Encryption settings
+- Updated router with OAuth routes (/api/v1/integrations/shopify/oauth, /callback)
+- Updated TEST_PLAN.md with OAuth and encryption test scenarios
+- Updated DATABASE_SCHEMA.md with partner_accounts migration
+- All tests passing (24/24)

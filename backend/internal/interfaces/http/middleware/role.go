@@ -47,7 +47,7 @@ func hasRequiredRole(userRole valueobject.Role, allowedRoles []valueobject.Role)
 	return false
 }
 
-// setUserContext is a helper for testing - sets user in context
-func setUserContext(ctx context.Context, user *entity.User) context.Context {
+// SetUserContext sets user in context (exported for testing)
+func SetUserContext(ctx context.Context, user *entity.User) context.Context {
 	return context.WithValue(ctx, userContextKey, user)
 }

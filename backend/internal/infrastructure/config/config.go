@@ -8,9 +8,11 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Database DatabaseConfig `yaml:"database"`
-	Firebase FirebaseConfig `yaml:"firebase"`
+	Server     ServerConfig     `yaml:"server"`
+	Database   DatabaseConfig   `yaml:"database"`
+	Firebase   FirebaseConfig   `yaml:"firebase"`
+	Shopify    ShopifyConfig    `yaml:"shopify"`
+	Encryption EncryptionConfig `yaml:"encryption"`
 }
 
 type ServerConfig struct {
@@ -28,6 +30,17 @@ type DatabaseConfig struct {
 
 type FirebaseConfig struct {
 	CredentialsFile string `yaml:"credentials_file"`
+}
+
+type ShopifyConfig struct {
+	ClientID     string `yaml:"client_id"`
+	ClientSecret string `yaml:"client_secret"`
+	RedirectURI  string `yaml:"redirect_uri"`
+	Scopes       string `yaml:"scopes"`
+}
+
+type EncryptionConfig struct {
+	MasterKey string `yaml:"master_key"`
 }
 
 // Load loads configuration from file and environment variables.
@@ -102,6 +115,25 @@ func applyEnvOverrides(cfg *Config) {
 	// Firebase
 	if v := os.Getenv("FIREBASE_CREDENTIALS_FILE"); v != "" {
 		cfg.Firebase.CredentialsFile = v
+	}
+
+	// Shopify
+	if v := os.Getenv("SHOPIFY_CLIENT_ID"); v != "" {
+		cfg.Shopify.ClientID = v
+	}
+	if v := os.Getenv("SHOPIFY_CLIENT_SECRET"); v != "" {
+		cfg.Shopify.ClientSecret = v
+	}
+	if v := os.Getenv("SHOPIFY_REDIRECT_URI"); v != "" {
+		cfg.Shopify.RedirectURI = v
+	}
+	if v := os.Getenv("SHOPIFY_SCOPES"); v != "" {
+		cfg.Shopify.Scopes = v
+	}
+
+	// Encryption
+	if v := os.Getenv("ENCRYPTION_MASTER_KEY"); v != "" {
+		cfg.Encryption.MasterKey = v
 	}
 }
 

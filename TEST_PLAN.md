@@ -64,9 +64,33 @@
 
 ---
 
-### 3. Domain (Future)
+### 3. Integrations
 
-#### 3.1 Risk Engine
+#### 3.1 Shopify OAuth
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| O-001 | Generate OAuth URL | Valid URL with client_id, redirect_uri, state | ✓ |
+| O-002 | Exchange code for token (success) | Access token returned | ✓ |
+| O-003 | Exchange code for token (error) | Error returned | ✓ |
+| O-004 | StartOAuth handler | 302 redirect to Shopify | ✓ |
+| O-005 | Callback missing code | 400 bad request | ✓ |
+| O-006 | Callback no user in context | 401 unauthorized | ✓ |
+| O-007 | Callback success | 200, account created | ✓ |
+
+#### 3.2 Encryption
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| E-001 | Encrypt and decrypt | Original data recovered | ✓ |
+| E-002 | Same plaintext different ciphertext | Non-deterministic (random IV) | ✓ |
+| E-003 | Invalid key length | Error returned | ✓ |
+| E-004 | Invalid ciphertext | Error returned | ✓ |
+| E-005 | Wrong key decryption | Error returned | ✓ |
+
+---
+
+### 4. Domain (Future)
+
+#### 4.1 Risk Engine
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
 | R-001 | Active subscription | SAFE | Pending |
@@ -75,7 +99,7 @@
 | R-004 | 61-90 days past due | TWO_CYCLE_MISSED | Pending |
 | R-005 | >90 days past due | CHURNED | Pending |
 
-#### 3.2 Revenue Classification
+#### 4.2 Revenue Classification
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
 | RC-001 | AppSubscriptionSale | RECURRING | Pending |
@@ -85,9 +109,9 @@
 
 ---
 
-### 4. Sync Engine (Future)
+### 5. Sync Engine (Future)
 
-#### 4.1 Transaction Sync
+#### 5.1 Transaction Sync
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
 | S-001 | First sync (empty DB) | All transactions imported | Pending |
@@ -97,9 +121,9 @@
 
 ---
 
-### 5. API Endpoints (Future)
+### 6. API Endpoints (Future)
 
-#### 5.1 Workspaces
+#### 6.1 Workspaces
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
 | W-001 | Create workspace | 201, workspace created | Pending |

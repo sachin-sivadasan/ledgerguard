@@ -329,9 +329,11 @@ go test ./... -race
 | FB-030 | Initial state | DashboardInitial | ✓ |
 | FB-031 | Load metrics success | [Loading, Loaded] | ✓ |
 | FB-032 | Load metrics failure | [Loading, Error] | ✓ |
-| FB-033 | Refresh metrics success | [Loaded(refreshing), Loaded] | ✓ |
-| FB-034 | Refresh metrics failure | [Loaded(refreshing), Loaded] keeps data | ✓ |
-| FB-035 | Refresh when not loaded | Triggers load | ✓ |
+| FB-033 | Load metrics empty | [Loading, Empty] | ✓ |
+| FB-034 | Refresh metrics success | [Loaded(refreshing), Loaded] | ✓ |
+| FB-035 | Refresh metrics failure | [Loaded(refreshing), Loaded] keeps data | ✓ |
+| FB-036 | Refresh when not loaded | Triggers load | ✓ |
+| FB-037 | Refresh returns empty | [Loaded(refreshing), Empty] | ✓ |
 
 #### F1.4 SubscriptionBloc
 | ID | Scenario | Expected Result | Status |
@@ -514,20 +516,25 @@ go test ./... -race
 | FW-102 | Shows loading indicator | CircularProgressIndicator when loading | ✓ |
 | FW-103 | Shows error message | Error text when error state | ✓ |
 | FW-104 | Dispatches LoadDashboard on retry | Event added on retry tap | ✓ |
-| FW-105 | Displays Renewal Success Rate | Rate percentage visible | ✓ |
+| FW-105 | Empty state shows message | "No Metrics Yet" visible | ✓ |
+| FW-106 | Empty state shows sync button | "Sync Data" button visible | ✓ |
+| FW-107 | Empty state dispatches refresh | RefreshDashboardRequested on tap | ✓ |
+| FW-108 | Empty state custom message | Custom message visible | ✓ |
+| FW-109 | Displays Renewal Success Rate | Rate percentage visible | ✓ |
 | FW-106 | Displays Active MRR | MRR value visible | ✓ |
 | FW-107 | Displays Revenue at Risk | Risk value visible | ✓ |
 | FW-108 | Displays Churned metrics | Churned value and count visible | ✓ |
 | FW-109 | Displays Usage Revenue | Usage value visible | ✓ |
-| FW-110 | Displays Revenue Mix chart | Recurring/Usage/One-time visible | ✓ |
-| FW-111 | Displays Risk Distribution chart | Safe/At Risk/Critical visible | ✓ |
-| FW-112 | Displays risk counts | Count numbers visible | ✓ |
-| FW-113 | Shows refresh button | Refresh icon in app bar | ✓ |
-| FW-114 | Dispatches Refresh on tap | RefreshDashboardRequested dispatched | ✓ |
-| FW-115 | Shows loading when refreshing | Progress indicator when refreshing | ✓ |
-| FW-116 | Disables refresh when refreshing | Refresh icon hidden | ✓ |
-| FW-117 | Displays Primary KPIs header | Section header visible | ✓ |
-| FW-118 | Displays Revenue & Risk header | Section header visible | ✓ |
+| FW-110 | Displays Total Revenue | Total revenue value visible | ✓ |
+| FW-111 | Displays Revenue Mix chart | Recurring/Usage/One-time visible | ✓ |
+| FW-112 | Displays Risk Distribution chart | Safe/At Risk/Critical visible | ✓ |
+| FW-113 | Displays risk counts | Count numbers visible | ✓ |
+| FW-114 | Shows refresh button | Refresh icon in app bar | ✓ |
+| FW-115 | Dispatches Refresh on tap | RefreshDashboardRequested dispatched | ✓ |
+| FW-116 | Shows loading when refreshing | Progress indicator when refreshing | ✓ |
+| FW-117 | Disables refresh when refreshing | Refresh icon hidden | ✓ |
+| FW-118 | Displays Primary KPIs header | Section header visible | ✓ |
+| FW-119 | Displays Revenue & Risk header | Section header visible | ✓ |
 
 ---
 

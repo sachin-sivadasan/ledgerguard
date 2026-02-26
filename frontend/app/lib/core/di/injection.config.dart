@@ -9,10 +9,10 @@
 import 'package:get_it/get_it.dart' as _i1;
 import 'package:injectable/injectable.dart' as _i2;
 
+import '../../data/repositories/api_dashboard_repository.dart';
 import '../../data/repositories/api_user_profile_repository.dart';
 import '../../data/repositories/firebase_auth_repository.dart';
 import '../../data/repositories/mock_app_repository.dart';
-import '../../data/repositories/mock_dashboard_repository.dart';
 import '../../data/repositories/mock_partner_integration_repository.dart';
 import '../../domain/repositories/app_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -35,7 +35,10 @@ extension GetItInjectableX on _i1.GetIt {
     registerLazySingleton<UserProfileRepository>(() => ApiUserProfileRepository());
     registerLazySingleton<PartnerIntegrationRepository>(() => MockPartnerIntegrationRepository());
     registerLazySingleton<AppRepository>(() => MockAppRepository());
-    registerLazySingleton<DashboardRepository>(() => MockDashboardRepository());
+    registerLazySingleton<DashboardRepository>(() => ApiDashboardRepository(
+          authRepository: get<AuthRepository>(),
+          appRepository: get<AppRepository>(),
+        ));
 
     // Blocs
     registerFactory<AuthBloc>(() => AuthBloc(authRepository: get<AuthRepository>()));

@@ -6,8 +6,12 @@ class MockDashboardRepository implements DashboardRepository {
   /// Simulated delay for API calls
   final Duration delay;
 
+  /// Whether to return empty state (for testing)
+  final bool returnEmpty;
+
   MockDashboardRepository({
     this.delay = const Duration(milliseconds: 800),
+    this.returnEmpty = false,
   });
 
   /// Mock dashboard metrics
@@ -18,6 +22,7 @@ class MockDashboardRepository implements DashboardRepository {
     churnedRevenue: 320000, // $3,200.00
     churnedCount: 12,
     usageRevenue: 2340000, // $23,400.00
+    totalRevenue: 15240000, // $152,400.00 (recurring + usage + one-time)
     revenueMix: RevenueMix(
       recurring: 12450000, // $124,500
       usage: 2340000, // $23,400
@@ -32,14 +37,14 @@ class MockDashboardRepository implements DashboardRepository {
   );
 
   @override
-  Future<DashboardMetrics> fetchMetrics() async {
+  Future<DashboardMetrics?> fetchMetrics() async {
     await Future.delayed(delay);
-    return _mockMetrics;
+    return returnEmpty ? null : _mockMetrics;
   }
 
   @override
-  Future<DashboardMetrics> refreshMetrics() async {
+  Future<DashboardMetrics?> refreshMetrics() async {
     await Future.delayed(delay);
-    return _mockMetrics;
+    return returnEmpty ? null : _mockMetrics;
   }
 }

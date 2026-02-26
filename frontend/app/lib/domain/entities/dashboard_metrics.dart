@@ -20,6 +20,9 @@ class DashboardMetrics extends Equatable {
   /// Usage-based revenue in cents
   final int usageRevenue;
 
+  /// Total revenue in cents (recurring + usage + one-time - refunds)
+  final int totalRevenue;
+
   /// Revenue mix breakdown
   final RevenueMix revenueMix;
 
@@ -33,6 +36,7 @@ class DashboardMetrics extends Equatable {
     required this.churnedRevenue,
     required this.churnedCount,
     required this.usageRevenue,
+    required this.totalRevenue,
     required this.revenueMix,
     required this.riskDistribution,
   });
@@ -48,6 +52,9 @@ class DashboardMetrics extends Equatable {
 
   /// Format usage revenue as currency string
   String get formattedUsageRevenue => _formatCurrency(usageRevenue);
+
+  /// Format total revenue as currency string
+  String get formattedTotalRevenue => _formatCurrency(totalRevenue);
 
   /// Format renewal rate as percentage string
   String get formattedRenewalRate => '${renewalSuccessRate.toStringAsFixed(1)}%';
@@ -70,6 +77,7 @@ class DashboardMetrics extends Equatable {
         churnedRevenue,
         churnedCount,
         usageRevenue,
+        totalRevenue,
         revenueMix,
         riskDistribution,
       ];

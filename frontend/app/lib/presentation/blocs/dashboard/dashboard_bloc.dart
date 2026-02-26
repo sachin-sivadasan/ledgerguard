@@ -24,7 +24,11 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
     try {
       final metrics = await _repository.fetchMetrics();
-      emit(DashboardLoaded(metrics: metrics));
+      if (metrics == null) {
+        emit(const DashboardEmpty());
+      } else {
+        emit(DashboardLoaded(metrics: metrics));
+      }
     } on DashboardException catch (e) {
       emit(DashboardError(e.message));
     } catch (e) {
@@ -42,7 +46,11 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
       try {
         final metrics = await _repository.refreshMetrics();
-        emit(DashboardLoaded(metrics: metrics));
+        if (metrics == null) {
+          emit(const DashboardEmpty());
+        } else {
+          emit(DashboardLoaded(metrics: metrics));
+        }
       } on DashboardException catch (e) {
         emit(currentState.copyWith(isRefreshing: false));
         // Could also emit error, but we keep showing current data

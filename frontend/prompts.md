@@ -200,3 +200,30 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (132/132)
 
 ---
+
+## Prompt 008 – Connect Dashboard to Backend
+**Date:** 2024-01-XX
+**Status:** Complete
+
+**Prompt:**
+> Connect dashboard to daily_metrics_snapshot endpoint. Render: Renewal Success Rate, Active MRR, Revenue at Risk, Usage Revenue, Total Revenue. Add: Loading state, Error state, Empty state. Write widget tests for rendering.
+
+**Changes:**
+- Domain layer:
+  - Updated `DashboardMetrics` - Added `totalRevenue` field
+  - Updated `DashboardRepository` - Return nullable for empty state
+  - Added exceptions: `NoAppSelectedException`, `NoMetricsException`, `UnauthorizedMetricsException`
+- Data layer:
+  - Created `ApiDashboardRepository` - Connects to `/api/v1/apps/{appId}/metrics/latest`
+  - Updated `MockDashboardRepository` - Support `returnEmpty` flag, added `totalRevenue`
+- Presentation layer:
+  - Updated `DashboardBloc` - Handle null metrics (empty state)
+  - Added `DashboardEmpty` state
+  - Updated `DashboardPage` - Added empty state UI, added Total Revenue KPI
+- Updated `core/di/injection.config.dart` - Wire `ApiDashboardRepository`
+- Tests:
+  - Updated `dashboard_bloc_test.dart` - Added empty state tests (8 tests)
+  - Updated `dashboard_page_test.dart` - Added empty state tests, Total Revenue test (25 tests)
+- All tests passing (140/140)
+
+---

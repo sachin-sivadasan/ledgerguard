@@ -18,6 +18,7 @@ void main() {
     churnedRevenue: 320000,
     churnedCount: 12,
     usageRevenue: 2340000,
+    totalRevenue: 15240000,
     revenueMix: RevenueMix(
       recurring: 12450000,
       usage: 2340000,
@@ -72,6 +73,20 @@ void main() {
               .having((s) => s.message, 'message', 'Network error'),
         ],
       );
+
+      blocTest<DashboardBloc, DashboardState>(
+        'emits [Loading, Empty] when no metrics available',
+        build: () {
+          when(() => mockRepository.fetchMetrics())
+              .thenAnswer((_) async => null);
+          return DashboardBloc(repository: mockRepository);
+        },
+        act: (bloc) => bloc.add(const LoadDashboardRequested()),
+        expect: () => [
+          isA<DashboardLoading>(),
+          isA<DashboardEmpty>(),
+        ],
+      );
     });
 
     group('RefreshDashboardRequested', () {
@@ -121,6 +136,22 @@ void main() {
         expect: () => [
           isA<DashboardLoading>(),
           isA<DashboardLoaded>(),
+        ],
+      );
+
+      blocTest<DashboardBloc, DashboardState>(
+        'emits [Loaded(refreshing), Empty] when refresh returns null',
+        build: () {
+          when(() => mockRepository.refreshMetrics())
+              .thenAnswer((_) async => null);
+          return DashboardBloc(repository: mockRepository);
+        },
+        seed: () => DashboardLoaded(metrics: testMetrics),
+        act: (bloc) => bloc.add(const RefreshDashboardRequested()),
+        expect: () => [
+          isA<DashboardLoaded>()
+              .having((s) => s.isRefreshing, 'isRefreshing', true),
+          isA<DashboardEmpty>(),
         ],
       );
     });

@@ -58,6 +58,10 @@ class DashboardPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
+          if (state is DashboardEmpty) {
+            return _buildEmptyState(context, state.message);
+          }
+
           if (state is DashboardError) {
             return _buildErrorState(context, state.message);
           }
@@ -106,6 +110,49 @@ class DashboardPage extends StatelessWidget {
               },
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.analytics_outlined,
+              size: 80,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No Metrics Yet',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () {
+                context
+                    .read<DashboardBloc>()
+                    .add(const RefreshDashboardRequested());
+              },
+              icon: const Icon(Icons.sync),
+              label: const Text('Sync Data'),
             ),
           ],
         ),
@@ -311,11 +358,26 @@ class DashboardPage extends StatelessWidget {
               Expanded(
                 child: Column(
                   children: [
-                    KpiCardCompact(
-                      title: 'Usage Revenue',
-                      value: metrics.formattedUsageRevenue,
-                      icon: Icons.data_usage,
-                      color: AppTheme.secondary,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: KpiCardCompact(
+                            title: 'Usage Revenue',
+                            value: metrics.formattedUsageRevenue,
+                            icon: Icons.data_usage,
+                            color: AppTheme.secondary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: KpiCardCompact(
+                            title: 'Total Revenue',
+                            value: metrics.formattedTotalRevenue,
+                            icon: Icons.account_balance_wallet,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     RevenueMixChart(revenueMix: metrics.revenueMix),
@@ -337,6 +399,13 @@ class DashboardPage extends StatelessWidget {
                 value: metrics.formattedUsageRevenue,
                 icon: Icons.data_usage,
                 color: AppTheme.secondary,
+              ),
+              const SizedBox(height: 12),
+              KpiCardCompact(
+                title: 'Total Revenue',
+                value: metrics.formattedTotalRevenue,
+                icon: Icons.account_balance_wallet,
+                color: AppTheme.primary,
               ),
               const SizedBox(height: 16),
               RevenueMixChart(revenueMix: metrics.revenueMix),

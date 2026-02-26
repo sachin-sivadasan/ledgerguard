@@ -21,6 +21,7 @@ void main() {
     churnedRevenue: 320000,
     churnedCount: 12,
     usageRevenue: 2340000,
+    totalRevenue: 15240000,
     revenueMix: RevenueMix(
       recurring: 12450000,
       usage: 2340000,
@@ -108,6 +109,44 @@ void main() {
       verify(() => mockBloc.add(const LoadDashboardRequested())).called(1);
     });
 
+    group('Empty state', () {
+      testWidgets('shows empty state message', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: const DashboardEmpty(),
+        ));
+
+        expect(find.text('No Metrics Yet'), findsOneWidget);
+        expect(find.text('No metrics available. Sync your app data to see metrics.'), findsOneWidget);
+      });
+
+      testWidgets('shows sync button in empty state', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: const DashboardEmpty(),
+        ));
+
+        expect(find.text('Sync Data'), findsOneWidget);
+      });
+
+      testWidgets('dispatches RefreshDashboardRequested on sync tap', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: const DashboardEmpty(),
+        ));
+
+        await tester.tap(find.text('Sync Data'));
+        await tester.pump();
+
+        verify(() => mockBloc.add(const RefreshDashboardRequested())).called(1);
+      });
+
+      testWidgets('shows custom empty message', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: const DashboardEmpty(message: 'Custom empty message'),
+        ));
+
+        expect(find.text('Custom empty message'), findsOneWidget);
+      });
+    });
+
     group('Primary KPIs', () {
       testWidgets('displays Renewal Success Rate', (tester) async {
         await tester.pumpWidget(buildTestWidget(
@@ -157,6 +196,15 @@ void main() {
 
         expect(find.text('Usage Revenue'), findsOneWidget);
         expect(find.text('\$23.4K'), findsOneWidget);
+      });
+
+      testWidgets('displays Total Revenue', (tester) async {
+        await tester.pumpWidget(buildTestWidget(
+          state: DashboardLoaded(metrics: testMetrics),
+        ));
+
+        expect(find.text('Total Revenue'), findsOneWidget);
+        expect(find.text('\$152.4K'), findsOneWidget);
       });
 
       testWidgets('displays Revenue Mix chart', (tester) async {

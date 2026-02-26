@@ -436,6 +436,53 @@ Created Executive Dashboard page with primary KPIs (Renewal Success Rate, Active
 
 ---
 
+## [2026-02-27] Connect Dashboard to Backend
+
+**Commit:** Connect dashboard to daily_metrics_snapshot endpoint
+
+**Summary:**
+Connected dashboard to backend API endpoint. Added Total Revenue KPI, empty state handling, and API repository implementation.
+
+**Implemented:**
+
+1. **Domain Layer:**
+   - Updated `DashboardMetrics` - Added `totalRevenue` field and `formattedTotalRevenue`
+   - Updated `DashboardRepository` - Return nullable `DashboardMetrics?` for empty state
+   - Added `NoAppSelectedException`, `NoMetricsException`, `UnauthorizedMetricsException`
+
+2. **Data Layer:**
+   - Created `ApiDashboardRepository` - Calls `/api/v1/apps/{appId}/metrics/latest`
+   - Parses backend response (cents, decimal rate)
+   - Handles 404 as empty state
+   - Updated `MockDashboardRepository` - Support `returnEmpty` flag
+
+3. **Presentation Layer:**
+   - Added `DashboardEmpty` state for no metrics available
+   - Updated `DashboardBloc` - Handle null metrics → emit `DashboardEmpty`
+   - Updated `DashboardPage` - Empty state UI with "Sync Data" button, Total Revenue KPI card
+
+4. **DI:**
+   - Switched from `MockDashboardRepository` to `ApiDashboardRepository`
+
+**Tests (TDD):**
+- DashboardBloc: 8 tests (+2 empty state tests)
+- DashboardPage: 25 tests (+5 empty state, +1 Total Revenue)
+
+**Files Created/Modified:**
+- `lib/domain/entities/dashboard_metrics.dart` (modified)
+- `lib/domain/repositories/dashboard_repository.dart` (modified)
+- `lib/data/repositories/api_dashboard_repository.dart` (created)
+- `lib/data/repositories/mock_dashboard_repository.dart` (modified)
+- `lib/presentation/blocs/dashboard/dashboard_bloc.dart` (modified)
+- `lib/presentation/blocs/dashboard/dashboard_state.dart` (modified)
+- `lib/presentation/pages/dashboard_page.dart` (modified)
+- `lib/core/di/injection.config.dart` (modified)
+- Tests updated
+
+**Tests:** 140 passing
+
+---
+
 ## Test Summary
 
 | Layer | Tests |
@@ -444,16 +491,16 @@ Created Executive Dashboard page with primary KPIs (Renewal Success Rate, Active
 | presentation/blocs/role | 11 |
 | presentation/blocs/partner_integration | 10 |
 | presentation/blocs/app_selection | 12 |
-| presentation/blocs/dashboard | 6 |
+| presentation/blocs/dashboard | 8 |
 | presentation/pages/login | 9 |
 | presentation/pages/signup | 8 |
 | presentation/pages/manual_integration | 4 |
 | presentation/pages/partner_integration | 16 |
 | presentation/pages/app_selection | 15 |
-| presentation/pages/dashboard | 19 |
+| presentation/pages/dashboard | 25 |
 | presentation/widgets/role_guard | 10 |
 | widget | 1 |
-| **Total** | **132** |
+| **Total** | **140** |
 
 ---
 
@@ -470,7 +517,7 @@ frontend/app/lib/
 ├── data/
 │   ├── datasources/    → API clients, local storage
 │   ├── models/         → JSON serializable models
-│   └── repositories/   → FirebaseAuthRepository, ApiUserProfileRepository, MockPartnerIntegrationRepository, MockAppRepository, MockDashboardRepository
+│   └── repositories/   → FirebaseAuthRepository, ApiUserProfileRepository, MockPartnerIntegrationRepository, MockAppRepository, ApiDashboardRepository
 ├── domain/
 │   ├── entities/       → UserEntity, UserProfile, PartnerIntegration, ShopifyApp, DashboardMetrics
 │   ├── repositories/   → AuthRepository, UserProfileRepository, PartnerIntegrationRepository, AppRepository, DashboardRepository

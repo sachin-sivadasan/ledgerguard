@@ -44,6 +44,18 @@ class DashboardLoaded extends DashboardState {
   List<Object?> get props => [metrics, isRefreshing];
 }
 
+/// No metrics available (empty state)
+class DashboardEmpty extends DashboardState {
+  final String message;
+
+  const DashboardEmpty({
+    this.message = 'No metrics available. Sync your app data to see metrics.',
+  });
+
+  @override
+  List<Object?> get props => [message];
+}
+
 /// Error loading metrics
 class DashboardError extends DashboardState {
   final String message;

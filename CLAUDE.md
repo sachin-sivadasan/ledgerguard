@@ -18,9 +18,11 @@ Update these files when relevant changes occur:
 | `TEST_PLAN.md` | New test scenarios |
 | `prompts.md` | Log every prompt executed |
 | `future.md` | Postponed features/ideas |
+| `IMPLEMENTATION_LOG.md` | Backend feature implementations |
 | `marketing/REQUIREMENTS.md` | Marketing site changes |
 | `frontend/REQUIREMENTS.md` | Frontend app changes |
 | `frontend/prompts.md` | Frontend-specific prompts |
+| `frontend/IMPLEMENTATION_LOG.md` | Frontend feature implementations |
 
 ### 2. Architecture Diagrams
 Update when architecture changes:

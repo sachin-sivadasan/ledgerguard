@@ -1,0 +1,62 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+
+# Binaries
+bin/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Dependencies
+vendor/
+
+# Test coverage
+coverage.out
+coverage.html
+
+# Flutter
+frontend/.dart_tool/
+frontend/.packages
+frontend/.pub-cache/
+frontend/.pub/
+frontend/build/
+frontend/*.iml
+frontend/.metadata
+frontend/pubspec.lock
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+
+# Temp
+tmp/
+temp/

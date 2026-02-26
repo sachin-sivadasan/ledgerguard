@@ -154,4 +154,65 @@ API -> DB: DELETE FROM partner_accounts\nWHERE user_id = ?
 DB --> API: Success
 API --> App: 200 OK\n{ "message": "Token revoked successfully" }
 
+' ==========================================
+' 5. App Selection Flow
+' ==========================================
+newpage App Selection Flow
+
+actor User
+participant "Client App" as App
+participant "API Server" as API
+participant "Shopify Partner API" as Shopify
+database "PostgreSQL" as DB
+
+== Fetch Available Apps ==
+
+User -> App: View available apps
+App -> API: GET /api/v1/apps/available\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware (verify user)
+API -> DB: SELECT FROM partner_accounts\nWHERE user_id = ?
+DB --> API: Partner account with encrypted_token
+
+API -> API: Decrypt access token (AES-256-GCM)
+
+API -> Shopify: POST GraphQL\n{ query: "apps { edges { node { id name } } }" }
+Shopify --> API: List of apps
+
+API --> App: 200 OK\n{ "apps": [{"id": "gid://...", "name": "App One"}, ...] }
+
+== Select App ==
+
+User -> App: Click "Track this app"
+App -> API: POST /api/v1/apps/select\n{ "partner_app_id": "gid://...", "name": "App One" }
+
+API -> API: AuthMiddleware (verify user)
+API -> DB: SELECT FROM partner_accounts\nWHERE user_id = ?
+DB --> API: Partner account
+
+API -> DB: SELECT FROM apps\nWHERE partner_app_id = ?
+alt App already tracked
+    DB --> API: Existing app
+    API --> App: 409 Conflict\n{ "error": "app already tracked" }
+else App not tracked
+    DB --> API: Not found
+    API -> DB: INSERT INTO apps\n(partner_account_id, partner_app_id, name)
+    DB --> API: Success
+    API --> App: 201 Created\n{ "id": "uuid", "name": "App One" }
+end
+
+== List Tracked Apps ==
+
+User -> App: View my apps
+App -> API: GET /api/v1/apps\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware (verify user)
+API -> DB: SELECT FROM partner_accounts\nWHERE user_id = ?
+DB --> API: Partner account
+
+API -> DB: SELECT FROM apps\nWHERE partner_account_id = ?
+DB --> API: List of tracked apps
+
+API --> App: 200 OK\n{ "apps": [{"id": "uuid", "name": "App One", "tracking_enabled": true}] }
+
 @enduml

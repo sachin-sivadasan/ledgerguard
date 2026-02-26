@@ -6,7 +6,7 @@ title LedgerGuard - C4 Component Diagram (Current Implementation)
 ' External Systems
 Person(developer, "Shopify App Developer", "Uses LedgerGuard")
 System_Ext(firebase, "Firebase Auth", "Authentication")
-System_Ext(shopify, "Shopify Partners", "OAuth provider")
+System_Ext(shopify, "Shopify Partners", "OAuth & Partner API")
 ContainerDb_Ext(postgres, "PostgreSQL", "Data storage")
 
 Container_Boundary(api, "API Server (Go 1.22+)") {
@@ -18,23 +18,28 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(health_handler, "HealthHandler", "HTTP Handler", "GET /health")
     Component(oauth_handler, "OAuthHandler", "HTTP Handler", "OAuth flow endpoints")
     Component(manual_token_handler, "ManualTokenHandler", "HTTP Handler", "Manual token CRUD (ADMIN)")
+    Component(app_handler, "AppHandler", "HTTP Handler", "App selection & listing")
 
     ' Domain Layer - IMPLEMENTED
     Component(user_entity, "User", "Entity", "id, firebase_uid, email, role, plan_tier")
     Component(partner_entity, "PartnerAccount", "Entity", "id, user_id, partner_id, encrypted_token")
+    Component(app_entity, "App", "Entity", "id, partner_account_id, partner_app_id, name")
     Component(role_vo, "Role", "Value Object", "OWNER, ADMIN")
     Component(plan_vo, "PlanTier", "Value Object", "FREE, PRO")
     Component(integration_vo, "IntegrationType", "Value Object", "OAUTH, MANUAL")
 
     Component(user_repo_if, "UserRepository", "Interface", "User persistence contract")
     Component(partner_repo_if, "PartnerAccountRepository", "Interface", "Partner account contract")
+    Component(app_repo_if, "AppRepository", "Interface", "App persistence contract")
 
     ' Infrastructure Layer - IMPLEMENTED
     Component(config, "Config", "Infrastructure", "YAML + env config loader")
     Component(user_repo, "PostgresUserRepository", "Repository", "User CRUD")
     Component(partner_repo, "PostgresPartnerAccountRepository", "Repository", "Partner account CRUD")
+    Component(app_repo, "PostgresAppRepository", "Repository", "App CRUD")
     Component(firebase_auth, "FirebaseAuthService", "External Adapter", "Token verification")
     Component(shopify_oauth, "ShopifyOAuthService", "External Adapter", "OAuth token exchange")
+    Component(partner_client, "ShopifyPartnerClient", "External Adapter", "Partner API GraphQL")
     Component(crypto, "AESEncryptor", "pkg/crypto", "AES-256-GCM encryption")
 }
 
@@ -46,6 +51,7 @@ Rel(router, role_mw, "Uses")
 Rel(router, health_handler, "/health")
 Rel(router, oauth_handler, "/api/v1/integrations/shopify/oauth,callback")
 Rel(router, manual_token_handler, "/api/v1/integrations/shopify/token")
+Rel(router, app_handler, "/api/v1/apps/*")
 
 Rel(auth_mw, firebase_auth, "Verifies token")
 Rel(auth_mw, user_repo_if, "Find/create user")
@@ -58,13 +64,21 @@ Rel(oauth_handler, crypto, "Encrypt token")
 Rel(manual_token_handler, partner_repo_if, "CRUD account")
 Rel(manual_token_handler, crypto, "Encrypt/decrypt token")
 
+Rel(app_handler, partner_repo_if, "Get partner account")
+Rel(app_handler, app_repo_if, "CRUD apps")
+Rel(app_handler, partner_client, "Fetch apps")
+Rel(app_handler, crypto, "Decrypt token")
+
 Rel(user_repo_if, user_repo, "Implements")
 Rel(partner_repo_if, partner_repo, "Implements")
+Rel(app_repo_if, app_repo, "Implements")
 
 Rel(firebase_auth, firebase, "Admin SDK")
 Rel(shopify_oauth, shopify, "OAuth 2.0")
+Rel(partner_client, shopify, "GraphQL API")
 Rel(user_repo, postgres, "SQL")
 Rel(partner_repo, postgres, "SQL")
+Rel(app_repo, postgres, "SQL")
 
 SHOW_LEGEND()
 @enduml

@@ -12,6 +12,7 @@ type Config struct {
 	HealthHandler      *handler.HealthHandler
 	OAuthHandler       *handler.OAuthHandler
 	ManualTokenHandler *handler.ManualTokenHandler
+	AppHandler         *handler.AppHandler
 	AuthMW             func(next http.Handler) http.Handler
 	AdminMW            func(next http.Handler) http.Handler // RequireRoles(ADMIN)
 }
@@ -45,6 +46,16 @@ func New(cfg Config) *chi.Mux {
 				r.With(cfg.AuthMW, cfg.AdminMW).Delete("/token", cfg.ManualTokenHandler.RevokeToken)
 			}
 		})
+
+		// App routes (requires auth)
+		if cfg.AppHandler != nil && cfg.AuthMW != nil {
+			r.Route("/apps", func(r chi.Router) {
+				r.Use(cfg.AuthMW)
+				r.Get("/available", cfg.AppHandler.GetAvailableApps)
+				r.Post("/select", cfg.AppHandler.SelectApp)
+				r.Get("/", cfg.AppHandler.ListApps)
+			})
+		}
 	})
 
 	return r

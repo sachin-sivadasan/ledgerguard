@@ -331,6 +331,7 @@ CREATE TRIGGER notification_preferences_updated_at
 |-----------|-------------|--------|
 | 000001_create_users_table | Create users table with Firebase UID, role, plan_tier | ✓ Implemented |
 | 000002_create_partner_accounts_table | Create partner_accounts table with encrypted tokens | ✓ Implemented |
+| 000003_create_apps_table | Create apps table for tracking Shopify apps | ✓ Implemented |
 
 ---
 

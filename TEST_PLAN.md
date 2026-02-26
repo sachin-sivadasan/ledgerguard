@@ -102,6 +102,28 @@
 | M-011 | Revoke token no user | 401, unauthorized | ✓ |
 | M-012 | Mask token function | Correctly masks last 4 chars | ✓ |
 
+#### 3.4 Shopify Partner Client
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| P-001 | Fetch apps success | Returns list of apps | ✓ |
+| P-002 | Fetch apps GraphQL error | Returns error | ✓ |
+| P-003 | Fetch apps HTTP error | Returns error | ✓ |
+| P-004 | Fetch apps empty | Returns empty list | ✓ |
+
+#### 3.5 App Management
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| AP-001 | Get available apps success | 200, apps from Partner API | ✓ |
+| AP-002 | Get available apps no partner account | 404, not found | ✓ |
+| AP-003 | Get available apps no user | 401, unauthorized | ✓ |
+| AP-004 | Select app success | 201, app created | ✓ |
+| AP-005 | Select app already exists | 409, conflict | ✓ |
+| AP-006 | Select app missing fields | 400, bad request | ✓ |
+| AP-007 | Select app no user | 401, unauthorized | ✓ |
+| AP-008 | List apps success | 200, user's apps | ✓ |
+| AP-009 | List apps no partner account | 404, not found | ✓ |
+| AP-010 | List apps no user | 401, unauthorized | ✓ |
+
 ---
 
 ### 4. Domain (Future)

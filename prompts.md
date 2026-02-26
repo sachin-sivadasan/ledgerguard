@@ -217,3 +217,33 @@
 - Updated router with /token routes (POST, GET, DELETE) with ADMIN middleware
 - Updated TEST_PLAN.md with manual token test scenarios
 - All tests passing (36/36)
+
+### [2026-02-26] Fetch Apps from Partner API
+**Original:**
+> Fetch apps from Partner API. Allow user to select one app. Store selected app in apps table.
+
+**Improved:**
+> Implement Shopify Partner API app fetching and selection:
+> 1. Create App entity in domain/entity
+> 2. Create AppRepository interface and PostgreSQL implementation
+> 3. Create migration 000003_create_apps_table
+> 4. Create ShopifyPartnerClient in infrastructure/external for GraphQL API calls
+> 5. Create AppHandler with endpoints:
+>    - GET /api/v1/apps/available - Fetch apps from Partner API
+>    - POST /api/v1/apps/select - Select and store an app
+>    - GET /api/v1/apps - List user's tracked apps
+> 6. Use decrypted partner token to call Shopify Partner API
+> 7. Write tests first (TDD)
+> 8. Update router, diagrams, documentation
+
+**Result:**
+- domain/entity/app.go - App entity
+- domain/repository/app_repository.go - AppRepository interface
+- infrastructure/persistence/app_repository.go - PostgreSQL implementation
+- infrastructure/external/shopify_partner_client.go + tests - GraphQL client (4 tests)
+- interfaces/http/handler/app.go + app_test.go - AppHandler (10 tests)
+- migrations/000003_create_apps_table.up.sql / .down.sql
+- Updated router with /apps routes
+- Updated TEST_PLAN.md with app test scenarios
+- Updated DATABASE_SCHEMA.md with apps migration
+- All tests passing (50/50)

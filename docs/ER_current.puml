@@ -24,8 +24,20 @@ entity "partner_accounts" as partner_accounts {
   created_at : TIMESTAMPTZ
 }
 
+entity "apps" as apps {
+  *id : UUID <<PK>>
+  --
+  *partner_account_id : UUID <<FK>>
+  *partner_app_id : VARCHAR(100)
+  *name : VARCHAR(255)
+  tracking_enabled : BOOLEAN <<DEFAULT: TRUE>>
+  created_at : TIMESTAMPTZ
+  <<UNIQUE: partner_account_id, partner_app_id>>
+}
+
 ' Relationships
 users ||--o{ partner_accounts : "has"
+partner_accounts ||--o{ apps : "tracks"
 
 note right of users
   Migration: 000001_create_users_table
@@ -41,6 +53,16 @@ note right of partner_accounts
   Indexes:
   - idx_partner_accounts_user_id
   - idx_partner_accounts_partner_id
+end note
+
+note right of apps
+  Migration: 000003_create_apps_table
+  - Shopify apps being tracked
+  - One app selected per user
+
+  Indexes:
+  - idx_apps_partner_account_id
+  - idx_apps_tracking_enabled
 end note
 
 @enduml

@@ -1,21 +1,22 @@
 const tiers = [
   {
-    name: "Free",
-    price: "$0",
-    description: "Perfect for getting started",
+    name: "Starter",
+    price: "$149",
+    period: "/month",
+    description: "For growing app businesses",
     features: [
       "1 Shopify app",
       "Renewal Success Rate",
       "Revenue at Risk alerts",
-      "30-day transaction history",
+      "90-day transaction history",
       "Email notifications",
     ],
-    cta: "Get Started Free",
+    cta: "Get Started",
     featured: false,
   },
   {
     name: "Pro",
-    price: "$29",
+    price: "$299",
     period: "/month",
     description: "For serious app developers",
     features: [
@@ -39,7 +40,7 @@ export default function Pricing() {
             Simple, Transparent Pricing
           </h2>
           <p className="mt-4 text-lg text-slate-600">
-            Start free, upgrade when you need more.
+            Choose the plan that fits your business.
           </p>
         </div>
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">

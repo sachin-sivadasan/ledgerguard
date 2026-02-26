@@ -72,17 +72,18 @@ Public-facing marketing site for LedgerGuard, a Revenue Intelligence Platform fo
 
 **Tiers:**
 
-#### Free Tier
-- Price: $0/month
+#### Starter Tier
+- Price: $149/month
 - Features:
   - 1 Shopify app
   - Renewal Success Rate
   - Revenue at Risk alerts
-  - 30-day transaction history
+  - 90-day transaction history
   - Email notifications
+- CTA: "Get Started"
 
 #### Pro Tier
-- Price: $29/month
+- Price: $299/month
 - Features:
   - Unlimited apps
   - AI Daily Revenue Brief

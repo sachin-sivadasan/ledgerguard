@@ -147,9 +147,28 @@
 
 ---
 
-### 5. Sync Engine (Future)
+### 5. Sync Engine
 
-#### 5.1 Transaction Sync
+#### 5.1 SyncService
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| SS-001 | SyncApp success | Transactions fetched and stored | ✓ |
+| SS-002 | SyncApp app not found | Error returned | ✓ |
+| SS-003 | SyncApp fetch error | Error returned | ✓ |
+| SS-004 | SyncApp no transactions | Success, 0 count | ✓ |
+| SS-005 | SyncAllApps success | All apps synced, results returned | ✓ |
+
+#### 5.2 SyncHandler
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| SH-001 | SyncAllApps success | 200, results array | ✓ |
+| SH-002 | SyncAllApps no user | 401, unauthorized | ✓ |
+| SH-003 | SyncAllApps no partner | 404, not found | ✓ |
+| SH-004 | SyncApp success | 200, sync result | ✓ |
+| SH-005 | SyncApp no user | 401, unauthorized | ✓ |
+| SH-006 | SyncApp invalid ID | 400, bad request | ✓ |
+
+#### 5.3 Transaction Sync (Future)
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
 | S-001 | First sync (empty DB) | All transactions imported | Pending |

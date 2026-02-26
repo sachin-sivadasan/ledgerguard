@@ -1,0 +1,169 @@
+package persistence
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+)
+
+var ErrTransactionNotFound = errors.New("transaction not found")
+
+type PostgresTransactionRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewPostgresTransactionRepository(pool *pgxpool.Pool) *PostgresTransactionRepository {
+	return &PostgresTransactionRepository{pool: pool}
+}
+
+func (r *PostgresTransactionRepository) Upsert(ctx context.Context, tx *entity.Transaction) error {
+	query := `
+		INSERT INTO transactions (id, app_id, shopify_gid, myshopify_domain, charge_type, amount_cents, currency, transaction_date, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (shopify_gid) DO UPDATE SET
+			amount_cents = EXCLUDED.amount_cents,
+			currency = EXCLUDED.currency
+	`
+
+	_, err := r.pool.Exec(ctx, query,
+		tx.ID,
+		tx.AppID,
+		tx.ShopifyGID,
+		tx.MyshopifyDomain,
+		tx.ChargeType.String(),
+		tx.AmountCents,
+		tx.Currency,
+		tx.TransactionDate,
+		tx.CreatedAt,
+	)
+
+	return err
+}
+
+func (r *PostgresTransactionRepository) UpsertBatch(ctx context.Context, txs []*entity.Transaction) error {
+	if len(txs) == 0 {
+		return nil
+	}
+
+	batch := &pgx.Batch{}
+	query := `
+		INSERT INTO transactions (id, app_id, shopify_gid, myshopify_domain, charge_type, amount_cents, currency, transaction_date, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (shopify_gid) DO UPDATE SET
+			amount_cents = EXCLUDED.amount_cents,
+			currency = EXCLUDED.currency
+	`
+
+	for _, tx := range txs {
+		batch.Queue(query,
+			tx.ID,
+			tx.AppID,
+			tx.ShopifyGID,
+			tx.MyshopifyDomain,
+			tx.ChargeType.String(),
+			tx.AmountCents,
+			tx.Currency,
+			tx.TransactionDate,
+			tx.CreatedAt,
+		)
+	}
+
+	results := r.pool.SendBatch(ctx, batch)
+	defer results.Close()
+
+	for range txs {
+		if _, err := results.Exec(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *PostgresTransactionRepository) FindByAppID(ctx context.Context, appID uuid.UUID, from, to time.Time) ([]*entity.Transaction, error) {
+	query := `
+		SELECT id, app_id, shopify_gid, myshopify_domain, charge_type, amount_cents, currency, transaction_date, created_at
+		FROM transactions
+		WHERE app_id = $1 AND transaction_date >= $2 AND transaction_date <= $3
+		ORDER BY transaction_date DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query, appID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transactions []*entity.Transaction
+	for rows.Next() {
+		var tx entity.Transaction
+		var chargeType string
+
+		err := rows.Scan(
+			&tx.ID,
+			&tx.AppID,
+			&tx.ShopifyGID,
+			&tx.MyshopifyDomain,
+			&chargeType,
+			&tx.AmountCents,
+			&tx.Currency,
+			&tx.TransactionDate,
+			&tx.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		tx.ChargeType = valueobject.ChargeType(chargeType)
+		transactions = append(transactions, &tx)
+	}
+
+	return transactions, rows.Err()
+}
+
+func (r *PostgresTransactionRepository) FindByShopifyGID(ctx context.Context, shopifyGID string) (*entity.Transaction, error) {
+	query := `
+		SELECT id, app_id, shopify_gid, myshopify_domain, charge_type, amount_cents, currency, transaction_date, created_at
+		FROM transactions
+		WHERE shopify_gid = $1
+	`
+
+	var tx entity.Transaction
+	var chargeType string
+
+	err := r.pool.QueryRow(ctx, query, shopifyGID).Scan(
+		&tx.ID,
+		&tx.AppID,
+		&tx.ShopifyGID,
+		&tx.MyshopifyDomain,
+		&chargeType,
+		&tx.AmountCents,
+		&tx.Currency,
+		&tx.TransactionDate,
+		&tx.CreatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrTransactionNotFound
+		}
+		return nil, err
+	}
+
+	tx.ChargeType = valueobject.ChargeType(chargeType)
+	return &tx, nil
+}
+
+func (r *PostgresTransactionRepository) CountByAppID(ctx context.Context, appID uuid.UUID) (int64, error) {
+	query := `SELECT COUNT(*) FROM transactions WHERE app_id = $1`
+
+	var count int64
+	err := r.pool.QueryRow(ctx, query, appID).Scan(&count)
+	return count, err
+}

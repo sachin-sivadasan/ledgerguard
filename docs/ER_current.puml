@@ -35,9 +35,23 @@ entity "apps" as apps {
   <<UNIQUE: partner_account_id, partner_app_id>>
 }
 
+entity "transactions" as transactions {
+  *id : UUID <<PK>>
+  --
+  *app_id : UUID <<FK>>
+  *shopify_gid : VARCHAR(255) <<UNIQUE>>
+  *myshopify_domain : VARCHAR(255)
+  *charge_type : VARCHAR(20) <<CHECK: RECURRING, USAGE, ONE_TIME, REFUND>>
+  *amount_cents : BIGINT
+  currency : VARCHAR(3) <<DEFAULT: USD>>
+  *transaction_date : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+}
+
 ' Relationships
 users ||--o{ partner_accounts : "has"
 partner_accounts ||--o{ apps : "tracks"
+apps ||--o{ transactions : "records"
 
 note right of users
   Migration: 000001_create_users_table
@@ -63,6 +77,17 @@ note right of apps
   Indexes:
   - idx_apps_partner_account_id
   - idx_apps_tracking_enabled
+end note
+
+note right of transactions
+  Migration: 000004_create_transactions_table
+  - Immutable ledger of transactions
+  - Upsert by shopify_gid (idempotent)
+
+  Indexes:
+  - idx_transactions_app_date
+  - idx_transactions_domain
+  - idx_transactions_type
 end note
 
 @enduml

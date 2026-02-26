@@ -13,6 +13,7 @@ type Config struct {
 	OAuthHandler       *handler.OAuthHandler
 	ManualTokenHandler *handler.ManualTokenHandler
 	AppHandler         *handler.AppHandler
+	SyncHandler        *handler.SyncHandler
 	AuthMW             func(next http.Handler) http.Handler
 	AdminMW            func(next http.Handler) http.Handler // RequireRoles(ADMIN)
 }
@@ -54,6 +55,15 @@ func New(cfg Config) *chi.Mux {
 				r.Get("/available", cfg.AppHandler.GetAvailableApps)
 				r.Post("/select", cfg.AppHandler.SelectApp)
 				r.Get("/", cfg.AppHandler.ListApps)
+			})
+		}
+
+		// Sync routes (requires auth)
+		if cfg.SyncHandler != nil && cfg.AuthMW != nil {
+			r.Route("/sync", func(r chi.Router) {
+				r.Use(cfg.AuthMW)
+				r.Post("/", cfg.SyncHandler.SyncAllApps)
+				r.Post("/{appID}", cfg.SyncHandler.SyncApp)
 			})
 		}
 	})

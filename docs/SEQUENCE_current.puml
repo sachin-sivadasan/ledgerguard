@@ -215,4 +215,85 @@ DB --> API: List of tracked apps
 
 API --> App: 200 OK\n{ "apps": [{"id": "uuid", "name": "App One", "tracking_enabled": true}] }
 
+' ==========================================
+' 6. Transaction Sync Flow
+' ==========================================
+newpage Transaction Sync Flow
+
+actor User
+participant "Client App" as App
+participant "API Server" as API
+participant "SyncService" as Sync
+participant "Shopify Partner API" as Shopify
+database "PostgreSQL" as DB
+
+== On-Demand Sync (All Apps) ==
+
+User -> App: Click "Sync Now"
+App -> API: POST /api/v1/sync\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware (verify user)
+API -> DB: SELECT FROM partner_accounts\nWHERE user_id = ?
+DB --> API: Partner account
+
+API -> Sync: SyncAllApps(partnerAccountID)
+
+Sync -> DB: SELECT FROM apps\nWHERE partner_account_id = ?
+DB --> Sync: List of tracked apps
+
+loop For each app with tracking_enabled = true
+    Sync -> DB: SELECT FROM partner_accounts\nWHERE id = ?
+    DB --> Sync: Partner account with encrypted_token
+
+    Sync -> Sync: Decrypt access token (AES-256-GCM)
+
+    Sync -> Shopify: POST GraphQL\nFetch transactions (12-month window)
+    Shopify --> Sync: List of transactions
+
+    Sync -> DB: UPSERT transactions\n(ON CONFLICT shopify_gid DO UPDATE)
+    DB --> Sync: Success
+end
+
+Sync --> API: SyncResults[]
+
+API --> App: 200 OK\n{ "results": [{"app_name": "App", "transaction_count": 50}] }
+
+== On-Demand Sync (Single App) ==
+
+User -> App: Click "Sync App"
+App -> API: POST /api/v1/sync/{appID}\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware (verify user)
+API -> Sync: SyncApp(appID)
+
+Sync -> DB: SELECT FROM apps WHERE id = ?
+DB --> Sync: App record
+
+Sync -> DB: SELECT FROM partner_accounts\nWHERE id = app.partner_account_id
+DB --> Sync: Partner account with encrypted_token
+
+Sync -> Sync: Decrypt access token
+
+Sync -> Shopify: POST GraphQL\nFetch transactions (12-month window)
+Shopify --> Sync: List of transactions
+
+Sync -> DB: UPSERT batch transactions
+DB --> Sync: Success
+
+Sync --> API: SyncResult
+
+API --> App: 200 OK\n{ "app_name": "App", "transaction_count": 50 }
+
+== Scheduled Sync (12-hour interval) ==
+
+note over Sync: SyncScheduler runs at 00:00 and 12:00 UTC
+
+Sync -> Sync: Timer fires
+
+loop For each partner account
+    Sync -> Sync: SyncAllApps(partnerAccountID)
+end
+
+Sync -> Sync: Log results
+
 @enduml

@@ -39,6 +39,36 @@ func (r *PostgresPartnerAccountRepository) Create(ctx context.Context, account *
 	return err
 }
 
+func (r *PostgresPartnerAccountRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.PartnerAccount, error) {
+	query := `
+		SELECT id, user_id, integration_type, partner_id, encrypted_access_token, created_at
+		FROM partner_accounts
+		WHERE id = $1
+	`
+
+	var account entity.PartnerAccount
+	var integrationType string
+
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&account.ID,
+		&account.UserID,
+		&integrationType,
+		&account.PartnerID,
+		&account.EncryptedAccessToken,
+		&account.CreatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrPartnerAccountNotFound
+		}
+		return nil, err
+	}
+
+	account.IntegrationType = valueobject.IntegrationType(integrationType)
+	return &account, nil
+}
+
 func (r *PostgresPartnerAccountRepository) FindByUserID(ctx context.Context, userID uuid.UUID) (*entity.PartnerAccount, error) {
 	query := `
 		SELECT id, user_id, integration_type, partner_id, encrypted_access_token, created_at

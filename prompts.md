@@ -247,3 +247,44 @@
 - Updated TEST_PLAN.md with app test scenarios
 - Updated DATABASE_SCHEMA.md with apps migration
 - All tests passing (50/50)
+
+### [2026-02-26] Implement PartnerSyncService
+**Original:**
+> Implement PartnerSyncService. - Pull transactions (mock first) - Store transactions - Add 12-hour scheduler
+
+**Improved:**
+> Implement PartnerSyncService for transaction synchronization:
+> 1. Create Transaction entity in domain/entity
+> 2. Create ChargeType value object (RECURRING, USAGE, ONE_TIME, REFUND)
+> 3. Create TransactionRepository interface and PostgreSQL implementation
+> 4. Create migration 000004_create_transactions_table
+> 5. Create SyncService in application/service with:
+>    - SyncApp(appID) - Sync single app
+>    - SyncAllApps(partnerAccountID) - Sync all apps for account
+> 6. Create TransactionFetcher interface (mock for now)
+> 7. Create SyncScheduler with 12-hour interval (00:00, 12:00 UTC)
+> 8. Create SyncHandler for on-demand sync endpoints:
+>    - POST /api/v1/sync - Sync all apps
+>    - POST /api/v1/sync/{appID} - Sync specific app
+> 9. Add FindByID to PartnerAccountRepository
+> 10. Write tests first (TDD)
+> 11. Update router, diagrams, documentation
+
+**Result:**
+- domain/valueobject/charge_type.go - ChargeType (RECURRING, USAGE, ONE_TIME, REFUND)
+- domain/entity/transaction.go - Transaction entity
+- domain/repository/transaction_repository.go - TransactionRepository interface
+- domain/repository/partner_account_repository.go - Added FindByID method
+- infrastructure/persistence/transaction_repository.go - PostgreSQL implementation with batch upsert
+- infrastructure/persistence/partner_account_repository.go - Added FindByID implementation
+- application/service/sync_service.go + sync_service_test.go - SyncService (5 tests)
+- application/scheduler/sync_scheduler.go - 12-hour interval scheduler
+- interfaces/http/handler/sync.go + sync_test.go - SyncHandler (6 tests)
+- migrations/000004_create_transactions_table.up.sql / .down.sql
+- Updated router with /sync routes
+- Updated all mocks with FindByID method
+- Updated TEST_PLAN.md with sync test scenarios
+- Updated DATABASE_SCHEMA.md with transactions migration
+- Updated ER_current.puml with transactions entity
+- Updated SEQUENCE_current.puml with sync flow
+- All tests passing (58/58)

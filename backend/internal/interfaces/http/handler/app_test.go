@@ -71,6 +71,10 @@ func (m *mockPartnerRepoForApp) Create(ctx context.Context, account *entity.Part
 	return nil
 }
 
+func (m *mockPartnerRepoForApp) FindByID(ctx context.Context, id uuid.UUID) (*entity.PartnerAccount, error) {
+	return m.account, m.findErr
+}
+
 func (m *mockPartnerRepoForApp) FindByUserID(ctx context.Context, userID uuid.UUID) (*entity.PartnerAccount, error) {
 	return m.account, m.findErr
 }

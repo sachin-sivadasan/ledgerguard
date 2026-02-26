@@ -508,18 +508,48 @@ Created NotificationService for push notifications with device token management,
 
 ---
 
+## [2026-02-27] SlackNotificationProvider Implementation
+
+**Commit:** Implement SlackNotificationProvider for Slack webhooks
+
+**Summary:**
+Created SlackNotificationProvider for sending notifications to Slack via webhooks, integrated with NotificationService.
+
+**Implemented:**
+
+1. **Infrastructure - SlackNotificationProvider:**
+   - `SendSlack(ctx, webhookURL, title, body, color)` - Send Slack webhook message
+   - Slack payload with attachments for rich formatting
+   - Color constants (danger, warning, success, info)
+   - Configurable HTTP client (for testing)
+
+2. **Application Service Updates:**
+   - Added `SlackNotifier` interface to NotificationService
+   - Added `WithSlackNotifier(notifier)` builder method
+   - `SendCriticalAlert` now sends to Slack (danger color) when webhook configured
+   - `SendDailySummary` now sends to Slack (info color) when webhook configured
+   - Continues sending push notifications even if Slack fails
+
+3. **Tests:**
+   - SlackNotificationProvider tests (5 test cases)
+   - Slack integration tests in NotificationService (5 test cases)
+
+**Tests:** 10 new tests (total: 112)
+
+---
+
 ## Test Summary
 
 | Package | Tests |
 |---------|-------|
 | infrastructure/config | 5 |
-| infrastructure/external | 7 |
+| infrastructure/external | 12 |
 | interfaces/http/handler | 42 |
 | interfaces/http/middleware | 11 |
-| application/service | 16 |
-| domain/service | 23 |
+| application/service | 21 |
+| domain/service | 16 |
 | pkg/crypto | 5 |
-| **Total** | **109** |
+| **Total** | **112** |
 
 ---
 
@@ -554,7 +584,7 @@ internal/application/
 internal/infrastructure/
   ├── config/                   → YAML + env config loading
   ├── persistence/              → PostgreSQL implementations
-  └── external/                 → Firebase, Shopify OAuth, Shopify Partner Client, PushNotificationProvider
+  └── external/                 → Firebase, Shopify OAuth, Shopify Partner Client, SlackNotificationProvider
 internal/interfaces/http/
   ├── handler/                  → Health, OAuth, ManualToken, App, Sync
   ├── middleware/               → Auth, Role

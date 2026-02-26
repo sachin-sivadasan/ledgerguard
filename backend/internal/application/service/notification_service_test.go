@@ -168,6 +168,37 @@ func (m *mockPushNotificationProvider) SendPush(ctx context.Context, deviceToken
 	return nil
 }
 
+type mockSlackNotifier struct {
+	sentMessages []slackMessage
+	sendErr      error
+}
+
+type slackMessage struct {
+	webhookURL string
+	title      string
+	body       string
+	color      string
+}
+
+func newMockSlackNotifier() *mockSlackNotifier {
+	return &mockSlackNotifier{
+		sentMessages: make([]slackMessage, 0),
+	}
+}
+
+func (m *mockSlackNotifier) SendSlack(ctx context.Context, webhookURL string, title string, body string, color string) error {
+	if m.sendErr != nil {
+		return m.sendErr
+	}
+	m.sentMessages = append(m.sentMessages, slackMessage{
+		webhookURL: webhookURL,
+		title:      title,
+		body:       body,
+		color:      color,
+	})
+	return nil
+}
+
 // Tests
 
 func TestNotificationService_RegisterDevice(t *testing.T) {
@@ -548,6 +579,169 @@ func TestNotificationService_UpdatePreferences(t *testing.T) {
 		}
 		if result.DailySummaryEnabled {
 			t.Error("expected daily summary to be disabled after update")
+		}
+	})
+}
+
+func TestNotificationService_SlackIntegration(t *testing.T) {
+	ctx := context.Background()
+	userID := uuid.New()
+	appID := uuid.New()
+
+	t.Run("sends critical alert to slack when webhook configured", func(t *testing.T) {
+		tokenRepo := newMockDeviceTokenRepository()
+		prefsRepo := newMockNotificationPreferencesRepository()
+		pushProvider := newMockPushNotificationProvider()
+		slackNotifier := newMockSlackNotifier()
+		svc := NewNotificationService(tokenRepo, prefsRepo, pushProvider).WithSlackNotifier(slackNotifier)
+
+		// Configure Slack webhook in preferences
+		prefs := entity.NewNotificationPreferences(userID)
+		prefs.SlackWebhookURL = "https://hooks.slack.com/services/xxx/yyy/zzz"
+		_ = prefsRepo.Upsert(ctx, prefs)
+
+		// Send critical alert
+		err := svc.SendCriticalAlert(ctx, userID, "MyApp", "store.myshopify.com",
+			valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		// Verify Slack message was sent
+		if len(slackNotifier.sentMessages) != 1 {
+			t.Fatalf("expected 1 slack message, got %d", len(slackNotifier.sentMessages))
+		}
+
+		msg := slackNotifier.sentMessages[0]
+		if msg.webhookURL != "https://hooks.slack.com/services/xxx/yyy/zzz" {
+			t.Errorf("unexpected webhook URL: %s", msg.webhookURL)
+		}
+		if msg.title != "🚨 Risk Alert: MyApp" {
+			t.Errorf("unexpected title: %s", msg.title)
+		}
+		if msg.color != SlackColorDanger {
+			t.Errorf("expected danger color, got %s", msg.color)
+		}
+	})
+
+	t.Run("does not send to slack when no webhook configured", func(t *testing.T) {
+		tokenRepo := newMockDeviceTokenRepository()
+		prefsRepo := newMockNotificationPreferencesRepository()
+		pushProvider := newMockPushNotificationProvider()
+		slackNotifier := newMockSlackNotifier()
+		svc := NewNotificationService(tokenRepo, prefsRepo, pushProvider).WithSlackNotifier(slackNotifier)
+
+		// No Slack webhook configured (empty string)
+		prefs := entity.NewNotificationPreferences(userID)
+		_ = prefsRepo.Upsert(ctx, prefs)
+
+		err := svc.SendCriticalAlert(ctx, userID, "MyApp", "store.myshopify.com",
+			valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		// Verify no Slack message was sent
+		if len(slackNotifier.sentMessages) != 0 {
+			t.Errorf("expected 0 slack messages, got %d", len(slackNotifier.sentMessages))
+		}
+	})
+
+	t.Run("sends daily summary to slack when webhook configured", func(t *testing.T) {
+		tokenRepo := newMockDeviceTokenRepository()
+		prefsRepo := newMockNotificationPreferencesRepository()
+		pushProvider := newMockPushNotificationProvider()
+		slackNotifier := newMockSlackNotifier()
+		svc := NewNotificationService(tokenRepo, prefsRepo, pushProvider).WithSlackNotifier(slackNotifier)
+
+		// Configure Slack webhook
+		prefs := entity.NewNotificationPreferences(userID)
+		prefs.SlackWebhookURL = "https://hooks.slack.com/services/xxx/yyy/zzz"
+		_ = prefsRepo.Upsert(ctx, prefs)
+
+		snapshot := &entity.DailyMetricsSnapshot{
+			ID:                 uuid.New(),
+			AppID:              appID,
+			Date:               time.Now().UTC().Truncate(24 * time.Hour),
+			ActiveMRRCents:     500000,
+			RevenueAtRiskCents: 50000,
+			RenewalSuccessRate: 0.95,
+		}
+
+		err := svc.SendDailySummary(ctx, userID, "MyApp", snapshot)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		// Verify Slack message was sent
+		if len(slackNotifier.sentMessages) != 1 {
+			t.Fatalf("expected 1 slack message, got %d", len(slackNotifier.sentMessages))
+		}
+
+		msg := slackNotifier.sentMessages[0]
+		if msg.title != "📊 Daily Summary: MyApp" {
+			t.Errorf("unexpected title: %s", msg.title)
+		}
+		if msg.color != SlackColorInfo {
+			t.Errorf("expected info color, got %s", msg.color)
+		}
+	})
+
+	t.Run("sends to both slack and push when both configured", func(t *testing.T) {
+		tokenRepo := newMockDeviceTokenRepository()
+		prefsRepo := newMockNotificationPreferencesRepository()
+		pushProvider := newMockPushNotificationProvider()
+		slackNotifier := newMockSlackNotifier()
+		svc := NewNotificationService(tokenRepo, prefsRepo, pushProvider).WithSlackNotifier(slackNotifier)
+
+		// Register a device
+		_ = svc.RegisterDevice(ctx, userID, "token-1", entity.PlatformIOS)
+
+		// Configure Slack webhook
+		prefs := entity.NewNotificationPreferences(userID)
+		prefs.SlackWebhookURL = "https://hooks.slack.com/services/xxx/yyy/zzz"
+		_ = prefsRepo.Upsert(ctx, prefs)
+
+		err := svc.SendCriticalAlert(ctx, userID, "MyApp", "store.myshopify.com",
+			valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		// Verify both were sent
+		if len(slackNotifier.sentMessages) != 1 {
+			t.Errorf("expected 1 slack message, got %d", len(slackNotifier.sentMessages))
+		}
+		if len(pushProvider.sentNotifications) != 1 {
+			t.Errorf("expected 1 push notification, got %d", len(pushProvider.sentNotifications))
+		}
+	})
+
+	t.Run("continues sending push even if slack fails", func(t *testing.T) {
+		tokenRepo := newMockDeviceTokenRepository()
+		prefsRepo := newMockNotificationPreferencesRepository()
+		pushProvider := newMockPushNotificationProvider()
+		slackNotifier := newMockSlackNotifier()
+		slackNotifier.sendErr = errors.New("slack error")
+		svc := NewNotificationService(tokenRepo, prefsRepo, pushProvider).WithSlackNotifier(slackNotifier)
+
+		// Register a device
+		_ = svc.RegisterDevice(ctx, userID, "token-1", entity.PlatformIOS)
+
+		// Configure Slack webhook
+		prefs := entity.NewNotificationPreferences(userID)
+		prefs.SlackWebhookURL = "https://hooks.slack.com/services/xxx/yyy/zzz"
+		_ = prefsRepo.Upsert(ctx, prefs)
+
+		err := svc.SendCriticalAlert(ctx, userID, "MyApp", "store.myshopify.com",
+			valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
+
+		// Error should be returned but push should still be sent
+		if err == nil {
+			t.Error("expected error from slack failure")
+		}
+		if len(pushProvider.sentNotifications) != 1 {
+			t.Errorf("expected 1 push notification despite slack failure, got %d", len(pushProvider.sentNotifications))
 		}
 	})
 }

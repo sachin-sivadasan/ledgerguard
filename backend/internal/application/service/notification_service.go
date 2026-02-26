@@ -23,11 +23,26 @@ type PushNotificationProvider interface {
 	SendPush(ctx context.Context, deviceToken string, platform entity.Platform, title string, body string) error
 }
 
+// SlackNotifier defines the interface for sending Slack notifications
+type SlackNotifier interface {
+	// SendSlack sends a message to a Slack webhook
+	SendSlack(ctx context.Context, webhookURL string, title string, body string, color string) error
+}
+
+// Slack color constants
+const (
+	SlackColorDanger  = "#dc3545" // Red - for critical alerts
+	SlackColorWarning = "#ffc107" // Yellow - for warnings
+	SlackColorSuccess = "#28a745" // Green - for success
+	SlackColorInfo    = "#17a2b8" // Blue - for info
+)
+
 // NotificationService handles sending notifications to users
 type NotificationService struct {
 	deviceTokenRepo repository.DeviceTokenRepository
 	prefsRepo       repository.NotificationPreferencesRepository
 	pushProvider    PushNotificationProvider
+	slackNotifier   SlackNotifier
 }
 
 // NewNotificationService creates a new notification service
@@ -41,6 +56,12 @@ func NewNotificationService(
 		prefsRepo:       prefsRepo,
 		pushProvider:    pushProvider,
 	}
+}
+
+// WithSlackNotifier adds Slack notification support
+func (s *NotificationService) WithSlackNotifier(notifier SlackNotifier) *NotificationService {
+	s.slackNotifier = notifier
+	return s
 }
 
 // RegisterDevice registers a device token for push notifications
@@ -119,22 +140,26 @@ func (s *NotificationService) SendCriticalAlert(
 		return nil // User has disabled critical alerts
 	}
 
+	// Build notification content
+	title := fmt.Sprintf("🚨 Risk Alert: %s", appName)
+	body := fmt.Sprintf("%s changed from %s to %s", storeDomain, oldState, newState)
+
+	var lastErr error
+
+	// Send to Slack if configured
+	if s.slackNotifier != nil && prefs.SlackWebhookURL != "" {
+		if err := s.slackNotifier.SendSlack(ctx, prefs.SlackWebhookURL, title, body, SlackColorDanger); err != nil {
+			lastErr = err
+		}
+	}
+
 	// Get user's device tokens
 	tokens, err := s.deviceTokenRepo.FindByUserID(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to get device tokens: %w", err)
 	}
 
-	if len(tokens) == 0 {
-		return nil // No devices registered
-	}
-
-	// Build notification content
-	title := fmt.Sprintf("🚨 Risk Alert: %s", appName)
-	body := fmt.Sprintf("%s changed from %s to %s", storeDomain, oldState, newState)
-
 	// Send to all devices
-	var lastErr error
 	for _, token := range tokens {
 		if err := s.pushProvider.SendPush(ctx, token.DeviceToken, token.Platform, title, body); err != nil {
 			lastErr = err
@@ -162,16 +187,6 @@ func (s *NotificationService) SendDailySummary(
 		return nil // User has disabled daily summaries
 	}
 
-	// Get user's device tokens
-	tokens, err := s.deviceTokenRepo.FindByUserID(ctx, userID)
-	if err != nil {
-		return fmt.Errorf("failed to get device tokens: %w", err)
-	}
-
-	if len(tokens) == 0 {
-		return nil // No devices registered
-	}
-
 	// Build notification content
 	title := fmt.Sprintf("📊 Daily Summary: %s", appName)
 	mrrDollars := float64(snapshot.ActiveMRRCents) / 100
@@ -179,8 +194,22 @@ func (s *NotificationService) SendDailySummary(
 	body := fmt.Sprintf("MRR: $%.2f | At Risk: $%.2f | Renewal Rate: %.1f%%",
 		mrrDollars, atRiskDollars, snapshot.RenewalSuccessRate*100)
 
-	// Send to all devices
 	var lastErr error
+
+	// Send to Slack if configured
+	if s.slackNotifier != nil && prefs.SlackWebhookURL != "" {
+		if err := s.slackNotifier.SendSlack(ctx, prefs.SlackWebhookURL, title, body, SlackColorInfo); err != nil {
+			lastErr = err
+		}
+	}
+
+	// Get user's device tokens
+	tokens, err := s.deviceTokenRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to get device tokens: %w", err)
+	}
+
+	// Send to all devices
 	for _, token := range tokens {
 		if err := s.pushProvider.SendPush(ctx, token.DeviceToken, token.Platform, title, body); err != nil {
 			lastErr = err

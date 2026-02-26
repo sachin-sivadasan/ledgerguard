@@ -200,7 +200,22 @@
 | NS-014 | Get preferences not found | Returns default preferences | ✓ |
 | NS-015 | Update preferences success | Preferences updated | ✓ |
 
-#### 4.6 Revenue Classification
+#### 4.7 Slack Notification Provider
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| SL-001 | Send slack message success | Message delivered, 200 OK | ✓ |
+| SL-002 | Send slack empty webhook URL | ErrInvalidWebhookURL | ✓ |
+| SL-003 | Send slack non-200 response | ErrSlackWebhookFailed | ✓ |
+| SL-004 | Send slack invalid URL | Error returned | ✓ |
+| SL-005 | Send slack timeout | Error returned | ✓ |
+| SL-006 | Slack color constants valid | All hex codes valid | ✓ |
+| SL-007 | Slack integration critical alert | Sends to Slack with danger color | ✓ |
+| SL-008 | Slack integration no webhook | No Slack message sent | ✓ |
+| SL-009 | Slack integration daily summary | Sends to Slack with info color | ✓ |
+| SL-010 | Slack + Push both configured | Both receive notifications | ✓ |
+| SL-011 | Slack fails, push continues | Push still sent despite Slack error | ✓ |
+
+#### 4.8 Revenue Classification
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
 | RC-001 | AppSubscriptionSale | RECURRING | ✓ |

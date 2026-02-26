@@ -66,11 +66,32 @@ entity "subscriptions" as subscriptions {
   updated_at : TIMESTAMPTZ
 }
 
+entity "daily_metrics_snapshot" as daily_metrics_snapshot {
+  *id : UUID <<PK>>
+  --
+  *app_id : UUID <<FK>>
+  *date : DATE
+  active_mrr_cents : BIGINT
+  revenue_at_risk_cents : BIGINT
+  usage_revenue_cents : BIGINT
+  total_revenue_cents : BIGINT
+  renewal_success_rate : DECIMAL(5,4)
+  safe_count : INT
+  one_cycle_missed_count : INT
+  two_cycles_missed_count : INT
+  churned_count : INT
+  total_subscriptions : INT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+  <<UNIQUE: app_id, date>>
+}
+
 ' Relationships
 users ||--o{ partner_accounts : "has"
 partner_accounts ||--o{ apps : "tracks"
 apps ||--o{ transactions : "records"
 apps ||--o{ subscriptions : "has"
+apps ||--o{ daily_metrics_snapshot : "snapshots"
 
 note right of users
   Migration: 000001_create_users_table
@@ -121,6 +142,23 @@ note right of subscriptions
   - idx_subscriptions_app_risk
   - idx_subscriptions_domain
   - idx_subscriptions_expected_charge
+end note
+
+note right of daily_metrics_snapshot
+  Migration: 000006_create_daily_metrics_snapshot_table
+  - Immutable daily KPI snapshots
+  - One per app per day (never deleted)
+  - Computed by MetricsEngine
+
+  Metrics:
+  - Active MRR (SAFE only)
+  - Revenue at Risk (ONE_CYCLE + TWO_CYCLES)
+  - Usage Revenue / Total Revenue
+  - Renewal Success Rate
+
+  Indexes:
+  - idx_daily_metrics_app_date
+  - idx_daily_metrics_app_latest
 end note
 
 @enduml

@@ -145,10 +145,23 @@ User Prompt
     ↓
 7. Run tests
     ↓
-8. Commit with message & push
+8. PRE-COMMIT CHECKLIST (see below)
     ↓
-9. Log prompt to prompts.md (original + improved)
+9. Commit with message & push
+    ↓
+10. Log prompt to prompts.md (original + improved)
 ```
+
+### Pre-Commit Checklist
+**Before every commit, verify these are updated if relevant:**
+
+- [ ] `TEST_PLAN.md` – New test scenarios added?
+- [ ] `DATABASE_SCHEMA.md` – New migrations documented?
+- [ ] `IMPLEMENTATION_LOG.md` – Feature summary added?
+- [ ] `docs/ER_current.puml` – New entities/relationships?
+- [ ] `docs/SEQUENCE_current.puml` – New flows?
+- [ ] `docs/C4_current.puml` – New containers/components?
+- [ ] `prompts.md` – Prompt logged?
 
 ### Prompt Improvement Rule
 Before executing any user prompt:

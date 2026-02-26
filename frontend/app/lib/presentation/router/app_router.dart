@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../blocs/auth/auth.dart';
 import '../pages/admin/manual_integration_page.dart';
 import '../pages/login_page.dart';
+import '../pages/partner_integration_page.dart';
 import '../pages/signup_page.dart';
 import '../pages/placeholder_page.dart';
 
@@ -60,6 +61,11 @@ class AppRouter {
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const PlaceholderPage(title: 'Settings'),
+      ),
+      GoRoute(
+        path: '/partner-integration',
+        name: 'partner-integration',
+        builder: (context, state) => const PartnerIntegrationPage(),
       ),
       GoRoute(
         path: '/admin/manual-integration',

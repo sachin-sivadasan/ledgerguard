@@ -337,6 +337,20 @@ go test ./... -race
 | FB-041 | Filter by risk state | Emit filtered list | Pending |
 | FB-042 | View subscription detail | Emit detail state | Pending |
 
+#### F1.5 PartnerIntegrationBloc
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FB-070 | Initial state | PartnerIntegrationInitial | ✓ |
+| FB-071 | CheckStatus when connected | [Loading, Connected] | ✓ |
+| FB-072 | CheckStatus when not connected | [Loading, NotConnected] | ✓ |
+| FB-073 | CheckStatus failure | [Loading, Error] | ✓ |
+| FB-074 | ConnectWithOAuth success | [Loading, Success] | ✓ |
+| FB-075 | ConnectWithOAuth failure | [Loading, Error] | ✓ |
+| FB-076 | SaveManualToken success | [Loading, Success] | ✓ |
+| FB-077 | SaveManualToken invalid | [Loading, Error] | ✓ |
+| FB-078 | Disconnect success | [Loading, NotConnected] | ✓ |
+| FB-079 | Disconnect failure | [Loading, Error] | ✓ |
+
 ---
 
 ### F2. UseCases
@@ -433,6 +447,26 @@ go test ./... -race
 | FW-051 | Shows content for admin | Form fields visible | ✓ |
 | FW-052 | Shows loading while role loading | CircularProgressIndicator | ✓ |
 | FW-053 | Shows access denied for non-admin | Access denied message | ✓ |
+
+#### F4.7 PartnerIntegrationPage
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-060 | Renders page title | "Partner Integration" visible | ✓ |
+| FW-061 | Renders OAuth connect button | "Connect Shopify Partner" visible | ✓ |
+| FW-062 | Dispatches ConnectWithOAuth | Event added on button tap | ✓ |
+| FW-063 | Shows Manual Token for admin | Form fields visible for admin | ✓ |
+| FW-064 | Shows Manual Token for owner | Form fields visible for owner | ✓ |
+| FW-065 | Hides Manual Token when role not loaded | Form hidden | ✓ |
+| FW-066 | Dispatches SaveManualToken | Event added with form values | ✓ |
+| FW-067 | Validates Partner ID required | Error message shown | ✓ |
+| FW-068 | Validates API Token required | Error message shown | ✓ |
+| FW-069 | Shows loading indicator | CircularProgressIndicator when loading | ✓ |
+| FW-070 | Shows connected state | Partner ID and Disconnect visible | ✓ |
+| FW-071 | Dispatches Disconnect | Event added on button tap | ✓ |
+| FW-072 | Shows error message | Error text when error state | ✓ |
+| FW-073 | Shows success state | Connected card visible | ✓ |
+| FW-074 | Hides buttons when loading | Connect buttons not visible | ✓ |
+| FW-075 | Checks status on init | Event added on page load | ✓ |
 
 ---
 

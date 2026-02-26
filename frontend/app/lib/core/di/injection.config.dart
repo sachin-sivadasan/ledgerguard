@@ -11,9 +11,12 @@ import 'package:injectable/injectable.dart' as _i2;
 
 import '../../data/repositories/api_user_profile_repository.dart';
 import '../../data/repositories/firebase_auth_repository.dart';
+import '../../data/repositories/mock_partner_integration_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../domain/repositories/partner_integration_repository.dart';
 import '../../domain/repositories/user_profile_repository.dart';
 import '../../presentation/blocs/auth/auth_bloc.dart';
+import '../../presentation/blocs/partner_integration/partner_integration_bloc.dart';
 import '../../presentation/blocs/role/role_bloc.dart';
 
 extension GetItInjectableX on _i1.GetIt {
@@ -24,10 +27,12 @@ extension GetItInjectableX on _i1.GetIt {
     // Repositories
     registerLazySingleton<AuthRepository>(() => FirebaseAuthRepository());
     registerLazySingleton<UserProfileRepository>(() => ApiUserProfileRepository());
+    registerLazySingleton<PartnerIntegrationRepository>(() => MockPartnerIntegrationRepository());
 
     // Blocs
     registerFactory<AuthBloc>(() => AuthBloc(authRepository: get<AuthRepository>()));
     registerFactory<RoleBloc>(() => RoleBloc(userProfileRepository: get<UserProfileRepository>()));
+    registerFactory<PartnerIntegrationBloc>(() => PartnerIntegrationBloc(repository: get<PartnerIntegrationRepository>()));
 
     return this;
   }

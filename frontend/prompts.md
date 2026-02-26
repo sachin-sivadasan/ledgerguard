@@ -111,3 +111,32 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (54/54)
 
 ---
+
+## Prompt 005 – Partner Integration Screen
+**Date:** 2024-01-XX
+**Status:** Complete
+
+**Prompt:**
+> Create Partner Integration screen. Features: "Connect Shopify Partner" button (OAuth), Manual Token form (visible only to ADMIN), Token input fields, Save button, Loading state, Success state. Do not implement API logic deeply. Mock API calls first. Write widget tests.
+
+**Changes:**
+- Domain layer:
+  - `domain/entities/partner_integration.dart` - PartnerIntegration entity, IntegrationStatus enum
+  - `domain/repositories/partner_integration_repository.dart` - Repository interface + exceptions
+- Data layer:
+  - `data/repositories/mock_partner_integration_repository.dart` - Mock implementation
+- Presentation layer:
+  - `presentation/blocs/partner_integration/partner_integration_bloc.dart` - PartnerIntegrationBloc
+  - `presentation/blocs/partner_integration/partner_integration_event.dart` - CheckStatus, ConnectWithOAuth, SaveManualToken, Disconnect
+  - `presentation/blocs/partner_integration/partner_integration_state.dart` - Initial, Loading, NotConnected, Connected, Success, Error
+  - `presentation/pages/partner_integration_page.dart` - Partner integration page
+- Updated `app.dart` - PartnerIntegrationBloc integration
+- Updated `core/di/injection.config.dart` - Registered new dependencies
+- Updated `core/theme/app_theme.dart` - Added success color
+- Updated router with /partner-integration route
+- Tests:
+  - `test/presentation/blocs/partner_integration_bloc_test.dart` - 10 tests
+  - `test/presentation/pages/partner_integration_page_test.dart` - 16 tests
+- All tests passing (80/80)
+
+---

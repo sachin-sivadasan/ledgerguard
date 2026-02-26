@@ -5,6 +5,7 @@ import 'core/di/injection.dart';
 import 'core/theme/app_theme.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'presentation/blocs/auth/auth.dart';
+import 'presentation/blocs/partner_integration/partner_integration.dart';
 import 'presentation/blocs/role/role.dart';
 import 'presentation/router/app_router.dart';
 
@@ -19,6 +20,7 @@ class LedgerGuardApp extends StatefulWidget {
 class _LedgerGuardAppState extends State<LedgerGuardApp> {
   late final AuthBloc _authBloc;
   late final RoleBloc _roleBloc;
+  late final PartnerIntegrationBloc _partnerIntegrationBloc;
   late final AppRouter _appRouter;
   late final AuthRepository _authRepository;
 
@@ -28,6 +30,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
     _authRepository = getIt<AuthRepository>();
     _authBloc = getIt<AuthBloc>();
     _roleBloc = getIt<RoleBloc>();
+    _partnerIntegrationBloc = getIt<PartnerIntegrationBloc>();
     _appRouter = AppRouter(authBloc: _authBloc);
 
     // Check auth state on startup
@@ -38,6 +41,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
   void dispose() {
     _authBloc.close();
     _roleBloc.close();
+    _partnerIntegrationBloc.close();
     super.dispose();
   }
 
@@ -60,6 +64,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
       providers: [
         BlocProvider<AuthBloc>.value(value: _authBloc),
         BlocProvider<RoleBloc>.value(value: _roleBloc),
+        BlocProvider<PartnerIntegrationBloc>.value(value: _partnerIntegrationBloc),
       ],
       child: BlocListener<AuthBloc, AuthState>(
         listener: _onAuthStateChanged,

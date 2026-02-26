@@ -231,18 +231,87 @@ Implemented user role fetching from backend after login, with role-based UI visi
 
 ---
 
+## [2026-02-27] Partner Integration Screen
+
+**Commit:** Create Partner Integration screen with OAuth and manual token form
+
+**Summary:**
+Created Partner Integration page for connecting Shopify Partner account via OAuth or manual token entry (admin-only).
+
+**Implemented:**
+
+1. **Domain Layer:**
+   - `PartnerIntegration` entity with status, partnerId, connectedAt
+   - `IntegrationStatus` enum: notConnected, connecting, connected, error
+   - `PartnerIntegrationRepository` interface
+   - `PartnerIntegrationException` for error handling
+
+2. **Data Layer:**
+   - `MockPartnerIntegrationRepository` - Mock implementation for development
+   - Simulates OAuth connection and manual token save
+   - Configurable delay for realistic loading states
+
+3. **Presentation Layer (Bloc):**
+   - **PartnerIntegrationBloc** - Manages integration state
+   - **Events:**
+     - `CheckIntegrationStatusRequested` - Check current status
+     - `ConnectWithOAuthRequested` - Initiate OAuth flow
+     - `SaveManualTokenRequested` - Save manual token (admin only)
+     - `DisconnectRequested` - Disconnect integration
+   - **States:**
+     - `PartnerIntegrationInitial` - Before status check
+     - `PartnerIntegrationLoading` - During operations
+     - `PartnerIntegrationNotConnected` - No integration
+     - `PartnerIntegrationConnected` - Integration active
+     - `PartnerIntegrationSuccess` - Action completed
+     - `PartnerIntegrationError` - Error occurred
+
+4. **Partner Integration Page:**
+   - "Connect Shopify Partner" OAuth button (all users)
+   - Manual Token form (admin-only via RoleGuard)
+   - Partner ID and API Token input fields
+   - Loading state with progress indicator
+   - Connected state with partner ID display
+   - Disconnect button when connected
+   - Form validation for required fields
+   - Success snackbar on completion
+   - Route: `/partner-integration`
+
+**Tests (TDD):**
+- PartnerIntegrationBloc: 10 tests (status check, OAuth, manual token, disconnect)
+- PartnerIntegrationPage: 16 tests (rendering, events, states, validation)
+
+**Files Created/Modified:**
+- `lib/domain/entities/partner_integration.dart`
+- `lib/domain/repositories/partner_integration_repository.dart`
+- `lib/data/repositories/mock_partner_integration_repository.dart`
+- `lib/presentation/blocs/partner_integration/` - Bloc, events, states, barrel
+- `lib/presentation/pages/partner_integration_page.dart`
+- `lib/presentation/router/app_router.dart` (updated)
+- `lib/app.dart` (updated)
+- `lib/core/di/injection.config.dart` (updated)
+- `lib/core/theme/app_theme.dart` (updated - added success color)
+- `test/presentation/blocs/partner_integration_bloc_test.dart`
+- `test/presentation/pages/partner_integration_page_test.dart`
+
+**Tests:** 80 passing
+
+---
+
 ## Test Summary
 
 | Layer | Tests |
 |-------|-------|
 | presentation/blocs/auth | 11 |
 | presentation/blocs/role | 11 |
+| presentation/blocs/partner_integration | 10 |
 | presentation/pages/login | 9 |
 | presentation/pages/signup | 8 |
 | presentation/pages/manual_integration | 4 |
+| presentation/pages/partner_integration | 16 |
 | presentation/widgets/role_guard | 10 |
 | widget | 1 |
-| **Total** | **54** |
+| **Total** | **80** |
 
 ---
 
@@ -259,14 +328,14 @@ frontend/app/lib/
 ├── data/
 │   ├── datasources/    → API clients, local storage
 │   ├── models/         → JSON serializable models
-│   └── repositories/   → FirebaseAuthRepository, ApiUserProfileRepository
+│   └── repositories/   → FirebaseAuthRepository, ApiUserProfileRepository, MockPartnerIntegrationRepository
 ├── domain/
-│   ├── entities/       → UserEntity, UserProfile
-│   ├── repositories/   → AuthRepository, UserProfileRepository
+│   ├── entities/       → UserEntity, UserProfile, PartnerIntegration
+│   ├── repositories/   → AuthRepository, UserProfileRepository, PartnerIntegrationRepository
 │   └── usecases/       → Business logic
 └── presentation/
-    ├── blocs/          → AuthBloc, RoleBloc
-    ├── pages/          → LoginPage, SignupPage, ManualIntegrationPage
+    ├── blocs/          → AuthBloc, RoleBloc, PartnerIntegrationBloc
+    ├── pages/          → LoginPage, SignupPage, ManualIntegrationPage, PartnerIntegrationPage
     ├── widgets/        → RoleGuard, ProGuard
     └── router/         → GoRouter with auth/role redirects
 ```

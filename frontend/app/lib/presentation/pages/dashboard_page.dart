@@ -3,7 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/dashboard_metrics.dart';
+import '../../domain/entities/dashboard_preferences.dart';
 import '../blocs/dashboard/dashboard.dart';
+import '../blocs/preferences/preferences.dart';
+import '../widgets/dashboard_config_dialog.dart';
 import '../widgets/kpi_card.dart';
 import '../widgets/revenue_mix_chart.dart';
 import '../widgets/risk_distribution_chart.dart';
@@ -19,6 +22,17 @@ class DashboardPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Executive Dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Configure Dashboard',
+            onPressed: () {
+              // Load preferences before showing dialog
+              context
+                  .read<PreferencesBloc>()
+                  .add(const LoadPreferencesRequested());
+              DashboardConfigDialog.show(context);
+            },
+          ),
           BlocBuilder<DashboardBloc, DashboardState>(
             builder: (context, state) {
               final isRefreshing =

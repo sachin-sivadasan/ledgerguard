@@ -8,6 +8,7 @@ import 'presentation/blocs/app_selection/app_selection.dart';
 import 'presentation/blocs/auth/auth.dart';
 import 'presentation/blocs/dashboard/dashboard.dart';
 import 'presentation/blocs/partner_integration/partner_integration.dart';
+import 'presentation/blocs/preferences/preferences.dart';
 import 'presentation/blocs/role/role.dart';
 import 'presentation/router/app_router.dart';
 
@@ -25,6 +26,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
   late final PartnerIntegrationBloc _partnerIntegrationBloc;
   late final AppSelectionBloc _appSelectionBloc;
   late final DashboardBloc _dashboardBloc;
+  late final PreferencesBloc _preferencesBloc;
   late final AppRouter _appRouter;
   late final AuthRepository _authRepository;
 
@@ -37,6 +39,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
     _partnerIntegrationBloc = getIt<PartnerIntegrationBloc>();
     _appSelectionBloc = getIt<AppSelectionBloc>();
     _dashboardBloc = getIt<DashboardBloc>();
+    _preferencesBloc = getIt<PreferencesBloc>();
     _appRouter = AppRouter(authBloc: _authBloc);
 
     // Check auth state on startup
@@ -50,6 +53,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
     _partnerIntegrationBloc.close();
     _appSelectionBloc.close();
     _dashboardBloc.close();
+    _preferencesBloc.close();
     super.dispose();
   }
 
@@ -75,6 +79,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
         BlocProvider<PartnerIntegrationBloc>.value(value: _partnerIntegrationBloc),
         BlocProvider<AppSelectionBloc>.value(value: _appSelectionBloc),
         BlocProvider<DashboardBloc>.value(value: _dashboardBloc),
+        BlocProvider<PreferencesBloc>.value(value: _preferencesBloc),
       ],
       child: BlocListener<AuthBloc, AuthState>(
         listener: _onAuthStateChanged,

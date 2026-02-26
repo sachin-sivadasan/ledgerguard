@@ -535,6 +535,46 @@ go test ./... -race
 | FW-117 | Disables refresh when refreshing | Refresh icon hidden | ✓ |
 | FW-118 | Displays Primary KPIs header | Section header visible | ✓ |
 | FW-119 | Displays Revenue & Risk header | Section header visible | ✓ |
+| FW-120 | Shows settings button | Settings icon in app bar | ✓ |
+
+#### F4.10 PreferencesBloc
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FB-070 | Initial state | PreferencesInitial | ✓ |
+| FB-071 | Load preferences success | [Loading, Loaded] | ✓ |
+| FB-072 | Load preferences failure | [Loading, Error] | ✓ |
+| FB-073 | Add primary KPI | KPI added to preferences | ✓ |
+| FB-074 | Add duplicate KPI | KPI not duplicated | ✓ |
+| FB-075 | Max 4 KPIs enforced | No more than 4 KPIs | ✓ |
+| FB-076 | Remove primary KPI | KPI removed | ✓ |
+| FB-077 | Remove non-existent KPI | No change | ✓ |
+| FB-078 | Reorder KPIs | KPIs reordered correctly | ✓ |
+| FB-079 | Toggle secondary widget (disable) | Widget disabled | ✓ |
+| FB-080 | Toggle secondary widget (enable) | Widget enabled | ✓ |
+| FB-081 | Save preferences success | [Saving, Saved, Loaded] | ✓ |
+| FB-082 | Save preferences failure | [Saving, Error, Loaded] | ✓ |
+| FB-083 | Reset preferences | Defaults restored | ✓ |
+
+#### F4.11 DashboardConfigDialog
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-130 | Shows loading state | CircularProgressIndicator visible | ✓ |
+| FW-131 | Shows error with retry | Error message and retry button | ✓ |
+| FW-132 | Shows preferences when loaded | Configuration UI visible | ✓ |
+| FW-133 | Displays all primary KPIs | KPI list visible | ✓ |
+| FW-134 | Displays all secondary widgets | Widget toggles visible | ✓ |
+| FW-135 | Shows unsaved changes indicator | "Unsaved changes" text | ✓ |
+| FW-136 | Remove KPI dispatches event | RemovePrimaryKpiRequested | ✓ |
+| FW-137 | Toggle widget dispatches event | ToggleSecondaryWidgetRequested | ✓ |
+| FW-138 | Save button disabled when no changes | Button disabled | ✓ |
+| FW-139 | Save button enabled when changes | Button enabled | ✓ |
+| FW-140 | Reset button dispatches event | ResetPreferencesRequested | ✓ |
+| FW-141 | Shows KPI count | "(N/4)" format | ✓ |
+| FW-142 | Shows Add KPI when under max | "Add KPI" button visible | ✓ |
+| FW-143 | Hides Add KPI when at max | Button hidden | ✓ |
+| FW-144 | Shows saving indicator | CircularProgressIndicator in button | ✓ |
 
 ---
 

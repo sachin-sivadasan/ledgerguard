@@ -227,3 +227,32 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (140/140)
 
 ---
+
+## Prompt 009 – Dashboard Configuration
+**Date:** 2024-01-XX
+**Status:** Complete
+
+**Prompt:**
+> Implement Dashboard Configuration feature. User can: Choose up to 4 primary KPIs, Reorder KPIs, Toggle secondary widgets. Store preferences via backend API. Create: DashboardPreferencesRepository, PreferencesController. Persist configuration.
+
+**Changes:**
+- Domain layer:
+  - Created `domain/entities/dashboard_preferences.dart` - `KpiType` enum, `SecondaryWidget` enum, `DashboardPreferences` class
+  - Created `domain/repositories/dashboard_preferences_repository.dart` - Repository interface + exceptions
+- Data layer:
+  - Created `data/repositories/mock_dashboard_preferences_repository.dart` - Mock implementation
+  - Created `data/repositories/api_dashboard_preferences_repository.dart` - API implementation
+- Presentation layer:
+  - Created `presentation/blocs/preferences/preferences_event.dart` - Events for preferences
+  - Created `presentation/blocs/preferences/preferences_state.dart` - States for preferences
+  - Created `presentation/blocs/preferences/preferences_bloc.dart` - PreferencesBloc
+  - Created `presentation/widgets/dashboard_config_dialog.dart` - Configuration dialog UI
+  - Updated `dashboard_page.dart` - Added settings button in AppBar
+- Updated `app.dart` - Added PreferencesBloc provider
+- Updated `core/di/injection.config.dart` - Registered PreferencesBloc and repository
+- Tests:
+  - Created `test/presentation/blocs/preferences_bloc_test.dart` - 14 tests
+  - Created `test/presentation/widgets/dashboard_config_dialog_test.dart` - 15 tests
+- All tests passing (168/168)
+
+---

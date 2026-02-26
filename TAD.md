@@ -4,32 +4,45 @@
 
 ### Backend
 - **Language:** Go 1.22+
-- **Pattern:** Clean Architecture
+- **Pattern:** Domain-Driven Design (DDD)
 - **Structure:** Modular Monolith
 
 ```
 backend/
 ├── cmd/
-│   └── server/main.go           # Entry point
+│   └── server/main.go              # Entry point
 ├── internal/
-│   ├── domain/                  # Entities, business rules (no dependencies)
-│   ├── usecase/                 # Application logic
-│   ├── repository/              # Data access interfaces
-│   │   ├── postgres/            # PostgreSQL implementation
-│   │   └── memory/              # In-memory (testing)
-│   ├── delivery/
-│   │   └── http/                # HTTP handlers
-│   ├── service/                 # External service adapters
-│   │   ├── firebase/            # Firebase Auth
-│   │   ├── shopify/             # Partner API client
-│   │   └── openai/              # AI insights
-│   └── infrastructure/
-│       ├── config/              # Environment config
-│       ├── middleware/          # Auth, CORS, logging
-│       └── scheduler/           # Cron jobs
-├── pkg/                         # Shared utilities
-└── migrations/                  # SQL migrations
+│   ├── domain/                     # Core business logic (no external dependencies)
+│   │   ├── entity/                 # Domain entities (User, Subscription, Transaction)
+│   │   ├── valueobject/            # Value objects (Money, RiskState, ChargeType)
+│   │   ├── service/                # Domain services (RiskEngine, MetricsEngine)
+│   │   └── repository/             # Repository interfaces (ports)
+│   ├── application/                # Application layer (orchestration)
+│   │   ├── service/                # Application services (use cases)
+│   │   └── dto/                    # Data transfer objects
+│   ├── infrastructure/             # External concerns (adapters)
+│   │   ├── config/                 # Environment configuration
+│   │   ├── persistence/            # Repository implementations (PostgreSQL)
+│   │   └── external/               # External service clients (Firebase, Shopify, OpenAI)
+│   └── interfaces/                 # Entry points
+│       └── http/
+│           ├── handler/            # HTTP handlers
+│           ├── middleware/         # Auth, CORS, logging
+│           └── router/             # Route definitions
+├── pkg/                            # Shared utilities
+└── migrations/                     # SQL migrations
 ```
+
+### DDD Layers
+
+| Layer | Purpose | Dependencies |
+|-------|---------|--------------|
+| **Domain** | Core business logic, entities, rules | None (pure Go) |
+| **Application** | Use cases, orchestration, DTOs | Domain |
+| **Infrastructure** | DB, external APIs, config | Domain, Application |
+| **Interfaces** | HTTP handlers, CLI, gRPC | Application |
+
+**Dependency Rule:** Outer layers depend on inner layers. Domain has zero external dependencies.
 
 ### Frontend
 - **Framework:** Flutter 3.x
@@ -66,28 +79,26 @@ frontend/
 
 | Service | Layer | Responsibility |
 |---------|-------|----------------|
-| `FirebaseAuthAdapter` | Service | Verify ID tokens, extract user claims |
-| `PartnerIntegrationService` | Usecase | OAuth flow, token storage, app selection |
-| `PartnerSyncService` | Usecase | Fetch transactions, coordinate sync |
-| `LedgerRebuilder` | Domain | Deterministic ledger rebuild from transactions |
-| `RiskEngine` | Domain | Classify subscription risk states |
-| `MetricsEngine` | Domain | Compute KPIs from ledger state |
-| `SnapshotService` | Usecase | Store/retrieve daily snapshots |
-| `AIInsightService` | Service | Generate daily briefs via OpenAI |
-| `NotificationService` | Service | Email, Slack, in-app alerts |
+| `FirebaseAuthAdapter` | Infrastructure/External | Verify ID tokens, extract user claims |
+| `PartnerIntegrationService` | Application | OAuth flow, token storage, app selection |
+| `PartnerSyncService` | Application | Fetch transactions, coordinate sync |
+| `LedgerRebuilder` | Domain/Service | Deterministic ledger rebuild from transactions |
+| `RiskEngine` | Domain/Service | Classify subscription risk states |
+| `MetricsEngine` | Domain/Service | Compute KPIs from ledger state |
+| `SnapshotService` | Application | Store/retrieve daily snapshots |
+| `AIInsightService` | Infrastructure/External | Generate daily briefs via OpenAI |
+| `NotificationService` | Infrastructure/External | Email, Slack, in-app alerts |
 
-### Dependency Graph
+### Dependency Graph (DDD)
 
 ```
-HTTP Handlers
+Interfaces (HTTP Handlers)
     ↓
-Usecases (PartnerIntegrationService, PartnerSyncService, SnapshotService)
+Application (PartnerIntegrationService, PartnerSyncService, SnapshotService)
     ↓
-Domain (LedgerRebuilder, RiskEngine, MetricsEngine)
+Domain (Entities, Value Objects, Domain Services, Repository Interfaces)
     ↓
-Repository Interfaces
-    ↓
-Implementations (PostgreSQL, Firebase, Shopify API)
+Infrastructure (PostgreSQL, Firebase, Shopify API implementations)
 ```
 
 ---

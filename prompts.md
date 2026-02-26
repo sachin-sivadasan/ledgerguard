@@ -59,3 +59,28 @@
 - cmd/server/main.go
 - TEST_PLAN.md
 - All tests passing
+
+### [2026-02-26] Refactor to DDD Architecture
+**Original:**
+> backend should be in domain driven architecture
+
+**Improved:**
+> Refactor backend from Clean Architecture to Domain-Driven Design (DDD) folder structure:
+> 1. Restructure to: cmd/, internal/domain/, internal/application/, internal/infrastructure/, internal/interfaces/
+> 2. Domain layer: entity/, valueobject/, service/, repository/ (interfaces)
+> 3. Application layer: service/ (use cases), dto/
+> 4. Infrastructure layer: config/, persistence/, external/
+> 5. Interfaces layer: http/handler/, http/middleware/, http/router/
+> 6. Move existing health endpoint code to new structure
+> 7. Update TAD.md and DECISIONS.md with architecture change
+> 8. Keep all tests passing
+
+**Result:**
+- Restructured to DDD: domain/, application/, infrastructure/, interfaces/
+- Moved health handler to interfaces/http/handler/
+- Moved router to interfaces/http/router/
+- Moved database to infrastructure/persistence/
+- Updated TAD.md with DDD structure
+- Added ADR-005 for DDD decision
+- Updated CLAUDE.md with new folder structure
+- All tests passing (3/3)

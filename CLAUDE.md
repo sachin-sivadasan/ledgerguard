@@ -25,18 +25,25 @@ Update when architecture changes:
 - `docs/ER.puml` – Entity relationships
 - `docs/SEQUENCE.puml` – Key flows (sync, auth, etc.)
 
-### 3. Clean Architecture (Go)
+### 3. Domain-Driven Design (Go)
 ```
-cmd/server/main.go          → Entry point only
-internal/domain/            → Entities, business rules (zero dependencies)
-internal/usecase/           → Application logic
-internal/repository/        → Data access interfaces + implementations
-internal/delivery/http/     → HTTP handlers
-internal/service/           → External adapters (Firebase, Shopify, OpenAI)
-pkg/                        → Shared utilities
+cmd/server/main.go                    → Entry point only
+internal/domain/entity/               → Domain entities (User, Subscription, Transaction)
+internal/domain/valueobject/          → Value objects (Money, RiskState, ChargeType)
+internal/domain/service/              → Domain services (RiskEngine, MetricsEngine)
+internal/domain/repository/           → Repository interfaces (ports)
+internal/application/service/         → Application services (use cases)
+internal/application/dto/             → Data transfer objects
+internal/infrastructure/config/       → Configuration
+internal/infrastructure/persistence/  → Database implementations (adapters)
+internal/infrastructure/external/     → External service clients (Firebase, Shopify)
+internal/interfaces/http/handler/     → HTTP handlers
+internal/interfaces/http/middleware/  → HTTP middleware
+internal/interfaces/http/router/      → Route definitions
+pkg/                                  → Shared utilities
 ```
 
-**Dependency Rule:** Dependencies point inward. Domain knows nothing about outer layers.
+**Dependency Rule:** Outer layers depend on inner. Domain has ZERO external dependencies.
 
 ### 4. TDD – Test-Driven Development
 ```
@@ -175,10 +182,22 @@ ledgerguard/
 │   ├── cmd/server/main.go
 │   ├── internal/
 │   │   ├── domain/
-│   │   ├── usecase/
-│   │   ├── repository/
-│   │   ├── delivery/http/
-│   │   └── service/
+│   │   │   ├── entity/
+│   │   │   ├── valueobject/
+│   │   │   ├── service/
+│   │   │   └── repository/
+│   │   ├── application/
+│   │   │   ├── service/
+│   │   │   └── dto/
+│   │   ├── infrastructure/
+│   │   │   ├── config/
+│   │   │   ├── persistence/
+│   │   │   └── external/
+│   │   └── interfaces/
+│   │       └── http/
+│   │           ├── handler/
+│   │           ├── middleware/
+│   │           └── router/
 │   ├── pkg/
 │   └── migrations/
 └── frontend/

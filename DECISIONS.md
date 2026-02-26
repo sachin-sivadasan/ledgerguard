@@ -89,3 +89,26 @@ Use PostgreSQL with pgcrypto for UUID generation.
 - JSON support if needed
 - Well-known, easy to hire for
 - Requires managed instance in production
+
+---
+
+### ADR-005: Domain-Driven Design over Clean Architecture
+**Date:** 2026-02-26
+**Status:** Accepted
+
+**Context:**
+Initial implementation used Clean Architecture folder structure. Need clearer separation between business logic and infrastructure with explicit domain modeling.
+
+**Decision:**
+Refactor to Domain-Driven Design (DDD) structure:
+- `domain/` - Entities, value objects, domain services, repository interfaces
+- `application/` - Use cases, DTOs, orchestration
+- `infrastructure/` - Database, external services, config
+- `interfaces/` - HTTP handlers, middleware, routing
+
+**Consequences:**
+- Better domain isolation (domain layer has zero external dependencies)
+- Clearer boundaries between layers
+- Repository interfaces defined in domain (ports), implementations in infrastructure (adapters)
+- More explicit modeling of business concepts
+- Slightly more directories, but clearer responsibilities

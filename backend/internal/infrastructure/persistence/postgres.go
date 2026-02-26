@@ -1,4 +1,4 @@
-package database
+package persistence
 
 import (
 	"context"
@@ -8,11 +8,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type DB struct {
+type PostgresDB struct {
 	Pool *pgxpool.Pool
 }
 
-func NewPostgresDB(ctx context.Context, dsn string) (*DB, error) {
+func NewPostgresDB(ctx context.Context, dsn string) (*PostgresDB, error) {
 	config, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse database config: %w", err)
@@ -28,13 +28,13 @@ func NewPostgresDB(ctx context.Context, dsn string) (*DB, error) {
 		return nil, fmt.Errorf("failed to create connection pool: %w", err)
 	}
 
-	return &DB{Pool: pool}, nil
+	return &PostgresDB{Pool: pool}, nil
 }
 
-func (db *DB) Ping(ctx context.Context) error {
+func (db *PostgresDB) Ping(ctx context.Context) error {
 	return db.Pool.Ping(ctx)
 }
 
-func (db *DB) Close() {
+func (db *PostgresDB) Close() {
 	db.Pool.Close()
 }

@@ -10,9 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	httpdelivery "github.com/sachin-sivadasan/ledgerguard/internal/delivery/http"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/config"
-	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/database"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
+	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/handler"
+	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/router"
 )
 
 func main() {
@@ -29,8 +30,8 @@ func run() error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	var db *database.DB
-	db, err = database.NewPostgresDB(ctx, cfg.Database.DSN())
+	var db *persistence.PostgresDB
+	db, err = persistence.NewPostgresDB(ctx, cfg.Database.DSN())
 	if err != nil {
 		log.Printf("WARNING: failed to connect to database: %v", err)
 		log.Printf("Server will start without database connection")
@@ -40,8 +41,8 @@ func run() error {
 		log.Println("Connected to PostgreSQL")
 	}
 
-	healthHandler := httpdelivery.NewHealthHandler(db)
-	r := httpdelivery.NewRouter(healthHandler)
+	healthHandler := handler.NewHealthHandler(db)
+	r := router.New(healthHandler)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

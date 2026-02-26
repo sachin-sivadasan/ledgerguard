@@ -86,6 +86,22 @@
 | E-004 | Invalid ciphertext | Error returned | ✓ |
 | E-005 | Wrong key decryption | Error returned | ✓ |
 
+#### 3.3 Manual Token (ADMIN only)
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| M-001 | Add token success | 201, token encrypted, masked in response | ✓ |
+| M-002 | Add token missing token | 400, bad request | ✓ |
+| M-003 | Add token missing partner_id | 400, bad request | ✓ |
+| M-004 | Add token no user | 401, unauthorized | ✓ |
+| M-005 | Add token updates existing | 200, account updated | ✓ |
+| M-006 | Get token success | 200, masked token returned | ✓ |
+| M-007 | Get token not found | 404, not found | ✓ |
+| M-008 | Get token no user | 401, unauthorized | ✓ |
+| M-009 | Revoke token success | 200, token deleted | ✓ |
+| M-010 | Revoke token not found | 404, not found | ✓ |
+| M-011 | Revoke token no user | 401, unauthorized | ✓ |
+| M-012 | Mask token function | Correctly masks last 4 chars | ✓ |
+
 ---
 
 ### 4. Domain (Future)

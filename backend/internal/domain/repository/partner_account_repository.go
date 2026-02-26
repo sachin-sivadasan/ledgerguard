@@ -12,4 +12,5 @@ type PartnerAccountRepository interface {
 	FindByUserID(ctx context.Context, userID uuid.UUID) (*entity.PartnerAccount, error)
 	FindByPartnerID(ctx context.Context, partnerID string) (*entity.PartnerAccount, error)
 	Update(ctx context.Context, account *entity.PartnerAccount) error
+	Delete(ctx context.Context, userID uuid.UUID) error
 }

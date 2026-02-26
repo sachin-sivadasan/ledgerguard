@@ -9,9 +9,11 @@ import (
 )
 
 type Config struct {
-	HealthHandler *handler.HealthHandler
-	OAuthHandler  *handler.OAuthHandler
-	AuthMW        func(next http.Handler) http.Handler
+	HealthHandler      *handler.HealthHandler
+	OAuthHandler       *handler.OAuthHandler
+	ManualTokenHandler *handler.ManualTokenHandler
+	AuthMW             func(next http.Handler) http.Handler
+	AdminMW            func(next http.Handler) http.Handler // RequireRoles(ADMIN)
 }
 
 func New(cfg Config) *chi.Mux {
@@ -26,13 +28,21 @@ func New(cfg Config) *chi.Mux {
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		// OAuth routes (public - no auth required for redirect)
+		// Shopify integration routes
 		r.Route("/integrations/shopify", func(r chi.Router) {
+			// OAuth routes
 			if cfg.OAuthHandler != nil {
 				// StartOAuth requires auth (user must be logged in)
 				r.With(cfg.AuthMW).Get("/oauth", cfg.OAuthHandler.StartOAuth)
 				// Callback is public (receives redirect from Shopify)
 				r.Get("/callback", cfg.OAuthHandler.Callback)
+			}
+
+			// Manual token routes (ADMIN only)
+			if cfg.ManualTokenHandler != nil && cfg.AuthMW != nil && cfg.AdminMW != nil {
+				r.With(cfg.AuthMW, cfg.AdminMW).Post("/token", cfg.ManualTokenHandler.AddToken)
+				r.With(cfg.AuthMW, cfg.AdminMW).Get("/token", cfg.ManualTokenHandler.GetToken)
+				r.With(cfg.AuthMW, cfg.AdminMW).Delete("/token", cfg.ManualTokenHandler.RevokeToken)
 			}
 		})
 	})

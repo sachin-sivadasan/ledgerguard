@@ -17,6 +17,7 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(role_mw, "RoleMiddleware", "Middleware", "RBAC (OWNER/ADMIN)")
     Component(health_handler, "HealthHandler", "HTTP Handler", "GET /health")
     Component(oauth_handler, "OAuthHandler", "HTTP Handler", "OAuth flow endpoints")
+    Component(manual_token_handler, "ManualTokenHandler", "HTTP Handler", "Manual token CRUD (ADMIN)")
 
     ' Domain Layer - IMPLEMENTED
     Component(user_entity, "User", "Entity", "id, firebase_uid, email, role, plan_tier")
@@ -43,7 +44,8 @@ Rel(developer, router, "HTTPS/REST")
 Rel(router, auth_mw, "Uses")
 Rel(router, role_mw, "Uses")
 Rel(router, health_handler, "/health")
-Rel(router, oauth_handler, "/api/v1/integrations/shopify/*")
+Rel(router, oauth_handler, "/api/v1/integrations/shopify/oauth,callback")
+Rel(router, manual_token_handler, "/api/v1/integrations/shopify/token")
 
 Rel(auth_mw, firebase_auth, "Verifies token")
 Rel(auth_mw, user_repo_if, "Find/create user")
@@ -52,6 +54,9 @@ Rel(role_mw, user_entity, "Checks role")
 Rel(oauth_handler, shopify_oauth, "OAuth flow")
 Rel(oauth_handler, partner_repo_if, "Store account")
 Rel(oauth_handler, crypto, "Encrypt token")
+
+Rel(manual_token_handler, partner_repo_if, "CRUD account")
+Rel(manual_token_handler, crypto, "Encrypt/decrypt token")
 
 Rel(user_repo_if, user_repo, "Implements")
 Rel(partner_repo_if, partner_repo, "Implements")

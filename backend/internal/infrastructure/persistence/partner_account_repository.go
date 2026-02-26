@@ -114,3 +114,18 @@ func (r *PostgresPartnerAccountRepository) Update(ctx context.Context, account *
 
 	return err
 }
+
+func (r *PostgresPartnerAccountRepository) Delete(ctx context.Context, userID uuid.UUID) error {
+	query := `DELETE FROM partner_accounts WHERE user_id = $1`
+
+	result, err := r.pool.Exec(ctx, query, userID)
+	if err != nil {
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrPartnerAccountNotFound
+	}
+
+	return nil
+}

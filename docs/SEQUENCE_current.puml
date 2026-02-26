@@ -106,4 +106,52 @@ API --> App: 200 OK\n{"success": true, "partner_id": "..."}
 
 App --> User: "Connected successfully!"
 
+' ==========================================
+' 4. Manual Token Flow (ADMIN only)
+' ==========================================
+newpage Manual Token Flow (ADMIN only)
+
+actor Admin
+participant "Client App" as App
+participant "API Server" as API
+database "PostgreSQL" as DB
+
+== Add Manual Token ==
+
+Admin -> App: Enter partner token & ID
+App -> API: POST /api/v1/integrations/shopify/token\n[Authorization: Bearer <token>]\n{ "token": "shppa_xxx", "partner_id": "12345" }
+
+API -> API: AuthMiddleware (verify user)
+API -> API: RoleMiddleware (require ADMIN)
+
+alt User is ADMIN or OWNER
+    API -> API: Encrypt token (AES-256-GCM)
+    API -> DB: INSERT/UPDATE partner_accounts
+    DB --> API: Success
+    API --> App: 201 Created\n{ "masked_token": "***...xxxx" }
+else Not ADMIN
+    API --> App: 403 Forbidden
+end
+
+== Get Token Info ==
+
+Admin -> App: View token info
+App -> API: GET /api/v1/integrations/shopify/token\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware + RoleMiddleware
+API -> DB: SELECT FROM partner_accounts
+DB --> API: Account record
+API -> API: Decrypt & mask token
+API --> App: 200 OK\n{ "masked_token": "***...xxxx",\n"partner_id": "12345",\n"integration_type": "MANUAL" }
+
+== Revoke Token ==
+
+Admin -> App: Click "Revoke Token"
+App -> API: DELETE /api/v1/integrations/shopify/token\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware + RoleMiddleware
+API -> DB: DELETE FROM partner_accounts\nWHERE user_id = ?
+DB --> API: Success
+API --> App: 200 OK\n{ "message": "Token revoked successfully" }
+
 @enduml

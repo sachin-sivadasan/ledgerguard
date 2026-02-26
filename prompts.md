@@ -190,3 +190,30 @@
 - Updated TEST_PLAN.md with OAuth and encryption test scenarios
 - Updated DATABASE_SCHEMA.md with partner_accounts migration
 - All tests passing (24/24)
+
+### [2026-02-26] Manual Partner Token Integration
+**Original:**
+> Implement manual partner token integration. - ADMIN only - Encrypt token - Mask token in API responses - Allow revoke
+
+**Improved:**
+> Implement manual Shopify Partner token integration (for development/testing):
+> 1. Create ManualTokenHandler with endpoints:
+>    - POST /api/v1/integrations/shopify/token - Add manual token (ADMIN only)
+>    - GET /api/v1/integrations/shopify/token - Get token info (masked)
+>    - DELETE /api/v1/integrations/shopify/token - Revoke token
+> 2. Use existing AES-256-GCM encryption for token storage
+> 3. Use existing PartnerAccount entity with IntegrationType = MANUAL
+> 4. Mask token in responses (show only last 4 chars: `***...xxxx`)
+> 5. Apply RequireRoles(ADMIN) middleware
+> 6. Add Delete method to PartnerAccountRepository
+> 7. Write tests first (TDD)
+> 8. Update router, diagrams, documentation
+
+**Result:**
+- domain/repository/partner_account_repository.go - Added Delete method
+- infrastructure/persistence/partner_account_repository.go - Added Delete implementation
+- interfaces/http/handler/manual_token.go - ManualTokenHandler (AddToken, GetToken, RevokeToken)
+- interfaces/http/handler/manual_token_test.go - 12 tests
+- Updated router with /token routes (POST, GET, DELETE) with ADMIN middleware
+- Updated TEST_PLAN.md with manual token test scenarios
+- All tests passing (36/36)

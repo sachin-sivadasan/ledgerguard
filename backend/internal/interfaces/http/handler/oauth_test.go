@@ -61,6 +61,10 @@ func (m *mockPartnerAccountRepo) Update(ctx context.Context, account *entity.Par
 	return nil
 }
 
+func (m *mockPartnerAccountRepo) Delete(ctx context.Context, userID uuid.UUID) error {
+	return nil
+}
+
 func TestOAuthHandler_StartOAuth(t *testing.T) {
 	oauthService := &mockOAuthService{authURL: "https://partners.shopify.com/authorize"}
 	handler := NewOAuthHandler(oauthService, nil, nil)

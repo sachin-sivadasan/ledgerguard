@@ -158,6 +158,20 @@
 | RE-013 | CalculateRevenueAtRisk | ONE_CYCLE + TWO_CYCLES MRR | ✓ |
 | RE-014 | IsAtRisk helper | true for ONE/TWO CYCLE MISSED | ✓ |
 
+#### 4.3 Metrics Engine
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| ME-001 | Calculate Active MRR | Sum of SAFE subscription MRR | ✓ |
+| ME-002 | Calculate Active MRR annual | Annual / 12 = monthly | ✓ |
+| ME-003 | Calculate Revenue at Risk | ONE_CYCLE + TWO_CYCLES MRR | ✓ |
+| ME-004 | Calculate Usage Revenue | Sum of USAGE transactions | ✓ |
+| ME-005 | Calculate Total Revenue | RECURRING + USAGE + ONE_TIME - REFUNDS | ✓ |
+| ME-006 | Calculate Renewal Success Rate | SAFE / Total = decimal | ✓ |
+| ME-007 | Renewal rate no subscriptions | Returns 0 | ✓ |
+| ME-008 | Renewal rate all safe | Returns 1.0 | ✓ |
+| ME-009 | Compute all metrics | Returns complete snapshot | ✓ |
+| ME-010 | Compute metrics empty inputs | Returns zeros | ✓ |
+
 #### 4.3 Revenue Classification
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|

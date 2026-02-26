@@ -379,6 +379,48 @@ Created dedicated RiskEngine domain service and integrated it with the sync flow
 
 ---
 
+## [2026-02-26] MetricsEngine Implementation
+
+**Commit:** Implement MetricsEngine with daily snapshots
+
+**Summary:**
+Created MetricsEngine domain service for KPI computation and daily metrics snapshots storage.
+
+**Implemented:**
+
+1. **Domain Entity - DailyMetricsSnapshot:**
+   - Immutable daily KPI records (one per app per day)
+   - Stores: ActiveMRR, RevenueAtRisk, UsageRevenue, TotalRevenue
+   - Stores: RenewalSuccessRate, subscription counts by risk state
+   - Never deleted - permanent audit trail
+
+2. **Domain Service - MetricsEngine:**
+   - `CalculateActiveMRR(subscriptions)` - Sum MRR from SAFE subscriptions
+   - `CalculateRevenueAtRisk(subscriptions)` - MRR from ONE_CYCLE + TWO_CYCLES
+   - `CalculateUsageRevenue(transactions)` - Sum of USAGE transactions
+   - `CalculateTotalRevenue(transactions)` - RECURRING + USAGE + ONE_TIME - REFUNDS
+   - `CalculateRenewalSuccessRate(subscriptions)` - SAFE / Total as decimal
+   - `ComputeAllMetrics(appID, subscriptions, transactions, now)` - Creates complete snapshot
+
+3. **Repository:**
+   - `DailyMetricsSnapshotRepository` interface
+   - PostgreSQL implementation with `Upsert` (ON CONFLICT DO UPDATE)
+   - `FindByAppIDAndDate`, `FindByAppIDRange`, `FindLatestByAppID`
+
+4. **Integration:**
+   - LedgerService now accepts optional snapshot repository
+   - `WithSnapshotRepository(repo)` builder method
+   - Stores daily snapshot after each ledger rebuild
+
+5. **Migration:**
+   - `000006_create_daily_metrics_snapshot_table`
+   - UNIQUE constraint on (app_id, date)
+   - Indexes for time-series queries
+
+**Tests:** 10 new tests (total: 98)
+
+---
+
 ## Test Summary
 
 | Package | Tests |
@@ -388,9 +430,9 @@ Created dedicated RiskEngine domain service and integrated it with the sync flow
 | interfaces/http/handler | 42 |
 | interfaces/http/middleware | 11 |
 | application/service | 5 |
-| domain/service | 20 |
+| domain/service | 30 |
 | pkg/crypto | 5 |
-| **Total** | **88** |
+| **Total** | **98** |
 
 ---
 
@@ -403,6 +445,7 @@ Created dedicated RiskEngine domain service and integrated it with the sync flow
 | 000003_create_apps_table | Tracked Shopify apps | ✓ |
 | 000004_create_transactions_table | Immutable transaction ledger | ✓ |
 | 000005_create_subscriptions_table | Subscription state with risk tracking | ✓ |
+| 000006_create_daily_metrics_snapshot_table | Daily KPI snapshots | ✓ |
 
 ---
 
@@ -411,10 +454,10 @@ Created dedicated RiskEngine domain service and integrated it with the sync flow
 ```
 cmd/server/main.go              → Entry point only
 internal/domain/
-  ├── entity/                   → User, PartnerAccount, App, Transaction, Subscription
+  ├── entity/                   → User, PartnerAccount, App, Transaction, Subscription, DailyMetricsSnapshot
   ├── valueobject/              → Role, PlanTier, IntegrationType, ChargeType, RiskState, BillingInterval
-  ├── repository/               → Interfaces (UserRepo, PartnerAccountRepo, AppRepo, TransactionRepo, SubscriptionRepo)
-  └── service/                  → LedgerService, RiskEngine
+  ├── repository/               → Interfaces (UserRepo, PartnerAccountRepo, AppRepo, TransactionRepo, SubscriptionRepo, DailyMetricsSnapshotRepo)
+  └── service/                  → LedgerService, RiskEngine, MetricsEngine
 internal/application/
   ├── service/                  → SyncService (with LedgerRebuilder integration)
   └── scheduler/                → SyncScheduler

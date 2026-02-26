@@ -352,3 +352,37 @@
 - Updated TEST_PLAN.md with RiskEngine test scenarios
 - Updated IMPLEMENTATION_LOG.md with RiskEngine implementation
 - All tests passing (88/88)
+
+### [2026-02-26] Implement MetricsEngine
+**Original:**
+> Implement MetricsEngine.
+> Compute: Renewal Success Rate, Active MRR, Revenue at Risk, Usage Revenue, Total Revenue
+> Store daily snapshot.
+
+**Improved:**
+> Implement MetricsEngine for KPI computation and daily snapshots:
+> 1. Create MetricsEngine in domain/service that computes:
+>    - Renewal Success Rate = SAFE subscriptions / Total active subscriptions
+>    - Active MRR = Sum of MRR from SAFE subscriptions only
+>    - Revenue at Risk = MRR from ONE_CYCLE_MISSED + TWO_CYCLES_MISSED
+>    - Usage Revenue = Sum of USAGE transactions (12-month window)
+>    - Total Revenue = RECURRING + USAGE + ONE_TIME - REFUNDS
+> 2. Create DailyMetricsSnapshot entity
+> 3. Create DailyMetricsSnapshotRepository interface and PostgreSQL implementation
+> 4. Create migration 000006_create_daily_metrics_snapshot_table
+> 5. Integrate with LedgerService to store snapshot after rebuild
+> 6. Write tests first (TDD)
+> 7. Update documentation
+
+**Result:**
+- domain/entity/daily_metrics_snapshot.go - DailyMetricsSnapshot entity
+- domain/repository/daily_metrics_snapshot_repository.go - Repository interface
+- domain/service/metrics_engine.go - MetricsEngine with KPI calculations
+- domain/service/metrics_engine_test.go - Comprehensive tests (10 test cases)
+- infrastructure/persistence/daily_metrics_snapshot_repository.go - PostgreSQL implementation
+- domain/service/ledger_service.go - Added WithSnapshotRepository, stores snapshot after rebuild
+- migrations/000006_create_daily_metrics_snapshot_table.up.sql / .down.sql
+- Updated TEST_PLAN.md with MetricsEngine test scenarios
+- Updated DATABASE_SCHEMA.md with migration 000006
+- Updated IMPLEMENTATION_LOG.md with MetricsEngine implementation
+- All tests passing (98/98)

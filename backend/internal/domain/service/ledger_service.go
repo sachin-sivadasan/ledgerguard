@@ -19,6 +19,8 @@ type LedgerRebuildResult struct {
 	TotalUsageCents      int64
 	RiskSummary          RiskSummary
 	RebuildAt            time.Time
+	// Snapshot contains the daily metrics snapshot (if snapshotRepo is configured)
+	Snapshot             *entity.DailyMetricsSnapshot
 }
 
 // RiskSummary contains counts of subscriptions by risk state
@@ -31,8 +33,10 @@ type RiskSummary struct {
 
 // LedgerService handles deterministic ledger rebuilds
 type LedgerService struct {
-	txRepo  repository.TransactionRepository
-	subRepo repository.SubscriptionRepository
+	txRepo       repository.TransactionRepository
+	subRepo      repository.SubscriptionRepository
+	snapshotRepo repository.DailyMetricsSnapshotRepository
+	metrics      *MetricsEngine
 }
 
 func NewLedgerService(
@@ -42,7 +46,14 @@ func NewLedgerService(
 	return &LedgerService{
 		txRepo:  txRepo,
 		subRepo: subRepo,
+		metrics: NewMetricsEngine(),
 	}
+}
+
+// WithSnapshotRepository adds a snapshot repository for daily metrics storage
+func (s *LedgerService) WithSnapshotRepository(repo repository.DailyMetricsSnapshotRepository) *LedgerService {
+	s.snapshotRepo = repo
+	return s
 }
 
 // RebuildFromTransactions rebuilds subscription state from transactions
@@ -96,14 +107,25 @@ func (s *LedgerService) RebuildFromTransactions(ctx context.Context, appID uuid.
 	// Calculate total usage revenue
 	totalUsage = s.sumUsageRevenue(transactions)
 
-	return &LedgerRebuildResult{
+	result := &LedgerRebuildResult{
 		AppID:                appID,
 		SubscriptionsUpdated: len(subscriptions),
 		TotalMRRCents:        totalMRR,
 		TotalUsageCents:      totalUsage,
 		RiskSummary:          riskSummary,
 		RebuildAt:            now,
-	}, nil
+	}
+
+	// Store daily metrics snapshot if repository is configured
+	if s.snapshotRepo != nil && s.metrics != nil {
+		snapshot := s.metrics.ComputeAllMetrics(appID, subscriptions, transactions, now)
+		if err := s.snapshotRepo.Upsert(ctx, snapshot); err != nil {
+			return nil, err
+		}
+		result.Snapshot = snapshot
+	}
+
+	return result, nil
 }
 
 // groupTransactionsByDomain groups transactions by myshopify_domain

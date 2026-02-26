@@ -20,6 +20,9 @@ abstract class AuthRepository {
 
   /// Sign out
   Future<void> signOut();
+
+  /// Get Firebase ID token for API calls
+  Future<String?> getIdToken();
 }
 
 /// Authentication exceptions

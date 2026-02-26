@@ -81,3 +81,33 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (29/29)
 
 ---
+
+## Prompt 004 – Fetch User Role from Backend
+**Date:** 2024-01-XX
+**Status:** Complete
+
+**Prompt:**
+> Fetch user role from backend after login. Store: role (OWNER/ADMIN), plan_tier. Implement: RoleProvider. Hide admin-only UI for non-admin. Protect manual integration route. Write tests for role visibility.
+
+**Changes:**
+- Domain layer:
+  - `domain/entities/user_profile.dart` - UserProfile, UserRole, PlanTier
+  - `domain/repositories/user_profile_repository.dart` - Repository interface + exceptions
+- Data layer:
+  - `data/repositories/api_user_profile_repository.dart` - API implementation with Dio
+- Presentation layer:
+  - `presentation/blocs/role/role_bloc.dart` - RoleBloc
+  - `presentation/blocs/role/role_event.dart` - FetchRoleRequested, ClearRoleRequested
+  - `presentation/blocs/role/role_state.dart` - RoleInitial, RoleLoading, RoleLoaded, RoleError
+  - `presentation/widgets/role_guard.dart` - RoleGuard, ProGuard widgets
+  - `presentation/pages/admin/manual_integration_page.dart` - Admin-only page
+- Updated `app.dart` - RoleBloc integration, fetch role after auth
+- Updated `auth_repository.dart` - Added getIdToken method
+- Updated router with /admin/manual-integration route
+- Tests:
+  - `test/presentation/blocs/role_bloc_test.dart` - 11 tests
+  - `test/presentation/widgets/role_guard_test.dart` - 10 tests
+  - `test/presentation/pages/manual_integration_page_test.dart` - 4 tests
+- All tests passing (54/54)
+
+---

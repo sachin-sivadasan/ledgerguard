@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/di/injection.dart';
 import 'core/theme/app_theme.dart';
+import 'domain/repositories/auth_repository.dart';
 import 'presentation/blocs/auth/auth.dart';
+import 'presentation/blocs/role/role.dart';
 import 'presentation/router/app_router.dart';
 
 /// Main application widget
@@ -16,12 +18,16 @@ class LedgerGuardApp extends StatefulWidget {
 
 class _LedgerGuardAppState extends State<LedgerGuardApp> {
   late final AuthBloc _authBloc;
+  late final RoleBloc _roleBloc;
   late final AppRouter _appRouter;
+  late final AuthRepository _authRepository;
 
   @override
   void initState() {
     super.initState();
+    _authRepository = getIt<AuthRepository>();
     _authBloc = getIt<AuthBloc>();
+    _roleBloc = getIt<RoleBloc>();
     _appRouter = AppRouter(authBloc: _authBloc);
 
     // Check auth state on startup
@@ -31,18 +37,38 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
   @override
   void dispose() {
     _authBloc.close();
+    _roleBloc.close();
     super.dispose();
+  }
+
+  void _onAuthStateChanged(BuildContext context, AuthState state) async {
+    if (state is Authenticated) {
+      // Fetch user role after successful authentication
+      final token = await _authRepository.getIdToken();
+      if (token != null) {
+        _roleBloc.add(FetchRoleRequested(authToken: token));
+      }
+    } else if (state is Unauthenticated) {
+      // Clear role on sign out
+      _roleBloc.add(const ClearRoleRequested());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<AuthBloc>.value(
-      value: _authBloc,
-      child: MaterialApp.router(
-        title: 'LedgerGuard',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        routerConfig: _appRouter.router,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<AuthBloc>.value(value: _authBloc),
+        BlocProvider<RoleBloc>.value(value: _roleBloc),
+      ],
+      child: BlocListener<AuthBloc, AuthState>(
+        listener: _onAuthStateChanged,
+        child: MaterialApp.router(
+          title: 'LedgerGuard',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          routerConfig: _appRouter.router,
+        ),
       ),
     );
   }

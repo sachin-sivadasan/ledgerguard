@@ -158,15 +158,91 @@ Created login and signup pages with clean minimal UI, form validation, loading s
 
 ---
 
+## [2026-02-27] Role-Based Access Control
+
+**Commit:** Implement user role fetching and role-based UI guards
+
+**Summary:**
+Implemented user role fetching from backend after login, with role-based UI visibility guards and protected admin routes.
+
+**Implemented:**
+
+1. **Domain Layer:**
+   - `UserProfile` - Domain entity with id, email, role, planTier
+   - `UserRole` enum - `owner`, `admin` with permission hierarchy
+   - `PlanTier` enum - `starter`, `pro` for plan-based features
+   - `UserProfileRepository` interface - Contract for profile operations
+   - Exception classes: `ProfileNotFoundException`, `ProfileFetchException`
+
+2. **Data Layer:**
+   - `ApiUserProfileRepository` - Fetches profile from `/api/v1/me`
+   - Uses Dio with Bearer token authentication
+   - Caches profile for quick access
+
+3. **Presentation Layer (Bloc):**
+   - **RoleBloc** - Manages user role state
+   - **Events:**
+     - `FetchRoleRequested(authToken)` - Fetch profile from backend
+     - `ClearRoleRequested` - Clear cached role (on logout)
+   - **States:**
+     - `RoleInitial` - Before role fetch
+     - `RoleLoading` - During fetch
+     - `RoleLoaded(profile)` - Profile loaded with role checks
+     - `RoleError(message)` - Error occurred
+
+4. **Role Guard Widgets:**
+   - `RoleGuard` - Shows child only for users with required role
+     - `RoleGuard.ownerOnly()` - Owner-only content
+     - `RoleGuard.adminOnly()` - Admin+ content (owner or admin)
+   - `ProGuard` - Shows child only for Pro tier users
+
+5. **Admin Pages:**
+   - `ManualIntegrationPage` - Admin-only page with Partner API token form
+   - Shows "Access Denied" for non-admin users
+   - Route: `/admin/manual-integration`
+
+6. **Auth Integration:**
+   - `AuthRepository.getIdToken()` - Get Firebase ID token for API calls
+   - `app.dart` - Fetches role after successful authentication
+   - Clears role on logout
+
+**Tests (TDD):**
+- RoleBloc: 11 tests (initial state, fetch success/failure, clear)
+- RoleGuard: 10 tests (owner, admin, fallback, loading states)
+- ManualIntegrationPage: 4 tests (owner, admin, loading, access denied)
+
+**Files Created/Modified:**
+- `lib/domain/entities/user_profile.dart`
+- `lib/domain/repositories/user_profile_repository.dart`
+- `lib/domain/repositories/auth_repository.dart` (updated)
+- `lib/data/repositories/api_user_profile_repository.dart`
+- `lib/data/repositories/firebase_auth_repository.dart` (updated)
+- `lib/presentation/blocs/role/` - Bloc, events, states, barrel
+- `lib/presentation/widgets/role_guard.dart`
+- `lib/presentation/pages/admin/manual_integration_page.dart`
+- `lib/presentation/router/app_router.dart` (updated)
+- `lib/app.dart` (updated)
+- `lib/core/di/injection.config.dart` (updated)
+- `test/presentation/blocs/role_bloc_test.dart`
+- `test/presentation/widgets/role_guard_test.dart`
+- `test/presentation/pages/manual_integration_page_test.dart`
+
+**Tests:** 54 passing
+
+---
+
 ## Test Summary
 
 | Layer | Tests |
 |-------|-------|
 | presentation/blocs/auth | 11 |
+| presentation/blocs/role | 11 |
 | presentation/pages/login | 9 |
 | presentation/pages/signup | 8 |
+| presentation/pages/manual_integration | 4 |
+| presentation/widgets/role_guard | 10 |
 | widget | 1 |
-| **Total** | **29** |
+| **Total** | **54** |
 
 ---
 
@@ -183,14 +259,14 @@ frontend/app/lib/
 ├── data/
 │   ├── datasources/    → API clients, local storage
 │   ├── models/         → JSON serializable models
-│   └── repositories/   → Repository implementations (FirebaseAuthRepository)
+│   └── repositories/   → FirebaseAuthRepository, ApiUserProfileRepository
 ├── domain/
-│   ├── entities/       → Business entities (UserEntity)
-│   ├── repositories/   → Repository interfaces (AuthRepository)
+│   ├── entities/       → UserEntity, UserProfile
+│   ├── repositories/   → AuthRepository, UserProfileRepository
 │   └── usecases/       → Business logic
 └── presentation/
-    ├── blocs/          → Bloc state management (AuthBloc)
-    ├── pages/          → Screen widgets (LoginPage, SignupPage)
-    ├── widgets/        → Reusable components
-    └── router/         → GoRouter with auth redirects
+    ├── blocs/          → AuthBloc, RoleBloc
+    ├── pages/          → LoginPage, SignupPage, ManualIntegrationPage
+    ├── widgets/        → RoleGuard, ProGuard
+    └── router/         → GoRouter with auth/role redirects
 ```

@@ -408,6 +408,50 @@ go test ./... -race
 | FW-026 | Dispatches SignInWithGoogle | Event added on Google button tap | ✓ |
 | FW-027 | Disables buttons when loading | onPressed is null | ✓ |
 
+#### F4.4 RoleGuard Widget
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-030 | Shows child for owner when owner required | Child visible | ✓ |
+| FW-031 | Hides child for admin when owner required | Child hidden | ✓ |
+| FW-032 | Shows child for owner when admin required | Child visible | ✓ |
+| FW-033 | Shows child for admin when admin required | Child visible | ✓ |
+| FW-034 | Shows fallback when role not met | Fallback widget visible | ✓ |
+| FW-035 | Shows nothing when role not loaded | SizedBox.shrink | ✓ |
+| FW-036 | Shows loading when showLoading true | CircularProgressIndicator | ✓ |
+
+#### F4.5 ProGuard Widget
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-040 | Shows child for Pro tier | Child visible | ✓ |
+| FW-041 | Hides child for Starter tier | Child hidden | ✓ |
+| FW-042 | Shows fallback for Starter tier | Fallback widget visible | ✓ |
+
+#### F4.6 ManualIntegrationPage
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-050 | Shows content for owner | Form fields visible | ✓ |
+| FW-051 | Shows content for admin | Form fields visible | ✓ |
+| FW-052 | Shows loading while role loading | CircularProgressIndicator | ✓ |
+| FW-053 | Shows access denied for non-admin | Access denied message | ✓ |
+
+---
+
+### F5. RoleBloc Tests
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FB-050 | Initial state | RoleInitial | ✓ |
+| FB-051 | FetchRole success (owner) | [RoleLoading, RoleLoaded] | ✓ |
+| FB-052 | FetchRole success (admin) | [RoleLoading, RoleLoaded] | ✓ |
+| FB-053 | FetchRole profile not found | [RoleLoading, RoleError] | ✓ |
+| FB-054 | FetchRole unauthorized | [RoleLoading, RoleError] | ✓ |
+| FB-055 | ClearRole clears cache | [RoleInitial] | ✓ |
+| FB-056 | RoleLoaded.isOwner for owner | true | ✓ |
+| FB-057 | RoleLoaded.isOwner for admin | false | ✓ |
+| FB-058 | RoleLoaded.isPro for pro tier | true | ✓ |
+| FB-059 | RoleLoaded.isPro for starter tier | false | ✓ |
+| FB-060 | RoleLoaded.hasRole checks permission | Correct permission check | ✓ |
+
 ---
 
 ### Running Frontend Tests

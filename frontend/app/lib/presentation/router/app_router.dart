@@ -1,26 +1,49 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../blocs/auth/auth.dart';
+import '../pages/login_page.dart';
+import '../pages/signup_page.dart';
 import '../pages/placeholder_page.dart';
 
 /// App routes configuration using GoRouter
 class AppRouter {
-  static final GoRouter router = GoRouter(
-    initialLocation: '/',
+  final AuthBloc authBloc;
+
+  AppRouter({required this.authBloc});
+
+  late final GoRouter router = GoRouter(
+    initialLocation: '/login',
+    refreshListenable: GoRouterRefreshStream(authBloc.stream),
+    redirect: (context, state) {
+      final isAuthenticated = authBloc.state is Authenticated;
+      final isAuthRoute = state.matchedLocation == '/login' ||
+          state.matchedLocation == '/signup';
+
+      // If not authenticated and not on auth route, redirect to login
+      if (!isAuthenticated && !isAuthRoute) {
+        return '/login';
+      }
+
+      // If authenticated and on auth route, redirect to dashboard
+      if (isAuthenticated && isAuthRoute) {
+        return '/dashboard';
+      }
+
+      // No redirect needed
+      return null;
+    },
     routes: [
-      GoRoute(
-        path: '/',
-        name: 'home',
-        builder: (context, state) => const PlaceholderPage(title: 'Home'),
-      ),
       GoRoute(
         path: '/login',
         name: 'login',
-        builder: (context, state) => const PlaceholderPage(title: 'Login'),
+        builder: (context, state) => const LoginPage(),
       ),
       GoRoute(
         path: '/signup',
         name: 'signup',
-        builder: (context, state) => const PlaceholderPage(title: 'Sign Up'),
+        builder: (context, state) => const SignupPage(),
       ),
       GoRoute(
         path: '/dashboard',
@@ -39,4 +62,20 @@ class AppRouter {
       ),
     ],
   );
+}
+
+/// Converts a Stream into a Listenable for GoRouter refresh
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  late final dynamic _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
 }

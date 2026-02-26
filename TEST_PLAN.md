@@ -383,6 +383,31 @@ go test ./... -race
 | FW-002 | RiskBadge colors | Correct color per state | Pending |
 | FW-003 | SubscriptionTile | Shows subscription info | Pending |
 
+#### F4.2 LoginPage
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-010 | Renders email and password fields | Two TextFormFields visible | ✓ |
+| FW-011 | Renders login button | Sign In button visible | ✓ |
+| FW-012 | Renders Google sign in button | Continue with Google visible | ✓ |
+| FW-013 | Renders signup link | Don't have an account? + Sign Up | ✓ |
+| FW-014 | Shows loading indicator | CircularProgressIndicator when AuthLoading | ✓ |
+| FW-015 | Shows error message | Error text when AuthError | ✓ |
+| FW-016 | Dispatches SignInWithEmail | Event added on button tap | ✓ |
+| FW-017 | Dispatches SignInWithGoogle | Event added on Google button tap | ✓ |
+| FW-018 | Disables buttons when loading | onPressed is null | ✓ |
+
+#### F4.3 SignupPage
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-020 | Renders email and password fields | Two TextFormFields visible | ✓ |
+| FW-021 | Renders create account button | Create Account button visible | ✓ |
+| FW-022 | Renders Google sign up button | Continue with Google visible | ✓ |
+| FW-023 | Renders login link | Already have an account? + Sign In | ✓ |
+| FW-024 | Shows loading indicator | CircularProgressIndicator when AuthLoading | ✓ |
+| FW-025 | Shows error message | Error text when AuthError | ✓ |
+| FW-026 | Dispatches SignInWithGoogle | Event added on Google button tap | ✓ |
+| FW-027 | Disables buttons when loading | onPressed is null | ✓ |
+
 ---
 
 ### Running Frontend Tests

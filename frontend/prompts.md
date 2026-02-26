@@ -54,3 +54,30 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (12/12)
 
 ---
+
+## Prompt 003 – Create Login and Signup Screens
+**Date:** 2024-01-XX
+**Status:** Complete
+
+**Prompt:**
+> Create login and signup screens. Requirements: Email field, Password field, Google login button, Loading state, Error display, Clean minimal UI. Navigation: If logged in → redirect to dashboard route. If not logged in → show login. Write widget tests.
+
+**Changes:**
+- Presentation layer:
+  - `presentation/pages/login_page.dart` - Login screen with email/password, Google sign-in
+  - `presentation/pages/signup_page.dart` - Signup screen with email/password, Google sign-in
+  - `presentation/router/app_router.dart` - Auth-aware routing with redirects
+- Updated `app.dart` - BlocProvider setup, AuthBloc initialization
+- Widget tests:
+  - `test/presentation/pages/login_page_test.dart` - 9 test cases
+  - `test/presentation/pages/signup_page_test.dart` - 8 test cases
+- Features:
+  - Form validation
+  - Loading state with disabled buttons
+  - Error display with red container
+  - Auth redirect (login ↔ dashboard)
+  - Clean minimal UI matching theme
+- Updated TEST_PLAN.md with page widget tests
+- All tests passing (29/29)
+
+---

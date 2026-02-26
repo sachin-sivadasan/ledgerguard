@@ -582,3 +582,30 @@
 - Updated TEST_PLAN.md with AuthBloc test scenarios
 - Updated frontend/prompts.md with prompt entry
 - All tests passing (12/12 Flutter)
+
+### [2026-02-27] Create Login and Signup Screens
+**Original:**
+> Create login and signup screens. Requirements: Email field, Password field, Google login button, Loading state, Error display, Clean minimal UI. Navigation: If logged in → redirect to dashboard route. If not logged in → show login. Write widget tests.
+
+**Improved:**
+> Create login and signup screens with auth navigation:
+> 1. Create LoginPage with email/password fields, Sign In button, Google Sign In button
+> 2. Create SignupPage with email/password fields, Create Account button, Google Sign In button
+> 3. Add loading state (CircularProgressIndicator, disabled buttons)
+> 4. Add error display (red container with message)
+> 5. Update AppRouter with auth-aware redirects using GoRouterRefreshStream
+> 6. Update LedgerGuardApp to provide AuthBloc and trigger AuthCheckRequested
+> 7. Write widget tests for both pages (TDD)
+> 8. Update documentation
+
+**Result:**
+- presentation/pages/login_page.dart - Login screen with form, loading, error states
+- presentation/pages/signup_page.dart - Signup screen with form, loading, error states
+- presentation/router/app_router.dart - Auth redirects with GoRouterRefreshStream
+- app.dart - BlocProvider setup, AuthBloc initialization
+- test/presentation/pages/login_page_test.dart - 9 test cases
+- test/presentation/pages/signup_page_test.dart - 8 test cases
+- Updated TEST_PLAN.md with page widget tests
+- Updated frontend/IMPLEMENTATION_LOG.md
+- Updated frontend/prompts.md
+- All tests passing (29/29 Flutter)

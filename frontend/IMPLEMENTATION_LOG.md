@@ -105,13 +105,68 @@ Implemented Firebase Authentication integration using Clean Architecture and TDD
 
 ---
 
+## [2026-02-27] Login and Signup Screens
+
+**Commit:** Create login and signup screens with auth navigation
+
+**Summary:**
+Created login and signup pages with clean minimal UI, form validation, loading states, and auth-aware routing.
+
+**Implemented:**
+
+1. **LoginPage:**
+   - Email and password form fields with validation
+   - Sign In button dispatches `SignInWithEmailRequested`
+   - Google Sign In button dispatches `SignInWithGoogleRequested`
+   - Loading state shows CircularProgressIndicator, disables buttons
+   - Error state shows message in red container
+   - Link to signup page
+
+2. **SignupPage:**
+   - Email and password form fields with validation
+   - Create Account button (placeholder for email signup)
+   - Google Sign In button dispatches `SignInWithGoogleRequested`
+   - Loading state shows CircularProgressIndicator, disables buttons
+   - Error state shows message in red container
+   - Link to login page
+
+3. **Auth-Aware Router:**
+   - `GoRouterRefreshStream` listens to AuthBloc state changes
+   - Redirect to `/login` if not authenticated
+   - Redirect to `/dashboard` if authenticated on auth routes
+   - `AppRouter` now requires `AuthBloc` instance
+
+4. **App Integration:**
+   - `LedgerGuardApp` creates and provides `AuthBloc`
+   - Triggers `AuthCheckRequested` on startup
+   - Provides BlocProvider to widget tree
+
+**Widget Tests:**
+- LoginPage: 9 test cases (fields, buttons, loading, error, events)
+- SignupPage: 8 test cases (fields, buttons, loading, error, events)
+
+**Files Created/Modified:**
+- `lib/presentation/pages/login_page.dart`
+- `lib/presentation/pages/signup_page.dart`
+- `lib/presentation/router/app_router.dart` (updated)
+- `lib/app.dart` (updated)
+- `test/presentation/pages/login_page_test.dart`
+- `test/presentation/pages/signup_page_test.dart`
+- `test/widget_test.dart` (updated)
+
+**Tests:** 29 passing (11 AuthBloc + 9 LoginPage + 8 SignupPage + 1 widget)
+
+---
+
 ## Test Summary
 
 | Layer | Tests |
 |-------|-------|
 | presentation/blocs/auth | 11 |
+| presentation/pages/login | 9 |
+| presentation/pages/signup | 8 |
 | widget | 1 |
-| **Total** | **12** |
+| **Total** | **29** |
 
 ---
 
@@ -135,7 +190,7 @@ frontend/app/lib/
 │   └── usecases/       → Business logic
 └── presentation/
     ├── blocs/          → Bloc state management (AuthBloc)
-    ├── pages/          → Screen widgets
+    ├── pages/          → Screen widgets (LoginPage, SignupPage)
     ├── widgets/        → Reusable components
-    └── router/         → GoRouter configuration
+    └── router/         → GoRouter with auth redirects
 ```

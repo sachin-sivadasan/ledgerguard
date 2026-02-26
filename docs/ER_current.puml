@@ -1,0 +1,46 @@
+@startuml ER_LedgerGuard_Current
+!theme plain
+skinparam linetype ortho
+
+title LedgerGuard - Entity Relationship Diagram (Current Implementation)
+
+entity "users" as users {
+  *id : UUID <<PK>>
+  --
+  *firebase_uid : VARCHAR(128) <<UNIQUE>>
+  *email : VARCHAR(255)
+  *role : VARCHAR(20) <<CHECK: OWNER, ADMIN>>
+  plan_tier : VARCHAR(20) <<DEFAULT: FREE>>
+  created_at : TIMESTAMPTZ
+}
+
+entity "partner_accounts" as partner_accounts {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK>>
+  *integration_type : VARCHAR(20) <<CHECK: OAUTH, MANUAL>>
+  *partner_id : VARCHAR(100)
+  *encrypted_access_token : BYTEA
+  created_at : TIMESTAMPTZ
+}
+
+' Relationships
+users ||--o{ partner_accounts : "has"
+
+note right of users
+  Migration: 000001_create_users_table
+  - Firebase authentication
+  - Role-based access control
+end note
+
+note right of partner_accounts
+  Migration: 000002_create_partner_accounts_table
+  - Shopify Partner OAuth
+  - AES-256-GCM encrypted tokens
+
+  Indexes:
+  - idx_partner_accounts_user_id
+  - idx_partner_accounts_partner_id
+end note
+
+@enduml

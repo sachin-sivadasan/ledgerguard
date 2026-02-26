@@ -1,0 +1,109 @@
+@startuml SEQUENCE_LedgerGuard_Current
+!theme plain
+
+title LedgerGuard - Sequence Diagrams (Current Implementation)
+
+' ==========================================
+' 1. Authentication Flow
+' ==========================================
+newpage Authentication Flow
+
+actor User
+participant "Client App" as App
+participant "Firebase Auth" as Firebase
+participant "API Server" as API
+database "PostgreSQL" as DB
+
+User -> App: Login with Google
+App -> Firebase: signInWithGoogle()
+Firebase --> App: Firebase ID Token
+
+App -> API: Request with\nAuthorization: Bearer <token>
+API -> API: AuthMiddleware intercepts
+
+API -> Firebase: verifyIdToken(token)
+Firebase --> API: { uid, email }
+
+API -> DB: SELECT * FROM users\nWHERE firebase_uid = ?
+
+alt User exists
+    DB --> API: User record
+else New user (first login)
+    API -> DB: INSERT INTO users\n(firebase_uid, email, role='OWNER')
+    DB --> API: New user record
+end
+
+API -> API: Set user in request context
+API -> API: Continue to handler
+API --> App: Response with user context
+
+' ==========================================
+' 2. Role-Based Access Control
+' ==========================================
+newpage Role-Based Access Control
+
+actor User
+participant "Client App" as App
+participant "API Server" as API
+
+App -> API: Request to protected endpoint\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware\n(verify token, load user)
+
+API -> API: RoleMiddleware\n(check RequireRoles)
+
+alt User has required role
+    note right of API: OWNER has access to all routes\nADMIN only to ADMIN routes
+    API -> API: Continue to handler
+    API --> App: 200 OK + Response
+else Insufficient permissions
+    API --> App: 403 Forbidden\n{"error": "insufficient permissions"}
+end
+
+' ==========================================
+' 3. Shopify Partner OAuth Flow
+' ==========================================
+newpage Shopify Partner OAuth Flow
+
+actor User
+participant "Client App" as App
+participant "API Server" as API
+participant "Shopify Partners" as Shopify
+database "PostgreSQL" as DB
+
+User -> App: Click "Connect Shopify"
+
+App -> API: GET /api/v1/integrations/shopify/oauth\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware (verify user)
+API -> API: Generate OAuth state token
+API -> API: Build Shopify OAuth URL\n(client_id, redirect_uri, scopes, state)
+
+API --> App: 302 Redirect to Shopify
+
+App -> Shopify: GET /oauth/authorize?...
+Shopify --> User: "Authorize LedgerGuard?"
+
+User -> Shopify: Click "Approve"
+
+Shopify --> App: 302 Redirect to callback\n?code=xxx&state=yyy
+
+App -> API: GET /api/v1/integrations/shopify/callback\n?code=xxx&state=yyy
+
+API -> API: Validate state token
+API -> API: Get user from context
+
+API -> Shopify: POST /oauth/access_token\n{ code, client_id, client_secret }
+Shopify --> API: { access_token, organization_id }
+
+API -> API: Encrypt token\n(AES-256-GCM)
+
+API -> DB: INSERT INTO partner_accounts\n(user_id, partner_id, integration_type='OAUTH',\nencrypted_access_token)
+
+DB --> API: Success
+
+API --> App: 200 OK\n{"success": true, "partner_id": "..."}
+
+App --> User: "Connected successfully!"
+
+@enduml

@@ -51,21 +51,24 @@ lib/
 
 ---
 
-## Screens (Planned)
+## Screens (Implementation Status)
 
 ### Authentication
-- [ ] Login (Firebase Auth)
-- [ ] Signup
+- [x] Login (Firebase Auth)
+- [x] Signup
 - [ ] Forgot Password
 
 ### Onboarding
-- [ ] Connect Shopify Partner
-- [ ] Select App
+- [x] Connect Shopify Partner (Partner Integration)
+- [x] Select App (App Selection)
 
 ### Dashboard
-- [ ] Overview (MRR, Renewal Rate, At Risk)
+- [x] Overview (MRR, Renewal Rate, At Risk, Revenue Mix, Risk Distribution)
 - [ ] Subscription List
 - [ ] Subscription Detail
+
+### Admin
+- [x] Manual Integration (Admin-only token entry)
 
 ### Settings
 - [ ] Notification Preferences

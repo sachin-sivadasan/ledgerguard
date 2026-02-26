@@ -304,31 +304,38 @@ go test ./... -race
 #### F1.1 AuthBloc
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
-| FB-001 | Login event success | Emit authenticated state | Pending |
-| FB-002 | Login event failure | Emit error state | Pending |
-| FB-003 | Logout event | Emit unauthenticated state | Pending |
-| FB-004 | Check auth on startup | Emit correct state | Pending |
+| FB-001 | Initial state | AuthInitial | ✓ |
+| FB-002 | AuthCheckRequested user logged in | [AuthLoading, Authenticated] | ✓ |
+| FB-003 | AuthCheckRequested user not logged in | [AuthLoading, Unauthenticated] | ✓ |
+| FB-004 | SignInWithEmail success | [AuthLoading, Authenticated] | ✓ |
+| FB-005 | SignInWithEmail invalid credentials | [AuthLoading, AuthError] | ✓ |
+| FB-006 | SignInWithEmail user not found | [AuthLoading, AuthError] | ✓ |
+| FB-007 | SignInWithGoogle success | [AuthLoading, Authenticated] | ✓ |
+| FB-008 | SignInWithGoogle cancelled | [AuthLoading, Unauthenticated] | ✓ |
+| FB-009 | SignInWithGoogle failure | [AuthLoading, AuthError] | ✓ |
+| FB-010 | SignOut success | [AuthLoading, Unauthenticated] | ✓ |
+| FB-011 | SignOut failure | [AuthLoading, AuthError] | ✓ |
 
 #### F1.2 OnboardingBloc
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
-| FB-010 | Connect Shopify Partner | Navigate to app selection | Pending |
-| FB-011 | Select app success | Emit app selected state | Pending |
-| FB-012 | Select app failure | Emit error state | Pending |
+| FB-020 | Connect Shopify Partner | Navigate to app selection | Pending |
+| FB-021 | Select app success | Emit app selected state | Pending |
+| FB-022 | Select app failure | Emit error state | Pending |
 
 #### F1.3 DashboardBloc
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
-| FB-020 | Load metrics success | Emit metrics loaded | Pending |
-| FB-021 | Load metrics failure | Emit error state | Pending |
-| FB-022 | Refresh metrics | Re-fetch and emit updated | Pending |
+| FB-030 | Load metrics success | Emit metrics loaded | Pending |
+| FB-031 | Load metrics failure | Emit error state | Pending |
+| FB-032 | Refresh metrics | Re-fetch and emit updated | Pending |
 
 #### F1.4 SubscriptionBloc
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|
-| FB-030 | Load subscriptions | Emit list of subscriptions | Pending |
-| FB-031 | Filter by risk state | Emit filtered list | Pending |
-| FB-032 | View subscription detail | Emit detail state | Pending |
+| FB-040 | Load subscriptions | Emit list of subscriptions | Pending |
+| FB-041 | Filter by risk state | Emit filtered list | Pending |
+| FB-042 | View subscription detail | Emit detail state | Pending |
 
 ---
 

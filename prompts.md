@@ -551,3 +551,34 @@
 - test/widget_test.dart - Basic app render test
 - Updated TEST_PLAN.md with frontend test scenarios (4 sections, 20+ test cases)
 - All tests passing (1/1 Flutter)
+
+### [2026-02-27] Implement Firebase Authentication
+**Original:**
+> Implement Firebase Authentication integration. Requirements: Email/Password login, Google login, Firebase initialization, Auth state listener, Basic loading state. Create: AuthRepository, AuthController, AuthState. Write widget tests for login logic. Do not build dashboard yet.
+
+**Improved:**
+> Implement Firebase Authentication with Clean Architecture and TDD:
+> 1. Add dependencies: firebase_auth, google_sign_in
+> 2. Create UserEntity in domain/entities
+> 3. Create AuthRepository interface in domain/repositories with exceptions
+> 4. Create FirebaseAuthRepository in data/repositories implementing Firebase Auth
+> 5. Create AuthBloc with events (AuthCheckRequested, SignInWithEmail, SignInWithGoogle, SignOut)
+> 6. Create AuthState (AuthInitial, AuthLoading, Authenticated, Unauthenticated, AuthError)
+> 7. Register dependencies in injection.config.dart
+> 8. Write tests first (TDD) for AuthBloc
+> 9. Update TEST_PLAN.md and documentation
+
+**Result:**
+- pubspec.yaml - Added firebase_auth, google_sign_in dependencies
+- domain/entities/user_entity.dart - UserEntity with Equatable
+- domain/repositories/auth_repository.dart - AuthRepository interface + exception classes
+- data/repositories/firebase_auth_repository.dart - Firebase implementation
+- presentation/blocs/auth/auth_bloc.dart - AuthBloc with all event handlers
+- presentation/blocs/auth/auth_event.dart - Auth events
+- presentation/blocs/auth/auth_state.dart - Auth states
+- presentation/blocs/auth/auth.dart - Barrel export
+- core/di/injection.config.dart - Registered AuthRepository and AuthBloc
+- test/presentation/blocs/auth_bloc_test.dart - 11 test cases (TDD)
+- Updated TEST_PLAN.md with AuthBloc test scenarios
+- Updated frontend/prompts.md with prompt entry
+- All tests passing (12/12 Flutter)

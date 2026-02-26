@@ -1,40 +1,123 @@
 @startuml C4_LedgerGuard
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
-title LedgerGuard - System Context & Container Diagram
-
-' System Context
-Person(developer, "Shopify App Developer", "Uses LedgerGuard to monitor revenue health")
-Person(admin, "Admin User", "Manages integrations and team access")
-
-System_Boundary(ledgerguard, "LedgerGuard") {
-    Container(web_app, "Flutter Web App", "Flutter/Dart", "Dashboard UI for viewing KPIs, risk states, and insights")
-    Container(api_server, "API Server", "Go 1.22+", "Handles all business logic, sync, and KPI computation")
-    ContainerDb(postgres, "PostgreSQL", "PostgreSQL 15+", "Stores users, transactions, subscriptions, snapshots")
-    Container(redis, "Redis", "Redis", "Session cache, rate limiting")
-}
+title LedgerGuard - C4 Component Diagram (API Server)
 
 ' External Systems
-System_Ext(firebase, "Firebase Auth", "Authentication provider")
-System_Ext(shopify, "Shopify Partner API", "Transaction and subscription data")
-System_Ext(openai, "OpenAI API", "AI-powered daily insights (Pro)")
-System_Ext(email, "Email Service", "SendGrid/AWS SES for notifications")
-System_Ext(slack, "Slack", "Webhook notifications (Pro)")
+Person(developer, "Shopify App Developer", "Uses LedgerGuard")
+System_Ext(flutter_app, "Flutter Web App", "Dashboard UI")
+System_Ext(firebase, "Firebase Auth", "Authentication")
+System_Ext(shopify, "Shopify Partner API", "Transaction data")
+System_Ext(openai, "OpenAI API", "AI insights")
+System_Ext(email, "Email Service", "Notifications")
+ContainerDb_Ext(postgres, "PostgreSQL", "Data storage")
 
-' Relationships - Context
-Rel(developer, web_app, "Views dashboard, triggers sync")
-Rel(admin, web_app, "Manages integrations, users")
-Rel(web_app, api_server, "REST API calls", "HTTPS")
-Rel(api_server, postgres, "Reads/writes data", "TCP/5432")
-Rel(api_server, redis, "Cache/sessions", "TCP/6379")
+Container_Boundary(api, "API Server (Go 1.22+)") {
+
+    ' Interfaces Layer
+    Component(router, "Router", "Chi Router", "Route definitions, middleware chain")
+    Component(auth_mw, "AuthMiddleware", "Middleware", "Firebase token verification, user context")
+    Component(role_mw, "RoleMiddleware", "Middleware", "RBAC enforcement")
+    Component(health_handler, "HealthHandler", "HTTP Handler", "Health check endpoint")
+    Component(oauth_handler, "OAuthHandler", "HTTP Handler", "Shopify OAuth flow")
+    Component(dashboard_handler, "DashboardHandler", "HTTP Handler", "KPI & risk endpoints")
+    Component(sync_handler, "SyncHandler", "HTTP Handler", "Trigger sync operations")
+
+    ' Application Layer
+    Component(partner_svc, "PartnerIntegrationService", "Application Service", "OAuth flow, token management")
+    Component(sync_svc, "SyncService", "Application Service", "Orchestrates sync pipeline")
+    Component(snapshot_svc, "SnapshotService", "Application Service", "Daily metrics snapshots")
+    Component(notification_svc, "NotificationService", "Application Service", "Alert orchestration")
+
+    ' Domain Layer
+    Component(user_entity, "User", "Entity", "id, firebase_uid, email, role, plan_tier")
+    Component(partner_entity, "PartnerAccount", "Entity", "id, user_id, partner_id, encrypted_token")
+    Component(subscription_entity, "Subscription", "Entity", "id, status, risk_state, price")
+    Component(transaction_entity, "Transaction", "Entity", "id, charge_type, amount, date")
+
+    Component(risk_engine, "RiskEngine", "Domain Service", "Classifies SAFE/ONE_CYCLE/TWO_CYCLE/CHURNED")
+    Component(metrics_engine, "MetricsEngine", "Domain Service", "Computes MRR, at-risk, renewal rate")
+    Component(ledger_rebuilder, "LedgerRebuilder", "Domain Service", "Deterministic ledger rebuild")
+
+    Component(user_repo_if, "UserRepository", "Interface", "User persistence contract")
+    Component(partner_repo_if, "PartnerAccountRepository", "Interface", "Partner account contract")
+    Component(subscription_repo_if, "SubscriptionRepository", "Interface", "Subscription contract")
+    Component(transaction_repo_if, "TransactionRepository", "Interface", "Transaction contract")
+
+    ' Infrastructure Layer
+    Component(user_repo, "PostgresUserRepository", "Repository", "User CRUD operations")
+    Component(partner_repo, "PostgresPartnerAccountRepository", "Repository", "Partner account CRUD")
+    Component(subscription_repo, "PostgresSubscriptionRepository", "Repository", "Subscription CRUD")
+    Component(transaction_repo, "PostgresTransactionRepository", "Repository", "Transaction CRUD")
+
+    Component(firebase_auth, "FirebaseAuthService", "External Adapter", "Token verification")
+    Component(shopify_oauth, "ShopifyOAuthService", "External Adapter", "OAuth token exchange")
+    Component(shopify_client, "ShopifyPartnerClient", "External Adapter", "GraphQL API client")
+    Component(ai_insight, "AIInsightService", "External Adapter", "OpenAI integration")
+    Component(email_sender, "EmailSender", "External Adapter", "Email notifications")
+    Component(crypto, "AESEncryptor", "Utility", "AES-256-GCM encryption")
+}
+
+' Layer boundaries (visual grouping)
+Boundary(interfaces, "Interfaces Layer") {
+}
+Boundary(application, "Application Layer") {
+}
+Boundary(domain, "Domain Layer") {
+}
+Boundary(infrastructure, "Infrastructure Layer") {
+}
 
 ' External relationships
-Rel(web_app, firebase, "Authenticates", "Firebase SDK")
-Rel(api_server, firebase, "Verifies tokens", "Admin SDK")
-Rel(api_server, shopify, "Fetches transactions", "GraphQL")
-Rel(api_server, openai, "Generates insights", "REST API")
-Rel(api_server, email, "Sends alerts", "SMTP/API")
-Rel(api_server, slack, "Sends notifications", "Webhook")
+Rel(developer, flutter_app, "Uses")
+Rel(flutter_app, router, "HTTPS/REST")
+
+' Interfaces -> Application
+Rel(router, auth_mw, "Uses")
+Rel(router, role_mw, "Uses")
+Rel(router, health_handler, "Routes")
+Rel(router, oauth_handler, "Routes")
+Rel(router, dashboard_handler, "Routes")
+Rel(router, sync_handler, "Routes")
+
+Rel(oauth_handler, partner_svc, "Uses")
+Rel(sync_handler, sync_svc, "Uses")
+Rel(dashboard_handler, snapshot_svc, "Uses")
+
+' Application -> Domain
+Rel(sync_svc, ledger_rebuilder, "Uses")
+Rel(sync_svc, risk_engine, "Uses")
+Rel(sync_svc, metrics_engine, "Uses")
+Rel(sync_svc, transaction_repo_if, "Uses")
+Rel(sync_svc, subscription_repo_if, "Uses")
+
+Rel(partner_svc, partner_repo_if, "Uses")
+Rel(snapshot_svc, metrics_engine, "Uses")
+
+' Domain interfaces -> Infrastructure implementations
+Rel(user_repo_if, user_repo, "Implemented by")
+Rel(partner_repo_if, partner_repo, "Implemented by")
+Rel(subscription_repo_if, subscription_repo, "Implemented by")
+Rel(transaction_repo_if, transaction_repo, "Implemented by")
+
+' Infrastructure -> External
+Rel(auth_mw, firebase_auth, "Uses")
+Rel(firebase_auth, firebase, "Verifies tokens")
+
+Rel(partner_svc, shopify_oauth, "Uses")
+Rel(shopify_oauth, shopify, "OAuth flow")
+Rel(partner_svc, crypto, "Encrypts tokens")
+
+Rel(sync_svc, shopify_client, "Uses")
+Rel(shopify_client, shopify, "GraphQL queries")
+
+Rel(ai_insight, openai, "Generates insights")
+Rel(email_sender, email, "Sends emails")
+
+Rel(user_repo, postgres, "SQL")
+Rel(partner_repo, postgres, "SQL")
+Rel(subscription_repo, postgres, "SQL")
+Rel(transaction_repo, postgres, "SQL")
 
 SHOW_LEGEND()
 @enduml

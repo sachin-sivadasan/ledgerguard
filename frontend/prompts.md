@@ -341,3 +341,46 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (229/229)
 
 ---
+
+## Prompt 012 – Notification Settings Screen
+**Date:** 2026-02-27
+**Status:** Complete
+
+**Prompt:**
+> Create Notification Settings screen. Options: Toggle Critical Alerts, Toggle Daily Summary, Select Daily Summary Time. Persist via backend. Add loading state and success indicator.
+
+**Improved:**
+> Create Notification Settings screen with:
+> 1. Toggle switch for Critical Alerts (on/off)
+> 2. Toggle switch for Daily Summary (on/off)
+> 3. Time picker for Daily Summary Time (disabled when Daily Summary is off)
+> 4. Save button with loading state
+> 5. Success snackbar on save
+> 6. Load/Save via `/api/v1/users/notification-preferences`
+
+**Changes:**
+- Domain layer:
+  - Created `domain/entities/notification_preferences.dart` - NotificationPreferences with fromJson/toJson, formattedTime
+  - Created `domain/repositories/notification_preferences_repository.dart` - Repository interface + exceptions
+- Data layer:
+  - Created `data/repositories/api_notification_preferences_repository.dart` - API implementation
+  - Created `data/repositories/mock_notification_preferences_repository.dart` - Mock implementation
+- Presentation layer:
+  - Created `presentation/blocs/notification_preferences/notification_preferences_bloc.dart` - Bloc
+  - Created `presentation/blocs/notification_preferences/notification_preferences_event.dart` - Events
+  - Created `presentation/blocs/notification_preferences/notification_preferences_state.dart` - States
+  - Created `presentation/pages/notification_settings_page.dart` - Settings page with:
+    - Critical Alerts toggle section
+    - Daily Summary toggle section
+    - Time picker (disabled when summary off)
+    - Save button with unsaved changes indicator
+    - Success/error snackbars
+- Updated `app.dart` - Added NotificationPreferencesBloc provider
+- Updated `core/di/injection.config.dart` - Registered bloc and repository
+- Updated `presentation/router/app_router.dart` - Added /settings/notifications route
+- Tests:
+  - Created `test/presentation/blocs/notification_preferences_bloc_test.dart` - 19 tests
+  - Created `test/presentation/pages/notification_settings_page_test.dart` - 21 tests
+- All tests passing (268/268)
+
+---

@@ -7,6 +7,7 @@ import '../pages/admin/manual_integration_page.dart';
 import '../pages/app_selection_page.dart';
 import '../pages/dashboard_page.dart';
 import '../pages/login_page.dart';
+import '../pages/notification_settings_page.dart';
 import '../pages/partner_integration_page.dart';
 import '../pages/risk_breakdown_page.dart';
 import '../pages/signup_page.dart';
@@ -84,6 +85,11 @@ class AppRouter {
         path: '/risk-breakdown',
         name: 'risk-breakdown',
         builder: (context, state) => const RiskBreakdownPage(),
+      ),
+      GoRoute(
+        path: '/settings/notifications',
+        name: 'notification-settings',
+        builder: (context, state) => const NotificationSettingsPage(),
       ),
     ],
   );

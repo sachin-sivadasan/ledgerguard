@@ -696,6 +696,59 @@ go test ./... -race
 
 ---
 
+### F8. NotificationPreferencesBloc Tests
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FB-080 | Initial state | NotificationPreferencesInitial | ✓ |
+| FB-081 | Load success | [Loading, Loaded] | ✓ |
+| FB-082 | Load fails | [Loading, Error] | ✓ |
+| FB-083 | Load generic exception | [Loading, Error] | ✓ |
+| FB-084 | Toggle critical alerts | Updates preferences | ✓ |
+| FB-085 | Toggle daily summary | Updates preferences | ✓ |
+| FB-086 | Update summary time | Updates preferences | ✓ |
+| FB-087 | Save success | [Loaded(saving), Saved, Loaded] | ✓ |
+| FB-088 | Save fails | [Loaded(saving), Error, Loaded] | ✓ |
+| FB-089 | Does nothing when not loaded | No state change | ✓ |
+
+#### F8.1 NotificationPreferences Entity
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FE-040 | fromJson parses correctly | All fields parsed | ✓ |
+| FE-041 | fromJson handles missing values | Defaults used | ✓ |
+| FE-042 | toJson serializes correctly | Correct JSON | ✓ |
+| FE-043 | copyWith creates copy | Updated values | ✓ |
+| FE-044 | formattedTime returns correct | "9:30 AM" format | ✓ |
+
+---
+
+### F9. NotificationSettingsPage Tests
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-190 | Shows app bar title | "Notification Settings" visible | ✓ |
+| FW-191 | Loads preferences on init | LoadRequested dispatched | ✓ |
+| FW-192 | Shows loading indicator | CircularProgressIndicator | ✓ |
+| FW-193 | Shows error state with retry | Error message and button | ✓ |
+| FW-194 | Shows critical alerts section | Toggle visible | ✓ |
+| FW-195 | Shows daily summary section | Toggle and time picker | ✓ |
+| FW-196 | Shows save button | Save Changes visible | ✓ |
+| FW-197 | Save disabled when no changes | onPressed is null | ✓ |
+| FW-198 | Save enabled when has changes | onPressed is not null | ✓ |
+| FW-199 | Shows unsaved changes indicator | Warning text visible | ✓ |
+| FW-200 | Shows saving indicator | Progress in button | ✓ |
+| FW-201 | Dispatches toggle critical | Event dispatched | ✓ |
+| FW-202 | Dispatches toggle summary | Event dispatched | ✓ |
+| FW-203 | Dispatches save | Event dispatched | ✓ |
+| FW-204 | Time picker shows formatted time | "9:00 AM" visible | ✓ |
+| FW-205 | Time picker disabled when summary off | onPressed is null | ✓ |
+| FW-206 | Time picker enabled when summary on | onPressed is not null | ✓ |
+| FW-207 | Shows correct switch values | Initial values shown | ✓ |
+| FW-208 | Shows disabled switch values | Disabled values shown | ✓ |
+
+---
+
 ### Running Frontend Tests
 
 ```bash

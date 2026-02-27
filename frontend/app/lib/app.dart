@@ -8,6 +8,7 @@ import 'presentation/blocs/app_selection/app_selection.dart';
 import 'presentation/blocs/auth/auth.dart';
 import 'presentation/blocs/dashboard/dashboard.dart';
 import 'presentation/blocs/insight/insight.dart';
+import 'presentation/blocs/notification_preferences/notification_preferences.dart';
 import 'presentation/blocs/partner_integration/partner_integration.dart';
 import 'presentation/blocs/preferences/preferences.dart';
 import 'presentation/blocs/risk/risk.dart';
@@ -29,6 +30,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
   late final AppSelectionBloc _appSelectionBloc;
   late final DashboardBloc _dashboardBloc;
   late final InsightBloc _insightBloc;
+  late final NotificationPreferencesBloc _notificationPreferencesBloc;
   late final PreferencesBloc _preferencesBloc;
   late final RiskBloc _riskBloc;
   late final AppRouter _appRouter;
@@ -44,6 +46,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
     _appSelectionBloc = getIt<AppSelectionBloc>();
     _dashboardBloc = getIt<DashboardBloc>();
     _insightBloc = getIt<InsightBloc>();
+    _notificationPreferencesBloc = getIt<NotificationPreferencesBloc>();
     _preferencesBloc = getIt<PreferencesBloc>();
     _riskBloc = getIt<RiskBloc>();
     _appRouter = AppRouter(authBloc: _authBloc);
@@ -60,6 +63,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
     _appSelectionBloc.close();
     _dashboardBloc.close();
     _insightBloc.close();
+    _notificationPreferencesBloc.close();
     _preferencesBloc.close();
     _riskBloc.close();
     super.dispose();
@@ -88,6 +92,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
         BlocProvider<AppSelectionBloc>.value(value: _appSelectionBloc),
         BlocProvider<DashboardBloc>.value(value: _dashboardBloc),
         BlocProvider<InsightBloc>.value(value: _insightBloc),
+        BlocProvider<NotificationPreferencesBloc>.value(value: _notificationPreferencesBloc),
         BlocProvider<PreferencesBloc>.value(value: _preferencesBloc),
         BlocProvider<RiskBloc>.value(value: _riskBloc),
       ],

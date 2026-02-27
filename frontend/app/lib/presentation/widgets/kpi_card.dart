@@ -34,78 +34,99 @@ class KpiCard extends StatelessWidget {
     final effectiveBgColor =
         backgroundColor ?? effectiveColor.withOpacity(0.1);
 
-    return Container(
-      padding: EdgeInsets.all(isLarge ? 24 : 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(isLarge ? 12 : 10),
-                decoration: BoxDecoration(
-                  color: effectiveBgColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: effectiveColor,
-                  size: isLarge ? 28 : 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive sizing based on card width
+        final isCompact = constraints.maxWidth < 200;
+        final iconSize = isCompact ? 20.0 : (isLarge ? 28.0 : 24.0);
+        final iconPadding = isCompact ? 8.0 : (isLarge ? 12.0 : 10.0);
+        final cardPadding = isCompact ? 12.0 : (isLarge ? 24.0 : 20.0);
+        final valueFontSize = isCompact ? 20.0 : (isLarge ? 28.0 : 24.0);
+
+        return Container(
+          padding: EdgeInsets.all(cardPadding),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          SizedBox(height: isLarge ? 20 : 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: isLarge ? 32 : 28,
-                      ),
-                ),
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(iconPadding),
+                    decoration: BoxDecoration(
+                      color: effectiveBgColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: effectiveColor,
+                      size: iconSize,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                            fontSize: isCompact ? 12 : null,
+                          ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              if (delta != null) ...[
-                const SizedBox(width: 8),
-                _DeltaBadge(delta: delta!),
+              SizedBox(height: isCompact ? 12 : (isLarge ? 20 : 16)),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        value,
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: valueFontSize,
+                            ),
+                      ),
+                    ),
+                  ),
+                  if (delta != null) ...[
+                    const SizedBox(width: 6),
+                    _DeltaBadge(delta: delta!, isCompact: isCompact),
+                  ],
+                ],
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  subtitle!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[500],
+                        fontSize: isCompact ? 10 : null,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ],
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              subtitle!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[500],
-                  ),
-            ),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -113,13 +134,20 @@ class KpiCard extends StatelessWidget {
 /// Delta badge showing percentage change
 class _DeltaBadge extends StatelessWidget {
   final DeltaIndicator delta;
+  final bool isCompact;
 
-  const _DeltaBadge({required this.delta});
+  const _DeltaBadge({required this.delta, this.isCompact = false});
 
   @override
   Widget build(BuildContext context) {
+    final padding = isCompact
+        ? const EdgeInsets.symmetric(horizontal: 4, vertical: 2)
+        : const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
+    final iconSize = isCompact ? 10.0 : 14.0;
+    final fontSize = isCompact ? 9.0 : 12.0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: padding,
       decoration: BoxDecoration(
         color: delta.color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -129,14 +157,14 @@ class _DeltaBadge extends StatelessWidget {
         children: [
           Icon(
             delta.icon,
-            size: 14,
+            size: iconSize,
             color: delta.color,
           ),
           const SizedBox(width: 2),
           Text(
             delta.formattedValue,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: fontSize,
               fontWeight: FontWeight.w600,
               color: delta.color,
             ),

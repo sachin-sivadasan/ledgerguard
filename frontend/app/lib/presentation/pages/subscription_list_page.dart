@@ -92,64 +92,78 @@ class SubscriptionListPage extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context, SubscriptionListLoaded state) {
-    return Column(
-      children: [
-        // Filter bar
-        _buildFilterBar(context, state),
-        // Subscription list
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              context
-                  .read<SubscriptionListBloc>()
-                  .add(const RefreshSubscriptionsRequested());
-              // Wait for the state to change
-              await context
-                  .read<SubscriptionListBloc>()
-                  .stream
-                  .firstWhere((s) =>
-                      s is SubscriptionListLoaded && !s.isRefreshing ||
-                      s is SubscriptionListError);
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.subscriptions.length + (state.hasMore ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == state.subscriptions.length) {
-                  // Load more indicator
-                  _loadMore(context, state);
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive padding
+        final listPadding = constraints.maxWidth < 600 ? 12.0 : 16.0;
 
-                final subscription = state.subscriptions[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: SubscriptionTile(
-                    subscription: subscription,
-                    onTap: () => _navigateToDetail(context, subscription),
-                  ),
-                );
-              },
+        return Column(
+          children: [
+            // Filter bar
+            _buildFilterBar(context, state),
+            // Subscription list
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  context
+                      .read<SubscriptionListBloc>()
+                      .add(const RefreshSubscriptionsRequested());
+                  // Wait for the state to change
+                  await context
+                      .read<SubscriptionListBloc>()
+                      .stream
+                      .firstWhere((s) =>
+                          s is SubscriptionListLoaded && !s.isRefreshing ||
+                          s is SubscriptionListError);
+                },
+                child: ListView.builder(
+                  padding: EdgeInsets.all(listPadding),
+                  itemCount: state.subscriptions.length + (state.hasMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == state.subscriptions.length) {
+                      // Load more indicator
+                      _loadMore(context, state);
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+
+                    final subscription = state.subscriptions[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: SubscriptionTile(
+                        subscription: subscription,
+                        onTap: () => _navigateToDetail(context, subscription),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
   Widget _buildFilterBar(BuildContext context, SubscriptionListLoaded state) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 400;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 12 : 16,
+        vertical: isCompact ? 8 : 12,
+      ),
       color: Colors.white,
       child: Row(
         children: [
           Text(
-            '${state.total} subscriptions',
+            isCompact ? '${state.total}' : '${state.total} subscriptions',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey[600],
+                  fontSize: isCompact ? 13 : null,
                 ),
           ),
           const Spacer(),

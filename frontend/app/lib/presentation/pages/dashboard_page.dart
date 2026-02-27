@@ -27,9 +27,9 @@ class DashboardPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Executive Dashboard'),
+        title: const Text('Dashboard'),
         actions: [
-          // Time Range Selector
+          // Time Range Selector - responsive
           BlocBuilder<DashboardBloc, DashboardState>(
             builder: (context, state) {
               final timeRange = state is DashboardLoaded
@@ -46,18 +46,8 @@ class DashboardPage extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Configure Dashboard',
-            onPressed: () {
-              // Load preferences before showing dialog
-              context
-                  .read<PreferencesBloc>()
-                  .add(const LoadPreferencesRequested());
-              DashboardConfigDialog.show(context);
-            },
-          ),
+          const SizedBox(width: 4),
+          // Refresh button - always visible
           BlocBuilder<DashboardBloc, DashboardState>(
             builder: (context, state) {
               final isRefreshing =
@@ -83,15 +73,55 @@ class DashboardPage extends StatelessWidget {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.subscriptions_outlined),
-            tooltip: 'Subscriptions',
-            onPressed: () => _navigateToSubscriptions(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'Profile',
-            onPressed: () => context.push('/profile'),
+          // Overflow menu for secondary actions
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'More options',
+            onSelected: (value) {
+              switch (value) {
+                case 'subscriptions':
+                  _navigateToSubscriptions(context);
+                  break;
+                case 'settings':
+                  context
+                      .read<PreferencesBloc>()
+                      .add(const LoadPreferencesRequested());
+                  DashboardConfigDialog.show(context);
+                  break;
+                case 'profile':
+                  context.push('/profile');
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'subscriptions',
+                child: ListTile(
+                  leading: Icon(Icons.subscriptions_outlined),
+                  title: Text('Subscriptions'),
+                  contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'settings',
+                child: ListTile(
+                  leading: Icon(Icons.settings),
+                  title: Text('Configure Dashboard'),
+                  contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'profile',
+                child: ListTile(
+                  leading: Icon(Icons.person_outline),
+                  title: Text('Profile'),
+                  contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -229,10 +259,15 @@ class DashboardPage extends StatelessWidget {
               (state) => state is DashboardLoaded && !state.isRefreshing,
             );
       },
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
-        child: Column(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Responsive padding: smaller on mobile
+          final padding = constraints.maxWidth < 600 ? 12.0 : 20.0;
+
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.all(padding),
+            child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const ProGuard(child: AiInsightCard()),
@@ -245,6 +280,8 @@ class DashboardPage extends StatelessWidget {
             _buildSecondarySection(context, metrics),
           ],
         ),
+          );
+        },
       ),
     );
   }

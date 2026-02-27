@@ -24,6 +24,22 @@ enum TimeRangePreset {
     }
   }
 
+  /// Short name for compact display on mobile
+  String get shortName {
+    switch (this) {
+      case TimeRangePreset.thisMonth:
+        return 'Month';
+      case TimeRangePreset.lastMonth:
+        return 'Prev';
+      case TimeRangePreset.last30Days:
+        return '30D';
+      case TimeRangePreset.last90Days:
+        return '90D';
+      case TimeRangePreset.custom:
+        return 'Custom';
+    }
+  }
+
   /// Backend API value
   String get apiValue {
     switch (this) {

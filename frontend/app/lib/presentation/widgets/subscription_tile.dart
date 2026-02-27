@@ -16,91 +16,94 @@ class SubscriptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 360;
+        final avatarSize = isCompact ? 40.0 : 48.0;
+        final padding = isCompact ? 12.0 : 16.0;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
-          ),
-          child: Row(
-            children: [
-              // Store avatar
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    _getInitials(subscription.displayName),
-                    style: const TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+            child: Container(
+              padding: EdgeInsets.all(padding),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Row(
+                children: [
+                  // Store avatar
+                  Container(
+                    width: avatarSize,
+                    height: avatarSize,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(isCompact ? 8 : 10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        _getInitials(subscription.displayName),
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: isCompact ? 13 : 16,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Store and plan info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _formatDisplayName(subscription),
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
+                  SizedBox(width: isCompact ? 10 : 16),
+                  // Store and plan info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          subscription.planName,
+                          _formatDisplayName(subscription),
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                fontSize: isCompact ? 13 : null,
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          isCompact
+                              ? subscription.formattedPrice
+                              : '${subscription.planName} · ${subscription.formattedPrice}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Colors.grey[600],
+                                fontSize: isCompact ? 11 : null,
                               ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          subscription.formattedPrice,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[500],
-                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(width: isCompact ? 8 : 12),
+                  // Risk badge
+                  RiskBadge(
+                    riskState: subscription.riskState,
+                    isCompact: true,
+                  ),
+                  SizedBox(width: isCompact ? 4 : 8),
+                  // Chevron
+                  Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey[400],
+                    size: isCompact ? 18 : 20,
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              // Risk badge
-              RiskBadge(
-                riskState: subscription.riskState,
-                isCompact: true,
-              ),
-              const SizedBox(width: 8),
-              // Chevron
-              Icon(
-                Icons.chevron_right,
-                color: Colors.grey[400],
-                size: 20,
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

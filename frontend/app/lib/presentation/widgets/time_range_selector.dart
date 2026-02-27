@@ -18,6 +18,10 @@ class TimeRangeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get screen width for responsive design
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 400;
+
     return PopupMenuButton<TimeRangePreset>(
       initialValue: currentRange.preset,
       onSelected: (preset) {
@@ -52,7 +56,10 @@ class TimeRangeSelector extends StatelessWidget {
               ))
           .toList(),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 8 : 12,
+          vertical: isCompact ? 6 : 8,
+        ),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
@@ -63,24 +70,28 @@ class TimeRangeSelector extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.calendar_today,
-              size: 16,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 6),
+            if (!isCompact) ...[
+              Icon(
+                Icons.calendar_today,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+            ],
             Text(
-              currentRange.preset.displayName,
+              isCompact
+                  ? currentRange.preset.shortName
+                  : currentRange.preset.displayName,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: isCompact ? 12 : 13,
                 fontWeight: FontWeight.w500,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 2),
             Icon(
               Icons.arrow_drop_down,
-              size: 18,
+              size: isCompact ? 16 : 18,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ],

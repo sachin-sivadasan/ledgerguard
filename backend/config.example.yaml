@@ -11,6 +11,18 @@ database:
   password: "your_password_here"
   name: "ledgerguard"
   sslmode: "disable"  # disable, require, verify-ca, verify-full
+  migrations_path: "migrations"
 
 firebase:
-  credentials_file: "/path/to/firebase-credentials.json"
+  credentials_file: "firebase-credentials.json"
+
+shopify:
+  client_id: "your_shopify_client_id"
+  client_secret: "your_shopify_client_secret"
+  redirect_uri: "http://localhost:8080/api/v1/integrations/shopify/callback"
+  scopes: "read_analytics"
+
+encryption:
+  # Must be exactly 32 bytes for AES-256
+  # Generate with: openssl rand -hex 16
+  master_key: "your_32_byte_encryption_key_here"

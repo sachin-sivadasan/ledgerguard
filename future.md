@@ -16,6 +16,7 @@ Postponed ideas and features for later implementation.
 | Custom report builder | P3 | User-defined reports |
 | Subscription detail view | P2 | View individual subscription details, history, risk timeline |
 | Subscription list page | P2 | List all subscriptions with filters (risk state, plan, search) |
+| Onboarding flow | P1 | Guide new users through setup (connect partner, select app, first sync) |
 | Affiliate program | P4 | Referral system |
 
 ---
@@ -76,3 +77,37 @@ List all subscriptions with filtering, sorting, and search capabilities.
 
 **Endpoints needed:**
 - `GET /api/v1/subscriptions?risk_state=&plan=&search=&sort=&page=&limit=`
+
+### Onboarding Flow (P1)
+**Added:** 2026-02-27
+
+**Description:**
+Guide new users through the initial setup process after signup.
+
+**Proposed Steps:**
+1. **Welcome Screen** - Brief intro to LedgerGuard value proposition
+2. **Connect Partner Account** - OAuth or manual token entry for Shopify Partner API
+3. **Select App** - Choose which app to track from available apps
+4. **Initial Sync** - Trigger first data sync with progress indicator
+5. **Setup Complete** - Success screen with link to dashboard
+
+**UI Components:**
+- Step indicator (1/5, 2/5, etc.)
+- Progress bar across steps
+- Skip option (where appropriate)
+- Back navigation
+- Loading states during API calls
+
+**State Management:**
+- OnboardingBloc with steps: welcome, connectPartner, selectApp, syncing, complete
+- Persist onboarding progress (resume if interrupted)
+- Track completion status in user profile
+
+**Navigation:**
+- Auto-redirect new users to onboarding after signup
+- Redirect to dashboard after completion
+- Allow re-entry from settings if setup incomplete
+
+**Endpoints needed:**
+- `GET /api/v1/users/onboarding-status` - Check if onboarding complete
+- `POST /api/v1/users/onboarding-complete` - Mark onboarding as done

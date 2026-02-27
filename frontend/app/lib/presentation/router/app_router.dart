@@ -9,6 +9,7 @@ import '../pages/dashboard_page.dart';
 import '../pages/login_page.dart';
 import '../pages/notification_settings_page.dart';
 import '../pages/partner_integration_page.dart';
+import '../pages/profile_page.dart';
 import '../pages/risk_breakdown_page.dart';
 import '../pages/signup_page.dart';
 import '../pages/placeholder_page.dart';
@@ -90,6 +91,11 @@ class AppRouter {
         path: '/settings/notifications',
         name: 'notification-settings',
         builder: (context, state) => const NotificationSettingsPage(),
+      ),
+      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => const ProfilePage(),
       ),
     ],
   );

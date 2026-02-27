@@ -749,6 +749,33 @@ go test ./... -race
 
 ---
 
+### F10. ProfilePage Tests
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-210 | Shows app bar title | "Profile" visible | ✓ |
+| FW-211 | Shows loading when unauthenticated | CircularProgressIndicator | ✓ |
+| FW-212 | Shows loading when role loading | CircularProgressIndicator | ✓ |
+| FW-213 | Shows error state | Error message visible | ✓ |
+| FW-214 | Shows user email | Email address visible | ✓ |
+| FW-215 | Shows user initials in avatar | First 2 chars visible | ✓ |
+| FW-216 | Shows role badge for owner | "Owner" badge visible | ✓ |
+| FW-217 | Shows role badge for admin | "Admin" badge visible | ✓ |
+| FW-218 | Shows plan badge for pro | "Pro" badge visible | ✓ |
+| FW-219 | Shows plan badge for free | "Free" badge visible | ✓ |
+| FW-220 | Shows upgrade card for free tier | "Upgrade to Pro" visible | ✓ |
+| FW-221 | Hides upgrade card for pro tier | Upgrade card not visible | ✓ |
+| FW-222 | Shows coming soon snackbar on upgrade | Snackbar message | ✓ |
+| FW-223 | Shows notification settings link | Link visible | ✓ |
+| FW-224 | Shows logout button | "Log Out" visible | ✓ |
+| FW-225 | Shows logout confirmation dialog | Dialog with confirm/cancel | ✓ |
+| FW-226 | Dismisses dialog on cancel | Dialog hidden | ✓ |
+| FW-227 | Dispatches SignOutRequested on confirm | Event dispatched | ✓ |
+| FW-228 | Shows account section | Section header visible | ✓ |
+| FW-229 | Shows settings section | Section header visible | ✓ |
+
+---
+
 ### Running Frontend Tests
 
 ```bash

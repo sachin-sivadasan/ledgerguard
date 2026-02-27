@@ -18,6 +18,16 @@ enum UserRole {
 
   String toJson() => name.toUpperCase();
 
+  /// Human-readable display name
+  String get displayName {
+    switch (this) {
+      case UserRole.owner:
+        return 'Owner';
+      case UserRole.admin:
+        return 'Admin';
+    }
+  }
+
   /// Check if this role has at least the given role's permissions
   bool hasPermission(UserRole required) {
     // OWNER has all permissions, ADMIN has only ADMIN permissions
@@ -31,10 +41,14 @@ enum PlanTier {
   starter,
   pro;
 
+  /// Alias for starter (used in some contexts as "free")
+  static PlanTier get free => PlanTier.starter;
+
   static PlanTier fromString(String value) {
     switch (value.toUpperCase()) {
       case 'PRO':
         return PlanTier.pro;
+      case 'FREE':
       case 'STARTER':
       default:
         return PlanTier.starter;
@@ -43,7 +57,18 @@ enum PlanTier {
 
   String toJson() => name.toUpperCase();
 
+  /// Human-readable display name
+  String get displayName {
+    switch (this) {
+      case PlanTier.starter:
+        return 'Free';
+      case PlanTier.pro:
+        return 'Pro';
+    }
+  }
+
   bool get isPro => this == PlanTier.pro;
+  bool get isFree => this == PlanTier.starter;
 }
 
 /// User profile with role and plan information

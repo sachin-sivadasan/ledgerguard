@@ -384,3 +384,53 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (268/268)
 
 ---
+
+## Prompt 013 – Profile Page
+**Date:** 2026-02-27
+**Status:** Complete
+
+**Prompt:**
+> Create Profile page. Display: Email, Role, Plan tier, Upgrade button (placeholder). Include logout button. Add route protection.
+
+**Improved:**
+> Create Profile page with:
+> 1. Profile header with avatar (initials), email
+> 2. Account section showing email, role (badge), plan tier (badge)
+> 3. Upgrade card (visible only for FREE tier) with "Coming Soon" placeholder
+> 4. Settings section with link to Notification Settings
+> 5. Logout button with confirmation dialog
+> 6. Add /profile route, accessible from dashboard app bar
+> 7. Route protection via existing auth redirect
+
+**Changes:**
+- Domain layer:
+  - Updated `domain/entities/user_profile.dart` - Added displayName getters to UserRole and PlanTier enums, added PlanTier.free alias and isFree getter
+- Presentation layer:
+  - Created `presentation/pages/profile_page.dart` - Profile page with:
+    - Profile header with CircleAvatar showing initials
+    - Account section (email, role, plan info tiles)
+    - Role badge (Owner=primary, Admin=secondary)
+    - Plan badge (Pro=warning star, Free=grey star)
+    - Upgrade card (only for free tier) with "Coming Soon" snackbar
+    - Settings section with Notification Settings link
+    - Logout button with confirmation dialog
+    - SignOutRequested dispatch on confirm
+  - Updated `presentation/pages/dashboard_page.dart` - Added profile icon to app bar
+- Updated `presentation/router/app_router.dart` - Added /profile route
+- Tests:
+  - Created `test/presentation/pages/profile_page_test.dart` - 20 tests covering:
+    - App bar title
+    - Loading states (unauthenticated, role loading)
+    - Error state display
+    - User email and initials
+    - Role badge (owner, admin)
+    - Plan badge (pro, free)
+    - Upgrade card visibility (free tier only)
+    - Upgrade coming soon snackbar
+    - Notification settings link
+    - Logout button and confirmation dialog
+    - Logout cancel and confirm actions
+    - Account and Settings sections
+- All tests passing (288/288)
+
+---

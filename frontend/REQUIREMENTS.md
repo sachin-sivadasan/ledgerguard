@@ -108,6 +108,20 @@ dev_dependencies:
 - **Widget Tests:** UI components
 - **Integration Tests:** Full flows (future)
 
+### Test Coverage
+- [x] AuthBloc tests
+- [x] RoleBloc tests
+- [x] PartnerIntegrationBloc tests
+- [x] AppSelectionBloc tests
+- [x] DashboardBloc tests
+- [x] PreferencesBloc tests
+- [x] RiskBloc tests
+- [x] InsightBloc tests
+- [x] NotificationPreferencesBloc tests
+- [x] SubscriptionListBloc tests
+- [x] RiskBadge widget tests
+- [x] SubscriptionTile widget tests
+
 ---
 
 ## Notes

@@ -623,3 +623,45 @@ Track all prompts executed for the Flutter frontend.
   - Returns '??' for empty/invalid names
 
 ---
+
+## Prompt 019 – Frontend Tests for Subscription Feature
+**Date:** 2026-02-27
+**Status:** Complete
+
+**Prompt:**
+> whats pending for next? → 3 (Frontend tests - BLoC and widget tests for subscription feature)
+
+**Improved:**
+> Write comprehensive tests for subscription feature:
+> 1. SubscriptionListBloc tests - fetch, filter, refresh, load more
+> 2. RiskBadge widget tests - colors, icons, text, compact mode
+> 3. SubscriptionTile widget tests - display, tap handling, responsive layout
+
+**Changes:**
+- Tests created:
+  - `test/presentation/blocs/subscription_list_bloc_test.dart` - 17 tests
+    - Initial state test
+    - FetchSubscriptionsRequested: success, empty, error (SubscriptionException, generic)
+    - hasMore pagination flag
+    - FilterByRiskStateRequested: success, empty, no appId
+    - RefreshSubscriptionsRequested: success, failure
+    - LoadMoreSubscriptionsRequested: success, hasMore=false
+  - `test/presentation/widgets/risk_badge_test.dart` - 20 tests
+    - Display correct text for each RiskState
+    - Display correct colors (green, yellow, orange, red)
+    - Display correct icons
+    - Compact mode (no icon, smaller font)
+    - RiskStateIndicator with descriptions
+  - `test/presentation/widgets/subscription_tile_test.dart` - 17 tests
+    - Display shop name and formatted domain
+    - Display plan name and price
+    - Show initials in avatar
+    - Display risk badge
+    - Chevron icon
+    - Tap handling
+    - Responsive layout (compact vs full)
+    - Initials generation edge cases
+- All 54 new tests passing
+- Total tests: 188 passing (2 pre-existing failures in partner_integration_page_test.dart)
+
+---

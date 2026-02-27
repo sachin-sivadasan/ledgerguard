@@ -1,0 +1,112 @@
+@startuml UC_Revenue_API_Simple
+!theme plain
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam defaultFontSize 14
+skinparam usecaseFontSize 12
+skinparam rectangleFontSize 16
+
+title LedgerGuard Revenue API\nUse Case Overview
+
+' ============================================
+' ACTORS
+' ============================================
+
+actor "Shopify App\nDeveloper" as dev <<Human>>
+actor "Developer's\nBackend" as backend <<System>>
+actor "LedgerGuard\nUser" as owner <<Human>>
+
+' ============================================
+' MAIN SYSTEM
+' ============================================
+
+rectangle "Revenue API" as system #LightYellow {
+
+    ' Core API Operations
+    package "Core Operations" #LightGreen {
+        usecase "Query Subscription\nPayment Status" as UC1 #PaleGreen
+        usecase "Query Usage\nBilling Status" as UC2 #PaleGreen
+        usecase "Batch Status\nLookup" as UC3 #PaleGreen
+    }
+
+    ' Business Logic
+    package "Business Actions" #LightCoral {
+        usecase "Block Non-Paying\nStores" as UC4 #MistyRose
+        usecase "Gate Premium\nFeatures" as UC5 #MistyRose
+        usecase "Trigger Churn\nPrevention" as UC6 #MistyRose
+    }
+
+    ' Management
+    package "Management" #LightBlue {
+        usecase "Manage\nAPI Keys" as UC7 #AliceBlue
+        usecase "View Audit\nLogs" as UC8 #AliceBlue
+        usecase "Generate\nReports" as UC9 #AliceBlue
+    }
+
+    ' Integrations
+    package "Integrations" #Lavender {
+        usecase "Sync to\nCRM" as UC10 #Thistle
+        usecase "Send\nAlerts" as UC11 #Thistle
+        usecase "Export\nData" as UC12 #Thistle
+    }
+}
+
+' ============================================
+' RELATIONSHIPS
+' ============================================
+
+' Developer designs the integration
+dev --> UC7 : "setup"
+dev --> UC1 : "implement"
+dev --> UC2 : "implement"
+
+' Backend makes API calls
+backend --> UC1 : "real-time"
+backend --> UC2 : "real-time"
+backend --> UC3 : "batch"
+backend --> UC4 : "enforce"
+backend --> UC5 : "enforce"
+backend --> UC6 : "automate"
+backend --> UC10 : "sync"
+backend --> UC11 : "notify"
+
+' Owner manages and views
+owner --> UC7 : "manage"
+owner --> UC8 : "monitor"
+owner --> UC9 : "analyze"
+owner --> UC12 : "export"
+
+' Dependencies
+UC4 ..> UC1 : <<uses>>
+UC5 ..> UC1 : <<uses>>
+UC6 ..> UC3 : <<uses>>
+UC10 ..> UC3 : <<uses>>
+
+' ============================================
+' NOTES
+' ============================================
+
+note right of UC1
+  **Key Endpoint**
+  GET /v1/subscription/{gid}/status
+
+  Returns:
+  - risk_state
+  - is_paid_current_cycle
+  - months_overdue
+end note
+
+note right of UC4
+  **Primary Value**
+  Prevent revenue leakage
+  by blocking stores that
+  haven't paid
+end note
+
+note bottom of system
+  **API Authentication:** X-API-KEY header
+  **Rate Limiting:** 60 req/min default (Redis-backed)
+  **Phase 1:** REST API | **Phase 2:** + GraphQL
+end note
+
+@enduml

@@ -1,0 +1,136 @@
+@startuml UC_Revenue_API_Flows
+!theme plain
+skinparam defaultFontSize 13
+skinparam noteFontSize 11
+skinparam actorStyle awesome
+
+title Revenue API - Key Business Flows
+
+' ============================================
+' ACTORS
+' ============================================
+
+actor "Merchant's\nCustomer" as customer #LightBlue
+actor "Shopify App\n(Your Backend)" as app #LightGreen
+actor "LedgerGuard\nRevenue API" as api #Gold
+actor "App Owner\n(You)" as owner #LightCoral
+
+' ============================================
+' FLOW 1: Feature Gating
+' ============================================
+
+rectangle "Flow 1: Feature Gating" #Honeydew {
+    usecase "Customer opens\nyour Shopify app" as F1_1
+    usecase "Check subscription\npayment status" as F1_2
+    usecase "Grant/Block\naccess" as F1_3
+}
+
+customer --> F1_1
+F1_1 --> app
+app --> F1_2
+F1_2 --> api : "GET /v1/subscription/{gid}/status"
+api --> F1_3
+F1_3 --> customer : "Access or Payment Required page"
+
+note right of F1_2
+  **Response:**
+  {
+    "risk_state": "TWO_CYCLES_MISSED",
+    "months_overdue": 2,
+    "is_paid_current_cycle": false
+  }
+
+  **Action:** Block access
+end note
+
+' ============================================
+' FLOW 2: Usage Billing Verification
+' ============================================
+
+rectangle "Flow 2: Usage Billing Verification" #Lavender {
+    usecase "Customer triggers\npremium action" as F2_1
+    usecase "Create Shopify\nUsage Charge" as F2_2
+    usecase "Verify charge\nwas billed" as F2_3
+    usecase "Deliver premium\nservice" as F2_4
+}
+
+customer --> F2_1 : "e.g., Send 1000 emails"
+F2_1 --> app
+app --> F2_2 : "Shopify API"
+app --> F2_3
+F2_3 --> api : "GET /v1/usage/{gid}/status"
+api --> F2_4
+F2_4 --> customer : "Emails sent!"
+
+note right of F2_3
+  **Response:**
+  {
+    "billed": true,
+    "billing_date": "2024-02-28",
+    "amount_cents": 1500
+  }
+
+  **Action:** Safe to deliver
+end note
+
+' ============================================
+' FLOW 3: Churn Prevention
+' ============================================
+
+rectangle "Flow 3: Churn Prevention Automation" #MistyRose {
+    usecase "Daily batch check\nall subscriptions" as F3_1
+    usecase "Identify at-risk\nsubscriptions" as F3_2
+    usecase "Trigger automated\noutreach" as F3_3
+    usecase "Alert owner\nvia Slack" as F3_4
+}
+
+app --> F3_1 : "Cron job"
+F3_1 --> api : "POST /v1/subscriptions/status/batch"
+api --> F3_2
+F3_2 --> F3_3 : "Send payment reminder emails"
+F3_2 --> F3_4
+F3_4 --> owner : "#revenue: 5 at-risk subscriptions"
+
+note right of F3_2
+  **Batch Response:**
+  {
+    "results": [
+      {"months_overdue": 1, ...},
+      {"months_overdue": 2, ...}
+    ]
+  }
+
+  **Segments:**
+  - 1 month: Warning email
+  - 2 months: Urgent + block
+end note
+
+' ============================================
+' FLOW 4: Revenue Reporting
+' ============================================
+
+rectangle "Flow 4: Revenue Dashboard" #AliceBlue {
+    usecase "Owner opens\nLedgerGuard dashboard" as F4_1
+    usecase "Fetch subscription\nstatuses" as F4_2
+    usecase "Display MRR,\nchurn, at-risk $" as F4_3
+}
+
+owner --> F4_1
+F4_1 --> api
+api --> F4_2 : "Internal query"
+F4_2 --> F4_3
+F4_3 --> owner : "MRR: $12,500 | At Risk: $800"
+
+' ============================================
+' LEGEND
+' ============================================
+
+legend bottom
+  |= Color |= Flow |= Primary Benefit |
+  | <#Honeydew> | Feature Gating | Prevent revenue leakage |
+  | <#Lavender> | Usage Verification | Ensure billing before delivery |
+  | <#MistyRose> | Churn Prevention | Proactive retention |
+  | <#AliceBlue> | Reporting | Revenue visibility |
+endlegend
+
+@enduml

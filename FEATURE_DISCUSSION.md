@@ -418,6 +418,9 @@ internal/
 | `docs/C4_revenue_api.puml` | Container + Component diagram (Phase 1 + 2) |
 | `docs/ER_revenue_api.puml` | Entity relationships for API tables |
 | `docs/SEQUENCE_revenue_api.puml` | All Revenue API flows (Phase 1 + 2) |
+| `docs/UC_revenue_api.puml` | Comprehensive use case diagram (all actors & scenarios) |
+| `docs/UC_revenue_api_simple.puml` | Simplified use case overview (demo-friendly) |
+| `docs/UC_revenue_api_flows.puml` | End-to-end business flow scenarios |
 
 ---
 

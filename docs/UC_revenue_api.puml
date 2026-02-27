@@ -1,0 +1,209 @@
+@startuml UC_Revenue_API
+!theme plain
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam usecaseBackgroundColor<<p1>> #LightGreen
+skinparam usecaseBackgroundColor<<p2>> #LightBlue
+skinparam usecaseBorderColor<<p1>> #228B22
+skinparam usecaseBorderColor<<p2>> #4169E1
+
+title LedgerGuard Revenue API - Use Cases\n(Phase 1: Green | Phase 2: Blue)
+
+' ============================================
+' ACTORS
+' ============================================
+
+actor "App Owner" as owner #Business
+actor "External Developer" as dev #Application
+actor "Developer's App\n(Server)" as app #Technology
+actor "Support Agent" as support #Person
+actor "Finance Team" as finance #Person
+
+' ============================================
+' SYSTEM BOUNDARY
+' ============================================
+
+rectangle "LedgerGuard Revenue API" {
+
+    ' --- API Key Management ---
+    package "API Key Management" <<Frame>> {
+        usecase "Create API Key" as UC_CreateKey <<p1>>
+        usecase "List API Keys" as UC_ListKeys <<p1>>
+        usecase "Revoke API Key" as UC_RevokeKey <<p1>>
+        usecase "View Key Usage\nStats" as UC_KeyStats <<p1>>
+    }
+
+    ' --- Subscription Status ---
+    package "Subscription Status" <<Frame>> {
+        usecase "Check Single\nSubscription Status" as UC_SubSingle <<p1>>
+        usecase "Check Subscription\nby Domain" as UC_SubDomain <<p1>>
+        usecase "Batch Check\nSubscriptions" as UC_SubBatch <<p1>>
+        usecase "Filter Subscriptions\nby Risk State" as UC_SubFilter <<p2>>
+        usecase "Search Subscriptions" as UC_SubSearch <<p2>>
+    }
+
+    ' --- Usage Billing ---
+    package "Usage Billing" <<Frame>> {
+        usecase "Check Usage\nBilling Status" as UC_UsageSingle <<p1>>
+        usecase "Batch Check\nUsage Records" as UC_UsageBatch <<p1>>
+        usecase "Verify Usage\nBefore Delivery" as UC_UsageVerify <<p1>>
+        usecase "Filter Usage\nRecords" as UC_UsageFilter <<p2>>
+    }
+
+    ' --- Access Control ---
+    package "Access Control & Feature Gating" <<Frame>> {
+        usecase "Block Non-Paying\nStores" as UC_Block <<p1>>
+        usecase "Enforce Grace\nPeriod" as UC_Grace <<p1>>
+        usecase "Gate Premium\nFeatures" as UC_Gate <<p1>>
+        usecase "Enforce Usage\nLimits" as UC_Limits <<p1>>
+    }
+
+    ' --- Churn Prevention ---
+    package "Churn Prevention" <<Frame>> {
+        usecase "Detect Early\nWarning Signs" as UC_EarlyWarn <<p1>>
+        usecase "Trigger Dunning\nSequence" as UC_Dunning <<p1>>
+        usecase "Identify Win-back\nOpportunities" as UC_Winback <<p1>>
+        usecase "Calculate Customer\nHealth Score" as UC_Health <<p2>>
+    }
+
+    ' --- Reporting ---
+    package "Reporting & Analytics" <<Frame>> {
+        usecase "Generate Revenue\nReport" as UC_RevReport <<p1>>
+        usecase "View MRR\nBreakdown" as UC_MRR <<p1>>
+        usecase "Export for\nAccounting" as UC_Export <<p1>>
+        usecase "Cohort Analysis" as UC_Cohort <<p2>>
+        usecase "Churn Prediction" as UC_Predict <<p2>>
+    }
+
+    ' --- Integrations ---
+    package "Integrations" <<Frame>> {
+        usecase "Sync to CRM\n(HubSpot/Salesforce)" as UC_CRM <<p1>>
+        usecase "Send Slack\nAlerts" as UC_Slack <<p1>>
+        usecase "Update Support\nTicket Context" as UC_Support <<p1>>
+        usecase "Trigger Zapier\nWorkflow" as UC_Zapier <<p1>>
+        usecase "Real-time\nWebhooks" as UC_Webhook <<p2>>
+    }
+
+    ' --- Compliance ---
+    package "Compliance & Audit" <<Frame>> {
+        usecase "View API\nAudit Log" as UC_Audit <<p1>>
+        usecase "Generate Tax\nReport" as UC_Tax <<p1>>
+        usecase "Export Billing\nHistory" as UC_BillHistory <<p1>>
+    }
+
+    ' --- GraphQL (Phase 2) ---
+    package "GraphQL API (Phase 2)" <<Frame>> {
+        usecase "Flexible Field\nSelection" as UC_GqlFields <<p2>>
+        usecase "Nested Queries" as UC_GqlNested <<p2>>
+        usecase "Real-time\nSubscriptions" as UC_GqlRealtime <<p2>>
+        usecase "Aggregations" as UC_GqlAgg <<p2>>
+    }
+}
+
+' ============================================
+' RELATIONSHIPS - App Owner
+' ============================================
+
+owner --> UC_CreateKey
+owner --> UC_ListKeys
+owner --> UC_RevokeKey
+owner --> UC_KeyStats
+owner --> UC_RevReport
+owner --> UC_MRR
+owner --> UC_Audit
+owner --> UC_Health
+
+' ============================================
+' RELATIONSHIPS - External Developer
+' ============================================
+
+dev --> UC_SubSingle : "via SDK"
+dev --> UC_UsageSingle : "via SDK"
+dev --> UC_Block : "implements"
+dev --> UC_Gate : "implements"
+dev --> UC_GqlFields : "Phase 2"
+
+' ============================================
+' RELATIONSHIPS - Developer's App (Server)
+' ============================================
+
+app --> UC_SubSingle
+app --> UC_SubDomain
+app --> UC_SubBatch
+app --> UC_UsageSingle
+app --> UC_UsageBatch
+app --> UC_UsageVerify
+app --> UC_Block
+app --> UC_Grace
+app --> UC_Gate
+app --> UC_Limits
+app --> UC_EarlyWarn
+app --> UC_Dunning
+app --> UC_CRM
+app --> UC_Slack
+app --> UC_Zapier
+app --> UC_GqlNested : "Phase 2"
+app --> UC_GqlRealtime : "Phase 2"
+
+' ============================================
+' RELATIONSHIPS - Support Agent
+' ============================================
+
+support --> UC_SubDomain
+support --> UC_Support
+support --> UC_BillHistory
+
+' ============================================
+' RELATIONSHIPS - Finance Team
+' ============================================
+
+finance --> UC_RevReport
+finance --> UC_Export
+finance --> UC_Tax
+finance --> UC_MRR
+finance --> UC_Cohort : "Phase 2"
+
+' ============================================
+' INCLUDE/EXTEND RELATIONSHIPS
+' ============================================
+
+UC_SubSingle ..> UC_Block : <<include>>
+UC_SubSingle ..> UC_Grace : <<include>>
+UC_UsageVerify ..> UC_UsageSingle : <<include>>
+UC_EarlyWarn ..> UC_Dunning : <<extend>>
+UC_Dunning ..> UC_Slack : <<extend>>
+UC_Winback ..> UC_CRM : <<extend>>
+UC_SubBatch ..> UC_RevReport : <<include>>
+UC_GqlNested ..> UC_SubSingle : <<extend>>
+UC_GqlNested ..> UC_UsageSingle : <<extend>>
+
+' ============================================
+' NOTES
+' ============================================
+
+note right of UC_SubSingle
+  **Primary Use Case**
+  Every feature gating
+  decision starts here
+end note
+
+note right of UC_UsageVerify
+  **Critical for Usage Billing**
+  Verify Shopify billed the
+  charge before delivering
+  premium services
+end note
+
+note bottom of UC_GqlRealtime
+  **Phase 2 Feature**
+  WebSocket-based
+  live updates
+end note
+
+note as N1
+  **Legend**
+  <back:#LightGreen>Phase 1 (REST)</back>
+  <back:#LightBlue>Phase 2 (GraphQL)</back>
+end note
+
+@enduml

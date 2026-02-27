@@ -800,3 +800,111 @@ Added shop name and gross amount fields to transactions, fixed charge type infer
    - `000011_add_shop_name_and_gross_amount_to_transactions` - Add shop_name, gross_amount_cents columns
 
 **Tests:** All tests passing (124 backend)
+
+---
+
+## [2026-02-27] Revenue API Implementation
+
+**Commit:** feat: implement Revenue API with REST and GraphQL endpoints
+
+**Summary:**
+Implemented external Revenue API for Shopify app developers to query subscription payment status and usage billing status via REST and GraphQL endpoints. Uses CQRS pattern with a dedicated read model built from the ledger.
+
+**Implemented:**
+
+1. **Database Migrations (4 tables):**
+   - `000012_create_api_keys_table` - API keys with SHA-256 hash storage
+   - `000013_create_api_subscription_status_table` - CQRS read model for subscriptions
+   - `000014_create_api_usage_status_table` - Usage billing status
+   - `000015_create_api_audit_log_table` - Request audit logging
+
+2. **Domain Layer (`internal/revenue_api/domain/`):**
+   - **Entities:**
+     - `APIKey` - API key with NewAPIKey(), HashKey() using SHA-256
+     - `SubscriptionStatus` - Read model with risk state, payment status
+     - `UsageStatus` - Usage billing with parent subscription reference
+     - `AuditLog` - Request audit entry
+   - **Repository Interfaces:**
+     - `APIKeyRepository` - CRUD with FindByKeyHash
+     - `SubscriptionStatusRepository` - Read model queries
+     - `UsageStatusRepository` - Usage queries
+     - `AuditLogRepository` - Async audit logging
+
+3. **Infrastructure Layer (`internal/revenue_api/infrastructure/persistence/`):**
+   - PostgreSQL implementations for all repositories
+   - Async audit logging with background goroutine
+
+4. **Application Layer (`internal/revenue_api/application/service/`):**
+   - `APIKeyService` - Create, List, Revoke, ValidateKey
+   - `SubscriptionStatusService` - GetByShopifyGID, GetByDomain, GetByShopifyGIDs
+   - `UsageStatusService` - GetByShopifyGID, GetByShopifyGIDs
+   - `RevenueReadModelBuilder` - Rebuilds read model from ledger
+
+5. **HTTP Layer (`internal/revenue_api/interfaces/http/`):**
+   - **Middleware:**
+     - `APIKeyAuth` - X-API-Key header validation
+     - `RateLimiter` - In-memory token bucket (Redis interface ready)
+     - `AuditLogger` - Async request logging
+   - **Handlers:**
+     - `APIKeyHandler` - POST/GET/DELETE /api-keys
+     - `SubscriptionStatusHandler` - REST endpoints
+     - `UsageStatusHandler` - REST endpoints
+
+6. **GraphQL Layer (`internal/revenue_api/interfaces/graphql/`):**
+   - **Schema (`schema.graphql`):**
+     ```graphql
+     type Query {
+       subscription(shopifyGid: ID!): SubscriptionStatus
+       subscriptionByDomain(domain: String!): SubscriptionStatus
+       subscriptions(shopifyGids: [ID!]!): SubscriptionBatchResult!
+       usage(shopifyGid: ID!): UsageStatus
+       usages(shopifyGids: [ID!]!): UsageBatchResult!
+     }
+     ```
+   - `gqlgen.yml` - gqlgen configuration
+   - `resolver.go` - Root resolver with enums
+   - `schema.resolvers.go` - Query resolvers
+   - `handler.go` - HTTP handler for /graphql
+
+7. **Router (`internal/revenue_api/interfaces/http/router/router.go`):**
+   - Separate router for Revenue API
+   - API key management routes (Firebase auth)
+   - Public API routes (API key auth)
+
+8. **API Endpoints:**
+   - **API Key Management (requires Firebase auth):**
+     - `POST /v1/api-keys` - Create new API key
+     - `GET /v1/api-keys` - List user's API keys
+     - `DELETE /v1/api-keys/{keyID}` - Revoke API key
+   - **REST Endpoints (requires API key):**
+     - `GET /v1/subscriptions/{shopify_gid}` - Get subscription by GID
+     - `GET /v1/subscriptions/status?domain={domain}` - Get subscription by domain
+     - `POST /v1/subscriptions/batch` - Batch lookup (max 100)
+     - `GET /v1/usages/{shopify_gid}` - Get usage by GID
+     - `POST /v1/usages/batch` - Batch lookup (max 100)
+   - **GraphQL Endpoint (requires API key):**
+     - `POST /v1/graphql` - GraphQL queries
+
+9. **Security Features:**
+   - API keys hashed with SHA-256 (raw key never stored)
+   - Tenant isolation (users can only access their own apps)
+   - Rate limiting per API key (default: 60 requests/minute)
+   - Request audit logging
+
+10. **CQRS Pattern:**
+    - Read model separate from write ledger
+    - `RevenueReadModelBuilder` rebuilds from transactions
+    - Eventually consistent (rebuilt on sync)
+
+**Files Created:**
+- 4 migrations
+- 4 domain entities
+- 4 repository interfaces
+- 4 PostgreSQL repositories
+- 4 application services
+- 3 HTTP middleware
+- 3 HTTP handlers
+- 4 GraphQL files
+- 1 router
+
+**Tests:** Pending (Task #10)

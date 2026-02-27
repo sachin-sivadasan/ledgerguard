@@ -1,0 +1,150 @@
+# Revenue API GraphQL Schema
+
+"""
+Risk state of a subscription
+"""
+enum RiskState {
+  SAFE
+  ONE_CYCLE_MISSED
+  TWO_CYCLES_MISSED
+  CHURNED
+}
+
+"""
+Subscription status (ACTIVE, CANCELLED, FROZEN, PENDING)
+"""
+enum SubscriptionStatusEnum {
+  ACTIVE
+  CANCELLED
+  FROZEN
+  PENDING
+}
+
+"""
+Subscription payment status from the Revenue API
+"""
+type SubscriptionStatus {
+  """Shopify GraphQL ID (e.g., gid://shopify/AppSubscription/123)"""
+  subscriptionId: ID!
+
+  """Store's myshopify domain"""
+  myshopifyDomain: String!
+
+  """Store's display name"""
+  shopName: String
+
+  """Subscription plan name"""
+  planName: String
+
+  """Risk classification"""
+  riskState: RiskState!
+
+  """True if the subscription is paid for the current billing cycle"""
+  isPaidCurrentCycle: Boolean!
+
+  """Number of months without successful payment"""
+  monthsOverdue: Int!
+
+  """Date of last successful charge"""
+  lastSuccessfulChargeDate: Time
+
+  """Expected date of next charge"""
+  expectedNextChargeDate: Time
+
+  """Subscription status"""
+  status: SubscriptionStatusEnum!
+}
+
+"""
+Usage billing status from the Revenue API
+"""
+type UsageStatus {
+  """Shopify GraphQL ID (e.g., gid://shopify/AppUsageRecord/456)"""
+  usageId: ID!
+
+  """Whether Shopify has billed this usage charge"""
+  billed: Boolean!
+
+  """Date when the usage was billed (if billed)"""
+  billingDate: Time
+
+  """Amount in cents"""
+  amountCents: Int!
+
+  """Description of the usage charge"""
+  description: String
+
+  """Parent subscription status"""
+  subscription: SubscriptionStatus
+}
+
+"""
+Batch lookup result for subscriptions
+"""
+type SubscriptionBatchResult {
+  """Found subscription statuses"""
+  results: [SubscriptionStatus!]!
+
+  """Shopify GIDs that were not found"""
+  notFound: [String!]!
+}
+
+"""
+Batch lookup result for usage records
+"""
+type UsageBatchResult {
+  """Found usage statuses"""
+  results: [UsageStatus!]!
+
+  """Shopify GIDs that were not found"""
+  notFound: [String!]!
+}
+
+"""
+Filter options for subscription queries
+"""
+input SubscriptionFilter {
+  """Filter by risk state"""
+  riskState: RiskState
+
+  """Filter by subscription status"""
+  status: SubscriptionStatusEnum
+
+  """Only show subscriptions with overdue payments"""
+  isOverdue: Boolean
+}
+
+"""
+Root query type for Revenue API
+"""
+type Query {
+  """
+  Get a subscription status by Shopify GID
+  """
+  subscription(shopifyGid: ID!): SubscriptionStatus
+
+  """
+  Get a subscription status by myshopify domain
+  """
+  subscriptionByDomain(domain: String!): SubscriptionStatus
+
+  """
+  Get multiple subscription statuses by Shopify GIDs
+  """
+  subscriptions(shopifyGids: [ID!]!): SubscriptionBatchResult!
+
+  """
+  Get a usage status by Shopify GID (includes parent subscription)
+  """
+  usage(shopifyGid: ID!): UsageStatus
+
+  """
+  Get multiple usage statuses by Shopify GIDs
+  """
+  usages(shopifyGids: [ID!]!): UsageBatchResult!
+}
+
+"""
+Custom scalar for timestamps
+"""
+scalar Time

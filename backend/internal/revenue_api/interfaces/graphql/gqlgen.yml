@@ -1,0 +1,33 @@
+# gqlgen configuration for Revenue API GraphQL
+
+schema:
+  - schema.graphql
+
+exec:
+  filename: generated.go
+  package: graphql
+
+model:
+  filename: models_gen.go
+  package: graphql
+
+resolver:
+  layout: follow-schema
+  dir: .
+  package: graphql
+  filename_template: "{name}.resolvers.go"
+
+# Map GraphQL types to Go types
+models:
+  ID:
+    model:
+      - github.com/99designs/gqlgen/graphql.ID
+  Time:
+    model:
+      - github.com/99designs/gqlgen/graphql.Time
+  RiskState:
+    model:
+      - github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/graphql.RiskState
+  SubscriptionStatusEnum:
+    model:
+      - github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/graphql.SubscriptionStatusEnum

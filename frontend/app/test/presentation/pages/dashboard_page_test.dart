@@ -4,15 +4,39 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:ledgerguard/domain/entities/dashboard_metrics.dart';
+import 'package:ledgerguard/domain/entities/user_profile.dart';
 import 'package:ledgerguard/presentation/blocs/dashboard/dashboard.dart';
+import 'package:ledgerguard/presentation/blocs/insight/insight.dart';
+import 'package:ledgerguard/presentation/blocs/preferences/preferences.dart';
+import 'package:ledgerguard/presentation/blocs/role/role.dart';
 import 'package:ledgerguard/presentation/pages/dashboard_page.dart';
 
 class MockDashboardBloc extends Mock implements DashboardBloc {}
 
+class MockRoleBloc extends Mock implements RoleBloc {}
+
+class MockInsightBloc extends Mock implements InsightBloc {}
+
+class MockPreferencesBloc extends Mock implements PreferencesBloc {}
+
 class FakeDashboardEvent extends Fake implements DashboardEvent {}
+
+class FakeInsightEvent extends Fake implements InsightEvent {}
+
+class FakePreferencesEvent extends Fake implements PreferencesEvent {}
 
 void main() {
   late MockDashboardBloc mockBloc;
+  late MockRoleBloc mockRoleBloc;
+  late MockInsightBloc mockInsightBloc;
+  late MockPreferencesBloc mockPreferencesBloc;
+
+  const proUserProfile = UserProfile(
+    id: 'user-1',
+    email: 'pro@example.com',
+    role: UserRole.owner,
+    planTier: PlanTier.pro,
+  );
 
   const testMetrics = DashboardMetrics(
     renewalSuccessRate: 94.2,
@@ -37,10 +61,29 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(FakeDashboardEvent());
+    registerFallbackValue(FakeInsightEvent());
+    registerFallbackValue(FakePreferencesEvent());
   });
 
   setUp(() {
     mockBloc = MockDashboardBloc();
+    mockRoleBloc = MockRoleBloc();
+    mockInsightBloc = MockInsightBloc();
+    mockPreferencesBloc = MockPreferencesBloc();
+
+    // Setup RoleBloc defaults
+    when(() => mockRoleBloc.state).thenReturn(const RoleLoaded(proUserProfile));
+    when(() => mockRoleBloc.stream).thenAnswer((_) => const Stream.empty());
+
+    // Setup InsightBloc defaults - empty state so card is hidden
+    when(() => mockInsightBloc.state).thenReturn(const InsightEmpty());
+    when(() => mockInsightBloc.stream).thenAnswer((_) => const Stream.empty());
+    when(() => mockInsightBloc.add(any())).thenReturn(null);
+
+    // Setup PreferencesBloc defaults
+    when(() => mockPreferencesBloc.state).thenReturn(const PreferencesInitial());
+    when(() => mockPreferencesBloc.stream).thenAnswer((_) => const Stream.empty());
+    when(() => mockPreferencesBloc.add(any())).thenReturn(null);
   });
 
   Widget buildTestWidget({DashboardState? state}) {
@@ -49,8 +92,13 @@ void main() {
     when(() => mockBloc.add(any())).thenReturn(null);
 
     return MaterialApp(
-      home: BlocProvider<DashboardBloc>.value(
-        value: mockBloc,
+      home: MultiBlocProvider(
+        providers: [
+          BlocProvider<DashboardBloc>.value(value: mockBloc),
+          BlocProvider<RoleBloc>.value(value: mockRoleBloc),
+          BlocProvider<InsightBloc>.value(value: mockInsightBloc),
+          BlocProvider<PreferencesBloc>.value(value: mockPreferencesBloc),
+        ],
         child: const DashboardPage(),
       ),
     );

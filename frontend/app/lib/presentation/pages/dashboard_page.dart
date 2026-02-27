@@ -6,10 +6,12 @@ import '../../domain/entities/dashboard_metrics.dart';
 import '../../domain/entities/dashboard_preferences.dart';
 import '../blocs/dashboard/dashboard.dart';
 import '../blocs/preferences/preferences.dart';
+import '../widgets/ai_insight_card.dart';
 import '../widgets/dashboard_config_dialog.dart';
 import '../widgets/kpi_card.dart';
 import '../widgets/revenue_mix_chart.dart';
 import '../widgets/risk_distribution_chart.dart';
+import '../widgets/role_guard.dart';
 
 /// Executive Dashboard page displaying key metrics
 class DashboardPage extends StatelessWidget {
@@ -189,6 +191,7 @@ class DashboardPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const ProGuard(child: AiInsightCard()),
             _buildSectionHeader(context, 'Primary KPIs'),
             const SizedBox(height: 16),
             _buildPrimaryKpis(context, metrics),

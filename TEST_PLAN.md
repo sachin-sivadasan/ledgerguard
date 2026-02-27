@@ -639,6 +639,63 @@ go test ./... -race
 
 ---
 
+### F6. InsightBloc Tests
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FB-070 | Initial state | InsightInitial | ✓ |
+| FB-071 | LoadInsight success | [InsightLoading, InsightLoaded] | ✓ |
+| FB-072 | LoadInsight returns null | [InsightLoading, InsightEmpty] | ✓ |
+| FB-073 | LoadInsight throws InsightException | [InsightLoading, InsightError] | ✓ |
+| FB-074 | LoadInsight throws generic exception | [InsightLoading, InsightError] | ✓ |
+| FB-075 | RefreshInsight success | [Loaded(refreshing), Loaded] | ✓ |
+| FB-076 | RefreshInsight fails with InsightException | [Loaded(refreshing), Loaded(same)] | ✓ |
+| FB-077 | RefreshInsight fails with generic exception | [Loaded(refreshing), Loaded(same)] | ✓ |
+| FB-078 | RefreshInsight from non-loaded state | Triggers LoadInsight | ✓ |
+| FB-079 | RefreshInsight returns null | [Loaded(refreshing), InsightEmpty] | ✓ |
+
+#### F6.1 DailyInsight Entity
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FE-020 | fromJson parses correctly | All fields parsed | ✓ |
+| FE-021 | fromJson handles missing key_points | Empty list | ✓ |
+| FE-022 | fromJson handles missing summary | Empty string | ✓ |
+| FE-023 | hasKeyPoints returns correct value | true/false based on list | ✓ |
+| FE-024 | formattedGeneratedAt for recent | "X min ago" | ✓ |
+| FE-025 | formattedGeneratedAt for hours ago | "X hours ago" | ✓ |
+
+#### F6.2 InsightException Classes
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FE-030 | NoAppSelectedInsightException | Correct message and code | ✓ |
+| FE-031 | UnauthorizedInsightException | Correct message and code | ✓ |
+| FE-032 | ProRequiredInsightException | Correct message and code | ✓ |
+
+---
+
+### F7. AiInsightCard Tests
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-170 | Shows nothing for InsightInitial | SizedBox.shrink | ✓ |
+| FW-171 | Shows loading state with shimmer | Shimmer placeholders visible | ✓ |
+| FW-172 | Shows nothing for InsightEmpty | Card hidden | ✓ |
+| FW-173 | Shows nothing for InsightError | Card hidden | ✓ |
+| FW-174 | Shows insight card when loaded | Card with summary visible | ✓ |
+| FW-175 | Shows key takeaways when present | Bullet points visible | ✓ |
+| FW-176 | Hides key takeaways when empty | Section not visible | ✓ |
+| FW-177 | Shows AI icon | auto_awesome icon visible | ✓ |
+| FW-178 | Shows refresh button when loaded | Refresh icon visible | ✓ |
+| FW-179 | Shows spinner when refreshing | CircularProgressIndicator | ✓ |
+| FW-180 | Can collapse and expand card | AnimatedCrossFade toggles | ✓ |
+| FW-181 | Loads insight on init | LoadInsightRequested dispatched | ✓ |
+| FW-182 | Triggers refresh on button tap | RefreshInsightRequested dispatched | ✓ |
+| FW-183 | Shows generated time | "Generated X ago" visible | ✓ |
+
+---
+
 ### Running Frontend Tests
 
 ```bash

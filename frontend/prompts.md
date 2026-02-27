@@ -289,3 +289,55 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (196/196)
 
 ---
+
+## Prompt 011 – AI Insight Card
+**Date:** 2026-02-27
+**Status:** Complete
+
+**Prompt:**
+> Implement AI Insight card on dashboard. Behavior: Visible only if plan_tier == PRO, Fetch daily_insight from backend, Display formatted executive summary, Collapsible card. Handle loading and empty states.
+
+**Improved:**
+> Implement AI Insight card on Executive Dashboard:
+> 1. Create `DailyInsight` entity with summary, generatedAt, keyPoints
+> 2. Create `InsightRepository` interface with exceptions
+> 3. Create `ApiInsightRepository` - calls `/api/v1/apps/{appId}/insights/daily`
+> 4. Create `InsightBloc` with Load/Refresh events and states
+> 5. Create `AiInsightCard` widget - collapsible card with:
+>    - AI sparkle icon, "Daily Insight" title
+>    - Generated timestamp
+>    - Summary text
+>    - Key takeaways bullet points
+>    - Shimmer loading state
+>    - Hidden on empty/error states
+> 6. Wrap card in `ProGuard` - visible only to PRO tier users
+> 7. Place at top of dashboard, above Primary KPIs
+> 8. Write tests for InsightBloc and AiInsightCard
+
+**Changes:**
+- Domain layer:
+  - Created `domain/entities/daily_insight.dart` - DailyInsight with fromJson, formattedGeneratedAt
+  - Created `domain/repositories/insight_repository.dart` - Repository interface + exceptions (InsightException, NoAppSelectedInsightException, UnauthorizedInsightException, ProRequiredInsightException)
+- Data layer:
+  - Created `data/repositories/api_insight_repository.dart` - API implementation
+  - Created `data/repositories/mock_insight_repository.dart` - Mock implementation
+- Presentation layer:
+  - Created `presentation/blocs/insight/insight_bloc.dart` - InsightBloc
+  - Created `presentation/blocs/insight/insight_event.dart` - LoadInsightRequested, RefreshInsightRequested
+  - Created `presentation/blocs/insight/insight_state.dart` - InsightInitial, InsightLoading, InsightLoaded, InsightEmpty, InsightError
+  - Created `presentation/widgets/ai_insight_card.dart` - Collapsible AI insight card with:
+    - Gradient background matching theme
+    - AI sparkle icon
+    - Shimmer loading state
+    - Expand/collapse animation
+    - Refresh button with spinner
+  - Updated `presentation/pages/dashboard_page.dart` - Added AiInsightCard wrapped in ProGuard
+- Updated `app.dart` - Added InsightBloc provider
+- Updated `core/di/injection.config.dart` - Registered InsightBloc and repository
+- Tests:
+  - Created `test/presentation/blocs/insight_bloc_test.dart` - 21 tests (bloc + entity + exceptions)
+  - Created `test/presentation/widgets/ai_insight_card_test.dart` - 13 tests
+  - Updated `test/presentation/pages/dashboard_page_test.dart` - Added RoleBloc, InsightBloc, PreferencesBloc mocks
+- All tests passing (229/229)
+
+---

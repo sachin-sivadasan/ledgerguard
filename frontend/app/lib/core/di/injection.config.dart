@@ -11,6 +11,8 @@ import 'package:injectable/injectable.dart' as _i2;
 
 import '../../data/repositories/api_dashboard_repository.dart';
 import '../../data/repositories/api_dashboard_preferences_repository.dart';
+import '../../data/repositories/api_insight_repository.dart';
+import '../../data/repositories/api_insight_repository.dart';
 import '../../data/repositories/api_risk_repository.dart';
 import '../../data/repositories/api_user_profile_repository.dart';
 import '../../data/repositories/firebase_auth_repository.dart';
@@ -20,12 +22,14 @@ import '../../domain/repositories/app_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/dashboard_repository.dart';
 import '../../domain/repositories/dashboard_preferences_repository.dart';
+import '../../domain/repositories/insight_repository.dart';
 import '../../domain/repositories/partner_integration_repository.dart';
 import '../../domain/repositories/risk_repository.dart';
 import '../../domain/repositories/user_profile_repository.dart';
 import '../../presentation/blocs/app_selection/app_selection_bloc.dart';
 import '../../presentation/blocs/auth/auth_bloc.dart';
 import '../../presentation/blocs/dashboard/dashboard_bloc.dart';
+import '../../presentation/blocs/insight/insight_bloc.dart';
 import '../../presentation/blocs/partner_integration/partner_integration_bloc.dart';
 import '../../presentation/blocs/preferences/preferences_bloc.dart';
 import '../../presentation/blocs/risk/risk_bloc.dart';
@@ -52,6 +56,10 @@ extension GetItInjectableX on _i1.GetIt {
           authRepository: get<AuthRepository>(),
           appRepository: get<AppRepository>(),
         ));
+    registerLazySingleton<InsightRepository>(() => ApiInsightRepository(
+          authRepository: get<AuthRepository>(),
+          appRepository: get<AppRepository>(),
+        ));
 
     // Blocs
     registerFactory<AuthBloc>(() => AuthBloc(authRepository: get<AuthRepository>()));
@@ -59,6 +67,7 @@ extension GetItInjectableX on _i1.GetIt {
     registerFactory<PartnerIntegrationBloc>(() => PartnerIntegrationBloc(repository: get<PartnerIntegrationRepository>()));
     registerFactory<AppSelectionBloc>(() => AppSelectionBloc(appRepository: get<AppRepository>()));
     registerFactory<DashboardBloc>(() => DashboardBloc(repository: get<DashboardRepository>()));
+    registerFactory<InsightBloc>(() => InsightBloc(repository: get<InsightRepository>()));
     registerFactory<PreferencesBloc>(() => PreferencesBloc(repository: get<DashboardPreferencesRepository>()));
     registerFactory<RiskBloc>(() => RiskBloc(repository: get<RiskRepository>()));
 

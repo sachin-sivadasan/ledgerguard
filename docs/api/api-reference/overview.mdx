@@ -1,0 +1,111 @@
+---
+title: 'API Reference Overview'
+description: 'REST API endpoints for subscription and usage status'
+---
+
+## Base URL
+
+All REST API requests should be made to:
+
+```
+https://api.ledgerguard.app/v1
+```
+
+For testing with sandbox data:
+
+```
+https://api-sandbox.ledgerguard.app/v1
+```
+
+## Authentication
+
+Include your API key in the `X-API-Key` header:
+
+```bash
+curl https://api.ledgerguard.app/v1/subscriptions/... \
+  -H "X-API-Key: lg_live_xxxxxxxxxxxx"
+```
+
+## Available Endpoints
+
+### Subscriptions
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/subscriptions/{shopify_gid}` | Get subscription by Shopify GID |
+| `GET` | `/subscriptions/status?domain=` | Get subscription by domain |
+| `POST` | `/subscriptions/batch` | Batch lookup (max 100) |
+
+### Usage
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/usages/{shopify_gid}` | Get usage record by Shopify GID |
+| `POST` | `/usages/batch` | Batch lookup (max 100) |
+
+## Response Format
+
+All responses are JSON with the following structure:
+
+### Success Response
+
+```json
+{
+  "subscriptionId": "gid://shopify/AppSubscription/12345",
+  "riskState": "SAFE",
+  "isPaidCurrentCycle": true,
+  ...
+}
+```
+
+### Error Response
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Subscription not found"
+  }
+}
+```
+
+## HTTP Status Codes
+
+| Status | Description |
+|--------|-------------|
+| `200` | Success |
+| `400` | Bad request (invalid parameters) |
+| `401` | Unauthorized (missing/invalid API key) |
+| `403` | Forbidden (access denied) |
+| `404` | Not found |
+| `429` | Rate limited |
+| `500` | Internal server error |
+
+## Rate Limiting
+
+Rate limits are applied per API key:
+
+| Plan | Limit |
+|------|-------|
+| Free | 60 requests/minute |
+| Pro | 300 requests/minute |
+
+Rate limit headers are included in every response:
+
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 45
+X-RateLimit-Reset: 1709856000
+```
+
+## Pagination
+
+Batch endpoints support up to 100 items per request. For larger datasets, split your requests into multiple batches.
+
+## GraphQL Alternative
+
+For more flexible queries, consider using our [GraphQL API](/graphql/overview). It allows you to:
+
+- Request only the fields you need
+- Combine subscription and usage queries
+- Reduce response payload size

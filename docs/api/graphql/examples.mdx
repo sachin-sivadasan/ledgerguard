@@ -1,0 +1,267 @@
+---
+title: 'Examples'
+description: 'Copy-paste GraphQL examples for common use cases'
+---
+
+## Feature Gating
+
+Check if a subscription is paid before allowing access to premium features.
+
+```graphql
+query CheckAccess($gid: ID!) {
+  subscription(shopifyGid: $gid) {
+    isPaidCurrentCycle
+    riskState
+    status
+  }
+}
+```
+
+**Variables:**
+```json
+{
+  "gid": "gid://shopify/AppSubscription/12345"
+}
+```
+
+**Implementation:**
+
+```javascript
+async function checkPremiumAccess(shopifyGid) {
+  const { data } = await graphqlRequest(`
+    query CheckAccess($gid: ID!) {
+      subscription(shopifyGid: $gid) {
+        isPaidCurrentCycle
+        riskState
+        status
+      }
+    }
+  `, { gid: shopifyGid });
+
+  const { isPaidCurrentCycle, riskState, status } = data.subscription;
+
+  if (status === 'CANCELLED') {
+    return { allowed: false, reason: 'cancelled' };
+  }
+
+  if (!isPaidCurrentCycle) {
+    return { allowed: false, reason: 'unpaid', riskState };
+  }
+
+  return { allowed: true };
+}
+```
+
+---
+
+## Dashboard Loading
+
+Load payment status for multiple stores efficiently.
+
+```graphql
+query LoadDashboard($gids: [ID!]!) {
+  subscriptions(shopifyGids: $gids) {
+    results {
+      subscriptionId
+      myshopifyDomain
+      shopName
+      planName
+      riskState
+      isPaidCurrentCycle
+      monthsOverdue
+      status
+    }
+    notFound
+  }
+}
+```
+
+**Variables:**
+```json
+{
+  "gids": [
+    "gid://shopify/AppSubscription/123",
+    "gid://shopify/AppSubscription/456",
+    "gid://shopify/AppSubscription/789"
+  ]
+}
+```
+
+---
+
+## Risk Summary
+
+Count subscriptions by risk state.
+
+```graphql
+query RiskSummary($gids: [ID!]!) {
+  subscriptions(shopifyGids: $gids) {
+    results {
+      riskState
+    }
+  }
+}
+```
+
+**Processing:**
+
+```javascript
+const { data } = await graphqlRequest(query, { gids: allSubscriptionIds });
+
+const summary = data.subscriptions.results.reduce((acc, sub) => {
+  acc[sub.riskState] = (acc[sub.riskState] || 0) + 1;
+  return acc;
+}, {});
+
+console.log(summary);
+// { SAFE: 150, ONE_CYCLE_MISSED: 12, TWO_CYCLES_MISSED: 3, CHURNED: 5 }
+```
+
+---
+
+## Usage Reconciliation
+
+Check billing status of usage charges.
+
+```graphql
+query ReconcileUsage($gids: [ID!]!) {
+  usages(shopifyGids: $gids) {
+    results {
+      usageId
+      billed
+      billingDate
+      amountCents
+      description
+    }
+    notFound
+  }
+}
+```
+
+**Reconciliation:**
+
+```javascript
+const { data } = await graphqlRequest(query, { gids: usageGids });
+
+const billed = data.usages.results.filter(u => u.billed);
+const pending = data.usages.results.filter(u => !u.billed);
+const missing = data.usages.notFound;
+
+const billedTotal = billed.reduce((sum, u) => sum + u.amountCents, 0);
+const pendingTotal = pending.reduce((sum, u) => sum + u.amountCents, 0);
+
+console.log(`Billed: $${billedTotal / 100}, Pending: $${pendingTotal / 100}`);
+console.log(`Missing records: ${missing.length}`);
+```
+
+---
+
+## Combined Query
+
+Fetch both subscription and usage data in one request.
+
+```graphql
+query CombinedLookup($subGid: ID!, $usageGids: [ID!]!) {
+  subscription(shopifyGid: $subGid) {
+    subscriptionId
+    myshopifyDomain
+    shopName
+    riskState
+    isPaidCurrentCycle
+  }
+
+  usages(shopifyGids: $usageGids) {
+    results {
+      usageId
+      billed
+      amountCents
+    }
+    notFound
+  }
+}
+```
+
+**Variables:**
+```json
+{
+  "subGid": "gid://shopify/AppSubscription/12345",
+  "usageGids": [
+    "gid://shopify/AppUsageRecord/111",
+    "gid://shopify/AppUsageRecord/222"
+  ]
+}
+```
+
+---
+
+## Minimal Response
+
+Request only the fields you need to reduce payload size.
+
+```graphql
+# Full response (unnecessary fields)
+query {
+  subscription(shopifyGid: "gid://...") {
+    subscriptionId
+    myshopifyDomain
+    shopName
+    planName
+    riskState
+    isPaidCurrentCycle
+    monthsOverdue
+    lastSuccessfulChargeDate
+    expectedNextChargeDate
+    status
+  }
+}
+
+# Minimal response (just what you need)
+query {
+  subscription(shopifyGid: "gid://...") {
+    isPaidCurrentCycle
+  }
+}
+```
+
+The minimal query returns:
+
+```json
+{
+  "data": {
+    "subscription": {
+      "isPaidCurrentCycle": true
+    }
+  }
+}
+```
+
+---
+
+## Helper Function
+
+Reusable GraphQL client wrapper:
+
+```javascript
+async function graphqlRequest(query, variables = {}) {
+  const response = await fetch('https://api.ledgerguard.app/v1/graphql', {
+    method: 'POST',
+    headers: {
+      'X-API-Key': process.env.LEDGERGUARD_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ query, variables })
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const { data, errors } = await response.json();
+
+  if (errors?.length > 0) {
+    throw new Error(errors[0].message);
+  }
+
+  return { data };
+}
+```

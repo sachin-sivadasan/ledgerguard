@@ -1,0 +1,165 @@
+---
+title: 'Rate Limits'
+description: 'API rate limiting and best practices'
+---
+
+## Overview
+
+Rate limits protect the API from abuse and ensure fair usage for all customers. Limits are applied **per API key**.
+
+## Rate Limit Tiers
+
+| Plan | Requests per Minute | Burst Limit |
+|------|---------------------|-------------|
+| Free | 60 | 10 |
+| Pro | 300 | 50 |
+| Enterprise | Custom | Custom |
+
+<Note>
+  Burst limit is the maximum concurrent requests allowed. Exceeding this will queue additional requests.
+</Note>
+
+## Rate Limit Headers
+
+Every response includes rate limit information:
+
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 45
+X-RateLimit-Reset: 1709856000
+```
+
+| Header | Description |
+|--------|-------------|
+| `X-RateLimit-Limit` | Maximum requests per minute |
+| `X-RateLimit-Remaining` | Remaining requests in current window |
+| `X-RateLimit-Reset` | Unix timestamp when limit resets |
+
+## Rate Limit Exceeded
+
+When you exceed the limit, the API returns:
+
+**HTTP Status:** `429 Too Many Requests`
+
+```json
+{
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Rate limit exceeded. Retry after 60 seconds."
+  }
+}
+```
+
+## Handling Rate Limits
+
+### Check Headers Proactively
+
+Monitor remaining requests and slow down before hitting the limit:
+
+```javascript
+async function apiRequest(endpoint) {
+  const response = await fetch(endpoint, { headers });
+
+  const remaining = parseInt(response.headers.get('X-RateLimit-Remaining'));
+  const resetTime = parseInt(response.headers.get('X-RateLimit-Reset'));
+
+  if (remaining < 10) {
+    console.warn(`Rate limit warning: ${remaining} requests remaining`);
+  }
+
+  if (remaining === 0) {
+    const waitMs = (resetTime * 1000) - Date.now();
+    await sleep(waitMs);
+  }
+
+  return response;
+}
+```
+
+### Implement Exponential Backoff
+
+When rate limited, wait and retry with increasing delays:
+
+```javascript
+async function fetchWithBackoff(url, options, maxRetries = 5) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const response = await fetch(url, options);
+
+    if (response.status === 429) {
+      const resetTime = parseInt(response.headers.get('X-RateLimit-Reset'));
+      const waitMs = Math.max((resetTime * 1000) - Date.now(), 1000);
+
+      console.log(`Rate limited. Waiting ${waitMs}ms before retry.`);
+      await sleep(waitMs);
+      continue;
+    }
+
+    return response;
+  }
+
+  throw new Error('Max retries exceeded');
+}
+```
+
+### Use Batch Endpoints
+
+Reduce request count by using batch endpoints:
+
+```javascript
+// Bad: 100 requests
+for (const gid of subscriptionGids) {
+  await fetch(`/v1/subscriptions/${encodeURIComponent(gid)}`);
+}
+
+// Good: 1 request
+await fetch('/v1/subscriptions/batch', {
+  method: 'POST',
+  body: JSON.stringify({ ids: subscriptionGids })
+});
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use batch endpoints">
+    Always prefer batch endpoints over multiple individual requests. One batch request of 100 IDs counts as 1 request.
+  </Accordion>
+  <Accordion title="Cache responses">
+    Subscription status changes at most daily. Cache responses for 1 hour to reduce API calls.
+  </Accordion>
+  <Accordion title="Implement circuit breaker">
+    If you're consistently hitting rate limits, implement a circuit breaker to prevent cascading failures.
+  </Accordion>
+  <Accordion title="Use separate keys">
+    Create separate API keys for different services. This provides isolation and easier debugging.
+  </Accordion>
+  <Accordion title="Monitor usage">
+    Track your API usage patterns to predict when you might need a higher limit.
+  </Accordion>
+</AccordionGroup>
+
+## Rate Limit Calculator
+
+| Action | Requests | With 60/min limit |
+|--------|----------|-------------------|
+| Check 1 subscription | 1 | 60/minute |
+| Check 100 subscriptions (individual) | 100 | 0.6/minute |
+| Check 100 subscriptions (batch) | 1 | 60 batches/minute |
+| Dashboard with 50 stores | 1 (batch) | 60/minute |
+
+## Increasing Your Limit
+
+### Upgrade to Pro
+
+Pro plan includes 300 requests/minute — 5x the free tier:
+
+1. Go to [app.ledgerguard.app/settings/billing](https://app.ledgerguard.app/settings/billing)
+2. Click **Upgrade to Pro**
+3. Your new limits apply immediately
+
+### Enterprise Custom Limits
+
+For high-volume use cases, contact us for custom rate limits:
+
+- Email: [enterprise@ledgerguard.app](mailto:enterprise@ledgerguard.app)
+- Include your current usage and expected volume

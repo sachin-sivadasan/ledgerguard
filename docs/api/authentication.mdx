@@ -1,0 +1,190 @@
+---
+title: 'Authentication'
+description: 'Secure your API requests with API keys'
+---
+
+## API Keys
+
+All Revenue API requests require authentication via API key. API keys are tied to your LedgerGuard account and provide access to subscription data for all your tracked apps.
+
+## Creating API Keys
+
+<Steps>
+  <Step title="Open the Dashboard">
+    Navigate to [app.ledgerguard.app](https://app.ledgerguard.app) and sign in.
+  </Step>
+  <Step title="Go to API Keys">
+    Click **Settings** → **API Keys** in the left sidebar.
+  </Step>
+  <Step title="Create New Key">
+    Click **Create API Key** and provide a descriptive name.
+  </Step>
+  <Step title="Copy and Store">
+    Copy your API key immediately. It will only be shown once.
+  </Step>
+</Steps>
+
+<Warning>
+  **Never expose API keys in client-side code.** API keys should only be used server-side. If a key is compromised, revoke it immediately from the dashboard.
+</Warning>
+
+## Using API Keys
+
+Include your API key in the `X-API-Key` header with every request:
+
+```bash
+curl https://api.ledgerguard.app/v1/subscriptions/gid://shopify/AppSubscription/123 \
+  -H "X-API-Key: lg_live_xxxxxxxxxxxxxxxxxxxx"
+```
+
+Alternatively, you can use the `Authorization` header with a Bearer token:
+
+```bash
+curl https://api.ledgerguard.app/v1/subscriptions/gid://shopify/AppSubscription/123 \
+  -H "Authorization: Bearer lg_live_xxxxxxxxxxxxxxxxxxxx"
+```
+
+## Key Formats
+
+| Prefix | Environment | Use Case |
+|--------|-------------|----------|
+| `lg_live_` | Production | Live API calls |
+| `lg_test_` | Sandbox | Testing & development |
+
+<Note>
+  Test keys (`lg_test_`) have lower rate limits and return mock data. Use them during development.
+</Note>
+
+## Environment Variables
+
+Store your API key in environment variables, never in code:
+
+<CodeGroup>
+
+```bash .env
+LEDGERGUARD_API_KEY=lg_live_xxxxxxxxxxxxxxxxxxxx
+```
+
+```javascript Node.js
+const apiKey = process.env.LEDGERGUARD_API_KEY;
+```
+
+```python Python
+import os
+api_key = os.environ['LEDGERGUARD_API_KEY']
+```
+
+```ruby Ruby
+api_key = ENV['LEDGERGUARD_API_KEY']
+```
+
+```go Go
+apiKey := os.Getenv("LEDGERGUARD_API_KEY")
+```
+
+</CodeGroup>
+
+## Key Management
+
+### Viewing Keys
+
+From the API Keys page, you can see:
+- Key name and creation date
+- Last used timestamp
+- Partial key preview (last 4 characters)
+
+### Revoking Keys
+
+To revoke a compromised or unused key:
+
+1. Go to **Settings** → **API Keys**
+2. Find the key and click **Revoke**
+3. Confirm the action
+
+<Warning>
+  Revoked keys are immediately invalidated. Any requests using the revoked key will return `401 Unauthorized`.
+</Warning>
+
+### Key Rotation
+
+We recommend rotating API keys periodically:
+
+1. Create a new API key
+2. Update your application to use the new key
+3. Deploy and verify the new key works
+4. Revoke the old key
+
+## Rate Limits Per Key
+
+Each API key has its own rate limit:
+
+| Plan | Rate Limit |
+|------|------------|
+| Free | 60 requests/minute |
+| Pro | 300 requests/minute |
+| Enterprise | Custom |
+
+Rate limit headers are included in every response:
+
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 45
+X-RateLimit-Reset: 1709856000
+```
+
+See [Rate Limits](/rate-limits) for more details.
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use environment variables">
+    Never hardcode API keys in your source code. Use environment variables or secrets management.
+  </Accordion>
+  <Accordion title="Server-side only">
+    Never expose API keys in client-side JavaScript, mobile apps, or anywhere end users can see them.
+  </Accordion>
+  <Accordion title="Least privilege">
+    Create separate keys for different environments (staging, production) and services.
+  </Accordion>
+  <Accordion title="Monitor usage">
+    Regularly check the "Last used" timestamp to identify inactive keys that should be revoked.
+  </Accordion>
+  <Accordion title="Rotate regularly">
+    Rotate API keys every 90 days or immediately if you suspect compromise.
+  </Accordion>
+</AccordionGroup>
+
+## Error Responses
+
+### Missing API Key
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "API key required"
+  }
+}
+```
+
+### Invalid API Key
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid API key"
+  }
+}
+```
+
+### Revoked API Key
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "API key has been revoked"
+  }
+}
+```

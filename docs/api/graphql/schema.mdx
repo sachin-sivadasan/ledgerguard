@@ -1,0 +1,203 @@
+---
+title: 'Schema Reference'
+description: 'Complete GraphQL schema documentation'
+---
+
+## Schema
+
+```graphql
+# Queries
+type Query {
+  """Get subscription status by Shopify GID"""
+  subscription(shopifyGid: ID!): SubscriptionStatus
+
+  """Get subscription status by myshopify domain"""
+  subscriptionByDomain(domain: String!): SubscriptionStatus
+
+  """Batch lookup subscriptions by Shopify GIDs"""
+  subscriptions(shopifyGids: [ID!]!): SubscriptionBatchResult!
+
+  """Get usage status by Shopify GID"""
+  usage(shopifyGid: ID!): UsageStatus
+
+  """Batch lookup usage records by Shopify GIDs"""
+  usages(shopifyGids: [ID!]!): UsageBatchResult!
+}
+```
+
+## Types
+
+### SubscriptionStatus
+
+Payment status for a Shopify app subscription.
+
+```graphql
+type SubscriptionStatus {
+  """Shopify GraphQL ID (e.g., gid://shopify/AppSubscription/123)"""
+  subscriptionId: ID!
+
+  """Store's myshopify domain"""
+  myshopifyDomain: String!
+
+  """Store's display name"""
+  shopName: String
+
+  """Subscription plan name"""
+  planName: String
+
+  """Risk classification"""
+  riskState: RiskState!
+
+  """True if the subscription is paid for the current billing cycle"""
+  isPaidCurrentCycle: Boolean!
+
+  """Number of months without successful payment"""
+  monthsOverdue: Int!
+
+  """Date of last successful charge"""
+  lastSuccessfulChargeDate: Time
+
+  """Expected date of next charge"""
+  expectedNextChargeDate: Time
+
+  """Subscription status"""
+  status: SubscriptionStatusEnum!
+}
+```
+
+### UsageStatus
+
+Billing status for a usage-based charge.
+
+```graphql
+type UsageStatus {
+  """Shopify GraphQL ID (e.g., gid://shopify/AppUsageRecord/456)"""
+  usageId: ID!
+
+  """Whether Shopify has billed this usage charge"""
+  billed: Boolean!
+
+  """Date when the usage was billed (if billed)"""
+  billingDate: Time
+
+  """Amount in cents"""
+  amountCents: Int!
+
+  """Description of the usage charge"""
+  description: String
+
+  """Parent subscription status"""
+  subscription: SubscriptionStatus
+}
+```
+
+### SubscriptionBatchResult
+
+Result of a batch subscription lookup.
+
+```graphql
+type SubscriptionBatchResult {
+  """Found subscription statuses"""
+  results: [SubscriptionStatus!]!
+
+  """Shopify GIDs that were not found"""
+  notFound: [String!]!
+}
+```
+
+### UsageBatchResult
+
+Result of a batch usage lookup.
+
+```graphql
+type UsageBatchResult {
+  """Found usage statuses"""
+  results: [UsageStatus!]!
+
+  """Shopify GIDs that were not found"""
+  notFound: [String!]!
+}
+```
+
+## Enums
+
+### RiskState
+
+Payment risk classification.
+
+```graphql
+enum RiskState {
+  """Paid and current (0-30 days)"""
+  SAFE
+
+  """31-60 days overdue"""
+  ONE_CYCLE_MISSED
+
+  """61-90 days overdue"""
+  TWO_CYCLES_MISSED
+
+  """90+ days overdue"""
+  CHURNED
+}
+```
+
+### SubscriptionStatusEnum
+
+Shopify subscription status.
+
+```graphql
+enum SubscriptionStatusEnum {
+  """Subscription is active"""
+  ACTIVE
+
+  """Merchant cancelled the subscription"""
+  CANCELLED
+
+  """Paused due to payment failure"""
+  FROZEN
+
+  """Awaiting merchant approval"""
+  PENDING
+}
+```
+
+## Scalars
+
+### Time
+
+ISO 8601 datetime string.
+
+```
+"2024-02-15T10:30:00Z"
+```
+
+### ID
+
+Shopify GraphQL ID string.
+
+```
+"gid://shopify/AppSubscription/12345"
+```
+
+## Introspection
+
+You can explore the schema using GraphQL introspection:
+
+```graphql
+query {
+  __schema {
+    types {
+      name
+      description
+      fields {
+        name
+        type {
+          name
+        }
+      }
+    }
+  }
+}
+```
+
+Or use a GraphQL client like [GraphQL Playground](https://github.com/graphql/graphql-playground) or [Insomnia](https://insomnia.rest/) for interactive exploration.

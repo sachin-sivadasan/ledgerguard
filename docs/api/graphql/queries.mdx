@@ -1,0 +1,166 @@
+---
+title: 'Queries'
+description: 'Available GraphQL queries'
+---
+
+## subscription
+
+Get a single subscription's payment status by Shopify GID.
+
+### Arguments
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `shopifyGid` | `ID!` | Yes | Shopify GraphQL ID |
+
+### Returns
+
+`SubscriptionStatus` or `null` if not found.
+
+### Example
+
+```graphql
+query {
+  subscription(shopifyGid: "gid://shopify/AppSubscription/12345") {
+    subscriptionId
+    myshopifyDomain
+    shopName
+    riskState
+    isPaidCurrentCycle
+    monthsOverdue
+    status
+  }
+}
+```
+
+---
+
+## subscriptionByDomain
+
+Get a subscription's payment status by the store's myshopify domain.
+
+### Arguments
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `domain` | `String!` | Yes | The store's myshopify.com domain |
+
+### Returns
+
+`SubscriptionStatus` or `null` if not found.
+
+### Example
+
+```graphql
+query {
+  subscriptionByDomain(domain: "cool-store.myshopify.com") {
+    subscriptionId
+    riskState
+    isPaidCurrentCycle
+    planName
+  }
+}
+```
+
+---
+
+## subscriptions
+
+Batch lookup multiple subscriptions by their Shopify GIDs.
+
+### Arguments
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `shopifyGids` | `[ID!]!` | Yes | Array of Shopify GraphQL IDs (max 100) |
+
+### Returns
+
+`SubscriptionBatchResult!` with `results` and `notFound` arrays.
+
+### Example
+
+```graphql
+query {
+  subscriptions(shopifyGids: [
+    "gid://shopify/AppSubscription/123",
+    "gid://shopify/AppSubscription/456"
+  ]) {
+    results {
+      subscriptionId
+      myshopifyDomain
+      riskState
+      isPaidCurrentCycle
+    }
+    notFound
+  }
+}
+```
+
+---
+
+## usage
+
+Get a single usage record's billing status.
+
+### Arguments
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `shopifyGid` | `ID!` | Yes | Shopify GraphQL ID for the usage record |
+
+### Returns
+
+`UsageStatus` or `null` if not found.
+
+### Example
+
+```graphql
+query {
+  usage(shopifyGid: "gid://shopify/AppUsageRecord/67890") {
+    usageId
+    billed
+    billingDate
+    amountCents
+    description
+    subscription {
+      subscriptionId
+      riskState
+    }
+  }
+}
+```
+
+---
+
+## usages
+
+Batch lookup multiple usage records.
+
+### Arguments
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `shopifyGids` | `[ID!]!` | Yes | Array of Shopify GraphQL IDs (max 100) |
+
+### Returns
+
+`UsageBatchResult!` with `results` and `notFound` arrays.
+
+### Example
+
+```graphql
+query {
+  usages(shopifyGids: [
+    "gid://shopify/AppUsageRecord/111",
+    "gid://shopify/AppUsageRecord/222"
+  ]) {
+    results {
+      usageId
+      billed
+      amountCents
+    }
+    notFound
+  }
+}
+```

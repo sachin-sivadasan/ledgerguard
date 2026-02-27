@@ -1,0 +1,117 @@
+---
+title: 'Introduction'
+description: 'Real-time subscription payment intelligence for your Shopify app'
+---
+
+# Welcome to LedgerGuard Revenue API
+
+The Revenue API gives you instant visibility into your customers' subscription payment status. Know exactly which stores are paid, at-risk, or churned — directly from your app's backend.
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick Start"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get your first API call working in under 5 minutes
+  </Card>
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api-reference/overview"
+  >
+    Explore all REST endpoints with examples
+  </Card>
+  <Card
+    title="GraphQL"
+    icon="diagram-project"
+    href="/graphql/overview"
+  >
+    Flexible queries with our GraphQL API
+  </Card>
+  <Card
+    title="Risk States"
+    icon="shield-halved"
+    href="/concepts/risk-states"
+  >
+    Understand payment risk classification
+  </Card>
+</CardGroup>
+
+## Why Revenue API?
+
+**The Problem:** Shopify's Partner API tells you about transactions, but not payment health. You don't know if a subscription is paid, overdue, or about to churn.
+
+**The Solution:** Revenue API processes your transaction data and gives you:
+
+<AccordionGroup>
+  <Accordion title="Real-time Payment Status">
+    Know instantly if a subscription is paid for the current billing cycle. No more guessing.
+  </Accordion>
+  <Accordion title="Risk Classification">
+    Every subscription is classified: **SAFE**, **ONE_CYCLE_MISSED**, **TWO_CYCLES_MISSED**, or **CHURNED**.
+  </Accordion>
+  <Accordion title="Usage Billing Status">
+    Track which usage charges have been billed by Shopify and which are pending.
+  </Accordion>
+  <Accordion title="Batch Lookups">
+    Query up to 100 subscriptions in a single request for high-performance dashboards.
+  </Accordion>
+</AccordionGroup>
+
+## Use Cases
+
+<Steps>
+  <Step title="Gate Premium Features">
+    Only show premium features to stores with `isPaidCurrentCycle: true`
+  </Step>
+  <Step title="Dunning Flows">
+    Trigger email sequences when risk state changes to `ONE_CYCLE_MISSED`
+  </Step>
+  <Step title="Churn Prevention">
+    Surface at-risk subscriptions in your admin dashboard
+  </Step>
+  <Step title="Usage Reconciliation">
+    Verify usage charges match your internal records
+  </Step>
+</Steps>
+
+## Base URL
+
+All API requests are made to:
+
+```
+https://api.ledgerguard.app/v1
+```
+
+## Authentication
+
+All requests require an API key passed in the `X-API-Key` header:
+
+```bash
+curl https://api.ledgerguard.app/v1/subscriptions/gid://shopify/AppSubscription/123 \
+  -H "X-API-Key: lg_live_xxxxxxxxxxxx"
+```
+
+<Note>
+  API keys are created in the [LedgerGuard Dashboard](https://app.ledgerguard.app). Each key is tied to your account and has its own rate limit.
+</Note>
+
+## Need Help?
+
+<CardGroup cols={2}>
+  <Card
+    title="Support"
+    icon="envelope"
+    href="mailto:support@ledgerguard.app"
+  >
+    Email our team for integration help
+  </Card>
+  <Card
+    title="Status Page"
+    icon="signal"
+    href="https://status.ledgerguard.app"
+  >
+    Check API availability and incidents
+  </Card>
+</CardGroup>

@@ -1,0 +1,508 @@
+openapi: 3.1.0
+info:
+  title: LedgerGuard Revenue API
+  version: '1.0'
+  description: |
+    Real-time subscription payment intelligence for Shopify apps.
+
+    The Revenue API provides instant visibility into your customers' subscription payment status,
+    helping you gate features, trigger dunning flows, and prevent churn.
+  contact:
+    name: LedgerGuard Support
+    email: support@ledgerguard.app
+    url: https://ledgerguard.app
+  license:
+    name: Proprietary
+    url: https://ledgerguard.app/terms
+
+servers:
+  - url: https://api.ledgerguard.app/v1
+    description: Production
+  - url: https://api-sandbox.ledgerguard.app/v1
+    description: Sandbox (test data)
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Subscriptions
+    description: Query subscription payment status
+  - name: Usage
+    description: Query usage billing status
+
+paths:
+  /subscriptions/{shopify_gid}:
+    get:
+      operationId: getSubscriptionByGid
+      summary: Get subscription by Shopify GID
+      description: Retrieve payment status for a specific subscription using its Shopify GraphQL ID.
+      tags:
+        - Subscriptions
+      parameters:
+        - name: shopify_gid
+          in: path
+          required: true
+          description: |
+            The Shopify GraphQL ID for the subscription.
+            Example: `gid://shopify/AppSubscription/12345`
+          schema:
+            type: string
+            example: gid://shopify/AppSubscription/12345
+      responses:
+        '200':
+          description: Subscription status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionStatus'
+              example:
+                subscriptionId: gid://shopify/AppSubscription/12345
+                myshopifyDomain: cool-store.myshopify.com
+                shopName: Cool Store
+                planName: Pro Plan
+                riskState: SAFE
+                isPaidCurrentCycle: true
+                monthsOverdue: 0
+                lastSuccessfulChargeDate: '2024-02-15T10:30:00Z'
+                expectedNextChargeDate: '2024-03-15T10:30:00Z'
+                status: ACTIVE
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /subscriptions/status:
+    get:
+      operationId: getSubscriptionByDomain
+      summary: Get subscription by domain
+      description: Retrieve payment status for a subscription using the store's myshopify domain.
+      tags:
+        - Subscriptions
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          description: The store's myshopify.com domain
+          schema:
+            type: string
+            example: cool-store.myshopify.com
+      responses:
+        '200':
+          description: Subscription status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /subscriptions/batch:
+    post:
+      operationId: getSubscriptionsBatch
+      summary: Batch lookup subscriptions
+      description: |
+        Retrieve payment status for multiple subscriptions in a single request.
+        Maximum 100 IDs per request.
+      tags:
+        - Subscriptions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ids
+              properties:
+                ids:
+                  type: array
+                  description: Array of Shopify GraphQL IDs
+                  maxItems: 100
+                  items:
+                    type: string
+                  example:
+                    - gid://shopify/AppSubscription/123
+                    - gid://shopify/AppSubscription/456
+                    - gid://shopify/AppSubscription/789
+      responses:
+        '200':
+          description: Batch lookup completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionBatchResult'
+              example:
+                results:
+                  - subscriptionId: gid://shopify/AppSubscription/123
+                    myshopifyDomain: store-a.myshopify.com
+                    riskState: SAFE
+                    isPaidCurrentCycle: true
+                    status: ACTIVE
+                  - subscriptionId: gid://shopify/AppSubscription/456
+                    myshopifyDomain: store-b.myshopify.com
+                    riskState: ONE_CYCLE_MISSED
+                    isPaidCurrentCycle: false
+                    status: ACTIVE
+                notFound:
+                  - gid://shopify/AppSubscription/789
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /usages/{shopify_gid}:
+    get:
+      operationId: getUsageByGid
+      summary: Get usage record by Shopify GID
+      description: Retrieve billing status for a specific usage charge.
+      tags:
+        - Usage
+      parameters:
+        - name: shopify_gid
+          in: path
+          required: true
+          description: The Shopify GraphQL ID for the usage record
+          schema:
+            type: string
+            example: gid://shopify/AppUsageRecord/67890
+      responses:
+        '200':
+          description: Usage status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageStatus'
+              example:
+                usageId: gid://shopify/AppUsageRecord/67890
+                billed: true
+                billingDate: '2024-02-20T15:00:00Z'
+                amountCents: 1500
+                description: 500 API calls @ $0.03 each
+                subscription:
+                  subscriptionId: gid://shopify/AppSubscription/12345
+                  myshopifyDomain: cool-store.myshopify.com
+                  riskState: SAFE
+                  isPaidCurrentCycle: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /usages/batch:
+    post:
+      operationId: getUsagesBatch
+      summary: Batch lookup usage records
+      description: |
+        Retrieve billing status for multiple usage records in a single request.
+        Maximum 100 IDs per request.
+      tags:
+        - Usage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ids
+              properties:
+                ids:
+                  type: array
+                  description: Array of Shopify GraphQL IDs
+                  maxItems: 100
+                  items:
+                    type: string
+                  example:
+                    - gid://shopify/AppUsageRecord/111
+                    - gid://shopify/AppUsageRecord/222
+      responses:
+        '200':
+          description: Batch lookup completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageBatchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        API key for authentication. Create keys in the LedgerGuard dashboard.
+
+        Example: `lg_live_xxxxxxxxxxxxxxxxxxxx`
+
+  schemas:
+    SubscriptionStatus:
+      type: object
+      required:
+        - subscriptionId
+        - myshopifyDomain
+        - riskState
+        - isPaidCurrentCycle
+        - monthsOverdue
+        - status
+      properties:
+        subscriptionId:
+          type: string
+          description: Shopify GraphQL ID
+          example: gid://shopify/AppSubscription/12345
+        myshopifyDomain:
+          type: string
+          description: Store's myshopify.com domain
+          example: cool-store.myshopify.com
+        shopName:
+          type: string
+          nullable: true
+          description: Store's display name
+          example: Cool Store
+        planName:
+          type: string
+          nullable: true
+          description: Subscription plan name
+          example: Pro Plan
+        riskState:
+          $ref: '#/components/schemas/RiskState'
+        isPaidCurrentCycle:
+          type: boolean
+          description: Whether the current billing period is paid
+          example: true
+        monthsOverdue:
+          type: integer
+          minimum: 0
+          description: Number of months without successful payment
+          example: 0
+        lastSuccessfulChargeDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the last successful charge occurred
+          example: '2024-02-15T10:30:00Z'
+        expectedNextChargeDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the next charge is expected
+          example: '2024-03-15T10:30:00Z'
+        status:
+          $ref: '#/components/schemas/SubscriptionStatusEnum'
+
+    RiskState:
+      type: string
+      enum:
+        - SAFE
+        - ONE_CYCLE_MISSED
+        - TWO_CYCLES_MISSED
+        - CHURNED
+      description: |
+        Payment risk classification:
+        - `SAFE` - Paid and current (0-30 days)
+        - `ONE_CYCLE_MISSED` - 31-60 days overdue
+        - `TWO_CYCLES_MISSED` - 61-90 days overdue
+        - `CHURNED` - 90+ days overdue
+
+    SubscriptionStatusEnum:
+      type: string
+      enum:
+        - ACTIVE
+        - CANCELLED
+        - FROZEN
+        - PENDING
+      description: |
+        Subscription status in Shopify:
+        - `ACTIVE` - Subscription is active
+        - `CANCELLED` - Merchant cancelled
+        - `FROZEN` - Paused due to payment failure
+        - `PENDING` - Awaiting merchant approval
+
+    SubscriptionBatchResult:
+      type: object
+      required:
+        - results
+        - notFound
+      properties:
+        results:
+          type: array
+          description: Successfully found subscriptions
+          items:
+            $ref: '#/components/schemas/SubscriptionStatus'
+        notFound:
+          type: array
+          description: IDs that were not found
+          items:
+            type: string
+
+    UsageStatus:
+      type: object
+      required:
+        - usageId
+        - billed
+        - amountCents
+      properties:
+        usageId:
+          type: string
+          description: Shopify GraphQL ID
+          example: gid://shopify/AppUsageRecord/67890
+        billed:
+          type: boolean
+          description: Whether Shopify has billed this charge
+          example: true
+        billingDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the charge was billed (null if not billed)
+          example: '2024-02-20T15:00:00Z'
+        amountCents:
+          type: integer
+          minimum: 0
+          description: Charge amount in cents
+          example: 1500
+        description:
+          type: string
+          nullable: true
+          description: Usage charge description
+          example: 500 API calls @ $0.03 each
+        subscription:
+          $ref: '#/components/schemas/SubscriptionStatusSummary'
+
+    SubscriptionStatusSummary:
+      type: object
+      description: Summary of parent subscription
+      properties:
+        subscriptionId:
+          type: string
+          example: gid://shopify/AppSubscription/12345
+        myshopifyDomain:
+          type: string
+          example: cool-store.myshopify.com
+        riskState:
+          $ref: '#/components/schemas/RiskState'
+        isPaidCurrentCycle:
+          type: boolean
+
+    UsageBatchResult:
+      type: object
+      required:
+        - results
+        - notFound
+      properties:
+        results:
+          type: array
+          description: Successfully found usage records
+          items:
+            $ref: '#/components/schemas/UsageStatus'
+        notFound:
+          type: array
+          description: IDs that were not found
+          items:
+            type: string
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: UNAUTHORIZED
+            message:
+              type: string
+              description: Human-readable error message
+              example: API key required
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: 'ids array is required'
+
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: API key required
+
+    Forbidden:
+      description: Access denied to this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: FORBIDDEN
+              message: Access denied
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: Subscription not found
+
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Request limit per minute
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Remaining requests
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix timestamp when limit resets
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Retry after 60 seconds.

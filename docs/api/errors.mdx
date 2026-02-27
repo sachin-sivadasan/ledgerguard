@@ -1,0 +1,291 @@
+---
+title: 'Error Reference'
+description: 'All error codes and how to handle them'
+---
+
+## Error Format
+
+All API errors follow a consistent format:
+
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable description"
+  }
+}
+```
+
+For GraphQL, errors appear in the `errors` array:
+
+```json
+{
+  "data": null,
+  "errors": [
+    {
+      "message": "Human-readable description",
+      "code": "ERROR_CODE"
+    }
+  ]
+}
+```
+
+## HTTP Status Codes
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Success |
+| `400` | Bad Request - Invalid parameters |
+| `401` | Unauthorized - Missing or invalid API key |
+| `403` | Forbidden - Access denied to resource |
+| `404` | Not Found - Resource doesn't exist |
+| `429` | Too Many Requests - Rate limit exceeded |
+| `500` | Internal Server Error - Something went wrong |
+
+## Error Codes
+
+### UNAUTHORIZED
+
+**HTTP Status:** `401`
+
+The API key is missing, invalid, or revoked.
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "API key required"
+  }
+}
+```
+
+**Causes:**
+- Missing `X-API-Key` header
+- Invalid API key format
+- API key doesn't exist
+- API key has been revoked
+
+**Solution:**
+1. Check that you're including the `X-API-Key` header
+2. Verify the API key is correct (check for typos)
+3. Ensure the key hasn't been revoked in the dashboard
+
+---
+
+### FORBIDDEN
+
+**HTTP Status:** `403`
+
+Your API key doesn't have access to this resource.
+
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Access denied"
+  }
+}
+```
+
+**Causes:**
+- Trying to access a subscription from an app you don't own
+- Resource belongs to a different LedgerGuard account
+
+**Solution:**
+- Verify you're querying subscriptions for your own apps
+- Check that the Shopify GID belongs to an app in your account
+
+---
+
+### NOT_FOUND
+
+**HTTP Status:** `404`
+
+The requested resource doesn't exist.
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Subscription not found"
+  }
+}
+```
+
+**Causes:**
+- Subscription/usage GID doesn't exist
+- Domain doesn't match any subscription
+- Data hasn't been synced yet
+
+**Solution:**
+- Verify the Shopify GID is correct
+- Check if the subscription exists in your LedgerGuard dashboard
+- Trigger a sync if the subscription is new
+
+---
+
+### BAD_REQUEST
+
+**HTTP Status:** `400`
+
+The request parameters are invalid.
+
+```json
+{
+  "error": {
+    "code": "BAD_REQUEST",
+    "message": "ids array is required"
+  }
+}
+```
+
+**Common messages:**
+- `ids array is required` - Missing request body
+- `maximum 100 IDs per batch request` - Too many IDs
+- `invalid request body` - Malformed JSON
+- `domain query parameter is required` - Missing query param
+
+**Solution:**
+- Check the request body format
+- Ensure all required parameters are provided
+- Limit batch requests to 100 IDs
+
+---
+
+### RATE_LIMITED
+
+**HTTP Status:** `429`
+
+You've exceeded your rate limit.
+
+```json
+{
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Rate limit exceeded. Retry after 60 seconds."
+  }
+}
+```
+
+**Headers included:**
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 1709856000
+```
+
+**Solution:**
+- Wait until `X-RateLimit-Reset` timestamp
+- Implement exponential backoff
+- Consider upgrading your plan for higher limits
+
+See [Rate Limits](/rate-limits) for more details.
+
+---
+
+### INTERNAL_ERROR
+
+**HTTP Status:** `500`
+
+Something went wrong on our end.
+
+```json
+{
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "An unexpected error occurred"
+  }
+}
+```
+
+**Solution:**
+- Retry the request after a brief delay
+- If the error persists, contact support@ledgerguard.app
+
+---
+
+## Error Handling Best Practices
+
+### Retry with Backoff
+
+For transient errors (429, 500), implement exponential backoff:
+
+```javascript
+async function fetchWithRetry(url, options, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(url, options);
+
+      if (response.status === 429) {
+        const resetTime = response.headers.get('X-RateLimit-Reset');
+        const waitMs = (resetTime * 1000) - Date.now();
+        await sleep(Math.max(waitMs, 1000));
+        continue;
+      }
+
+      if (response.status >= 500) {
+        await sleep(Math.pow(2, i) * 1000); // 1s, 2s, 4s
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      await sleep(Math.pow(2, i) * 1000);
+    }
+  }
+}
+```
+
+### Handle All Error Types
+
+```javascript
+async function getSubscription(shopifyGid) {
+  const response = await fetch(`/v1/subscriptions/${encodeURIComponent(shopifyGid)}`, {
+    headers: { 'X-API-Key': apiKey }
+  });
+
+  if (response.status === 401) {
+    throw new Error('Invalid API key - check your credentials');
+  }
+
+  if (response.status === 403) {
+    throw new Error('Access denied - subscription belongs to another account');
+  }
+
+  if (response.status === 404) {
+    return null; // Subscription not found
+  }
+
+  if (response.status === 429) {
+    throw new Error('Rate limited - slow down requests');
+  }
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  return response.json();
+}
+```
+
+### Log Errors for Debugging
+
+```javascript
+async function apiRequest(endpoint) {
+  const response = await fetch(endpoint, { headers });
+
+  if (!response.ok) {
+    const error = await response.json();
+    console.error('API Error:', {
+      endpoint,
+      status: response.status,
+      code: error.error?.code,
+      message: error.error?.message
+    });
+    throw new Error(error.error?.message || 'Unknown error');
+  }
+
+  return response.json();
+}
+```

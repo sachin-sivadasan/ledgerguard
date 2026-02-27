@@ -1,0 +1,169 @@
+---
+title: 'Subscription Status'
+description: 'Understanding subscription payment status data'
+---
+
+## Overview
+
+The subscription status endpoint provides comprehensive payment health information for Shopify app subscriptions. This is the core data model used throughout the Revenue API.
+
+## Data Model
+
+```json
+{
+  "subscriptionId": "gid://shopify/AppSubscription/12345",
+  "myshopifyDomain": "cool-store.myshopify.com",
+  "shopName": "Cool Store",
+  "planName": "Pro Plan",
+  "riskState": "SAFE",
+  "isPaidCurrentCycle": true,
+  "monthsOverdue": 0,
+  "lastSuccessfulChargeDate": "2024-02-15T10:30:00Z",
+  "expectedNextChargeDate": "2024-03-15T10:30:00Z",
+  "status": "ACTIVE"
+}
+```
+
+## Field Reference
+
+<ResponseField name="subscriptionId" type="string" required>
+  The Shopify GraphQL ID for the subscription.
+
+  Format: `gid://shopify/AppSubscription/{id}`
+</ResponseField>
+
+<ResponseField name="myshopifyDomain" type="string" required>
+  The store's myshopify.com domain.
+
+  Example: `cool-store.myshopify.com`
+</ResponseField>
+
+<ResponseField name="shopName" type="string">
+  The store's display name as set by the merchant.
+
+  Example: `Cool Store`
+</ResponseField>
+
+<ResponseField name="planName" type="string">
+  The subscription plan name.
+
+  Example: `Pro Plan`, `Enterprise Annual`
+</ResponseField>
+
+<ResponseField name="riskState" type="enum" required>
+  Payment risk classification. See [Risk States](/concepts/risk-states) for details.
+
+  Values: `SAFE`, `ONE_CYCLE_MISSED`, `TWO_CYCLES_MISSED`, `CHURNED`
+</ResponseField>
+
+<ResponseField name="isPaidCurrentCycle" type="boolean" required>
+  Whether the subscription has been paid for the current billing period.
+
+  - `true` - Paid and current
+  - `false` - Payment pending or failed
+</ResponseField>
+
+<ResponseField name="monthsOverdue" type="integer" required>
+  Number of complete billing cycles without successful payment.
+
+  - `0` - Subscription is current
+  - `1+` - Subscription is overdue
+</ResponseField>
+
+<ResponseField name="lastSuccessfulChargeDate" type="datetime">
+  ISO 8601 timestamp of the most recent successful charge.
+
+  `null` if no charges have been recorded.
+</ResponseField>
+
+<ResponseField name="expectedNextChargeDate" type="datetime">
+  ISO 8601 timestamp of when the next charge is expected.
+
+  Calculated based on billing interval (monthly or annual).
+</ResponseField>
+
+<ResponseField name="status" type="enum" required>
+  Current subscription status in Shopify.
+
+  Values: `ACTIVE`, `CANCELLED`, `FROZEN`, `PENDING`
+</ResponseField>
+
+## Subscription Status Values
+
+| Status | Description |
+|--------|-------------|
+| `ACTIVE` | Subscription is active and charges are being processed |
+| `CANCELLED` | Merchant cancelled the subscription |
+| `FROZEN` | Subscription is paused (usually due to payment failure) |
+| `PENDING` | Subscription is awaiting merchant approval |
+
+## Querying Subscriptions
+
+### By Shopify GID
+
+The most common method — use when you have the subscription ID:
+
+```bash
+GET /v1/subscriptions/{shopify_gid}
+```
+
+```javascript
+const status = await fetch(
+  `https://api.ledgerguard.app/v1/subscriptions/${encodeURIComponent(shopifyGid)}`,
+  { headers: { 'X-API-Key': apiKey } }
+);
+```
+
+### By Domain
+
+Useful when you only know the store domain:
+
+```bash
+GET /v1/subscriptions/status?domain={myshopify_domain}
+```
+
+```javascript
+const status = await fetch(
+  `https://api.ledgerguard.app/v1/subscriptions/status?domain=cool-store.myshopify.com`,
+  { headers: { 'X-API-Key': apiKey } }
+);
+```
+
+### Batch Lookup
+
+Query up to 100 subscriptions at once:
+
+```bash
+POST /v1/subscriptions/batch
+```
+
+```javascript
+const response = await fetch('https://api.ledgerguard.app/v1/subscriptions/batch', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': apiKey,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    ids: [
+      'gid://shopify/AppSubscription/123',
+      'gid://shopify/AppSubscription/456',
+      'gid://shopify/AppSubscription/789'
+    ]
+  })
+});
+```
+
+## Data Freshness
+
+<Info>
+  Subscription status is updated every time you sync your app in LedgerGuard. For most accounts, this happens every 12 hours automatically.
+</Info>
+
+| Scenario | Freshness |
+|----------|-----------|
+| After sync | Real-time |
+| Between syncs | Up to 12 hours old |
+| New subscription | Available after next sync |
+
+You can trigger a manual sync from the LedgerGuard dashboard if you need fresher data.

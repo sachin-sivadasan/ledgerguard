@@ -1,0 +1,128 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "LedgerGuard Revenue API",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#6366F1",
+    "light": "#818CF8",
+    "dark": "#4F46E5",
+    "anchors": {
+      "from": "#6366F1",
+      "to": "#8B5CF6"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "mailto:support@ledgerguard.app"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Dashboard",
+    "url": "https://app.ledgerguard.app"
+  },
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    },
+    {
+      "name": "GraphQL",
+      "url": "graphql"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "API Status",
+      "icon": "signal",
+      "url": "https://status.ledgerguard.app"
+    },
+    {
+      "name": "Changelog",
+      "icon": "clock-rotate-left",
+      "url": "/changelog"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "authentication"
+      ]
+    },
+    {
+      "group": "Core Concepts",
+      "pages": [
+        "concepts/subscription-status",
+        "concepts/risk-states",
+        "concepts/usage-billing"
+      ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api-reference/overview",
+        {
+          "group": "Subscriptions",
+          "pages": [
+            "api-reference/subscriptions/get-by-gid",
+            "api-reference/subscriptions/get-by-domain",
+            "api-reference/subscriptions/batch"
+          ]
+        },
+        {
+          "group": "Usage",
+          "pages": [
+            "api-reference/usage/get-by-gid",
+            "api-reference/usage/batch"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "GraphQL",
+      "pages": [
+        "graphql/overview",
+        "graphql/schema",
+        "graphql/queries",
+        "graphql/examples"
+      ]
+    },
+    {
+      "group": "Resources",
+      "pages": [
+        "errors",
+        "rate-limits",
+        "best-practices",
+        "changelog"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/ledgerguard",
+    "github": "https://github.com/ledgerguard"
+  },
+  "openapi": "openapi.yaml",
+  "api": {
+    "baseUrl": "https://api.ledgerguard.app",
+    "auth": {
+      "method": "key",
+      "name": "X-API-Key"
+    }
+  },
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true
+  },
+  "analytics": {
+    "posthog": {
+      "apiKey": ""
+    }
+  }
+}

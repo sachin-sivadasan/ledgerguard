@@ -1,0 +1,131 @@
+---
+title: 'Risk States'
+description: 'Understanding subscription payment risk classification'
+---
+
+## Overview
+
+Every subscription in LedgerGuard is assigned a **risk state** based on its payment history. This classification helps you identify which customers need attention and which are healthy.
+
+## Risk State Definitions
+
+<CardGroup cols={2}>
+  <Card title="SAFE" icon="circle-check" color="#22C55E">
+    **Paid and current**
+
+    The subscription is active and has been charged successfully within the expected billing cycle.
+  </Card>
+  <Card title="ONE_CYCLE_MISSED" icon="triangle-exclamation" color="#EAB308">
+    **31-60 days overdue**
+
+    One billing cycle has passed without successful payment. Time to reach out.
+  </Card>
+  <Card title="TWO_CYCLES_MISSED" icon="circle-exclamation" color="#F97316">
+    **61-90 days overdue**
+
+    Two billing cycles missed. High risk of churn. Urgent intervention needed.
+  </Card>
+  <Card title="CHURNED" icon="circle-xmark" color="#EF4444">
+    **90+ days overdue**
+
+    Considered churned. Payment recovery is unlikely without direct action.
+  </Card>
+</CardGroup>
+
+## Risk Classification Logic
+
+```
+if status == "ACTIVE" and recently_charged:
+    return "SAFE"
+
+days_overdue = today - expected_next_charge_date
+
+if days_overdue <= 30:
+    return "SAFE"          # Grace period
+elif days_overdue <= 60:
+    return "ONE_CYCLE_MISSED"
+elif days_overdue <= 90:
+    return "TWO_CYCLES_MISSED"
+else:
+    return "CHURNED"
+```
+
+<Note>
+  We apply a 30-day grace period because Shopify's billing system allows stores time to resolve payment issues before cancellation.
+</Note>
+
+## Using Risk States
+
+### Feature Gating
+
+Only allow access to premium features for SAFE subscriptions:
+
+```javascript
+const { riskState, isPaidCurrentCycle } = await getSubscriptionStatus(shopifyGid);
+
+if (riskState !== 'SAFE' || !isPaidCurrentCycle) {
+  return res.status(402).json({
+    error: 'Subscription payment required',
+    riskState,
+    message: getRiskMessage(riskState)
+  });
+}
+
+// Proceed with premium feature
+```
+
+### Dunning Campaigns
+
+Trigger email sequences based on risk state changes:
+
+| Risk State | Recommended Action |
+|------------|-------------------|
+| `SAFE` | No action needed |
+| `ONE_CYCLE_MISSED` | Send friendly reminder email |
+| `TWO_CYCLES_MISSED` | Send urgent email + in-app notification |
+| `CHURNED` | Send win-back campaign |
+
+### Dashboard Alerts
+
+Surface at-risk subscriptions in your admin dashboard:
+
+```javascript
+// Fetch all subscriptions and filter by risk
+const subscriptions = await fetchAllSubscriptions();
+
+const atRisk = subscriptions.filter(s =>
+  s.riskState === 'ONE_CYCLE_MISSED' ||
+  s.riskState === 'TWO_CYCLES_MISSED'
+);
+
+const churned = subscriptions.filter(s =>
+  s.riskState === 'CHURNED'
+);
+```
+
+## Related Fields
+
+| Field | Description |
+|-------|-------------|
+| `riskState` | The risk classification (SAFE, ONE_CYCLE_MISSED, etc.) |
+| `isPaidCurrentCycle` | Boolean indicating if current period is paid |
+| `monthsOverdue` | Number of months without successful payment |
+| `lastSuccessfulChargeDate` | When the last payment was received |
+| `expectedNextChargeDate` | When the next payment is expected |
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Act early on ONE_CYCLE_MISSED">
+    The best time to prevent churn is when a subscription first becomes at-risk. Don't wait until `CHURNED`.
+  </Accordion>
+  <Accordion title="Combine with isPaidCurrentCycle">
+    Use both `riskState` and `isPaidCurrentCycle` for more nuanced decisions. A subscription can be `SAFE` but not paid for the current cycle if it's within the grace period.
+  </Accordion>
+  <Accordion title="Cache risk states">
+    Risk states are updated daily. You can safely cache the response for 1 hour to reduce API calls.
+  </Accordion>
+  <Accordion title="Don't block immediately">
+    Consider showing a warning banner instead of hard-blocking users. This gives them a chance to resolve payment issues.
+  </Accordion>
+</AccordionGroup>

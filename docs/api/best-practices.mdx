@@ -1,0 +1,276 @@
+---
+title: 'Best Practices'
+description: 'Recommendations for integrating with the Revenue API'
+---
+
+## Authentication
+
+<AccordionGroup>
+  <Accordion title="Store keys securely" icon="lock">
+    Never hardcode API keys. Use environment variables or a secrets manager.
+
+    ```bash
+    # .env (never commit this file)
+    LEDGERGUARD_API_KEY=lg_live_xxxxxxxxxxxx
+    ```
+  </Accordion>
+  <Accordion title="Server-side only" icon="server">
+    API keys should only be used from your backend. Never expose them in:
+    - Client-side JavaScript
+    - Mobile app bundles
+    - Public repositories
+  </Accordion>
+  <Accordion title="Rotate keys regularly" icon="rotate">
+    Rotate API keys every 90 days:
+    1. Create a new key
+    2. Update your application
+    3. Verify it works
+    4. Revoke the old key
+  </Accordion>
+</AccordionGroup>
+
+## Performance
+
+### Use Batch Endpoints
+
+Batch requests are significantly more efficient than individual calls.
+
+```javascript
+// ❌ Bad: 100 API calls
+for (const gid of subscriptionGids) {
+  const status = await getSubscription(gid);
+}
+
+// ✅ Good: 1 API call
+const { results } = await getSubscriptionsBatch(subscriptionGids);
+```
+
+### Cache Responses
+
+Subscription status changes at most once per day. Cache responses appropriately:
+
+```javascript
+const cache = new Map();
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+async function getCachedSubscription(shopifyGid) {
+  const cached = cache.get(shopifyGid);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  const data = await getSubscription(shopifyGid);
+  cache.set(shopifyGid, { data, timestamp: Date.now() });
+  return data;
+}
+```
+
+### Use GraphQL for Minimal Payloads
+
+Request only the fields you need:
+
+```graphql
+# Full payload (wasteful)
+query {
+  subscription(shopifyGid: "...") {
+    subscriptionId
+    myshopifyDomain
+    shopName
+    planName
+    riskState
+    isPaidCurrentCycle
+    monthsOverdue
+    lastSuccessfulChargeDate
+    expectedNextChargeDate
+    status
+  }
+}
+
+# Minimal payload (efficient)
+query {
+  subscription(shopifyGid: "...") {
+    isPaidCurrentCycle
+    riskState
+  }
+}
+```
+
+## Error Handling
+
+### Handle All Error Cases
+
+```javascript
+async function safeGetSubscription(shopifyGid) {
+  try {
+    const response = await fetch(`/v1/subscriptions/${encodeURIComponent(shopifyGid)}`, {
+      headers: { 'X-API-Key': process.env.LEDGERGUARD_API_KEY }
+    });
+
+    if (response.status === 401) {
+      // Invalid API key - critical error
+      throw new Error('Invalid API key');
+    }
+
+    if (response.status === 404) {
+      // Subscription not found - might be expected
+      return null;
+    }
+
+    if (response.status === 429) {
+      // Rate limited - retry after waiting
+      const resetTime = response.headers.get('X-RateLimit-Reset');
+      throw new RateLimitError(resetTime);
+    }
+
+    if (!response.ok) {
+      // Other error
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Unknown error');
+    }
+
+    return response.json();
+  } catch (error) {
+    // Network error or timeout
+    console.error('API request failed:', error);
+    throw error;
+  }
+}
+```
+
+### Implement Retry Logic
+
+```javascript
+async function fetchWithRetry(fn, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        await sleep(error.waitMs);
+        continue;
+      }
+
+      if (i === maxRetries - 1) {
+        throw error;
+      }
+
+      // Exponential backoff
+      await sleep(Math.pow(2, i) * 1000);
+    }
+  }
+}
+```
+
+## Feature Gating
+
+### Graceful Degradation
+
+Don't block users immediately. Show warnings first:
+
+```javascript
+async function checkAccess(shopifyGid) {
+  const status = await getSubscription(shopifyGid);
+
+  if (!status) {
+    // New subscription - might not be synced yet
+    return { access: 'full', warning: null };
+  }
+
+  if (status.isPaidCurrentCycle) {
+    return { access: 'full', warning: null };
+  }
+
+  if (status.riskState === 'ONE_CYCLE_MISSED') {
+    return {
+      access: 'full', // Still allow access
+      warning: 'Your subscription payment is overdue. Please update your billing info.'
+    };
+  }
+
+  if (status.riskState === 'TWO_CYCLES_MISSED') {
+    return {
+      access: 'limited',
+      warning: 'Your subscription is significantly overdue. Some features are disabled.'
+    };
+  }
+
+  // CHURNED
+  return {
+    access: 'blocked',
+    warning: 'Your subscription has been cancelled due to non-payment.'
+  };
+}
+```
+
+### Don't Over-Check
+
+Check payment status strategically, not on every request:
+
+```javascript
+// ❌ Bad: Check on every API call
+app.use(async (req, res, next) => {
+  const status = await getSubscription(req.shop.subscriptionGid);
+  // ...
+});
+
+// ✅ Good: Check periodically and cache
+app.use(async (req, res, next) => {
+  const cached = await redis.get(`payment:${req.shop.id}`);
+  if (cached) {
+    req.paymentStatus = JSON.parse(cached);
+    return next();
+  }
+
+  const status = await getSubscription(req.shop.subscriptionGid);
+  await redis.setex(`payment:${req.shop.id}`, 3600, JSON.stringify(status));
+  req.paymentStatus = status;
+  next();
+});
+```
+
+## Monitoring
+
+### Log API Responses
+
+```javascript
+async function loggedFetch(endpoint) {
+  const start = Date.now();
+  const response = await fetch(endpoint, { headers });
+  const duration = Date.now() - start;
+
+  console.log({
+    endpoint,
+    status: response.status,
+    duration,
+    rateLimit: {
+      remaining: response.headers.get('X-RateLimit-Remaining'),
+      reset: response.headers.get('X-RateLimit-Reset')
+    }
+  });
+
+  return response;
+}
+```
+
+### Track Error Rates
+
+Monitor error rates to detect issues early:
+
+```javascript
+const metrics = {
+  requests: 0,
+  errors: 0,
+  rateLimits: 0
+};
+
+setInterval(() => {
+  const errorRate = metrics.errors / metrics.requests;
+  if (errorRate > 0.05) {
+    alert('High error rate detected');
+  }
+
+  // Reset counters
+  metrics.requests = 0;
+  metrics.errors = 0;
+}, 60000);
+```

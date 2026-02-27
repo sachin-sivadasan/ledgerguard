@@ -1,0 +1,179 @@
+---
+title: 'Usage Billing'
+description: 'Track usage-based charges and billing status'
+---
+
+## Overview
+
+If your Shopify app uses usage-based billing (charges per action, API call, etc.), the Usage API helps you track which charges have been billed by Shopify and which are still pending.
+
+## Use Cases
+
+- **Reconciliation** - Verify Shopify billed what you expected
+- **Revenue tracking** - Know your actual vs pending usage revenue
+- **Customer support** - Quickly check if a specific charge was billed
+
+## Data Model
+
+```json
+{
+  "usageId": "gid://shopify/AppUsageRecord/67890",
+  "billed": true,
+  "billingDate": "2024-02-20T15:00:00Z",
+  "amountCents": 1500,
+  "description": "500 API calls @ $0.03 each",
+  "subscription": {
+    "subscriptionId": "gid://shopify/AppSubscription/12345",
+    "myshopifyDomain": "cool-store.myshopify.com",
+    "riskState": "SAFE",
+    "isPaidCurrentCycle": true
+  }
+}
+```
+
+## Field Reference
+
+<ResponseField name="usageId" type="string" required>
+  The Shopify GraphQL ID for the usage record.
+
+  Format: `gid://shopify/AppUsageRecord/{id}`
+</ResponseField>
+
+<ResponseField name="billed" type="boolean" required>
+  Whether Shopify has billed this usage charge to the merchant.
+
+  - `true` - Charge has been billed
+  - `false` - Charge is pending (not yet on an invoice)
+</ResponseField>
+
+<ResponseField name="billingDate" type="datetime">
+  When the usage charge was billed.
+
+  `null` if `billed` is `false`.
+</ResponseField>
+
+<ResponseField name="amountCents" type="integer" required>
+  The usage charge amount in cents.
+
+  Example: `1500` = $15.00
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Description of the usage charge (set when you created the charge).
+</ResponseField>
+
+<ResponseField name="subscription" type="object">
+  The parent subscription for this usage charge. Includes payment status.
+</ResponseField>
+
+## Querying Usage Records
+
+### By Shopify GID
+
+Get a specific usage record:
+
+```bash
+GET /v1/usages/{shopify_gid}
+```
+
+```javascript
+const usage = await fetch(
+  `https://api.ledgerguard.app/v1/usages/${encodeURIComponent(usageGid)}`,
+  { headers: { 'X-API-Key': apiKey } }
+);
+```
+
+### Batch Lookup
+
+Query multiple usage records at once:
+
+```bash
+POST /v1/usages/batch
+```
+
+```javascript
+const response = await fetch('https://api.ledgerguard.app/v1/usages/batch', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': apiKey,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    ids: [
+      'gid://shopify/AppUsageRecord/111',
+      'gid://shopify/AppUsageRecord/222',
+      'gid://shopify/AppUsageRecord/333'
+    ]
+  })
+});
+```
+
+## Billing Timeline
+
+<Steps>
+  <Step title="You create a usage charge">
+    You call Shopify's `appUsageRecordCreate` mutation
+  </Step>
+  <Step title="Charge is pending">
+    `billed: false` — charge is queued for next invoice
+  </Step>
+  <Step title="Shopify invoices the merchant">
+    Usually on the subscription's billing anniversary
+  </Step>
+  <Step title="Charge is billed">
+    `billed: true` with `billingDate` set
+  </Step>
+</Steps>
+
+<Note>
+  Shopify typically bills usage charges on the merchant's billing anniversary date, not immediately when you create them.
+</Note>
+
+## Reconciliation Example
+
+Compare your internal usage records with what Shopify billed:
+
+```javascript
+async function reconcileUsage(internalRecords) {
+  // Fetch status from LedgerGuard
+  const response = await fetch('https://api.ledgerguard.app/v1/usages/batch', {
+    method: 'POST',
+    headers: {
+      'X-API-Key': apiKey,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      ids: internalRecords.map(r => r.shopifyGid)
+    })
+  });
+
+  const { results, notFound } = await response.json();
+
+  // Find discrepancies
+  const mismatches = results.filter(usage => {
+    const internal = internalRecords.find(r => r.shopifyGid === usage.usageId);
+    return internal.amountCents !== usage.amountCents;
+  });
+
+  return {
+    billed: results.filter(u => u.billed),
+    pending: results.filter(u => !u.billed),
+    notFound,
+    mismatches
+  };
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Store Shopify GIDs">
+    When you create a usage charge via Shopify's API, store the returned GID so you can query its status later.
+  </Accordion>
+  <Accordion title="Check before refunding">
+    Before issuing a refund, verify the charge was actually billed using this API.
+  </Accordion>
+  <Accordion title="Monitor pending charges">
+    Usage charges pending for more than 30 days may indicate a billing issue with the subscription.
+  </Accordion>
+</AccordionGroup>

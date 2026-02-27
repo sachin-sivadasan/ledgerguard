@@ -1,0 +1,90 @@
+---
+title: 'Changelog'
+description: 'API updates and changes'
+---
+
+## February 2024
+
+### v1.0.0 — Initial Release
+
+<Info>
+  Released: February 27, 2024
+</Info>
+
+The Revenue API is now generally available.
+
+#### Features
+
+- **REST API**
+  - `GET /v1/subscriptions/{shopify_gid}` - Get subscription by GID
+  - `GET /v1/subscriptions/status?domain=` - Get subscription by domain
+  - `POST /v1/subscriptions/batch` - Batch lookup (max 100)
+  - `GET /v1/usages/{shopify_gid}` - Get usage by GID
+  - `POST /v1/usages/batch` - Batch lookup (max 100)
+
+- **GraphQL API**
+  - `subscription(shopifyGid: ID!)` query
+  - `subscriptionByDomain(domain: String!)` query
+  - `subscriptions(shopifyGids: [ID!]!)` batch query
+  - `usage(shopifyGid: ID!)` query
+  - `usages(shopifyGids: [ID!]!)` batch query
+
+- **Authentication**
+  - API key authentication via `X-API-Key` header
+  - API key management in dashboard
+
+- **Rate Limiting**
+  - Free tier: 60 requests/minute
+  - Pro tier: 300 requests/minute
+  - Rate limit headers in all responses
+
+- **Risk Classification**
+  - `SAFE` - Paid and current
+  - `ONE_CYCLE_MISSED` - 31-60 days overdue
+  - `TWO_CYCLES_MISSED` - 61-90 days overdue
+  - `CHURNED` - 90+ days overdue
+
+---
+
+## Versioning
+
+The Revenue API uses URL-based versioning. The current version is `v1`.
+
+```
+https://api.ledgerguard.app/v1/...
+```
+
+### Backwards Compatibility
+
+We maintain backwards compatibility within major versions:
+
+- **Additive changes** (new fields, endpoints) are non-breaking
+- **Breaking changes** will be released in a new major version (v2)
+- **Deprecation notices** will be announced 6 months in advance
+
+### Subscribe to Updates
+
+Stay informed about API changes:
+
+- Email: Sign up for the developer newsletter in your [dashboard settings](https://app.ledgerguard.app/settings)
+- Status: Check [status.ledgerguard.app](https://status.ledgerguard.app) for real-time availability
+
+---
+
+## Upcoming
+
+<Note>
+  These features are planned but not yet available. Timelines are estimates.
+</Note>
+
+### Q2 2024
+
+- **Webhooks** - Real-time notifications for risk state changes
+- **Node.js SDK** - Official npm package
+- **Python SDK** - Official pip package
+
+### Q3 2024
+
+- **Merchant lookup** - Query by merchant email/name
+- **Historical data** - Query past subscription states
+- **Analytics API** - Aggregate metrics and trends

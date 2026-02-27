@@ -1,0 +1,109 @@
+---
+title: 'Get Subscription by GID'
+api: 'GET /v1/subscriptions/{shopify_gid}'
+description: 'Retrieve payment status for a subscription using its Shopify GraphQL ID'
+---
+
+## Path Parameters
+
+<ParamField path="shopify_gid" type="string" required>
+  The Shopify GraphQL ID for the subscription.
+
+  Example: `gid://shopify/AppSubscription/12345`
+</ParamField>
+
+## Response
+
+<ResponseField name="subscriptionId" type="string" required>
+  The Shopify GraphQL ID
+</ResponseField>
+
+<ResponseField name="myshopifyDomain" type="string" required>
+  The store's myshopify.com domain
+</ResponseField>
+
+<ResponseField name="shopName" type="string">
+  The store's display name
+</ResponseField>
+
+<ResponseField name="planName" type="string">
+  The subscription plan name
+</ResponseField>
+
+<ResponseField name="riskState" type="string" required>
+  Risk classification: `SAFE`, `ONE_CYCLE_MISSED`, `TWO_CYCLES_MISSED`, or `CHURNED`
+</ResponseField>
+
+<ResponseField name="isPaidCurrentCycle" type="boolean" required>
+  Whether the current billing cycle is paid
+</ResponseField>
+
+<ResponseField name="monthsOverdue" type="integer" required>
+  Number of months without successful payment
+</ResponseField>
+
+<ResponseField name="lastSuccessfulChargeDate" type="datetime">
+  When the last payment was received
+</ResponseField>
+
+<ResponseField name="expectedNextChargeDate" type="datetime">
+  When the next payment is expected
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Shopify status: `ACTIVE`, `CANCELLED`, `FROZEN`, or `PENDING`
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.ledgerguard.app/v1/subscriptions/gid://shopify/AppSubscription/12345 \
+  -H "X-API-Key: lg_live_xxxxxxxxxxxx"
+```
+
+```javascript Node.js
+const response = await fetch(
+  'https://api.ledgerguard.app/v1/subscriptions/gid://shopify/AppSubscription/12345',
+  {
+    headers: { 'X-API-Key': process.env.LEDGERGUARD_API_KEY }
+  }
+);
+const data = await response.json();
+```
+
+```python Python
+import requests
+import os
+
+response = requests.get(
+    'https://api.ledgerguard.app/v1/subscriptions/gid://shopify/AppSubscription/12345',
+    headers={'X-API-Key': os.environ['LEDGERGUARD_API_KEY']}
+)
+data = response.json()
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "subscriptionId": "gid://shopify/AppSubscription/12345",
+  "myshopifyDomain": "cool-store.myshopify.com",
+  "shopName": "Cool Store",
+  "planName": "Pro Plan",
+  "riskState": "SAFE",
+  "isPaidCurrentCycle": true,
+  "monthsOverdue": 0,
+  "lastSuccessfulChargeDate": "2024-02-15T10:30:00Z",
+  "expectedNextChargeDate": "2024-03-15T10:30:00Z",
+  "status": "ACTIVE"
+}
+```
+
+```json 404
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Subscription not found"
+  }
+}
+```
+</ResponseExample>

@@ -16,8 +16,8 @@ import '../../data/repositories/api_notification_preferences_repository.dart';
 import '../../data/repositories/api_risk_repository.dart';
 import '../../data/repositories/api_user_profile_repository.dart';
 import '../../data/repositories/firebase_auth_repository.dart';
-import '../../data/repositories/mock_app_repository.dart';
-import '../../data/repositories/mock_partner_integration_repository.dart';
+import '../../data/repositories/api_app_repository.dart';
+import '../../data/repositories/api_partner_integration_repository.dart';
 import '../../domain/repositories/app_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/dashboard_repository.dart';
@@ -56,8 +56,12 @@ extension GetItInjectableX on _i1.GetIt {
           snackbarService: get<SnackbarService>(),
         ));
     registerLazySingleton<UserProfileRepository>(() => ApiUserProfileRepository());
-    registerLazySingleton<PartnerIntegrationRepository>(() => MockPartnerIntegrationRepository());
-    registerLazySingleton<AppRepository>(() => MockAppRepository());
+    registerLazySingleton<PartnerIntegrationRepository>(() => ApiPartnerIntegrationRepository(
+          apiClient: get<ApiClient>(),
+        ));
+    registerLazySingleton<AppRepository>(() => ApiAppRepository(
+          apiClient: get<ApiClient>(),
+        ));
     registerLazySingleton<DashboardRepository>(() => ApiDashboardRepository(
           authRepository: get<AuthRepository>(),
           appRepository: get<AppRepository>(),

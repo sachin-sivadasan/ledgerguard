@@ -100,11 +100,65 @@ class DashboardPage extends StatelessWidget {
   }
 
   Widget _buildErrorState(BuildContext context, String message) {
+    // Check if this is a "no app selected" error
+    if (message.contains('No app selected') || message.contains('select an app')) {
+      return _buildOnboardingState(context);
+    }
+
     return ErrorStateWidget(
       title: 'Failed to load dashboard',
       message: message,
       onRetry: () =>
           context.read<DashboardBloc>().add(const LoadDashboardRequested()),
+    );
+  }
+
+  Widget _buildOnboardingState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.rocket_launch_outlined,
+              size: 80,
+              color: AppTheme.primary.withOpacity(0.5),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Welcome to LedgerGuard!',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Connect your Shopify Partner account to start tracking your app revenue.',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: 280,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () => context.go('/partner-integration'),
+                icon: const Icon(Icons.link),
+                label: const Text('Connect Partner Account'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => context.go('/app-selection'),
+              child: const Text('I already connected, select an app'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

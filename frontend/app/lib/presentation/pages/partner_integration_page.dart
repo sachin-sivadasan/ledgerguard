@@ -3,10 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../domain/entities/user_profile.dart';
 import '../blocs/partner_integration/partner_integration.dart';
-import '../blocs/role/role.dart';
-import '../widgets/role_guard.dart';
 
 /// Partner integration page for connecting Shopify Partner account
 class PartnerIntegrationPage extends StatefulWidget {
@@ -130,10 +127,8 @@ class _PartnerIntegrationPageState extends State<PartnerIntegrationPage> {
                     _buildOAuthSection(context, state),
                     const SizedBox(height: 32),
 
-                    // Manual Token Form (Admin only)
-                    RoleGuard.adminOnly(
-                      child: _buildManualTokenSection(context, state),
-                    ),
+                    // Manual Token Form (for development, showing to all users)
+                    _buildManualTokenSection(context, state),
                   ],
                 ],
               ),

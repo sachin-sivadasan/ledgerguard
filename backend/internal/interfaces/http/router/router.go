@@ -10,13 +10,16 @@ import (
 )
 
 type Config struct {
-	HealthHandler      *handler.HealthHandler
-	OAuthHandler       *handler.OAuthHandler
-	ManualTokenHandler *handler.ManualTokenHandler
-	AppHandler         *handler.AppHandler
-	SyncHandler        *handler.SyncHandler
-	AuthMW             func(next http.Handler) http.Handler
-	AdminMW            func(next http.Handler) http.Handler // RequireRoles(ADMIN)
+	HealthHandler            *handler.HealthHandler
+	MeHandler                *handler.MeHandler
+	OAuthHandler             *handler.OAuthHandler
+	ManualTokenHandler       *handler.ManualTokenHandler
+	IntegrationStatusHandler *handler.IntegrationStatusHandler
+	AppHandler               *handler.AppHandler
+	MetricsHandler           *handler.MetricsHandler
+	SyncHandler              *handler.SyncHandler
+	AuthMW                   func(next http.Handler) http.Handler
+	AdminMW                  func(next http.Handler) http.Handler // RequireRoles(ADMIN)
 }
 
 func New(cfg Config) *chi.Mux {
@@ -41,8 +44,18 @@ func New(cfg Config) *chi.Mux {
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
+		// Me endpoint (current user profile)
+		if cfg.MeHandler != nil && cfg.AuthMW != nil {
+			r.With(cfg.AuthMW).Get("/me", cfg.MeHandler.GetMe)
+		}
+
 		// Shopify integration routes
 		r.Route("/integrations/shopify", func(r chi.Router) {
+			// Integration status (user accessible)
+			if cfg.IntegrationStatusHandler != nil && cfg.AuthMW != nil {
+				r.With(cfg.AuthMW).Get("/status", cfg.IntegrationStatusHandler.GetStatus)
+			}
+
 			// OAuth routes
 			if cfg.OAuthHandler != nil {
 				// StartOAuth requires auth (user must be logged in)
@@ -66,6 +79,11 @@ func New(cfg Config) *chi.Mux {
 				r.Get("/available", cfg.AppHandler.GetAvailableApps)
 				r.Post("/select", cfg.AppHandler.SelectApp)
 				r.Get("/", cfg.AppHandler.ListApps)
+
+				// Metrics routes (appID is numeric, backend adds gid://partners/App/ prefix)
+				if cfg.MetricsHandler != nil {
+					r.Get("/{appID}/metrics/latest", cfg.MetricsHandler.GetLatestMetrics)
+				}
 			})
 		}
 

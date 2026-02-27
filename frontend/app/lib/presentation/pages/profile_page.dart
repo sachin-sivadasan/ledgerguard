@@ -112,6 +112,22 @@ class ProfilePage extends StatelessWidget {
 
           const SizedBox(height: 24),
 
+          // Integrations Section
+          _buildSection(
+            context,
+            title: 'Integrations',
+            children: [
+              _buildNavigationTile(
+                context,
+                icon: Icons.storefront_outlined,
+                label: 'Shopify Partner Account',
+                onTap: () => context.push('/partner-integration'),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
           // Settings Section
           _buildSection(
             context,

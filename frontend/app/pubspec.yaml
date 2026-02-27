@@ -31,6 +31,12 @@ dependencies:
   # Networking
   dio: ^5.7.0
 
+  # URL Launcher
+  url_launcher: ^6.3.1
+
+  # Local Storage
+  shared_preferences: ^2.3.3
+
   # Data Classes
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0

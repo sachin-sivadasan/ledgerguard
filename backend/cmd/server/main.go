@@ -132,6 +132,7 @@ func run() error {
 
 	// Initialize handlers
 	healthHandler := handler.NewHealthHandler(db)
+	meHandler := handler.NewMeHandler()
 
 	var oauthHandler *handler.OAuthHandler
 	if oauthService != nil && encryptor != nil && partnerRepo != nil && userRepo != nil {
@@ -151,12 +152,24 @@ func run() error {
 		log.Println("Manual token handler initialized")
 	}
 
+	var integrationStatusHandler *handler.IntegrationStatusHandler
+	if partnerRepo != nil {
+		integrationStatusHandler = handler.NewIntegrationStatusHandler(partnerRepo)
+		log.Println("Integration status handler initialized")
+	}
+
+	// Initialize Shopify Partner client for fetching apps
+	partnerClient := external.NewShopifyPartnerClient()
+
 	var appHandler *handler.AppHandler
 	if partnerRepo != nil && appRepo != nil && encryptor != nil {
-		// Note: PartnerClient would need to be initialized for full functionality
-		appHandler = handler.NewAppHandler(nil, partnerRepo, appRepo, encryptor)
-		log.Println("App handler initialized")
+		appHandler = handler.NewAppHandler(partnerClient, partnerRepo, appRepo, encryptor)
+		log.Println("App handler initialized with Partner client")
 	}
+
+	// Initialize metrics handler
+	metricsHandler := handler.NewMetricsHandler()
+	log.Println("Metrics handler initialized")
 
 	// Initialize sync service and handler
 	var syncService *appservice.SyncService
@@ -199,13 +212,16 @@ func run() error {
 
 	// Build router config
 	routerCfg := router.Config{
-		HealthHandler:      healthHandler,
-		OAuthHandler:       oauthHandler,
-		ManualTokenHandler: manualTokenHandler,
-		AppHandler:         appHandler,
-		SyncHandler:        syncHandler,
-		AuthMW:             authMW,
-		AdminMW:            adminMW,
+		HealthHandler:            healthHandler,
+		MeHandler:                meHandler,
+		OAuthHandler:             oauthHandler,
+		ManualTokenHandler:       manualTokenHandler,
+		IntegrationStatusHandler: integrationStatusHandler,
+		AppHandler:               appHandler,
+		MetricsHandler:           metricsHandler,
+		SyncHandler:              syncHandler,
+		AuthMW:                   authMW,
+		AdminMW:                  adminMW,
 	}
 
 	r := router.New(routerCfg)

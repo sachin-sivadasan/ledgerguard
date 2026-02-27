@@ -44,8 +44,11 @@ class ApiDashboardRepository implements DashboardRepository {
     }
 
     try {
+      // Extract numeric ID from full GID (e.g., "gid://partners/App/4599915" -> "4599915")
+      final appId = _extractNumericId(selectedApp.id);
+
       final response = await _dio.get(
-        '/api/v1/apps/${selectedApp.id}/metrics/latest',
+        '/api/v1/apps/$appId/metrics/latest',
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
         ),
@@ -75,6 +78,13 @@ class ApiDashboardRepository implements DashboardRepository {
         code: 'network-error',
       );
     }
+  }
+
+  /// Extracts numeric ID from Shopify GID
+  /// e.g., "gid://partners/App/4599915" -> "4599915"
+  String _extractNumericId(String gid) {
+    final parts = gid.split('/');
+    return parts.isNotEmpty ? parts.last : gid;
   }
 
   DashboardMetrics _parseMetrics(Map<String, dynamic> data) {

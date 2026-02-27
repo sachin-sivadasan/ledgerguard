@@ -129,29 +129,58 @@ DELETE /api/v1/api-keys/{id}    (OWNER only) - Revoke key
 
 #### Step 4: REST Endpoints
 
-**Subscription Status:**
+**Subscription Status (by Shopify GID):**
 ```
-GET /v1/subscription/{subscription_id}/status
+GET /v1/subscription/{shopify_gid}/status
+
+Example:
+GET /v1/subscription/gid://shopify/AppSubscription/12345/status
 
 Response:
 {
-    "subscription_id": "uuid",
-    "risk_state": "SAFE|ONE_CYCLE_MISSED|TWO_CYCLES_MISSED|CHURNED",
-    "is_paid_current_cycle": true,
-    "expected_next_charge_date": "2024-03-15T00:00:00Z"
+    "subscription_id": "gid://shopify/AppSubscription/12345",
+    "myshopify_domain": "acme-store.myshopify.com",
+    "shop_name": "Acme Store",
+    "plan_name": "Pro Plan",
+    "risk_state": "TWO_CYCLES_MISSED",
+    "is_paid_current_cycle": false,
+    "months_overdue": 2,
+    "last_successful_charge_date": "2024-01-15T00:00:00Z",
+    "expected_next_charge_date": "2024-02-15T00:00:00Z",
+    "status": "ACTIVE"
 }
 ```
 
-**Usage Status:**
+**Subscription Status (by Domain):**
 ```
-GET /v1/usage/{usage_id}/status
+GET /v1/subscription/status?domain={myshopify_domain}
+
+Example:
+GET /v1/subscription/status?domain=acme-store.myshopify.com
+
+Response: (same as above)
+```
+
+**Usage Status (by Shopify GID):**
+```
+GET /v1/usage/{shopify_gid}/status
+
+Example:
+GET /v1/usage/gid://shopify/AppUsageRecord/67890/status
 
 Response:
 {
-    "usage_id": "uuid",
+    "usage_id": "gid://shopify/AppUsageRecord/67890",
     "billed": true,
     "billing_date": "2024-02-28T00:00:00Z",
-    "amount_cents": 1500
+    "amount_cents": 1500,
+    "description": "API calls - February 2024",
+    "subscription": {
+        "subscription_id": "gid://shopify/AppSubscription/12345",
+        "myshopify_domain": "acme-store.myshopify.com",
+        "risk_state": "SAFE",
+        "is_paid_current_cycle": true
+    }
 }
 ```
 
@@ -161,22 +190,50 @@ POST /v1/subscriptions/status/batch
 
 Request:
 {
-    "subscription_ids": ["uuid1", "uuid2", "uuid3"]
+    "subscription_ids": [
+        "gid://shopify/AppSubscription/123",
+        "gid://shopify/AppSubscription/456",
+        "gid://shopify/AppSubscription/789"
+    ]
 }
 
 Response:
 {
     "results": [
         {
-            "subscription_id": "uuid1",
+            "subscription_id": "gid://shopify/AppSubscription/123",
+            "myshopify_domain": "store-a.myshopify.com",
             "risk_state": "SAFE",
             "is_paid_current_cycle": true,
-            "expected_next_charge_date": "2024-03-15T00:00:00Z"
+            "months_overdue": 0,
+            "last_successful_charge_date": "2024-02-15T00:00:00Z"
         },
-        ...
+        {
+            "subscription_id": "gid://shopify/AppSubscription/456",
+            "myshopify_domain": "store-b.myshopify.com",
+            "risk_state": "TWO_CYCLES_MISSED",
+            "is_paid_current_cycle": false,
+            "months_overdue": 2,
+            "last_successful_charge_date": "2023-12-15T00:00:00Z"
+        }
     ],
-    "not_found": ["uuid3"]
+    "not_found": ["gid://shopify/AppSubscription/789"]
 }
+```
+
+**Batch Subscription Status (by Domains):**
+```
+POST /v1/subscriptions/status/batch
+
+Request:
+{
+    "domains": [
+        "store-a.myshopify.com",
+        "store-b.myshopify.com"
+    ]
+}
+
+Response: (same structure as above)
 ```
 
 **Batch Usage Status:**
@@ -185,30 +242,49 @@ POST /v1/usage/status/batch
 
 Request:
 {
-    "usage_ids": ["uuid1", "uuid2"]
+    "usage_ids": [
+        "gid://shopify/AppUsageRecord/111",
+        "gid://shopify/AppUsageRecord/222"
+    ]
 }
 
 Response:
 {
     "results": [
         {
-            "usage_id": "uuid1",
+            "usage_id": "gid://shopify/AppUsageRecord/111",
             "billed": true,
             "billing_date": "2024-02-28T00:00:00Z",
-            "amount_cents": 1500
+            "amount_cents": 1500,
+            "subscription": {
+                "subscription_id": "gid://shopify/AppSubscription/123",
+                "risk_state": "SAFE"
+            }
         },
-        ...
+        {
+            "usage_id": "gid://shopify/AppUsageRecord/222",
+            "billed": false,
+            "billing_date": null,
+            "amount_cents": 2000,
+            "subscription": {
+                "subscription_id": "gid://shopify/AppSubscription/456",
+                "risk_state": "ONE_CYCLE_MISSED"
+            }
+        }
     ],
     "not_found": []
 }
 ```
 
 **Rules:**
+- **ID Format:** Use Shopify GID (URL-encoded in path: `gid%3A%2F%2Fshopify%2F...`)
+- **Lookup Options:** By GID or by myshopify_domain
 - Tenant isolation (user can only access their own app data)
 - Return 404 if not found or unauthorized (single queries)
 - Batch queries return `not_found` array for missing IDs
 - Batch limit: 100 IDs per request
 - Rate limiting enforced
+- Usage queries include parent subscription status
 
 #### Step 5: Security
 
@@ -303,6 +379,10 @@ internal/
 3. **API Versioning:** Path-based (`/v1/`) confirmed? → **Yes**
 4. **Key Rotation:** Should we support key rotation or just revoke+create? → **Revoke + create new**
 5. **Batch Queries:** Allow batch subscription/usage lookups in Phase 1? → **Yes, allow**
+6. **ID Format:** Use Shopify GID or LedgerGuard UUID? → **Shopify GID** (e.g., `gid://shopify/AppSubscription/123`)
+7. **Lookup by Domain:** Allow lookup by myshopify_domain? → **Yes, allow both GID and domain**
+8. **Additional Fields:** Add months_overdue, last_successful_charge_date? → **Yes**
+9. **Usage → Subscription:** Return parent subscription status with usage query? → **Yes**
 
 ---
 
@@ -321,6 +401,11 @@ internal/
 | 2026-02-27 | Revenue API as separate container | Physical isolation from core API |
 | 2026-02-27 | Redis in C4 + Sequence diagrams | Full visibility of rate limiting flow |
 | 2026-02-27 | Read model population as separate flow | Clear trigger point after ledger rebuild |
+| 2026-02-27 | Use Shopify GID as primary identifier | Developers already have GIDs from Shopify API |
+| 2026-02-27 | Allow lookup by GID or domain | Flexibility for different use cases |
+| 2026-02-27 | Add months_overdue field | Clear indication of payment delinquency |
+| 2026-02-27 | Add last_successful_charge_date | Know when last payment was received |
+| 2026-02-27 | Usage response includes subscription status | Single call to check usage + subscription health |
 
 ---
 
@@ -855,19 +940,28 @@ entity "api_audit_log" as api_audit_log #LightGreen {
 }
 
 entity "api_subscription_status" as api_sub_status #LightGreen {
-  *subscription_id : UUID <<PK>>
+  *id : UUID <<PK>>
   --
+  *shopify_gid : VARCHAR(255) <<UNIQUE>>
   *app_id : UUID
   *myshopify_domain : VARCHAR(255)
+  shop_name : VARCHAR(255)
+  plan_name : VARCHAR(255)
   *risk_state : VARCHAR(30)
   *is_paid_current_cycle : BOOLEAN
+  *months_overdue : INT
+  last_successful_charge_date : TIMESTAMPTZ
   expected_next_charge_date : TIMESTAMPTZ
+  *status : VARCHAR(20)
   *last_synced_at : TIMESTAMPTZ
   ==
   **Constraints:**
   CHECK risk_state IN ('SAFE','ONE_CYCLE_MISSED','TWO_CYCLES_MISSED','CHURNED')
+  CHECK months_overdue >= 0
+  CHECK status IN ('ACTIVE','CANCELLED','FROZEN','PENDING')
   ==
   **Indexes:**
+  idx_sub_status_gid UNIQUE (shopify_gid)
   idx_sub_status_app (app_id)
   idx_sub_status_risk (app_id, risk_state)
   idx_sub_status_domain (myshopify_domain)
@@ -875,19 +969,24 @@ entity "api_subscription_status" as api_sub_status #LightGreen {
 }
 
 entity "api_usage_status" as api_usage_status #LightGreen {
-  *app_usage_record_id : UUID <<PK>>
+  *id : UUID <<PK>>
   --
+  *shopify_gid : VARCHAR(255) <<UNIQUE>>
+  *subscription_shopify_gid : VARCHAR(255)
   *subscription_id : UUID
   *billed : BOOLEAN
   billing_date : TIMESTAMPTZ
   *amount_cents : INT
+  description : TEXT
   *last_synced_at : TIMESTAMPTZ
   ==
   **Constraints:**
   CHECK amount_cents >= 0
   ==
   **Indexes:**
+  idx_usage_gid UNIQUE (shopify_gid)
   idx_usage_subscription (subscription_id)
+  idx_usage_subscription_gid (subscription_shopify_gid)
   idx_usage_billed (subscription_id, billed)
   idx_usage_sync (last_synced_at)
 }
@@ -1004,7 +1103,7 @@ end note
 | | revoked_at | TIMESTAMPTZ | Revocation timestamp (NULL = active) |
 | **api_audit_log** | id | UUID | Primary key |
 | | api_key_id | UUID | Which key made the request |
-| | endpoint | VARCHAR(255) | e.g., "/v1/subscription/abc/status" |
+| | endpoint | VARCHAR(255) | e.g., "/v1/subscription/gid://shopify/.../status" |
 | | method | VARCHAR(10) | GET, POST, etc. |
 | | request_params | JSONB | Query params or body (sanitized) |
 | | response_status | INT | HTTP status code |
@@ -1012,18 +1111,27 @@ end note
 | | ip_address | VARCHAR(45) | Client IP (IPv4 or IPv6) |
 | | user_agent | TEXT | Client user agent string |
 | | created_at | TIMESTAMPTZ | Request timestamp |
-| **api_subscription_status** | subscription_id | UUID | PK, matches subscriptions.id |
+| **api_subscription_status** | id | UUID | Internal primary key |
+| | shopify_gid | VARCHAR(255) | **Shopify GID** (e.g., `gid://shopify/AppSubscription/123`) - UNIQUE, used for lookups |
 | | app_id | UUID | For tenant isolation queries |
-| | myshopify_domain | VARCHAR(255) | Store domain for lookups |
-| | risk_state | VARCHAR(30) | SAFE, ONE_CYCLE_MISSED, etc. |
+| | myshopify_domain | VARCHAR(255) | Store domain for lookups (alternative to GID) |
+| | shop_name | VARCHAR(255) | Human-readable store name |
+| | plan_name | VARCHAR(255) | Subscription plan name |
+| | risk_state | VARCHAR(30) | SAFE, ONE_CYCLE_MISSED, TWO_CYCLES_MISSED, CHURNED |
 | | is_paid_current_cycle | BOOLEAN | Quick payment status check |
+| | **months_overdue** | INT | **Number of months without successful charge** |
+| | **last_successful_charge_date** | TIMESTAMPTZ | **Date of last successful recurring charge** |
 | | expected_next_charge_date | TIMESTAMPTZ | When next payment expected |
+| | status | VARCHAR(20) | ACTIVE, CANCELLED, FROZEN, PENDING |
 | | last_synced_at | TIMESTAMPTZ | When read model was updated |
-| **api_usage_status** | app_usage_record_id | UUID | PK, matches usage records |
-| | subscription_id | UUID | Parent subscription |
+| **api_usage_status** | id | UUID | Internal primary key |
+| | shopify_gid | VARCHAR(255) | **Shopify GID** (e.g., `gid://shopify/AppUsageRecord/456`) - UNIQUE |
+| | subscription_shopify_gid | VARCHAR(255) | Parent subscription's Shopify GID (for nested response) |
+| | subscription_id | UUID | Parent subscription internal ID |
 | | billed | BOOLEAN | Has billing transaction occurred? |
 | | billing_date | TIMESTAMPTZ | When billed (if billed) |
 | | amount_cents | INT | Usage charge amount |
+| | description | TEXT | Usage description (e.g., "API calls - Feb 2024") |
 | | last_synced_at | TIMESTAMPTZ | When read model was updated |
 
 ---

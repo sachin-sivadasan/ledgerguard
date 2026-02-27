@@ -13,11 +13,11 @@ title LedgerGuard Revenue API - Use Cases\n(Phase 1: Green | Phase 2: Blue)
 ' ACTORS
 ' ============================================
 
-actor "App Owner" as owner #Business
-actor "External Developer" as dev #Application
-actor "Developer's App\n(Server)" as app #Technology
-actor "Support Agent" as support #Person
-actor "Finance Team" as finance #Person
+actor "App Owner" as owner #SkyBlue
+actor "External Developer" as dev #LightGreen
+actor "Developer's App\n(Server)" as app #Gold
+actor "Support Agent" as support #LightCoral
+actor "Finance Team" as finance #Plum
 
 ' ============================================
 ' SYSTEM BOUNDARY

@@ -2024,16 +2024,37 @@ async function syncToHubSpot() {
 
 ## Implementation Checklist
 
-### Phase 1: REST Revenue API
+### Revenue API (REST + GraphQL - Merged Implementation)
 
-- [ ] **Step 1:** Database migration (api_keys, api_subscription_status, api_usage_status)
-- [ ] **Step 2:** RevenueReadModelBuilder service
-- [ ] **Step 3:** API key management (create, list, revoke)
-- [ ] **Step 4:** API key auth middleware + rate limiter
-- [ ] **Step 5:** Subscription status endpoint
-- [ ] **Step 6:** Usage status endpoint
-- [ ] **Step 7:** Integration tests
-- [ ] **Step 8:** Documentation updates
-- [ ] **Step 9:** Phase 2 placeholder structure
+#### Foundation
+- [ ] **Step 1:** Database migration (api_keys, api_subscription_status, api_usage_status, api_audit_log)
+- [ ] **Step 2:** Domain entities & repository interfaces
+- [ ] **Step 3:** PostgreSQL repository implementations
+- [ ] **Step 4:** RevenueReadModelBuilder service (populates read model after sync)
+
+#### API Key System
+- [ ] **Step 5:** API key service (create, validate, revoke, list)
+- [ ] **Step 6:** API key HTTP handler + routes
+- [ ] **Step 7:** API key auth middleware (X-API-KEY header validation)
+- [ ] **Step 8:** Redis rate limiter middleware
+
+#### REST Endpoints
+- [ ] **Step 9:** Subscription status service
+- [ ] **Step 10:** Subscription status handler (GET single, GET by domain, POST batch)
+- [ ] **Step 11:** Usage status service
+- [ ] **Step 12:** Usage status handler (GET single, POST batch)
+- [ ] **Step 13:** Audit logging middleware
+
+#### GraphQL Endpoint
+- [ ] **Step 14:** GraphQL schema definition (gqlgen)
+- [ ] **Step 15:** Subscription resolver (reuses SubscriptionStatusService)
+- [ ] **Step 16:** Usage resolver (reuses UsageStatusService)
+- [ ] **Step 17:** DataLoader for N+1 prevention
+- [ ] **Step 18:** GraphQL handler + route
+
+#### Testing & Documentation
+- [ ] **Step 19:** Unit tests (services, handlers)
+- [ ] **Step 20:** Integration tests (full API flows)
+- [ ] **Step 21:** Documentation updates (PRD, TAD, DATABASE_SCHEMA, etc.)
 
 ---

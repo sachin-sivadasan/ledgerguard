@@ -23,6 +23,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/router"
 	"github.com/sachin-sivadasan/ledgerguard/pkg/crypto"
+	apikeyhandler "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/handler"
+	apikeysvc "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/application/service"
+	apikeypersist "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/infrastructure/persistence"
 )
 
 func main() {
@@ -220,6 +223,15 @@ func run() error {
 		log.Println("Subscription handler initialized")
 	}
 
+	// Initialize API key handler
+	var apiKeyHandler *apikeyhandler.APIKeyHandler
+	if db != nil {
+		apiKeyRepo := apikeypersist.NewPostgresAPIKeyRepository(db.Pool)
+		apiKeySvc := apikeysvc.NewAPIKeyService(apiKeyRepo)
+		apiKeyHandler = apikeyhandler.NewAPIKeyHandler(apiKeySvc)
+		log.Println("API key handler initialized")
+	}
+
 	// Initialize auth middleware
 	var authMW func(http.Handler) http.Handler
 	if firebaseAuth != nil && userRepo != nil {
@@ -242,6 +254,7 @@ func run() error {
 		MetricsHandler:           metricsHandler,
 		SyncHandler:              syncHandler,
 		SubscriptionHandler:      subscriptionHandler,
+		APIKeyHandler:            apiKeyHandler,
 		AuthMW:                   authMW,
 		AdminMW:                  adminMW,
 	}

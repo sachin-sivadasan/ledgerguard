@@ -26,6 +26,21 @@ type CreateRequest struct {
 	RateLimitPerMinute int    `json:"rate_limit_per_minute,omitempty"`
 }
 
+// APIKeyResponse is the response format for an API key
+type APIKeyResponse struct {
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	KeyPrefix string  `json:"key_prefix"`
+	CreatedAt string  `json:"created_at"`
+	LastUsedAt *string `json:"last_used_at"`
+}
+
+// CreateResponse is the response format after creating an API key
+type CreateResponse struct {
+	APIKey  APIKeyResponse `json:"api_key"`
+	FullKey string         `json:"full_key"`
+}
+
 // Create creates a new API key
 // POST /api/v1/api-keys
 func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -63,9 +78,26 @@ func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Format response for frontend
+	keyPrefix := resp.RawKey
+	if len(keyPrefix) > 12 {
+		keyPrefix = keyPrefix[:12] + "..."
+	}
+
+	createResp := CreateResponse{
+		APIKey: APIKeyResponse{
+			ID:         resp.ID.String(),
+			Name:       resp.Name,
+			KeyPrefix:  keyPrefix,
+			CreatedAt:  resp.CreatedAt.Format("2006-01-02T15:04:05Z"),
+			LastUsedAt: nil,
+		},
+		FullKey: resp.RawKey,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(resp)
+	json.NewEncoder(w).Encode(createResp)
 }
 
 // List returns all API keys for the authenticated user
@@ -89,9 +121,35 @@ func (h *APIKeyHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Format keys for frontend
+	apiKeys := make([]APIKeyResponse, len(keys))
+	for i, k := range keys {
+		// Only include active keys
+		if !k.IsActive {
+			continue
+		}
+		var lastUsed *string
+		// The service doesn't currently track last_used_at, so we leave it nil
+		apiKeys[i] = APIKeyResponse{
+			ID:         k.ID.String(),
+			Name:       k.Name,
+			KeyPrefix:  "lgk_" + k.ID.String()[:8] + "...", // Use part of ID as visual prefix
+			CreatedAt:  k.CreatedAt.Format("2006-01-02T15:04:05Z"),
+			LastUsedAt: lastUsed,
+		}
+	}
+
+	// Filter out any empty entries from inactive keys
+	activeKeys := make([]APIKeyResponse, 0, len(apiKeys))
+	for _, k := range apiKeys {
+		if k.ID != "" {
+			activeKeys = append(activeKeys, k)
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"api_keys": keys,
+		"api_keys": activeKeys,
 	})
 }
 

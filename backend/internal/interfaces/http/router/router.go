@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/handler"
+	apikeyhandler "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/handler"
 )
 
 type Config struct {
@@ -19,6 +20,7 @@ type Config struct {
 	MetricsHandler           *handler.MetricsHandler
 	SyncHandler              *handler.SyncHandler
 	SubscriptionHandler      *handler.SubscriptionHandler
+	APIKeyHandler            *apikeyhandler.APIKeyHandler
 	AuthMW                   func(next http.Handler) http.Handler
 	AdminMW                  func(next http.Handler) http.Handler // RequireRoles(ADMIN)
 }
@@ -101,6 +103,16 @@ func New(cfg Config) *chi.Mux {
 				r.Use(cfg.AuthMW)
 				r.Post("/", cfg.SyncHandler.SyncAllApps)
 				r.Post("/{appID}", cfg.SyncHandler.SyncApp)
+			})
+		}
+
+		// API key routes (requires auth)
+		if cfg.APIKeyHandler != nil && cfg.AuthMW != nil {
+			r.Route("/api-keys", func(r chi.Router) {
+				r.Use(cfg.AuthMW)
+				r.Get("/", cfg.APIKeyHandler.List)
+				r.Post("/", cfg.APIKeyHandler.Create)
+				r.Delete("/{id}", cfg.APIKeyHandler.Revoke)
 			})
 		}
 	})

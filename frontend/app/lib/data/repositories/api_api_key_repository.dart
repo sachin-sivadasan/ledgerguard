@@ -30,7 +30,7 @@ class ApiApiKeyRepository implements ApiKeyRepository {
   Future<List<ApiKey>> getApiKeys() async {
     try {
       final response = await _dio.get(
-        '$_baseUrl/v1/api-keys',
+        '$_baseUrl/api/v1/api-keys',
         options: Options(headers: await _headers),
       );
 
@@ -48,7 +48,7 @@ class ApiApiKeyRepository implements ApiKeyRepository {
   Future<ApiKeyCreationResult> createApiKey(String name) async {
     try {
       final response = await _dio.post(
-        '$_baseUrl/v1/api-keys',
+        '$_baseUrl/api/v1/api-keys',
         data: {'name': name},
         options: Options(headers: await _headers),
       );

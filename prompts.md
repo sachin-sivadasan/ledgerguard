@@ -812,3 +812,94 @@
 - GraphQL schema + resolvers + handler
 - Revenue API router
 - Files in `internal/revenue_api/` directory
+
+### [2026-02-28] API Key Management Backend Integration
+**Original:**
+> Integrate Revenue API's API key management endpoints into main router
+
+**Improved:**
+> Integrate API key handler from `internal/revenue_api/` into main backend router:
+>
+> **Router Integration:**
+> 1. Import `apikeyhandler` package from `internal/revenue_api/interfaces/http/handler`
+> 2. Add `APIKeyHandler *apikeyhandler.APIKeyHandler` to router Config struct
+> 3. Add `/api/v1/api-keys` routes with Firebase auth middleware:
+>    - `GET /api/v1/api-keys` - List user's API keys
+>    - `POST /api/v1/api-keys` - Create new API key
+>    - `DELETE /api/v1/api-keys/{id}` - Revoke API key
+>
+> **Main.go Integration:**
+> 4. Import API key service and repository packages
+> 5. Initialize PostgresAPIKeyRepository with db.Pool
+> 6. Initialize APIKeyService with repository
+> 7. Initialize APIKeyHandler with service
+> 8. Add apiKeyHandler to router config
+>
+> **Handler Updates:**
+> 9. Update Create response to match frontend format:
+>    - Return `api_key` object with id, name, key_prefix, created_at, last_used_at
+>    - Return `full_key` with the one-time visible raw key
+> 10. Update List response to return formatted APIKeyResponse array
+
+**Result:**
+- cmd/server/main.go - Import and initialize API key handler
+- internal/interfaces/http/router/router.go - Add APIKeyHandler to Config, add routes
+- internal/revenue_api/interfaces/http/handler/api_key_handler.go - Updated response format
+- Endpoint: GET/POST/DELETE /api/v1/api-keys
+
+### [2026-02-28] API Key Management Frontend
+**Original:**
+> Create Flutter screens for managing API keys for Revenue API access
+
+**Improved:**
+> Implement API Key Management frontend screens using Clean Architecture + BLoC:
+>
+> **Domain Layer:**
+> 1. `ApiKey` entity with id, name, keyPrefix, createdAt, lastUsedAt
+> 2. `ApiKeyCreationResult` for returning full key (shown only once after creation)
+> 3. `ApiKeyRepository` interface with getApiKeys, createApiKey, revokeApiKey
+> 4. Exception classes: ApiKeyException, ApiKeyLimitException, ApiKeyNotFoundException, ApiKeyUnauthorizedException
+>
+> **Data Layer:**
+> 5. `ApiApiKeyRepository` - API implementation calling `/api/v1/api-keys` endpoints
+> 6. Uses Dio with Bearer token authentication
+> 7. Handles error responses with proper exception mapping
+>
+> **Presentation Layer (BLoC):**
+> 8. `ApiKeyBloc` - Manages API key state
+> 9. Events: LoadApiKeysRequested, CreateApiKeyRequested, RevokeApiKeyRequested, DismissKeyCreatedRequested
+> 10. States: ApiKeyInitial, ApiKeyLoading, ApiKeyLoaded, ApiKeyCreated, ApiKeyEmpty, ApiKeyError
+>
+> **Widgets:**
+> 11. `ApiKeyTile` - Card showing key name, masked prefix, created date, last used, revoke button
+>
+> **Pages:**
+> 12. `ApiKeyListPage` - List of API keys with:
+>     - Create button in app bar
+>     - Create dialog with name validation
+>     - Key created dialog shows full key once with copy button and warning
+>     - Revoke confirmation dialog with warning
+>     - Pull-to-refresh functionality
+>     - Empty state with create button
+>     - Error state with retry button
+>
+> **Integration:**
+> 13. Add route `/settings/api-keys` to app_router.dart
+> 14. Register ApiKeyRepository and ApiKeyBloc in injection.config.dart
+> 15. Add "API Keys" navigation tile to Profile page Settings section
+>
+> **Tests (TDD):**
+> 16. ApiKeyBloc tests (14 tests): initial state, load, create, revoke, dismiss
+
+**Result:**
+- frontend/app/lib/domain/entities/api_key.dart
+- frontend/app/lib/domain/repositories/api_key_repository.dart
+- frontend/app/lib/data/repositories/api_api_key_repository.dart
+- frontend/app/lib/presentation/blocs/api_key/ (bloc, events, states, barrel)
+- frontend/app/lib/presentation/widgets/api_key_tile.dart
+- frontend/app/lib/presentation/pages/api_key_list_page.dart
+- frontend/app/lib/presentation/pages/profile_page.dart (modified)
+- frontend/app/lib/presentation/router/app_router.dart (modified)
+- frontend/app/lib/core/di/injection.config.dart (modified)
+- test/presentation/blocs/api_key_bloc_test.dart
+- 14 passing tests

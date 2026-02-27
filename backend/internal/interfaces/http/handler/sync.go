@@ -14,15 +14,18 @@ import (
 type SyncHandler struct {
 	syncService *service.SyncService
 	partnerRepo repository.PartnerAccountRepository
+	appRepo     repository.AppRepository
 }
 
 func NewSyncHandler(
 	syncService *service.SyncService,
 	partnerRepo repository.PartnerAccountRepository,
+	appRepo repository.AppRepository,
 ) *SyncHandler {
 	return &SyncHandler{
 		syncService: syncService,
 		partnerRepo: partnerRepo,
+		appRepo:     appRepo,
 	}
 }
 
@@ -84,6 +87,25 @@ func (h *SyncHandler) SyncApp(w http.ResponseWriter, r *http.Request) {
 	appID, err := uuid.Parse(appIDStr)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid app ID")
+		return
+	}
+
+	// Get user's partner account
+	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "no partner account found")
+		return
+	}
+
+	// Tenant isolation: verify the app belongs to the user's partner account
+	app, err := h.appRepo.FindByID(r.Context(), appID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "app not found")
+		return
+	}
+
+	if app.PartnerAccountID != partnerAccount.ID {
+		writeJSONError(w, http.StatusForbidden, "access denied")
 		return
 	}
 

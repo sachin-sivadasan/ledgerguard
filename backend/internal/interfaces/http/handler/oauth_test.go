@@ -69,11 +69,70 @@ func (m *mockPartnerAccountRepo) Delete(ctx context.Context, userID uuid.UUID) e
 	return nil
 }
 
-func TestOAuthHandler_StartOAuth(t *testing.T) {
+type mockUserRepo struct {
+	user *entity.User
+	err  error
+}
+
+func (m *mockUserRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
+	return m.user, m.err
+}
+
+func (m *mockUserRepo) FindByFirebaseUID(ctx context.Context, firebaseUID string) (*entity.User, error) {
+	return m.user, m.err
+}
+
+func (m *mockUserRepo) Create(ctx context.Context, user *entity.User) error {
+	return nil
+}
+
+type mockStateStore struct {
+	storedState  string
+	storedUserID uuid.UUID
+	validState   bool
+	returnUserID uuid.UUID
+}
+
+func (m *mockStateStore) Store(state string, userID uuid.UUID) {
+	m.storedState = state
+	m.storedUserID = userID
+}
+
+func (m *mockStateStore) Validate(state string) (uuid.UUID, bool) {
+	if m.validState && state == m.storedState {
+		return m.returnUserID, true
+	}
+	return uuid.Nil, false
+}
+
+func TestOAuthHandler_StartOAuth_NoUser(t *testing.T) {
 	oauthService := &mockOAuthService{authURL: "https://partners.shopify.com/authorize"}
-	handler := NewOAuthHandler(oauthService, nil, nil)
+	stateStore := &mockStateStore{}
+	handler := NewOAuthHandler(oauthService, nil, nil, nil, stateStore)
 
 	req := httptest.NewRequest(http.MethodGet, "/oauth", nil)
+	rec := httptest.NewRecorder()
+
+	handler.StartOAuth(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	}
+}
+
+func TestOAuthHandler_StartOAuth_Success(t *testing.T) {
+	oauthService := &mockOAuthService{authURL: "https://partners.shopify.com/authorize"}
+	stateStore := &mockStateStore{}
+
+	handler := NewOAuthHandler(oauthService, nil, nil, nil, stateStore)
+
+	user := &entity.User{
+		ID:   uuid.New(),
+		Role: valueobject.RoleOwner,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/oauth", nil)
+	req = req.WithContext(contextWithUser(req.Context(), user))
 	rec := httptest.NewRecorder()
 
 	handler.StartOAuth(rec, req)
@@ -94,10 +153,19 @@ func TestOAuthHandler_StartOAuth(t *testing.T) {
 	if resp["state"] == "" {
 		t.Error("expected state in response")
 	}
+
+	// Verify state was stored with user ID
+	if stateStore.storedState == "" {
+		t.Error("expected state to be stored")
+	}
+
+	if stateStore.storedUserID != user.ID {
+		t.Errorf("expected stored user ID %s, got %s", user.ID, stateStore.storedUserID)
+	}
 }
 
 func TestOAuthHandler_Callback_MissingCode(t *testing.T) {
-	handler := NewOAuthHandler(nil, nil, nil)
+	handler := NewOAuthHandler(nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/callback", nil)
 	rec := httptest.NewRecorder()
@@ -109,51 +177,69 @@ func TestOAuthHandler_Callback_MissingCode(t *testing.T) {
 	}
 }
 
-func TestOAuthHandler_Callback_NoUser(t *testing.T) {
-	oauthService := &mockOAuthService{token: "test-token"}
-	handler := NewOAuthHandler(oauthService, nil, nil)
+func TestOAuthHandler_Callback_MissingState(t *testing.T) {
+	handler := NewOAuthHandler(nil, nil, nil, nil, nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/callback?code=test-code&state=test-state", nil)
+	req := httptest.NewRequest(http.MethodGet, "/callback?code=test-code", nil)
 	rec := httptest.NewRecorder()
 
 	handler.Callback(rec, req)
 
-	if rec.Code != http.StatusUnauthorized {
-		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
+	}
+}
+
+func TestOAuthHandler_Callback_InvalidState(t *testing.T) {
+	stateStore := &mockStateStore{validState: false}
+	handler := NewOAuthHandler(nil, nil, nil, nil, stateStore)
+
+	req := httptest.NewRequest(http.MethodGet, "/callback?code=test-code&state=invalid-state", nil)
+	rec := httptest.NewRecorder()
+
+	handler.Callback(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
 	}
 }
 
 func TestOAuthHandler_Callback_Success(t *testing.T) {
-	oauthService := &mockOAuthService{token: "test-access-token"}
-	encryptor := &mockEncryptor{encrypted: []byte("encrypted-token")}
-	repo := &mockPartnerAccountRepo{}
-
-	handler := NewOAuthHandler(oauthService, encryptor, repo)
-
 	user := &entity.User{
 		ID:   uuid.New(),
 		Role: valueobject.RoleOwner,
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/callback?code=test-code&state=test-state", nil)
-	req = req.WithContext(contextWithUser(req.Context(), user))
+	oauthService := &mockOAuthService{token: "test-access-token"}
+	encryptor := &mockEncryptor{encrypted: []byte("encrypted-token")}
+	partnerRepo := &mockPartnerAccountRepo{}
+	userRepo := &mockUserRepo{user: user}
+	stateStore := &mockStateStore{
+		storedState:  "valid-state",
+		validState:   true,
+		returnUserID: user.ID,
+	}
+
+	handler := NewOAuthHandler(oauthService, encryptor, partnerRepo, userRepo, stateStore)
+
+	req := httptest.NewRequest(http.MethodGet, "/callback?code=test-code&state=valid-state", nil)
 	rec := httptest.NewRecorder()
 
 	handler.Callback(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Errorf("expected status %d, got %d", http.StatusOK, rec.Code)
+		t.Errorf("expected status %d, got %d; body: %s", http.StatusOK, rec.Code, rec.Body.String())
 	}
 
-	if repo.account == nil {
+	if partnerRepo.account == nil {
 		t.Fatal("expected partner account to be created")
 	}
 
-	if repo.account.UserID != user.ID {
-		t.Errorf("expected user ID %s, got %s", user.ID, repo.account.UserID)
+	if partnerRepo.account.UserID != user.ID {
+		t.Errorf("expected user ID %s, got %s", user.ID, partnerRepo.account.UserID)
 	}
 
-	if repo.account.IntegrationType != valueobject.IntegrationTypeOAuth {
-		t.Errorf("expected integration type OAUTH, got %s", repo.account.IntegrationType)
+	if partnerRepo.account.IntegrationType != valueobject.IntegrationTypeOAuth {
+		t.Errorf("expected integration type OAUTH, got %s", partnerRepo.account.IntegrationType)
 	}
 }

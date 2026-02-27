@@ -172,7 +172,7 @@ func TestSyncHandler_SyncAllApps_Success(t *testing.T) {
 	ledger := &mockSyncLedgerRebuilder{}
 
 	syncService := service.NewSyncService(fetcher, txRepo, appRepo, partnerRepo, decryptor, ledger)
-	handler := NewSyncHandler(syncService, partnerRepo)
+	handler := NewSyncHandler(syncService, partnerRepo, appRepo)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/sync", nil)
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
@@ -199,7 +199,7 @@ func TestSyncHandler_SyncAllApps_Success(t *testing.T) {
 }
 
 func TestSyncHandler_SyncAllApps_NoUser(t *testing.T) {
-	handler := NewSyncHandler(nil, nil)
+	handler := NewSyncHandler(nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/sync", nil)
 	rec := httptest.NewRecorder()
@@ -212,7 +212,7 @@ func TestSyncHandler_SyncAllApps_NoUser(t *testing.T) {
 
 func TestSyncHandler_SyncAllApps_NoPartnerAccount(t *testing.T) {
 	partnerRepo := &mockSyncPartnerRepo{err: errors.New("not found")}
-	handler := NewSyncHandler(nil, partnerRepo)
+	handler := NewSyncHandler(nil, partnerRepo, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/sync", nil)
 	user := &entity.User{ID: uuid.New(), Role: valueobject.RoleOwner}
@@ -260,7 +260,7 @@ func TestSyncHandler_SyncApp_Success(t *testing.T) {
 	ledger := &mockSyncLedgerRebuilder{}
 
 	syncService := service.NewSyncService(fetcher, txRepo, appRepo, partnerRepo, decryptor, ledger)
-	handler := NewSyncHandler(syncService, partnerRepo)
+	handler := NewSyncHandler(syncService, partnerRepo, appRepo)
 
 	// Create router to handle URL params
 	r := chi.NewRouter()
@@ -286,7 +286,7 @@ func TestSyncHandler_SyncApp_Success(t *testing.T) {
 }
 
 func TestSyncHandler_SyncApp_NoUser(t *testing.T) {
-	handler := NewSyncHandler(nil, nil)
+	handler := NewSyncHandler(nil, nil, nil)
 
 	r := chi.NewRouter()
 	r.Post("/api/v1/sync/{appID}", handler.SyncApp)
@@ -302,7 +302,7 @@ func TestSyncHandler_SyncApp_NoUser(t *testing.T) {
 
 func TestSyncHandler_SyncApp_InvalidAppID(t *testing.T) {
 	partnerRepo := &mockSyncPartnerRepo{account: &entity.PartnerAccount{}}
-	handler := NewSyncHandler(nil, partnerRepo)
+	handler := NewSyncHandler(nil, partnerRepo, nil)
 
 	r := chi.NewRouter()
 	r.Post("/api/v1/sync/{appID}", handler.SyncApp)
@@ -316,5 +316,73 @@ func TestSyncHandler_SyncApp_InvalidAppID(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
+	}
+}
+
+func TestSyncHandler_SyncApp_TenantIsolation_Forbidden(t *testing.T) {
+	// User A's partner account
+	userAPartnerAccountID := uuid.New()
+	userAPartnerAccount := &entity.PartnerAccount{
+		ID:                   userAPartnerAccountID,
+		UserID:               uuid.New(),
+		EncryptedAccessToken: []byte("encrypted"),
+	}
+
+	// User B's app (belongs to different partner account)
+	userBPartnerAccountID := uuid.New()
+	appID := uuid.New()
+	userBApp := &entity.App{
+		ID:               appID,
+		PartnerAccountID: userBPartnerAccountID, // Different partner account!
+		Name:             "User B's App",
+		TrackingEnabled:  true,
+	}
+
+	appRepo := &mockSyncAppRepo{app: userBApp}
+	partnerRepo := &mockSyncPartnerRepo{account: userAPartnerAccount}
+
+	handler := NewSyncHandler(nil, partnerRepo, appRepo)
+
+	r := chi.NewRouter()
+	r.Post("/api/v1/sync/{appID}", handler.SyncApp)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/sync/"+appID.String(), nil)
+	userA := &entity.User{ID: userAPartnerAccount.UserID, Role: valueobject.RoleOwner}
+	req = req.WithContext(contextWithUser(req.Context(), userA))
+
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	// Should be forbidden because User A is trying to sync User B's app
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected status %d (Forbidden), got %d", http.StatusForbidden, rec.Code)
+	}
+}
+
+func TestSyncHandler_SyncApp_AppNotFound(t *testing.T) {
+	partnerAccountID := uuid.New()
+	partnerAccount := &entity.PartnerAccount{
+		ID:                   partnerAccountID,
+		UserID:               uuid.New(),
+		EncryptedAccessToken: []byte("encrypted"),
+	}
+
+	appRepo := &mockSyncAppRepo{err: errors.New("not found")}
+	partnerRepo := &mockSyncPartnerRepo{account: partnerAccount}
+
+	handler := NewSyncHandler(nil, partnerRepo, appRepo)
+
+	r := chi.NewRouter()
+	r.Post("/api/v1/sync/{appID}", handler.SyncApp)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/sync/"+uuid.New().String(), nil)
+	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
+	req = req.WithContext(contextWithUser(req.Context(), user))
+
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected status %d, got %d", http.StatusNotFound, rec.Code)
 	}
 }

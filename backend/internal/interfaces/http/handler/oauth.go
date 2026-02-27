@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
@@ -23,27 +24,50 @@ type Encryptor interface {
 	Decrypt(ciphertext []byte) ([]byte, error)
 }
 
+// OAuthStateStore interface for storing and validating OAuth states
+type OAuthStateStore interface {
+	Store(state string, userID uuid.UUID)
+	Validate(state string) (uuid.UUID, bool)
+}
+
 type OAuthHandler struct {
 	oauthService OAuthService
 	encryptor    Encryptor
 	partnerRepo  repository.PartnerAccountRepository
+	userRepo     repository.UserRepository
+	stateStore   OAuthStateStore
 }
 
-func NewOAuthHandler(oauthService OAuthService, encryptor Encryptor, partnerRepo repository.PartnerAccountRepository) *OAuthHandler {
+func NewOAuthHandler(
+	oauthService OAuthService,
+	encryptor Encryptor,
+	partnerRepo repository.PartnerAccountRepository,
+	userRepo repository.UserRepository,
+	stateStore OAuthStateStore,
+) *OAuthHandler {
 	return &OAuthHandler{
 		oauthService: oauthService,
 		encryptor:    encryptor,
 		partnerRepo:  partnerRepo,
+		userRepo:     userRepo,
+		stateStore:   stateStore,
 	}
 }
 
 // StartOAuth generates the OAuth URL and returns it to the client.
 // GET /api/v1/integrations/shopify/oauth
 func (h *OAuthHandler) StartOAuth(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
 	state := generateState()
 	url := h.oauthService.GenerateAuthURL(state)
 
-	// TODO: Store state in session/cache for verification in callback
+	// Store state with user ID for validation in callback
+	h.stateStore.Store(state, user.ID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
@@ -61,11 +85,23 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Verify state parameter matches stored state
+	state := r.URL.Query().Get("state")
+	if state == "" {
+		writeJSONError(w, http.StatusBadRequest, "missing state parameter")
+		return
+	}
 
-	user := middleware.UserFromContext(r.Context())
-	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+	// Validate state and get associated user ID
+	userID, valid := h.stateStore.Validate(state)
+	if !valid {
+		writeJSONError(w, http.StatusBadRequest, "invalid or expired state parameter")
+		return
+	}
+
+	// Retrieve user from database
+	user, err := h.userRepo.FindByID(r.Context(), userID)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to retrieve user")
 		return
 	}
 

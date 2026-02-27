@@ -112,3 +112,46 @@ Refactor to Domain-Driven Design (DDD) structure:
 - Repository interfaces defined in domain (ports), implementations in infrastructure (adapters)
 - More explicit modeling of business concepts
 - Slightly more directories, but clearer responsibilities
+
+---
+
+### ADR-006: OAuth State Validation for CSRF Protection
+**Date:** 2026-02-27
+**Status:** Accepted
+
+**Context:**
+OAuth callback endpoint was missing state parameter validation, creating a CSRF vulnerability where an attacker could complete OAuth flow with their own credentials and link to victim's account.
+
+**Decision:**
+Implement in-memory state store with:
+- State stored with user ID when StartOAuth called
+- State validated and consumed (one-time use) in Callback
+- 10-minute TTL for expiration
+- State lookup returns associated user ID
+
+**Consequences:**
+- CSRF protection for OAuth flow
+- No external dependencies (in-memory store)
+- Needs Redis/distributed cache for multi-instance deployment
+- Tests added for state validation
+
+---
+
+### ADR-007: Tenant Isolation in Sync Handler
+**Date:** 2026-02-27
+**Status:** Accepted
+
+**Context:**
+SyncApp endpoint allowed users to sync any app by ID without verifying ownership, creating a tenant isolation vulnerability.
+
+**Decision:**
+Add ownership verification before sync:
+1. Get user's partner account from context
+2. Lookup requested app by ID
+3. Verify app.PartnerAccountID matches user's partner account
+4. Return 403 Forbidden if mismatch
+
+**Consequences:**
+- Users can only sync their own apps
+- Additional database lookup per request (acceptable)
+- Tests added for forbidden case

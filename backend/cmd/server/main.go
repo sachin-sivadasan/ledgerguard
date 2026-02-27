@@ -11,10 +11,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/cache"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/config"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/handler"
+	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/router"
+	"github.com/sachin-sivadasan/ledgerguard/pkg/crypto"
 )
 
 func main() {
@@ -44,6 +49,7 @@ func run() error {
 		log.Printf("Loaded config from: %s", *configPath)
 	}
 
+	// Initialize database connection
 	var db *persistence.PostgresDB
 	db, err = persistence.NewPostgresDB(ctx, cfg.Database.DSN())
 	if err != nil {
@@ -55,12 +61,104 @@ func run() error {
 		log.Println("Connected to PostgreSQL")
 	}
 
+	// Initialize Firebase Auth (optional - will fail gracefully if not configured)
+	var firebaseAuth *external.FirebaseAuthService
+	firebaseAuth, err = external.NewFirebaseAuthService(ctx, cfg.Firebase.CredentialsFile)
+	if err != nil {
+		log.Printf("WARNING: Firebase Auth not configured: %v", err)
+		log.Printf("Authentication will not work without Firebase configuration")
+	} else {
+		log.Println("Firebase Auth initialized")
+	}
+
+	// Initialize encryption
+	var encryptor *crypto.AESEncryptor
+	if cfg.Encryption.MasterKey != "" {
+		encryptor, err = crypto.NewAESEncryptor([]byte(cfg.Encryption.MasterKey))
+		if err != nil {
+			log.Printf("WARNING: Failed to initialize encryption: %v", err)
+		} else {
+			log.Println("Encryption initialized")
+		}
+	}
+
+	// Initialize repositories
+	var userRepo *persistence.PostgresUserRepository
+	var partnerRepo *persistence.PostgresPartnerAccountRepository
+	var appRepo *persistence.PostgresAppRepository
+
+	if db != nil {
+		userRepo = persistence.NewPostgresUserRepository(db.Pool)
+		partnerRepo = persistence.NewPostgresPartnerAccountRepository(db.Pool)
+		appRepo = persistence.NewPostgresAppRepository(db.Pool)
+	}
+
+	// Initialize OAuth state store (10 minute TTL)
+	stateStore := cache.NewOAuthStateStore(10 * time.Minute)
+
+	// Initialize Shopify OAuth service
+	var oauthService *external.ShopifyOAuthService
+	if cfg.Shopify.ClientID != "" {
+		oauthService = external.NewShopifyOAuthService(
+			cfg.Shopify.ClientID,
+			cfg.Shopify.ClientSecret,
+			cfg.Shopify.RedirectURI,
+			cfg.Shopify.Scopes,
+		)
+		log.Println("Shopify OAuth initialized")
+	}
+
+	// Initialize handlers
 	healthHandler := handler.NewHealthHandler(db)
-	r := router.New(router.Config{
-		HealthHandler: healthHandler,
-		OAuthHandler:  nil, // TODO: Wire up OAuth handler
-		AuthMW:        nil, // TODO: Wire up auth middleware
-	})
+
+	var oauthHandler *handler.OAuthHandler
+	if oauthService != nil && encryptor != nil && partnerRepo != nil && userRepo != nil {
+		oauthHandler = handler.NewOAuthHandler(
+			oauthService,
+			encryptor,
+			partnerRepo,
+			userRepo,
+			stateStore,
+		)
+		log.Println("OAuth handler initialized")
+	}
+
+	var manualTokenHandler *handler.ManualTokenHandler
+	if encryptor != nil && partnerRepo != nil {
+		manualTokenHandler = handler.NewManualTokenHandler(encryptor, partnerRepo)
+		log.Println("Manual token handler initialized")
+	}
+
+	var appHandler *handler.AppHandler
+	if partnerRepo != nil && appRepo != nil && encryptor != nil {
+		// Note: PartnerClient would need to be initialized for full functionality
+		appHandler = handler.NewAppHandler(nil, partnerRepo, appRepo, encryptor)
+		log.Println("App handler initialized")
+	}
+
+	// Initialize auth middleware
+	var authMW func(http.Handler) http.Handler
+	if firebaseAuth != nil && userRepo != nil {
+		authMiddleware := middleware.NewAuthMiddleware(firebaseAuth, userRepo)
+		authMW = authMiddleware.Authenticate
+		log.Println("Auth middleware initialized")
+	}
+
+	// Initialize admin middleware (requires ADMIN or OWNER role)
+	adminMW := middleware.RequireRoles(valueobject.RoleAdmin, valueobject.RoleOwner)
+
+	// Build router config
+	routerCfg := router.Config{
+		HealthHandler:      healthHandler,
+		OAuthHandler:       oauthHandler,
+		ManualTokenHandler: manualTokenHandler,
+		AppHandler:         appHandler,
+		SyncHandler:        nil, // SyncHandler needs SyncService which requires more dependencies
+		AuthMW:             authMW,
+		AdminMW:            adminMW,
+	}
+
+	r := router.New(routerCfg)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

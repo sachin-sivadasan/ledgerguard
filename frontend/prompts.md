@@ -477,3 +477,48 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (331/331)
 
 ---
+
+## Prompt 015 – Fix Critical Security Blockers
+**Date:** 2026-02-27
+**Status:** Complete
+
+**Prompt:**
+> Fix the 3 critical blockers identified in production readiness review:
+> 1. Auth middleware not wired in main.go
+> 2. OAuth state not validated (CSRF vulnerability)
+> 3. Tenant isolation missing in SyncApp handler
+
+**Changes:**
+- Backend security fixes:
+  - Created `internal/infrastructure/cache/oauth_state_store.go` - In-memory OAuth state store
+    - Store() saves state with user ID
+    - Validate() returns user ID and consumes state (one-time use)
+    - 10-minute TTL with automatic cleanup
+  - Updated `internal/interfaces/http/handler/oauth.go`:
+    - Added OAuthStateStore interface
+    - Added userRepo dependency for callback user lookup
+    - StartOAuth now stores state with user ID
+    - Callback validates state, retrieves user from store (CSRF protection)
+  - Updated `internal/interfaces/http/handler/sync.go`:
+    - Added appRepo dependency
+    - SyncApp verifies app.PartnerAccountID matches user's partner account
+    - Returns 403 Forbidden for unauthorized access (tenant isolation)
+  - Updated `cmd/server/main.go`:
+    - Wired Firebase Auth service
+    - Wired AuthMiddleware with token verifier and user repo
+    - Wired RoleMiddleware for admin routes
+    - Wired OAuthHandler with state store
+    - Initialized all repositories from database pool
+    - Added graceful degradation when services unavailable
+- Tests:
+  - Created `internal/infrastructure/cache/oauth_state_store_test.go` - 5 tests
+  - Updated `internal/interfaces/http/handler/oauth_test.go` - 6 tests (new signature)
+  - Updated `internal/interfaces/http/handler/sync_test.go` - 9 tests (added tenant isolation test)
+- Documentation:
+  - Updated `DECISIONS.md`:
+    - ADR-006: OAuth State Validation for CSRF Protection
+    - ADR-007: Tenant Isolation in Sync Handler
+- All backend tests passing
+- All frontend tests passing (325/325)
+
+---

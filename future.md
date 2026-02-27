@@ -17,6 +17,7 @@ Postponed ideas and features for later implementation.
 | Subscription detail view | P2 | View individual subscription details, history, risk timeline |
 | Subscription list page | P2 | List all subscriptions with filters (risk state, plan, search) |
 | Onboarding flow | P1 | Guide new users through setup (connect partner, select app, first sync) |
+| Dark mode support | P3 | System/manual theme toggle with dark color palette |
 | Affiliate program | P4 | Referral system |
 
 ---
@@ -111,3 +112,30 @@ Guide new users through the initial setup process after signup.
 **Endpoints needed:**
 - `GET /api/v1/users/onboarding-status` - Check if onboarding complete
 - `POST /api/v1/users/onboarding-complete` - Mark onboarding as done
+
+### Dark Mode Support (P3)
+**Added:** 2026-02-27
+
+**Description:**
+Add dark theme support with system preference detection and manual toggle.
+
+**Proposed Features:**
+- Dark color palette matching brand identity
+- System theme detection (follow device settings)
+- Manual toggle in settings (Light/Dark/System)
+- Persist preference locally
+- Smooth transition animation between themes
+
+**Implementation:**
+- Create `AppTheme.darkTheme` in `core/theme/app_theme.dart`
+- Add `ThemeBloc` or use `ValueNotifier` for theme state
+- Update `MaterialApp` to use `themeMode` property
+- Store preference in SharedPreferences
+- Add theme toggle in Profile/Settings page
+
+**Color Considerations:**
+- Dark backgrounds: grey[900], grey[850]
+- Card surfaces: grey[800]
+- Primary colors remain consistent
+- Ensure WCAG contrast compliance
+- Charts and badges need dark-mode variants

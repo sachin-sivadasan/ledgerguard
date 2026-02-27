@@ -190,9 +190,9 @@ func run() error {
 		// Initialize ledger service for rebuilding after sync
 		ledgerService := domainservice.NewLedgerService(txRepo, subscriptionRepo)
 
-		// Initialize sync service (no external fetcher in dev - would need Shopify Partner client)
+		// Initialize sync service with Shopify Partner client for live transaction fetching
 		syncService = appservice.NewSyncService(
-			nil, // TransactionFetcher - would be ShopifyPartnerClient in production
+			partnerClient, // ShopifyPartnerClient implements TransactionFetcher
 			txRepo,
 			appRepo,
 			partnerRepo,

@@ -22,6 +22,17 @@ Postponed ideas and features for later implementation.
 
 ---
 
+## Technical Debt / Code Quality
+
+| Issue | Priority | Location | Notes |
+|-------|----------|----------|-------|
+| io.ReadAll error handling | P2 | shopify_partner_client.go:70 | Error ignored in response body read |
+| Config validation | P2 | config/config.go | Warn if critical env vars missing |
+| RegisterDevice error swallowing | P2 | notification_service.go:99-101 | Only ignore "already exists", not all errors |
+| Repository contract clarity | P3 | AppRepository.FindByPartnerAppID | Clarify: should "not found" return error or nil? |
+
+---
+
 ## Ideas (Unvalidated)
 
 -

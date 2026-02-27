@@ -15,6 +15,7 @@ Postponed ideas and features for later implementation.
 | Native mobile app | P3 | iOS/Android standalone |
 | Custom report builder | P3 | User-defined reports |
 | Subscription detail view | P2 | View individual subscription details, history, risk timeline |
+| Subscription list page | P2 | List all subscriptions with filters (risk state, plan, search) |
 | Affiliate program | P4 | Referral system |
 
 ---
@@ -50,3 +51,28 @@ View individual subscription details with full history and risk analysis.
 - `GET /api/v1/subscriptions/{id}` - Subscription details
 - `GET /api/v1/subscriptions/{id}/history` - Payment history
 - `GET /api/v1/subscriptions/{id}/risk-timeline` - Risk state changes
+
+### Subscription List Page (P2)
+**Added:** 2026-02-27
+
+**Description:**
+List all subscriptions with filtering, sorting, and search capabilities.
+
+**Proposed Features:**
+- Paginated list of all subscriptions
+- Filter by risk state (SAFE, ONE_CYCLE_MISSED, TWO_CYCLES_MISSED, CHURNED)
+- Filter by plan tier
+- Search by shop name or email
+- Sort by MRR, risk state, last payment date
+- Quick stats summary (total count, at-risk count, churned count)
+- Tap row to navigate to Subscription Detail View
+
+**UI Components:**
+- Filter chips or dropdown for risk state
+- Search input field
+- Sortable column headers
+- Subscription row with shop name, MRR, risk badge, last payment
+- Pagination controls or infinite scroll
+
+**Endpoints needed:**
+- `GET /api/v1/subscriptions?risk_state=&plan=&search=&sort=&page=&limit=`

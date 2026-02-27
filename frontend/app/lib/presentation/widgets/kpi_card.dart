@@ -222,14 +222,17 @@ class KpiCardCompact extends StatelessWidget {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Text(
-                      value,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                    Flexible(
+                      child: Text(
+                        value,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     if (delta != null) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       _DeltaBadgeSmall(delta: delta!),
                     ],
                   ],

@@ -14,6 +14,7 @@ import '../../data/repositories/api_dashboard_preferences_repository.dart';
 import '../../data/repositories/api_insight_repository.dart';
 import '../../data/repositories/api_notification_preferences_repository.dart';
 import '../../data/repositories/api_risk_repository.dart';
+import '../../data/repositories/api_subscription_repository.dart';
 import '../../data/repositories/api_user_profile_repository.dart';
 import '../../data/repositories/firebase_auth_repository.dart';
 import '../../data/repositories/api_app_repository.dart';
@@ -26,6 +27,7 @@ import '../../domain/repositories/insight_repository.dart';
 import '../../domain/repositories/notification_preferences_repository.dart';
 import '../../domain/repositories/partner_integration_repository.dart';
 import '../../domain/repositories/risk_repository.dart';
+import '../../domain/repositories/subscription_repository.dart';
 import '../../domain/repositories/user_profile_repository.dart';
 import '../../presentation/blocs/app_selection/app_selection_bloc.dart';
 import '../../presentation/blocs/auth/auth_bloc.dart';
@@ -36,6 +38,8 @@ import '../../presentation/blocs/partner_integration/partner_integration_bloc.da
 import '../../presentation/blocs/preferences/preferences_bloc.dart';
 import '../../presentation/blocs/risk/risk_bloc.dart';
 import '../../presentation/blocs/role/role_bloc.dart';
+import '../../presentation/blocs/subscription_detail/subscription_detail_bloc.dart';
+import '../../presentation/blocs/subscription_list/subscription_list_bloc.dart';
 import '../network/api_client.dart';
 import '../services/snackbar_service.dart';
 
@@ -80,6 +84,9 @@ extension GetItInjectableX on _i1.GetIt {
     registerLazySingleton<NotificationPreferencesRepository>(() => ApiNotificationPreferencesRepository(
           authRepository: get<AuthRepository>(),
         ));
+    registerLazySingleton<SubscriptionRepository>(() => ApiSubscriptionRepository(
+          apiClient: get<ApiClient>(),
+        ));
 
     // Blocs
     registerFactory<AuthBloc>(() => AuthBloc(authRepository: get<AuthRepository>()));
@@ -91,6 +98,8 @@ extension GetItInjectableX on _i1.GetIt {
     registerFactory<NotificationPreferencesBloc>(() => NotificationPreferencesBloc(repository: get<NotificationPreferencesRepository>()));
     registerFactory<PreferencesBloc>(() => PreferencesBloc(repository: get<DashboardPreferencesRepository>()));
     registerFactory<RiskBloc>(() => RiskBloc(repository: get<RiskRepository>()));
+    registerFactory<SubscriptionListBloc>(() => SubscriptionListBloc(repository: get<SubscriptionRepository>()));
+    registerFactory<SubscriptionDetailBloc>(() => SubscriptionDetailBloc(repository: get<SubscriptionRepository>()));
 
     return this;
   }

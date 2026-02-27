@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
 import '../blocs/auth/auth.dart';
+import '../blocs/subscription_detail/subscription_detail.dart';
+import '../blocs/subscription_list/subscription_list.dart';
 import '../pages/admin/manual_integration_page.dart';
 import '../pages/app_selection_page.dart';
 import '../pages/dashboard_page.dart';
@@ -13,6 +16,8 @@ import '../pages/profile_page.dart';
 import '../pages/risk_breakdown_page.dart';
 import '../pages/signup_page.dart';
 import '../pages/placeholder_page.dart';
+import '../pages/subscription_detail_page.dart';
+import '../pages/subscription_list_page.dart';
 
 /// App routes configuration using GoRouter
 class AppRouter {
@@ -96,6 +101,32 @@ class AppRouter {
         path: '/profile',
         name: 'profile',
         builder: (context, state) => const ProfilePage(),
+      ),
+      GoRoute(
+        path: '/apps/:appId/subscriptions',
+        name: 'subscription-list',
+        builder: (context, state) {
+          final appId = state.pathParameters['appId']!;
+          return BlocProvider(
+            create: (_) => GetIt.instance<SubscriptionListBloc>(),
+            child: SubscriptionListPage(appId: appId),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/apps/:appId/subscriptions/:subscriptionId',
+        name: 'subscription-detail',
+        builder: (context, state) {
+          final appId = state.pathParameters['appId']!;
+          final subscriptionId = state.pathParameters['subscriptionId']!;
+          return BlocProvider(
+            create: (_) => GetIt.instance<SubscriptionDetailBloc>(),
+            child: SubscriptionDetailPage(
+              appId: appId,
+              subscriptionId: subscriptionId,
+            ),
+          );
+        },
       ),
     ],
   );

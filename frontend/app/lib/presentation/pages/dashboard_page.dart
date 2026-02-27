@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/dashboard_metrics.dart';
-import '../../domain/entities/dashboard_preferences.dart';
 import '../../domain/entities/time_range.dart';
+import '../../domain/repositories/app_repository.dart';
 import '../blocs/dashboard/dashboard.dart';
 import '../blocs/preferences/preferences.dart';
 import '../widgets/ai_insight_card.dart';
@@ -83,6 +84,11 @@ class DashboardPage extends StatelessWidget {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.subscriptions_outlined),
+            tooltip: 'Subscriptions',
+            onPressed: () => _navigateToSubscriptions(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.person_outline),
             tooltip: 'Profile',
             onPressed: () => context.push('/profile'),
@@ -117,6 +123,21 @@ class DashboardPage extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Future<void> _navigateToSubscriptions(BuildContext context) async {
+    final appRepository = GetIt.instance<AppRepository>();
+    final selectedApp = await appRepository.getSelectedApp();
+    if (selectedApp != null && context.mounted) {
+      // Extract numeric ID from GID (e.g., "gid://partners/App/4599915" -> "4599915")
+      final parts = selectedApp.id.split('/');
+      final numericAppId = parts.isNotEmpty ? parts.last : selectedApp.id;
+      context.push('/apps/$numericAppId/subscriptions');
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select an app first')),
+      );
+    }
   }
 
   Widget _buildErrorState(BuildContext context, String message) {

@@ -18,6 +18,7 @@ type Config struct {
 	AppHandler               *handler.AppHandler
 	MetricsHandler           *handler.MetricsHandler
 	SyncHandler              *handler.SyncHandler
+	SubscriptionHandler      *handler.SubscriptionHandler
 	AuthMW                   func(next http.Handler) http.Handler
 	AdminMW                  func(next http.Handler) http.Handler // RequireRoles(ADMIN)
 }
@@ -84,6 +85,12 @@ func New(cfg Config) *chi.Mux {
 				if cfg.MetricsHandler != nil {
 					r.Get("/{appID}/metrics/latest", cfg.MetricsHandler.GetLatestMetrics)
 					r.Get("/{appID}/metrics", cfg.MetricsHandler.GetMetricsByPeriod)
+				}
+
+				// Subscription routes
+				if cfg.SubscriptionHandler != nil {
+					r.Get("/{appID}/subscriptions", cfg.SubscriptionHandler.List)
+					r.Get("/{appID}/subscriptions/{subscriptionID}", cfg.SubscriptionHandler.GetByID)
 				}
 			})
 		}

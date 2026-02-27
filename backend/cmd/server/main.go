@@ -212,6 +212,13 @@ func run() error {
 		log.Println("Sync scheduler started (12-hour interval)")
 	}
 
+	// Initialize subscription handler
+	var subscriptionHandler *handler.SubscriptionHandler
+	if subscriptionRepo != nil && partnerRepo != nil && appRepo != nil {
+		subscriptionHandler = handler.NewSubscriptionHandler(subscriptionRepo, partnerRepo, appRepo)
+		log.Println("Subscription handler initialized")
+	}
+
 	// Initialize auth middleware
 	var authMW func(http.Handler) http.Handler
 	if firebaseAuth != nil && userRepo != nil {
@@ -233,6 +240,7 @@ func run() error {
 		AppHandler:               appHandler,
 		MetricsHandler:           metricsHandler,
 		SyncHandler:              syncHandler,
+		SubscriptionHandler:      subscriptionHandler,
 		AuthMW:                   authMW,
 		AdminMW:                  adminMW,
 	}

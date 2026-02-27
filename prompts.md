@@ -741,3 +741,74 @@
 - migrations/000010, 000011 - New columns
 - frontend/app/lib/presentation/widgets/subscription_tile.dart - Defensive string handling
 - All tests passing (124 backend)
+
+### [2026-02-27] Revenue API Implementation (REST + GraphQL)
+**Original:**
+> Implement external Revenue API for Shopify app developers to query subscription payment status
+
+**Improved:**
+> Implement Revenue API with REST and GraphQL endpoints for external clients:
+>
+> **Database (4 migrations):**
+> 1. `000012_create_api_keys_table` - API keys with SHA-256 hash storage
+> 2. `000013_create_api_subscription_status_table` - CQRS read model
+> 3. `000014_create_api_usage_status_table` - Usage billing status
+> 4. `000015_create_api_audit_log_table` - Request audit logging
+>
+> **Domain Layer (`internal/revenue_api/domain/`):**
+> 5. `APIKey` entity with NewAPIKey(), HashKey() using SHA-256
+> 6. `SubscriptionStatus` read model with risk state, payment status
+> 7. `UsageStatus` with parent subscription reference
+> 8. `AuditLog` request audit entry
+> 9. Repository interfaces for all entities
+>
+> **Infrastructure Layer:**
+> 10. PostgreSQL implementations for all repositories
+> 11. Async audit logging with background goroutine
+>
+> **Application Layer:**
+> 12. `APIKeyService` - Create, List, Revoke, ValidateKey
+> 13. `SubscriptionStatusService` - GetByShopifyGID, GetByDomain, batch
+> 14. `UsageStatusService` - GetByShopifyGID, batch
+> 15. `RevenueReadModelBuilder` - Rebuilds read model from ledger
+>
+> **HTTP Layer:**
+> 16. `APIKeyAuth` middleware - X-API-Key header validation
+> 17. `RateLimiter` middleware - In-memory token bucket
+> 18. `AuditLogger` middleware - Async request logging
+> 19. `APIKeyHandler` - POST/GET/DELETE /api-keys
+> 20. `SubscriptionStatusHandler` - REST endpoints
+> 21. `UsageStatusHandler` - REST endpoints
+>
+> **GraphQL Layer:**
+> 22. `schema.graphql` with Query type, SubscriptionStatus, UsageStatus types
+> 23. `resolver.go` - Root resolver with enums
+> 24. `schema.resolvers.go` - Query resolvers
+> 25. `handler.go` - HTTP handler for /graphql endpoint
+>
+> **Router:**
+> 26. Separate router for Revenue API at `/v1/`
+> 27. API key management routes (Firebase auth protected)
+> 28. Public API routes (API key auth protected)
+>
+> **API Endpoints:**
+> - `POST /v1/api-keys` - Create new API key
+> - `GET /v1/api-keys` - List user's API keys
+> - `DELETE /v1/api-keys/{keyID}` - Revoke API key
+> - `GET /v1/subscriptions/{shopify_gid}` - Get subscription by GID
+> - `GET /v1/subscriptions/by-domain?domain={domain}` - Get by domain
+> - `POST /v1/subscriptions/batch` - Batch lookup (max 100)
+> - `GET /v1/usage/{shopify_gid}` - Get usage by GID
+> - `POST /v1/usage/batch` - Batch lookup (max 100)
+> - `POST /v1/graphql` - GraphQL endpoint
+
+**Result:**
+- 4 migrations (000012-000015)
+- 4 domain entities + 4 repository interfaces
+- 4 PostgreSQL repository implementations
+- 4 application services
+- 3 HTTP middleware (APIKeyAuth, RateLimiter, AuditLogger)
+- 3 HTTP handlers (APIKey, SubscriptionStatus, UsageStatus)
+- GraphQL schema + resolvers + handler
+- Revenue API router
+- Files in `internal/revenue_api/` directory

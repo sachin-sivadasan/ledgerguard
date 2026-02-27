@@ -19,7 +19,14 @@ users
   │
   ├──< device_tokens
   │
-  └──< notification_preferences
+  ├──< notification_preferences
+  │
+  └──< api_keys (Revenue API)
+            │
+            └──< api_audit_log
+
+api_subscription_status (CQRS read model - populated from subscriptions)
+api_usage_status (CQRS read model - populated from transactions)
 ```
 
 ---
@@ -156,6 +163,73 @@ User notification settings.
 | slack_webhook_url | VARCHAR(500) | | Slack integration (Pro) |
 | created_at | TIMESTAMPTZ | DEFAULT NOW() | Creation time |
 | updated_at | TIMESTAMPTZ | DEFAULT NOW() | Last modified |
+
+---
+
+## Revenue API Tables (CQRS Read Model)
+
+### api_keys
+API keys for external Revenue API access.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK | Key ID |
+| user_id | UUID | FK → users.id, NOT NULL | Key owner |
+| key_hash | VARCHAR(64) | UNIQUE, NOT NULL | SHA-256 hash of raw key |
+| name | VARCHAR(100) | | User-friendly key name |
+| rate_limit_per_minute | INT | DEFAULT 60, CHECK 1-1000 | Per-key rate limit |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | Creation time |
+| revoked_at | TIMESTAMPTZ | | NULL = active, set = revoked |
+
+### api_subscription_status
+CQRS read model for subscription payment status.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK | Record ID |
+| shopify_gid | VARCHAR(255) | UNIQUE, NOT NULL | Shopify GraphQL ID |
+| app_id | UUID | NOT NULL | Parent app (for tenant isolation) |
+| myshopify_domain | VARCHAR(255) | NOT NULL | Store domain |
+| shop_name | VARCHAR(255) | | Store display name |
+| plan_name | VARCHAR(255) | | Subscription plan name |
+| risk_state | VARCHAR(30) | NOT NULL | SAFE, ONE_CYCLE_MISSED, TWO_CYCLES_MISSED, CHURNED |
+| is_paid_current_cycle | BOOLEAN | NOT NULL | Quick payment check |
+| months_overdue | INT | DEFAULT 0, CHECK >= 0 | Months without payment |
+| last_successful_charge_date | TIMESTAMPTZ | | Last successful charge |
+| expected_next_charge_date | TIMESTAMPTZ | | Next expected charge |
+| status | VARCHAR(20) | NOT NULL | ACTIVE, CANCELLED, FROZEN, PENDING |
+| last_synced_at | TIMESTAMPTZ | NOT NULL | When read model updated |
+
+### api_usage_status
+CQRS read model for usage billing status.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK | Record ID |
+| shopify_gid | VARCHAR(255) | UNIQUE, NOT NULL | Shopify GraphQL ID |
+| subscription_shopify_gid | VARCHAR(255) | NOT NULL | Parent subscription GID |
+| subscription_id | UUID | NOT NULL | Parent subscription ID |
+| billed | BOOLEAN | DEFAULT FALSE | Has Shopify billed this? |
+| billing_date | TIMESTAMPTZ | | When billed (if billed) |
+| amount_cents | INT | NOT NULL, CHECK >= 0 | Usage charge amount |
+| description | TEXT | | Usage description |
+| last_synced_at | TIMESTAMPTZ | NOT NULL | When read model updated |
+
+### api_audit_log
+Audit log for Revenue API requests.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK | Log entry ID |
+| api_key_id | UUID | FK → api_keys.id, NOT NULL | Which key made request |
+| endpoint | VARCHAR(255) | NOT NULL | e.g., /v1/subscription/... |
+| method | VARCHAR(10) | NOT NULL | GET, POST, etc. |
+| request_params | JSONB | | Sanitized params (no secrets) |
+| response_status | INT | NOT NULL | HTTP status code |
+| response_time_ms | INT | NOT NULL | Request duration |
+| ip_address | VARCHAR(45) | | Client IP (v4 or v6) |
+| user_agent | TEXT | | Client user agent |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | Request time |
 
 ---
 
@@ -343,6 +417,10 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000009_create_notification_preferences_table | Create notification_preferences for user settings | ✓ Implemented |
 | 000010_add_shop_name_to_subscriptions | Add shop_name column to subscriptions table | ✓ Implemented |
 | 000011_add_shop_name_and_gross_amount_to_transactions | Add shop_name and gross_amount_cents to transactions | ✓ Implemented |
+| 000012_create_api_keys_table | Create api_keys for Revenue API authentication | ✓ Implemented |
+| 000013_create_api_subscription_status_table | Create api_subscription_status (CQRS read model) | ✓ Implemented |
+| 000014_create_api_usage_status_table | Create api_usage_status (CQRS read model) | ✓ Implemented |
+| 000015_create_api_audit_log_table | Create api_audit_log for request logging | ✓ Implemented |
 
 ---
 

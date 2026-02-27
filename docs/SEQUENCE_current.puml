@@ -345,4 +345,101 @@ note over Ledger
   - >90 days past due: CHURNED
 end note
 
+' ==========================================
+' 8. Metrics Retrieval with Time Filtering
+' ==========================================
+newpage Metrics Retrieval with Time Filtering
+
+actor User
+participant "Client App" as App
+participant "API Server" as API
+participant "MetricsAggregationService" as MetricsAgg
+participant "MetricsEngine" as Engine
+database "PostgreSQL" as DB
+
+User -> App: Select time range\n(This Month, Last 30 Days, etc.)
+App -> API: GET /api/v1/apps/{appID}/metrics\n?start=2024-02-01&end=2024-02-15\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware (verify user)
+API -> API: Validate app ownership
+
+API -> MetricsAgg: GetPeriodMetrics(appID, dateRange)
+
+MetricsAgg -> MetricsAgg: Calculate previous period\n(same duration, immediately before)
+
+par Fetch data in parallel
+    MetricsAgg -> DB: SELECT daily_metrics_snapshot\nWHERE app_id = ? AND date BETWEEN current_start AND current_end
+    DB --> MetricsAgg: Current period snapshots
+
+    MetricsAgg -> DB: SELECT daily_metrics_snapshot\nWHERE app_id = ? AND date BETWEEN prev_start AND prev_end
+    DB --> MetricsAgg: Previous period snapshots
+
+    MetricsAgg -> DB: SELECT transactions\nWHERE app_id = ? AND date BETWEEN current_start AND current_end
+    DB --> MetricsAgg: Current period transactions
+
+    MetricsAgg -> DB: SELECT transactions\nWHERE app_id = ? AND date BETWEEN prev_start AND prev_end
+    DB --> MetricsAgg: Previous period transactions
+end
+
+MetricsAgg -> MetricsAgg: Get latest snapshot for point-in-time metrics\n(MRR, risk counts, renewal rate)
+
+MetricsAgg -> Engine: CalculateUsageRevenue(currentTxs)
+Engine --> MetricsAgg: Usage revenue for period
+
+MetricsAgg -> Engine: CalculateTotalRevenue(currentTxs)
+Engine --> MetricsAgg: Total revenue for period
+
+MetricsAgg -> MetricsAgg: Repeat for previous period
+
+MetricsAgg -> MetricsAgg: Calculate deltas:\n- (current - previous) / previous * 100
+
+MetricsAgg --> API: PeriodMetrics {\n  current: MetricsSummary,\n  previous: MetricsSummary,\n  delta: MetricsDelta\n}
+
+API --> App: 200 OK\n{ current: {...}, previous: {...}, delta: {...} }
+
+App --> User: Display KPIs with\ndelta badges (green/red)
+
+note over MetricsAgg
+  Point-in-time metrics from snapshots:
+  - Active MRR
+  - Revenue at Risk
+  - Renewal Success Rate
+  - Risk state counts
+
+  Period revenue from transactions:
+  - Usage Revenue (sum of USAGE charges)
+  - Total Revenue (sum of all charges)
+end note
+
+' ==========================================
+' 9. Subscription List with Filtering
+' ==========================================
+newpage Subscription List with Filtering
+
+actor User
+participant "Client App" as App
+participant "API Server" as API
+database "PostgreSQL" as DB
+
+User -> App: View subscriptions\n(filter by risk state)
+App -> API: GET /api/v1/apps/{appID}/subscriptions\n?risk_state=ONE_CYCLE_MISSED&limit=50&offset=0\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware (verify user)
+API -> API: Validate app ownership
+
+alt Filter by risk_state
+    API -> DB: SELECT * FROM subscriptions\nWHERE app_id = ? AND risk_state = ?\nORDER BY base_price_cents DESC\nLIMIT ? OFFSET ?
+else No filter
+    API -> DB: SELECT * FROM subscriptions\nWHERE app_id = ?\nORDER BY base_price_cents DESC\nLIMIT ? OFFSET ?
+end
+
+DB --> API: Subscriptions with shop_name
+
+API -> DB: SELECT COUNT(*) FROM subscriptions\nWHERE app_id = ? [AND risk_state = ?]
+DB --> API: Total count
+
+API --> App: 200 OK\n{\n  subscriptions: [{id, shop_name, plan_name, risk_state, ...}],\n  total: 150,\n  limit: 50,\n  offset: 0\n}
+
+App --> User: Display subscription list\nwith risk badges (SAFE=green,\nONE_CYCLE=yellow, TWO_CYCLES=orange,\nCHURNED=red)
+
 @enduml

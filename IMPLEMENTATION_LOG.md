@@ -614,6 +614,8 @@ Created a public-facing marketing landing page for LedgerGuard using Next.js 14+
 | 000007_create_daily_insight_table | AI-generated daily insights (Pro only) | ✓ |
 | 000008_create_device_tokens_table | Push notification device tokens | ✓ |
 | 000009_create_notification_preferences_table | User notification preferences | ✓ |
+| 000010_add_shop_name_to_subscriptions | Add shop_name to subscriptions | ✓ |
+| 000011_add_shop_name_and_gross_amount_to_transactions | Add shop_name, gross_amount_cents to transactions | ✓ |
 
 ---
 
@@ -741,3 +743,60 @@ Implemented live transaction fetching from Shopify Partner API with GraphQL pagi
 - If table exists without these columns, run ALTER TABLE to add them
 
 **Tests:** 6 new tests (total backend: 123)
+
+---
+
+## [2026-02-27] Shop Name, Gross Amount, and Period-Based Usage Revenue
+
+**Commit:** feat: add shop name, gross amount, and fix period-based usage revenue
+
+**Summary:**
+Added shop name and gross amount fields to transactions, fixed charge type inference using __typename, and fixed usage revenue to be calculated per period from transactions instead of cumulative snapshots.
+
+**Implemented:**
+
+1. **Transaction Entity Updates:**
+   - Added `ShopName` field - Store display name from Shopify
+   - Added `GrossAmountCents` field - Subscription price (what customer pays)
+   - Renamed `AmountCents` to `NetAmountCents` - Revenue after Shopify's cut
+   - Updated `NewTransaction` factory with new fields
+
+2. **Subscription Entity Updates:**
+   - Added `ShopName` field for store display name
+
+3. **ShopifyPartnerClient Updates:**
+   - Added `__typename` to GraphQL query for proper type identification
+   - Fixed `inferChargeType` to use typename:
+     - `AppSubscriptionSale` → RECURRING
+     - `AppUsageSale` → USAGE
+     - `AppOneTimeSale` → ONE_TIME
+     - `AppCredit` → REFUND
+   - Added `shop { name }` to GraphQL query
+   - Added `grossAmount { amount currencyCode }` to query
+   - New `parseAmounts` function returns both gross and net amounts
+
+4. **Transaction Repository Updates:**
+   - Updated INSERT/UPDATE queries for new fields
+   - Added `charge_type = EXCLUDED.charge_type` to ON CONFLICT clause
+   - Fixed SELECT queries to handle nullable shop_name and gross_amount_cents
+
+5. **Subscription Repository Updates:**
+   - Added shop_name to INSERT/SELECT queries
+
+6. **MetricsAggregationService Refactor:**
+   - Added `TransactionRepository` dependency
+   - Added `MetricsEngine` dependency
+   - `GetPeriodMetrics` now fetches transactions for specific date range
+   - Usage and total revenue calculated from transactions (not snapshots)
+   - Point-in-time metrics (MRR, risk states) still from snapshots
+   - **Fix:** Usage revenue now varies by time filter (was same for all periods)
+
+7. **Frontend Fixes:**
+   - Fixed `subscription_tile.dart` index out of range errors
+   - Added defensive string handling in `_getInitials` and `_formatDisplayName`
+
+8. **Migrations:**
+   - `000010_add_shop_name_to_subscriptions` - Add shop_name column
+   - `000011_add_shop_name_and_gross_amount_to_transactions` - Add shop_name, gross_amount_cents columns
+
+**Tests:** All tests passing (124 backend)

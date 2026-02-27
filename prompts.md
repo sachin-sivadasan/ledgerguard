@@ -678,3 +678,47 @@
 - interfaces/http/handler/metrics.go - Added error logging
 - interfaces/http/middleware/auth.go - Added token verification error logging
 - All backend tests passing (123/123)
+
+### [2026-02-27] Subscription List and Detail Implementation
+**Original:**
+> Implement subscription list and detail views for backend and frontend
+
+**Improved:**
+> Implement subscription list and detail views:
+> 1. Backend handler with List and GetByID endpoints
+> 2. API: GET /api/v1/apps/{appID}/subscriptions with risk_state filter
+> 3. API: GET /api/v1/apps/{appID}/subscriptions/{subscriptionID}
+> 4. Frontend Subscription entity and repository
+> 5. SubscriptionListBloc and SubscriptionDetailBloc
+> 6. Subscription list page with filter dropdown
+> 7. Subscription detail page with risk badge
+> 8. RiskBadge and SubscriptionTile widgets
+
+**Result:**
+- Backend subscription handler + tests
+- Frontend subscription pages and blocs
+- All tests passing
+
+### [2026-02-27] Shop Name, Gross Amount, and Period-Based Usage Revenue
+**Original:**
+> - show shop.name in subscription list instead of domain
+> - why usage charge is 0
+> - usage charge is same for all filters
+
+**Improved:**
+> Fix transaction data quality and period-based metrics:
+> 1. Add shop_name to transactions and subscriptions (display name, not domain)
+> 2. Add gross_amount_cents to transactions (subscription price pre-Shopify cut)
+> 3. Add __typename to GraphQL query for proper charge type inference (USAGE vs RECURRING)
+> 4. Fix MetricsAggregationService to calculate revenue from transactions for specific date range
+> 5. Fix frontend subscription_tile.dart index out of range errors
+> 6. Add migrations 000010 and 000011
+
+**Result:**
+- internal/domain/entity/transaction.go - ShopName, GrossAmountCents, NetAmountCents
+- internal/domain/entity/subscription.go - ShopName
+- internal/infrastructure/external/shopify_partner_client.go - __typename, shop.name, grossAmount
+- internal/application/service/metrics_aggregation_service.go - Calculate from transactions
+- migrations/000010, 000011 - New columns
+- frontend/app/lib/presentation/widgets/subscription_tile.dart - Defensive string handling
+- All tests passing (124 backend)

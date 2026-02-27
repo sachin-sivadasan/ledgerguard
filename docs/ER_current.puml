@@ -41,7 +41,9 @@ entity "transactions" as transactions {
   *app_id : UUID <<FK>>
   *shopify_gid : VARCHAR(255) <<UNIQUE>>
   *myshopify_domain : VARCHAR(255)
+  shop_name : VARCHAR(255)
   *charge_type : VARCHAR(20) <<CHECK: RECURRING, USAGE, ONE_TIME, REFUND>>
+  gross_amount_cents : BIGINT
   *amount_cents : BIGINT
   currency : VARCHAR(3) <<DEFAULT: USD>>
   *transaction_date : TIMESTAMPTZ
@@ -54,6 +56,7 @@ entity "subscriptions" as subscriptions {
   *app_id : UUID <<FK>>
   *shopify_gid : VARCHAR(255) <<UNIQUE>>
   *myshopify_domain : VARCHAR(255)
+  shop_name : VARCHAR(255)
   plan_name : VARCHAR(255)
   *base_price_cents : BIGINT
   currency : VARCHAR(3) <<DEFAULT: USD>>
@@ -156,8 +159,12 @@ end note
 
 note right of transactions
   Migration: 000004_create_transactions_table
+  Migration: 000011_add_shop_name_and_gross_amount
   - Immutable ledger of transactions
   - Upsert by shopify_gid (idempotent)
+  - shop_name: Store display name
+  - gross_amount: Subscription price (pre-Shopify cut)
+  - amount_cents: Net revenue (post-Shopify cut)
 
   Indexes:
   - idx_transactions_app_date
@@ -167,10 +174,12 @@ end note
 
 note right of subscriptions
   Migration: 000005_create_subscriptions_table
+  Migration: 000010_add_shop_name
   - Rebuilt from transactions (deterministic)
   - Tracks last_recurring_charge_date
   - Computes expected_next_charge_date
   - Risk classification
+  - shop_name: Store display name
 
   Indexes:
   - idx_subscriptions_app_status

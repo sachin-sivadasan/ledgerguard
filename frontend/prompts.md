@@ -564,3 +564,62 @@ Track all prompts executed for the Flutter frontend.
 - All dashboard tests passing (32/32)
 
 ---
+
+## Prompt 017 – Subscription List and Detail Pages
+**Date:** 2026-02-27
+**Status:** Complete
+
+**Prompt:**
+> Implement subscription list and detail views for frontend with risk filtering.
+
+**Improved:**
+> Create subscription list and detail pages:
+> 1. Create Subscription entity with shopName field
+> 2. Create SubscriptionRepository interface
+> 3. Create ApiSubscriptionRepository
+> 4. Create SubscriptionListBloc with filter events
+> 5. Create SubscriptionDetailBloc
+> 6. Create RiskBadge widget (green/yellow/orange/red)
+> 7. Create SubscriptionTile widget showing store name (not domain)
+> 8. Create SubscriptionListPage with filter dropdown
+> 9. Create SubscriptionDetailPage
+> 10. Add routes to app_router.dart
+
+**Changes:**
+- Domain layer:
+  - `lib/domain/entities/subscription.dart` - Subscription with shopName
+  - `lib/domain/repositories/subscription_repository.dart`
+- Data layer:
+  - `lib/data/repositories/api_subscription_repository.dart`
+- Presentation layer:
+  - `lib/presentation/blocs/subscription_list/` - Bloc, events, states
+  - `lib/presentation/blocs/subscription_detail/` - Bloc, events, states
+  - `lib/presentation/widgets/risk_badge.dart`
+  - `lib/presentation/widgets/subscription_tile.dart`
+  - `lib/presentation/pages/subscription_list_page.dart`
+  - `lib/presentation/pages/subscription_detail_page.dart`
+- Updated `lib/presentation/router/app_router.dart`
+
+---
+
+## Prompt 018 – Fix Subscription Tile Index Error
+**Date:** 2026-02-27
+**Status:** Complete
+
+**Prompt:**
+> The following IndexError was thrown building SubscriptionTile: RangeError (index): Index out of range: no indices are valid: 0
+
+**Improved:**
+> Fix index out of range in subscription_tile.dart:
+> 1. Add null/empty checks in _getInitials method
+> 2. Add null/empty checks in _formatDisplayName method
+> 3. Filter empty parts after splitting strings
+> 4. Return fallback values for edge cases
+
+**Changes:**
+- `lib/presentation/widgets/subscription_tile.dart`:
+  - `_getInitials`: Added empty checks, filter empty parts
+  - `_formatDisplayName`: Added empty string checks
+  - Returns '??' for empty/invalid names
+
+---

@@ -70,8 +70,10 @@ Immutable ledger of all Partner API transactions.
 | app_id | UUID | FK → apps.id, NOT NULL | Parent app |
 | shopify_gid | VARCHAR(255) | UNIQUE, NOT NULL | Shopify transaction GID |
 | myshopify_domain | VARCHAR(255) | NOT NULL | Store domain |
+| shop_name | VARCHAR(255) | | Store display name |
 | charge_type | VARCHAR(20) | NOT NULL, CHECK (RECURRING, USAGE, ONE_TIME, REFUND) | Revenue type |
-| amount_cents | BIGINT | NOT NULL | Amount in cents |
+| gross_amount_cents | BIGINT | | Subscription price (what customer pays) |
+| amount_cents | BIGINT | NOT NULL | Net revenue (after Shopify's cut) |
 | currency | VARCHAR(3) | DEFAULT 'USD' | Currency code |
 | transaction_date | TIMESTAMPTZ | NOT NULL | When charged |
 | created_at | TIMESTAMPTZ | DEFAULT NOW() | Record creation |
@@ -85,6 +87,7 @@ Current state of each subscription.
 | app_id | UUID | FK → apps.id, NOT NULL | Parent app |
 | shopify_gid | VARCHAR(255) | UNIQUE, NOT NULL | Shopify subscription GID |
 | myshopify_domain | VARCHAR(255) | NOT NULL | Store domain |
+| shop_name | VARCHAR(255) | | Store display name |
 | plan_name | VARCHAR(255) | | Plan name |
 | base_price_cents | BIGINT | NOT NULL | Price in cents |
 | currency | VARCHAR(3) | DEFAULT 'USD' | Currency code |
@@ -338,6 +341,8 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000007_create_daily_insight_table | Create daily_insight for AI-generated summaries | ✓ Implemented |
 | 000008_create_device_tokens_table | Create device_tokens for push notifications | ✓ Implemented |
 | 000009_create_notification_preferences_table | Create notification_preferences for user settings | ✓ Implemented |
+| 000010_add_shop_name_to_subscriptions | Add shop_name column to subscriptions table | ✓ Implemented |
+| 000011_add_shop_name_and_gross_amount_to_transactions | Add shop_name and gross_amount_cents to transactions | ✓ Implemented |
 
 ---
 

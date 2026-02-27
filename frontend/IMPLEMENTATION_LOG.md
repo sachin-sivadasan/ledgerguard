@@ -595,7 +595,53 @@ frontend/app/lib/
 │   └── usecases/       → Business logic
 └── presentation/
     ├── blocs/          → AuthBloc, RoleBloc, PartnerIntegrationBloc, AppSelectionBloc, DashboardBloc
-    ├── pages/          → LoginPage, SignupPage, ManualIntegrationPage, PartnerIntegrationPage, AppSelectionPage, DashboardPage
-    ├── widgets/        → RoleGuard, ProGuard, KpiCard, RevenueMixChart, RiskDistributionChart
+    ├── pages/          → LoginPage, SignupPage, ManualIntegrationPage, PartnerIntegrationPage, AppSelectionPage, DashboardPage, SubscriptionListPage, SubscriptionDetailPage
+    ├── widgets/        → RoleGuard, ProGuard, KpiCard, RevenueMixChart, RiskDistributionChart, RiskBadge, SubscriptionTile
     └── router/         → GoRouter with auth/role redirects
 ```
+
+---
+
+## [2026-02-27] Subscription List and Detail Pages
+
+**Commit:** feat: implement subscription list and detail views
+
+**Summary:**
+Implemented subscription list and detail pages with risk filtering, showing store display name instead of domain.
+
+**Implemented:**
+
+1. **Domain Layer:**
+   - `Subscription` entity with all fields including shopName
+   - `SubscriptionRepository` interface with list, filter, and getById
+
+2. **Data Layer:**
+   - `ApiSubscriptionRepository` - API implementation
+
+3. **Presentation Layer (Bloc):**
+   - `SubscriptionListBloc` - List with filtering
+   - `SubscriptionDetailBloc` - Single subscription detail
+
+4. **Widgets:**
+   - `SubscriptionTile` - List item with avatar, store name, plan, risk badge
+   - `RiskBadge` - Colored badge for risk state
+
+5. **Pages:**
+   - `SubscriptionListPage` - List with risk filter dropdown
+   - `SubscriptionDetailPage` - Full subscription details
+
+6. **Fixes:**
+   - Fixed index out of range in `_getInitials` and `_formatDisplayName`
+   - Added defensive null/empty checks for string operations
+
+**Files Created/Modified:**
+- `lib/domain/entities/subscription.dart`
+- `lib/domain/repositories/subscription_repository.dart`
+- `lib/data/repositories/api_subscription_repository.dart`
+- `lib/presentation/blocs/subscription_list/` - Bloc, events, states
+- `lib/presentation/blocs/subscription_detail/` - Bloc, events, states
+- `lib/presentation/pages/subscription_list_page.dart`
+- `lib/presentation/pages/subscription_detail_page.dart`
+- `lib/presentation/widgets/subscription_tile.dart`
+- `lib/presentation/widgets/risk_badge.dart`
+- `lib/presentation/router/app_router.dart` (updated)

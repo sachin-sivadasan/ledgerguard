@@ -13,11 +13,11 @@ title LedgerGuard Revenue API - Use Cases\n(Phase 1: Green | Phase 2: Blue)
 ' ACTORS
 ' ============================================
 
-actor "App Owner" as owner #SkyBlue
-actor "External Developer" as dev #LightGreen
-actor "Developer's App\n(Server)" as app #Gold
-actor "Support Agent" as support #LightCoral
-actor "Finance Team" as finance #Plum
+actor "Your Client\n(App Developer)" as client #SkyBlue
+actor "Client's App\nServer" as server #Gold
+actor "Merchant\n(Store Owner)" as merchant #LightGreen
+actor "Client's Support\nAgent" as support #LightCoral
+actor "Client's Finance\nTeam" as finance #Plum
 
 ' ============================================
 ' SYSTEM BOUNDARY
@@ -52,7 +52,7 @@ rectangle "LedgerGuard Revenue API" {
 
     ' --- Access Control ---
     package "Access Control & Feature Gating" <<Frame>> {
-        usecase "Block Non-Paying\nStores" as UC_Block <<p1>>
+        usecase "Block Non-Paying\nMerchants" as UC_Block <<p1>>
         usecase "Enforce Grace\nPeriod" as UC_Grace <<p1>>
         usecase "Gate Premium\nFeatures" as UC_Gate <<p1>>
         usecase "Enforce Usage\nLimits" as UC_Limits <<p1>>
@@ -63,7 +63,7 @@ rectangle "LedgerGuard Revenue API" {
         usecase "Detect Early\nWarning Signs" as UC_EarlyWarn <<p1>>
         usecase "Trigger Dunning\nSequence" as UC_Dunning <<p1>>
         usecase "Identify Win-back\nOpportunities" as UC_Winback <<p1>>
-        usecase "Calculate Customer\nHealth Score" as UC_Health <<p2>>
+        usecase "Calculate Merchant\nHealth Score" as UC_Health <<p2>>
     }
 
     ' --- Reporting ---
@@ -101,52 +101,48 @@ rectangle "LedgerGuard Revenue API" {
 }
 
 ' ============================================
-' RELATIONSHIPS - App Owner
+' RELATIONSHIPS - Your Client (App Developer)
 ' ============================================
 
-owner --> UC_CreateKey
-owner --> UC_ListKeys
-owner --> UC_RevokeKey
-owner --> UC_KeyStats
-owner --> UC_RevReport
-owner --> UC_MRR
-owner --> UC_Audit
-owner --> UC_Health
+client --> UC_CreateKey
+client --> UC_ListKeys
+client --> UC_RevokeKey
+client --> UC_KeyStats
+client --> UC_RevReport
+client --> UC_MRR
+client --> UC_Audit
+client --> UC_Health
 
 ' ============================================
-' RELATIONSHIPS - External Developer
+' RELATIONSHIPS - Client's App Server
 ' ============================================
 
-dev --> UC_SubSingle : "via SDK"
-dev --> UC_UsageSingle : "via SDK"
-dev --> UC_Block : "implements"
-dev --> UC_Gate : "implements"
-dev --> UC_GqlFields : "Phase 2"
+server --> UC_SubSingle
+server --> UC_SubDomain
+server --> UC_SubBatch
+server --> UC_UsageSingle
+server --> UC_UsageBatch
+server --> UC_UsageVerify
+server --> UC_Block
+server --> UC_Grace
+server --> UC_Gate
+server --> UC_Limits
+server --> UC_EarlyWarn
+server --> UC_Dunning
+server --> UC_CRM
+server --> UC_Slack
+server --> UC_Zapier
+server --> UC_GqlNested : "Phase 2"
+server --> UC_GqlRealtime : "Phase 2"
 
 ' ============================================
-' RELATIONSHIPS - Developer's App (Server)
+' RELATIONSHIPS - Merchant (triggers indirectly)
 ' ============================================
 
-app --> UC_SubSingle
-app --> UC_SubDomain
-app --> UC_SubBatch
-app --> UC_UsageSingle
-app --> UC_UsageBatch
-app --> UC_UsageVerify
-app --> UC_Block
-app --> UC_Grace
-app --> UC_Gate
-app --> UC_Limits
-app --> UC_EarlyWarn
-app --> UC_Dunning
-app --> UC_CRM
-app --> UC_Slack
-app --> UC_Zapier
-app --> UC_GqlNested : "Phase 2"
-app --> UC_GqlRealtime : "Phase 2"
+merchant ..> server : "uses client's app"
 
 ' ============================================
-' RELATIONSHIPS - Support Agent
+' RELATIONSHIPS - Client's Support Agent
 ' ============================================
 
 support --> UC_SubDomain
@@ -154,7 +150,7 @@ support --> UC_Support
 support --> UC_BillHistory
 
 ' ============================================
-' RELATIONSHIPS - Finance Team
+' RELATIONSHIPS - Client's Finance Team
 ' ============================================
 
 finance --> UC_RevReport
@@ -204,6 +200,11 @@ note as N1
   **Legend**
   <back:#LightGreen>Phase 1 (REST)</back>
   <back:#LightBlue>Phase 2 (GraphQL)</back>
+
+  **Actors**
+  Your Client = Shopify app developer (LedgerGuard user)
+  Client's Server = Their app's backend calling your API
+  Merchant = Store owner using client's Shopify app
 end note
 
 @enduml

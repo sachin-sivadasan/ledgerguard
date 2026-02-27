@@ -10,27 +10,27 @@ title Revenue API - Key Business Flows
 ' ACTORS
 ' ============================================
 
-actor "Merchant's\nCustomer" as customer #LightBlue
-actor "Shopify App\n(Your Backend)" as app #LightGreen
-actor "LedgerGuard\nRevenue API" as api #Gold
-actor "App Owner\n(You)" as owner #LightCoral
+actor "Merchant\n(Store Owner)" as merchant #LightGreen
+actor "Client's App\nServer" as server #Gold
+actor "LedgerGuard\nRevenue API" as api #SkyBlue
+actor "Your Client\n(App Developer)" as client #Plum
 
 ' ============================================
 ' FLOW 1: Feature Gating
 ' ============================================
 
 rectangle "Flow 1: Feature Gating" #Honeydew {
-    usecase "Customer opens\nyour Shopify app" as F1_1
+    usecase "Merchant opens\nclient's Shopify app" as F1_1
     usecase "Check subscription\npayment status" as F1_2
     usecase "Grant/Block\naccess" as F1_3
 }
 
-customer --> F1_1
-F1_1 --> app
-app --> F1_2
+merchant --> F1_1
+F1_1 --> server
+server --> F1_2
 F1_2 --> api : "GET /v1/subscription/{gid}/status"
 api --> F1_3
-F1_3 --> customer : "Access or Payment Required page"
+F1_3 --> merchant : "Access or Payment Required page"
 
 note right of F1_2
   **Response:**
@@ -40,7 +40,7 @@ note right of F1_2
     "is_paid_current_cycle": false
   }
 
-  **Action:** Block access
+  **Action:** Block merchant access
 end note
 
 ' ============================================
@@ -48,19 +48,19 @@ end note
 ' ============================================
 
 rectangle "Flow 2: Usage Billing Verification" #Lavender {
-    usecase "Customer triggers\npremium action" as F2_1
+    usecase "Merchant triggers\npremium action" as F2_1
     usecase "Create Shopify\nUsage Charge" as F2_2
     usecase "Verify charge\nwas billed" as F2_3
     usecase "Deliver premium\nservice" as F2_4
 }
 
-customer --> F2_1 : "e.g., Send 1000 emails"
-F2_1 --> app
-app --> F2_2 : "Shopify API"
-app --> F2_3
+merchant --> F2_1 : "e.g., Send 1000 emails"
+F2_1 --> server
+server --> F2_2 : "Shopify API"
+server --> F2_3
 F2_3 --> api : "GET /v1/usage/{gid}/status"
 api --> F2_4
-F2_4 --> customer : "Emails sent!"
+F2_4 --> merchant : "Emails sent!"
 
 note right of F2_3
   **Response:**
@@ -70,7 +70,7 @@ note right of F2_3
     "amount_cents": 1500
   }
 
-  **Action:** Safe to deliver
+  **Action:** Safe to deliver service
 end note
 
 ' ============================================
@@ -79,17 +79,17 @@ end note
 
 rectangle "Flow 3: Churn Prevention Automation" #MistyRose {
     usecase "Daily batch check\nall subscriptions" as F3_1
-    usecase "Identify at-risk\nsubscriptions" as F3_2
+    usecase "Identify at-risk\nmerchants" as F3_2
     usecase "Trigger automated\noutreach" as F3_3
-    usecase "Alert owner\nvia Slack" as F3_4
+    usecase "Alert client\nvia Slack" as F3_4
 }
 
-app --> F3_1 : "Cron job"
+server --> F3_1 : "Cron job"
 F3_1 --> api : "POST /v1/subscriptions/status/batch"
 api --> F3_2
 F3_2 --> F3_3 : "Send payment reminder emails"
 F3_2 --> F3_4
-F3_4 --> owner : "#revenue: 5 at-risk subscriptions"
+F3_4 --> client : "#revenue: 5 at-risk merchants"
 
 note right of F3_2
   **Batch Response:**
@@ -110,27 +110,33 @@ end note
 ' ============================================
 
 rectangle "Flow 4: Revenue Dashboard" #AliceBlue {
-    usecase "Owner opens\nLedgerGuard dashboard" as F4_1
+    usecase "Client opens\nLedgerGuard dashboard" as F4_1
     usecase "Fetch subscription\nstatuses" as F4_2
     usecase "Display MRR,\nchurn, at-risk $" as F4_3
 }
 
-owner --> F4_1
+client --> F4_1
 F4_1 --> api
 api --> F4_2 : "Internal query"
 F4_2 --> F4_3
-F4_3 --> owner : "MRR: $12,500 | At Risk: $800"
+F4_3 --> client : "MRR: $12,500 | At Risk: $800"
 
 ' ============================================
 ' LEGEND
 ' ============================================
 
 legend bottom
-  |= Color |= Flow |= Primary Benefit |
-  | <#Honeydew> | Feature Gating | Prevent revenue leakage |
-  | <#Lavender> | Usage Verification | Ensure billing before delivery |
-  | <#MistyRose> | Churn Prevention | Proactive retention |
-  | <#AliceBlue> | Reporting | Revenue visibility |
+  |= Actor |= Who They Are |
+  | <#Plum> Your Client | Shopify app developer using LedgerGuard |
+  | <#Gold> Client's App Server | Their Shopify app backend |
+  | <#LightGreen> Merchant | Store owner using client's app |
+  | <#SkyBlue> LedgerGuard API | Your Revenue API |
+
+  |= Flow |= Primary Benefit |
+  | Feature Gating | Block merchants who haven't paid |
+  | Usage Verification | Ensure billing before service delivery |
+  | Churn Prevention | Proactive merchant retention |
+  | Reporting | Revenue visibility for your clients |
 endlegend
 
 @enduml

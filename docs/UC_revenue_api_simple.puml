@@ -12,15 +12,15 @@ title LedgerGuard Revenue API\nUse Case Overview
 ' ACTORS
 ' ============================================
 
-actor "Shopify App\nDeveloper" as dev <<Human>>
-actor "Developer's\nBackend" as backend <<System>>
-actor "LedgerGuard\nUser" as owner <<Human>>
+actor "Your Client\n(App Developer)" as client #SkyBlue
+actor "Client's App\nServer" as server #Gold
+actor "Merchant\n(Store Owner)" as merchant #LightGreen
 
 ' ============================================
 ' MAIN SYSTEM
 ' ============================================
 
-rectangle "Revenue API" as system #LightYellow {
+rectangle "LedgerGuard Revenue API" as system #LightYellow {
 
     ' Core API Operations
     package "Core Operations" #LightGreen {
@@ -31,7 +31,7 @@ rectangle "Revenue API" as system #LightYellow {
 
     ' Business Logic
     package "Business Actions" #LightCoral {
-        usecase "Block Non-Paying\nStores" as UC4 #MistyRose
+        usecase "Block Non-Paying\nMerchants" as UC4 #MistyRose
         usecase "Gate Premium\nFeatures" as UC5 #MistyRose
         usecase "Trigger Churn\nPrevention" as UC6 #MistyRose
     }
@@ -55,26 +55,24 @@ rectangle "Revenue API" as system #LightYellow {
 ' RELATIONSHIPS
 ' ============================================
 
-' Developer designs the integration
-dev --> UC7 : "setup"
-dev --> UC1 : "implement"
-dev --> UC2 : "implement"
+' Client (App Developer) manages their account
+client --> UC7 : "setup"
+client --> UC8 : "monitor"
+client --> UC9 : "analyze"
+client --> UC12 : "export"
 
-' Backend makes API calls
-backend --> UC1 : "real-time"
-backend --> UC2 : "real-time"
-backend --> UC3 : "batch"
-backend --> UC4 : "enforce"
-backend --> UC5 : "enforce"
-backend --> UC6 : "automate"
-backend --> UC10 : "sync"
-backend --> UC11 : "notify"
+' Client's server makes API calls
+server --> UC1 : "real-time"
+server --> UC2 : "real-time"
+server --> UC3 : "batch"
+server --> UC4 : "enforce"
+server --> UC5 : "enforce"
+server --> UC6 : "automate"
+server --> UC10 : "sync"
+server --> UC11 : "notify"
 
-' Owner manages and views
-owner --> UC7 : "manage"
-owner --> UC8 : "monitor"
-owner --> UC9 : "analyze"
-owner --> UC12 : "export"
+' Merchant triggers actions (indirectly)
+merchant ..> server : "uses app"
 
 ' Dependencies
 UC4 ..> UC1 : <<uses>>
@@ -98,9 +96,9 @@ end note
 
 note right of UC4
   **Primary Value**
-  Prevent revenue leakage
-  by blocking stores that
-  haven't paid
+  Your clients can block
+  merchants who haven't
+  paid for their app
 end note
 
 note bottom of system

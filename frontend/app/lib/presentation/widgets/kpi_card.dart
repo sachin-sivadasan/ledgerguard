@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../domain/entities/dashboard_metrics.dart';
 
 /// Card widget for displaying a KPI metric
 class KpiCard extends StatelessWidget {
@@ -12,6 +13,9 @@ class KpiCard extends StatelessWidget {
   final Color? backgroundColor;
   final bool isLarge;
 
+  /// Optional delta indicator to show period-over-period change
+  final DeltaIndicator? delta;
+
   const KpiCard({
     super.key,
     required this.title,
@@ -21,12 +25,14 @@ class KpiCard extends StatelessWidget {
     this.color,
     this.backgroundColor,
     this.isLarge = false,
+    this.delta,
   });
 
   @override
   Widget build(BuildContext context) {
     final effectiveColor = color ?? AppTheme.primary;
-    final effectiveBgColor = backgroundColor ?? effectiveColor.withOpacity(0.1);
+    final effectiveBgColor =
+        backgroundColor ?? effectiveColor.withOpacity(0.1);
 
     return Container(
       padding: EdgeInsets.all(isLarge ? 24 : 20),
@@ -71,12 +77,23 @@ class KpiCard extends StatelessWidget {
             ],
           ),
           SizedBox(height: isLarge ? 20 : 16),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: isLarge ? 32 : 28,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: isLarge ? 32 : 28,
+                      ),
                 ),
+              ),
+              if (delta != null) ...[
+                const SizedBox(width: 8),
+                _DeltaBadge(delta: delta!),
+              ],
+            ],
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 4),
@@ -93,6 +110,43 @@ class KpiCard extends StatelessWidget {
   }
 }
 
+/// Delta badge showing percentage change
+class _DeltaBadge extends StatelessWidget {
+  final DeltaIndicator delta;
+
+  const _DeltaBadge({required this.delta});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: delta.color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            delta.icon,
+            size: 14,
+            color: delta.color,
+          ),
+          const SizedBox(width: 2),
+          Text(
+            delta.formattedValue,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: delta.color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Compact KPI card for secondary metrics
 class KpiCardCompact extends StatelessWidget {
   final String title;
@@ -100,12 +154,16 @@ class KpiCardCompact extends StatelessWidget {
   final IconData icon;
   final Color? color;
 
+  /// Optional delta indicator to show period-over-period change
+  final DeltaIndicator? delta;
+
   const KpiCardCompact({
     super.key,
     required this.title,
     required this.value,
     required this.icon,
     this.color,
+    this.delta,
   });
 
   @override
@@ -134,17 +192,54 @@ class KpiCardCompact extends StatelessWidget {
                       ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                Row(
+                  children: [
+                    Text(
+                      value,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    if (delta != null) ...[
+                      const SizedBox(width: 8),
+                      _DeltaBadgeSmall(delta: delta!),
+                    ],
+                  ],
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Small delta badge for compact cards
+class _DeltaBadgeSmall extends StatelessWidget {
+  final DeltaIndicator delta;
+
+  const _DeltaBadgeSmall({required this.delta});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          delta.icon,
+          size: 12,
+          color: delta.color,
+        ),
+        Text(
+          delta.formattedValue,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: delta.color,
+          ),
+        ),
+      ],
     );
   }
 }

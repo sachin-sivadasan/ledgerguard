@@ -106,6 +106,7 @@ func run() error {
 	var appRepo *persistence.PostgresAppRepository
 	var txRepo *persistence.PostgresTransactionRepository
 	var subscriptionRepo *persistence.PostgresSubscriptionRepository
+	var snapshotRepo *persistence.PostgresDailyMetricsSnapshotRepository
 
 	if db != nil {
 		userRepo = persistence.NewPostgresUserRepository(db.Pool)
@@ -113,6 +114,7 @@ func run() error {
 		appRepo = persistence.NewPostgresAppRepository(db.Pool)
 		txRepo = persistence.NewPostgresTransactionRepository(db.Pool)
 		subscriptionRepo = persistence.NewPostgresSubscriptionRepository(db.Pool)
+		snapshotRepo = persistence.NewPostgresDailyMetricsSnapshotRepository(db.Pool)
 	}
 
 	// Initialize OAuth state store (10 minute TTL)
@@ -167,9 +169,17 @@ func run() error {
 		log.Println("App handler initialized with Partner client")
 	}
 
-	// Initialize metrics handler
-	metricsHandler := handler.NewMetricsHandler()
-	log.Println("Metrics handler initialized")
+	// Initialize metrics aggregation service and handler
+	var metricsHandler *handler.MetricsHandler
+	if snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
+		metricsAggregator := appservice.NewMetricsAggregationService(snapshotRepo)
+		metricsHandler = handler.NewMetricsHandler(metricsAggregator, appRepo, partnerRepo)
+		log.Println("Metrics handler initialized with aggregation service")
+	} else {
+		// Fallback to handler without aggregator (will use mock data)
+		metricsHandler = handler.NewMetricsHandler(nil, appRepo, partnerRepo)
+		log.Println("Metrics handler initialized (without aggregator)")
+	}
 
 	// Initialize sync service and handler
 	var syncService *appservice.SyncService

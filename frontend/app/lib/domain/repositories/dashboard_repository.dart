@@ -1,14 +1,17 @@
 import '../entities/dashboard_metrics.dart';
+import '../entities/time_range.dart';
 
 /// Repository interface for dashboard metrics
 abstract class DashboardRepository {
   /// Fetch dashboard metrics for the selected app
   /// Returns null if no metrics are available (empty state)
-  Future<DashboardMetrics?> fetchMetrics();
+  /// If [timeRange] is provided, fetches metrics for that period
+  Future<DashboardMetrics?> fetchMetrics({TimeRange? timeRange});
 
   /// Refresh metrics (force fetch)
   /// Returns null if no metrics are available (empty state)
-  Future<DashboardMetrics?> refreshMetrics();
+  /// If [timeRange] is provided, fetches metrics for that period
+  Future<DashboardMetrics?> refreshMetrics({TimeRange? timeRange});
 }
 
 /// Exception for dashboard-related errors

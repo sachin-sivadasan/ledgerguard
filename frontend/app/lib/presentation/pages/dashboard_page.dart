@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/dashboard_metrics.dart';
 import '../../domain/entities/dashboard_preferences.dart';
+import '../../domain/entities/time_range.dart';
 import '../blocs/dashboard/dashboard.dart';
 import '../blocs/preferences/preferences.dart';
 import '../widgets/ai_insight_card.dart';
@@ -14,6 +15,7 @@ import '../widgets/revenue_mix_chart.dart';
 import '../widgets/risk_distribution_chart.dart';
 import '../widgets/role_guard.dart';
 import '../widgets/shared.dart';
+import '../widgets/time_range_selector.dart';
 
 /// Executive Dashboard page displaying key metrics
 class DashboardPage extends StatelessWidget {
@@ -26,6 +28,24 @@ class DashboardPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Executive Dashboard'),
         actions: [
+          // Time Range Selector
+          BlocBuilder<DashboardBloc, DashboardState>(
+            builder: (context, state) {
+              final timeRange = state is DashboardLoaded
+                  ? state.timeRange
+                  : TimeRange.thisMonth();
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: TimeRangeSelector(
+                  currentRange: timeRange,
+                  onRangeChanged: (range) {
+                    context.read<DashboardBloc>().add(TimeRangeChanged(range));
+                  },
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Configure Dashboard',
@@ -90,7 +110,7 @@ class DashboardPage extends StatelessWidget {
           }
 
           if (state is DashboardLoaded) {
-            return _buildDashboard(context, state.metrics);
+            return _buildDashboard(context, state.metrics, state.timeRange);
           }
 
           return const SizedBox.shrink();
@@ -101,7 +121,8 @@ class DashboardPage extends StatelessWidget {
 
   Widget _buildErrorState(BuildContext context, String message) {
     // Check if this is a "no app selected" error
-    if (message.contains('No app selected') || message.contains('select an app')) {
+    if (message.contains('No app selected') ||
+        message.contains('select an app')) {
       return _buildOnboardingState(context);
     }
 
@@ -174,7 +195,11 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDashboard(BuildContext context, DashboardMetrics metrics) {
+  Widget _buildDashboard(
+    BuildContext context,
+    DashboardMetrics metrics,
+    TimeRange timeRange,
+  ) {
     return RefreshIndicator(
       onRefresh: () async {
         context.read<DashboardBloc>().add(const RefreshDashboardRequested());
@@ -192,7 +217,7 @@ class DashboardPage extends StatelessWidget {
             const ProGuard(child: AiInsightCard()),
             _buildSectionHeader(context, 'Primary KPIs'),
             const SizedBox(height: 16),
-            _buildPrimaryKpis(context, metrics),
+            _buildPrimaryKpis(context, metrics, timeRange),
             const SizedBox(height: 32),
             _buildSectionHeader(context, 'Revenue & Risk'),
             const SizedBox(height: 16),
@@ -212,7 +237,14 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildPrimaryKpis(BuildContext context, DashboardMetrics metrics) {
+  Widget _buildPrimaryKpis(
+    BuildContext context,
+    DashboardMetrics metrics,
+    TimeRange timeRange,
+  ) {
+    final periodSubtitle = timeRange.preset.displayName;
+    final delta = metrics.delta;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth > 800;
@@ -225,10 +257,11 @@ class DashboardPage extends StatelessWidget {
                 child: KpiCard(
                   title: 'Renewal Success Rate',
                   value: '${metrics.renewalSuccessRate.toStringAsFixed(1)}%',
-                  subtitle: 'Last 30 days',
+                  subtitle: periodSubtitle,
                   icon: Icons.trending_up,
                   color: AppTheme.success,
                   isLarge: true,
+                  delta: delta?.renewalSuccessIndicator,
                 ),
               ),
               const SizedBox(width: 16),
@@ -240,6 +273,7 @@ class DashboardPage extends StatelessWidget {
                   icon: Icons.attach_money,
                   color: AppTheme.primary,
                   isLarge: true,
+                  delta: delta?.activeMrrIndicator,
                 ),
               ),
               const SizedBox(width: 16),
@@ -251,6 +285,7 @@ class DashboardPage extends StatelessWidget {
                   icon: Icons.warning_amber,
                   color: AppTheme.warning,
                   isLarge: true,
+                  delta: delta?.revenueAtRiskIndicator,
                 ),
               ),
               const SizedBox(width: 16),
@@ -262,6 +297,7 @@ class DashboardPage extends StatelessWidget {
                   icon: Icons.trending_down,
                   color: AppTheme.danger,
                   isLarge: true,
+                  delta: delta?.churnCountIndicator,
                 ),
               ),
             ],
@@ -276,9 +312,10 @@ class DashboardPage extends StatelessWidget {
                       title: 'Renewal Success Rate',
                       value:
                           '${metrics.renewalSuccessRate.toStringAsFixed(1)}%',
-                      subtitle: 'Last 30 days',
+                      subtitle: periodSubtitle,
                       icon: Icons.trending_up,
                       color: AppTheme.success,
+                      delta: delta?.renewalSuccessIndicator,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -289,6 +326,7 @@ class DashboardPage extends StatelessWidget {
                       subtitle: 'Monthly recurring revenue',
                       icon: Icons.attach_money,
                       color: AppTheme.primary,
+                      delta: delta?.activeMrrIndicator,
                     ),
                   ),
                 ],
@@ -303,6 +341,7 @@ class DashboardPage extends StatelessWidget {
                       subtitle: 'Needs attention',
                       icon: Icons.warning_amber,
                       color: AppTheme.warning,
+                      delta: delta?.revenueAtRiskIndicator,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -313,6 +352,7 @@ class DashboardPage extends StatelessWidget {
                       subtitle: '${metrics.churnedCount} subscriptions',
                       icon: Icons.trending_down,
                       color: AppTheme.danger,
+                      delta: delta?.churnCountIndicator,
                     ),
                   ),
                 ],
@@ -325,9 +365,10 @@ class DashboardPage extends StatelessWidget {
               KpiCard(
                 title: 'Renewal Success Rate',
                 value: '${metrics.renewalSuccessRate.toStringAsFixed(1)}%',
-                subtitle: 'Last 30 days',
+                subtitle: periodSubtitle,
                 icon: Icons.trending_up,
                 color: AppTheme.success,
+                delta: delta?.renewalSuccessIndicator,
               ),
               const SizedBox(height: 16),
               KpiCard(
@@ -336,6 +377,7 @@ class DashboardPage extends StatelessWidget {
                 subtitle: 'Monthly recurring revenue',
                 icon: Icons.attach_money,
                 color: AppTheme.primary,
+                delta: delta?.activeMrrIndicator,
               ),
               const SizedBox(height: 16),
               KpiCard(
@@ -344,6 +386,7 @@ class DashboardPage extends StatelessWidget {
                 subtitle: 'Needs attention',
                 icon: Icons.warning_amber,
                 color: AppTheme.warning,
+                delta: delta?.revenueAtRiskIndicator,
               ),
               const SizedBox(height: 16),
               KpiCard(
@@ -352,6 +395,7 @@ class DashboardPage extends StatelessWidget {
                 subtitle: '${metrics.churnedCount} subscriptions',
                 icon: Icons.trending_down,
                 color: AppTheme.danger,
+                delta: delta?.churnCountIndicator,
               ),
             ],
           );
@@ -362,6 +406,8 @@ class DashboardPage extends StatelessWidget {
 
   Widget _buildSecondarySection(
       BuildContext context, DashboardMetrics metrics) {
+    final delta = metrics.delta;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth > 700;
@@ -381,6 +427,7 @@ class DashboardPage extends StatelessWidget {
                             value: metrics.formattedUsageRevenue,
                             icon: Icons.data_usage,
                             color: AppTheme.secondary,
+                            delta: delta?.usageRevenueIndicator,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -390,6 +437,7 @@ class DashboardPage extends StatelessWidget {
                             value: metrics.formattedTotalRevenue,
                             icon: Icons.account_balance_wallet,
                             color: AppTheme.primary,
+                            delta: delta?.totalRevenueIndicator,
                           ),
                         ),
                       ],
@@ -414,6 +462,7 @@ class DashboardPage extends StatelessWidget {
                 value: metrics.formattedUsageRevenue,
                 icon: Icons.data_usage,
                 color: AppTheme.secondary,
+                delta: delta?.usageRevenueIndicator,
               ),
               const SizedBox(height: 12),
               KpiCardCompact(
@@ -421,6 +470,7 @@ class DashboardPage extends StatelessWidget {
                 value: metrics.formattedTotalRevenue,
                 icon: Icons.account_balance_wallet,
                 color: AppTheme.primary,
+                delta: delta?.totalRevenueIndicator,
               ),
               const SizedBox(height: 16),
               RevenueMixChart(revenueMix: metrics.revenueMix),

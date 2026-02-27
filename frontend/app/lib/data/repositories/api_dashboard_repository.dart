@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/config/app_config.dart';
 import '../../domain/entities/dashboard_metrics.dart';
+import '../../domain/entities/time_range.dart';
 import '../../domain/repositories/app_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/dashboard_repository.dart';
@@ -21,16 +22,16 @@ class ApiDashboardRepository implements DashboardRepository {
         _appRepository = appRepository;
 
   @override
-  Future<DashboardMetrics?> fetchMetrics() async {
-    return _fetchMetricsFromApi();
+  Future<DashboardMetrics?> fetchMetrics({TimeRange? timeRange}) async {
+    return _fetchMetricsFromApi(timeRange: timeRange);
   }
 
   @override
-  Future<DashboardMetrics?> refreshMetrics() async {
-    return _fetchMetricsFromApi();
+  Future<DashboardMetrics?> refreshMetrics({TimeRange? timeRange}) async {
+    return _fetchMetricsFromApi(timeRange: timeRange);
   }
 
-  Future<DashboardMetrics?> _fetchMetricsFromApi() async {
+  Future<DashboardMetrics?> _fetchMetricsFromApi({TimeRange? timeRange}) async {
     // Get the selected app
     final selectedApp = await _appRepository.getSelectedApp();
     if (selectedApp == null) {
@@ -47,8 +48,17 @@ class ApiDashboardRepository implements DashboardRepository {
       // Extract numeric ID from full GID (e.g., "gid://partners/App/4599915" -> "4599915")
       final appId = _extractNumericId(selectedApp.id);
 
+      // Build query parameters for time range
+      final queryParams = <String, String>{};
+      if (timeRange != null) {
+        queryParams['start'] = timeRange.startFormatted;
+        queryParams['end'] = timeRange.endFormatted;
+      }
+
+      // Use the new period metrics endpoint
       final response = await _dio.get(
-        '/api/v1/apps/$appId/metrics/latest',
+        '/api/v1/apps/$appId/metrics',
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
         ),
@@ -56,7 +66,7 @@ class ApiDashboardRepository implements DashboardRepository {
 
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
-        return _parseMetrics(data);
+        return _parseMetrics(data, timeRange: timeRange);
       }
 
       if (response.statusCode == 204 || response.data == null) {
@@ -87,31 +97,73 @@ class ApiDashboardRepository implements DashboardRepository {
     return parts.isNotEmpty ? parts.last : gid;
   }
 
-  DashboardMetrics _parseMetrics(Map<String, dynamic> data) {
+  DashboardMetrics _parseMetrics(
+    Map<String, dynamic> data, {
+    TimeRange? timeRange,
+  }) {
+    // Parse current period data
+    final current = data['current'] as Map<String, dynamic>?;
+    if (current == null) {
+      throw const NoMetricsException();
+    }
+
     // Backend returns cents for monetary values
-    final activeMrrCents = (data['active_mrr_cents'] as num?)?.toInt() ?? 0;
+    final activeMrrCents = (current['active_mrr_cents'] as num?)?.toInt() ?? 0;
     final revenueAtRiskCents =
-        (data['revenue_at_risk_cents'] as num?)?.toInt() ?? 0;
+        (current['revenue_at_risk_cents'] as num?)?.toInt() ?? 0;
     final usageRevenueCents =
-        (data['usage_revenue_cents'] as num?)?.toInt() ?? 0;
+        (current['usage_revenue_cents'] as num?)?.toInt() ?? 0;
     final totalRevenueCents =
-        (data['total_revenue_cents'] as num?)?.toInt() ?? 0;
+        (current['total_revenue_cents'] as num?)?.toInt() ?? 0;
 
     // Backend returns renewal success rate as decimal (0.0 - 1.0)
-    final renewalRate = (data['renewal_success_rate'] as num?)?.toDouble() ?? 0;
+    final renewalRate =
+        (current['renewal_success_rate'] as num?)?.toDouble() ?? 0;
     final renewalSuccessRatePercent = renewalRate * 100;
 
     // Risk distribution counts
-    final safeCount = (data['safe_count'] as num?)?.toInt() ?? 0;
+    final safeCount = (current['safe_count'] as num?)?.toInt() ?? 0;
     final oneCycleMissedCount =
-        (data['one_cycle_missed_count'] as num?)?.toInt() ?? 0;
+        (current['one_cycle_missed_count'] as num?)?.toInt() ?? 0;
     final twoCyclesMissedCount =
-        (data['two_cycles_missed_count'] as num?)?.toInt() ?? 0;
-    final churnedCount = (data['churned_count'] as num?)?.toInt() ?? 0;
+        (current['two_cycles_missed_count'] as num?)?.toInt() ?? 0;
+    final churnedCount = (current['churned_count'] as num?)?.toInt() ?? 0;
+
+    // Parse delta if available
+    MetricsDelta? delta;
+    final deltaData = data['delta'] as Map<String, dynamic>?;
+    if (deltaData != null) {
+      delta = MetricsDelta(
+        activeMrrPercent: (deltaData['active_mrr_percent'] as num?)?.toDouble(),
+        revenueAtRiskPercent:
+            (deltaData['revenue_at_risk_percent'] as num?)?.toDouble(),
+        usageRevenuePercent:
+            (deltaData['usage_revenue_percent'] as num?)?.toDouble(),
+        totalRevenuePercent:
+            (deltaData['total_revenue_percent'] as num?)?.toDouble(),
+        renewalSuccessPercent:
+            (deltaData['renewal_success_rate_percent'] as num?)?.toDouble(),
+        churnCountPercent:
+            (deltaData['churn_count_percent'] as num?)?.toDouble(),
+      );
+    }
+
+    // Parse time range from response or use provided
+    TimeRange? parsedTimeRange = timeRange;
+    final periodData = data['period'] as Map<String, dynamic>?;
+    if (periodData != null && parsedTimeRange == null) {
+      final startStr = periodData['start'] as String?;
+      final endStr = periodData['end'] as String?;
+      if (startStr != null && endStr != null) {
+        final start = DateTime.parse(startStr);
+        final end = DateTime.parse(endStr);
+        parsedTimeRange = TimeRange.custom(start, end);
+      }
+    }
 
     // Calculate churned revenue (estimate based on at-risk MRR distribution)
     // In real implementation, this would come from backend
-    final churnedRevenue = 0;
+    const churnedRevenue = 0;
 
     return DashboardMetrics(
       renewalSuccessRate: renewalSuccessRatePercent,
@@ -132,6 +184,8 @@ class ApiDashboardRepository implements DashboardRepository {
         critical: twoCyclesMissedCount,
         churned: churnedCount,
       ),
+      delta: delta,
+      timeRange: parsedTimeRange,
     );
   }
 }

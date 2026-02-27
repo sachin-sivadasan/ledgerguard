@@ -13,9 +13,11 @@ import (
 )
 
 type mockOAuthService struct {
-	authURL string
-	token   string
-	err     error
+	authURL        string
+	token          string
+	organizationID string
+	err            error
+	orgErr         error
 }
 
 func (m *mockOAuthService) GenerateAuthURL(state string) string {
@@ -24,6 +26,16 @@ func (m *mockOAuthService) GenerateAuthURL(state string) string {
 
 func (m *mockOAuthService) ExchangeCodeForToken(ctx context.Context, code string) (string, error) {
 	return m.token, m.err
+}
+
+func (m *mockOAuthService) FetchOrganizationID(ctx context.Context, accessToken string) (string, error) {
+	if m.orgErr != nil {
+		return "", m.orgErr
+	}
+	if m.organizationID == "" {
+		return "12345", nil // Default organization ID for tests
+	}
+	return m.organizationID, nil
 }
 
 type mockEncryptor struct {

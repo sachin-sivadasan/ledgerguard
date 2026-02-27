@@ -20,12 +20,13 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	DBName   string `yaml:"name"`
-	SSLMode  string `yaml:"sslmode"`
+	Host           string `yaml:"host"`
+	Port           string `yaml:"port"`
+	User           string `yaml:"user"`
+	Password       string `yaml:"password"`
+	DBName         string `yaml:"name"`
+	SSLMode        string `yaml:"sslmode"`
+	MigrationsPath string `yaml:"migrations_path"`
 }
 
 type FirebaseConfig struct {
@@ -52,11 +53,12 @@ func Load(configPath string) (*Config, error) {
 			Port: "8080",
 		},
 		Database: DatabaseConfig{
-			Host:    "localhost",
-			Port:    "5432",
-			User:    "postgres",
-			DBName:  "ledgerguard",
-			SSLMode: "disable",
+			Host:           "localhost",
+			Port:           "5432",
+			User:           "postgres",
+			DBName:         "ledgerguard",
+			SSLMode:        "disable",
+			MigrationsPath: "migrations",
 		},
 	}
 
@@ -110,6 +112,9 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("DB_SSLMODE"); v != "" {
 		cfg.Database.SSLMode = v
+	}
+	if v := os.Getenv("DB_MIGRATIONS_PATH"); v != "" {
+		cfg.Database.MigrationsPath = v
 	}
 
 	// Firebase

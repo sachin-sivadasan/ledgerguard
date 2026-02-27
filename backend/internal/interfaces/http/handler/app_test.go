@@ -155,9 +155,26 @@ func TestAppHandler_GetAvailableApps_Success(t *testing.T) {
 	}
 }
 
+func TestAppHandler_GetAvailableApps_NoPartnerClient(t *testing.T) {
+	partnerRepo := &mockPartnerRepoForApp{}
+	handler := NewAppHandler(nil, partnerRepo, nil, nil) // nil partnerClient
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/available", nil)
+	user := &entity.User{ID: uuid.New(), Role: valueobject.RoleOwner}
+	req = req.WithContext(contextWithUser(req.Context(), user))
+
+	rec := httptest.NewRecorder()
+	handler.GetAvailableApps(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("expected status %d, got %d", http.StatusServiceUnavailable, rec.Code)
+	}
+}
+
 func TestAppHandler_GetAvailableApps_NoPartnerAccount(t *testing.T) {
 	partnerRepo := &mockPartnerRepoForApp{findErr: errors.New("not found")}
-	handler := NewAppHandler(nil, partnerRepo, nil, nil)
+	partnerClient := &mockPartnerClient{} // Need to provide a mock client to pass nil check
+	handler := NewAppHandler(partnerClient, partnerRepo, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/available", nil)
 	user := &entity.User{ID: uuid.New(), Role: valueobject.RoleOwner}

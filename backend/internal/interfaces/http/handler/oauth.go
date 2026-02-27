@@ -17,6 +17,7 @@ import (
 type OAuthService interface {
 	GenerateAuthURL(state string) string
 	ExchangeCodeForToken(ctx context.Context, code string) (string, error)
+	FetchOrganizationID(ctx context.Context, accessToken string) (string, error)
 }
 
 type Encryptor interface {
@@ -112,6 +113,13 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch organization ID using the token
+	partnerID, err := h.oauthService.FetchOrganizationID(r.Context(), token)
+	if err != nil {
+		writeJSONError(w, http.StatusBadGateway, "failed to fetch organization info")
+		return
+	}
+
 	// Encrypt token
 	encryptedToken, err := h.encryptor.Encrypt([]byte(token))
 	if err != nil {
@@ -120,8 +128,6 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create partner account
-	// TODO: Extract partner ID from Shopify API response
-	partnerID := "pending" // Will be updated after first API call
 	account := entity.NewPartnerAccount(user.ID, partnerID, valueobject.IntegrationTypeOAuth, encryptedToken)
 
 	if err := h.partnerRepo.Create(r.Context(), account); err != nil {
@@ -138,7 +144,10 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 
 func generateState() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		// Cryptographic random failure is critical - panic rather than use weak state
+		panic("crypto/rand failed: " + err.Error())
+	}
 	return hex.EncodeToString(b)
 }
 

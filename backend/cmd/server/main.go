@@ -62,6 +62,21 @@ func run() error {
 	} else {
 		defer db.Close()
 		log.Println("Connected to PostgreSQL")
+
+		// Run database migrations
+		if cfg.Database.MigrationsPath != "" {
+			migrator, err := persistence.NewMigrator(cfg.Database.DSN(), cfg.Database.MigrationsPath)
+			if err != nil {
+				log.Printf("WARNING: failed to initialize migrator: %v", err)
+			} else {
+				if err := migrator.Up(); err != nil {
+					log.Printf("WARNING: failed to run migrations: %v", err)
+				} else {
+					log.Println("Database migrations applied successfully")
+				}
+				migrator.Close()
+			}
+		}
 	}
 
 	// Initialize Firebase Auth (optional - will fail gracefully if not configured)

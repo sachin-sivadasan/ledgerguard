@@ -46,6 +46,12 @@ func (h *AppHandler) GetAvailableApps(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if partner client is configured
+	if h.partnerClient == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "Shopify Partner API not configured")
+		return
+	}
+
 	// Get partner account
 	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
 	if err != nil {

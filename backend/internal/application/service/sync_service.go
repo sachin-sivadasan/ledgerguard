@@ -68,6 +68,11 @@ func NewSyncService(
 
 // SyncApp synchronizes transactions for a single app
 func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult, error) {
+	// Check if fetcher is configured
+	if s.fetcher == nil {
+		return nil, fmt.Errorf("transaction fetcher not configured")
+	}
+
 	// Get app
 	app, err := s.appRepo.FindByID(ctx, appID)
 	if err != nil {

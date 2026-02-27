@@ -645,3 +645,53 @@ Implemented subscription list and detail pages with risk filtering, showing stor
 - `lib/presentation/widgets/subscription_tile.dart`
 - `lib/presentation/widgets/risk_badge.dart`
 - `lib/presentation/router/app_router.dart` (updated)
+
+---
+
+## [2026-02-27] Mobile Responsiveness Improvements
+
+**Commit:** feat(frontend): add mobile responsiveness improvements
+
+**Summary:**
+Added responsive layouts for small screens (phones) across dashboard and subscription pages.
+
+**Implemented:**
+
+1. **Dashboard Page:**
+   - Replaced 5 AppBar action buttons with overflow menu (PopupMenuButton)
+   - Responsive padding: 12px on mobile (<600px), 20px on desktop
+   - Shortened title to "Dashboard"
+
+2. **KPI Cards:**
+   - LayoutBuilder for responsive sizing based on card width
+   - FittedBox wraps value text to prevent overflow
+   - Compact mode (<200px): smaller fonts, padding, icons
+   - Delta badges scale with card size
+
+3. **TimeRangeSelector:**
+   - Added `shortName` property to TimeRangePreset ("Month", "30D", "90D")
+   - Hide calendar icon on screens <400px
+   - Compact padding on mobile
+
+4. **Subscription List Page:**
+   - Responsive list padding
+   - Compact filter bar count on small screens
+
+5. **Subscription Tile:**
+   - Responsive avatar size (40px vs 48px)
+   - Responsive padding and font sizes
+   - Combined plan/price text on mobile
+
+**Responsive Breakpoints:**
+- `< 400px` - Compact (phone portrait)
+- `< 600px` - Mobile
+- `< 800px` - Tablet
+- `≥ 800px` - Desktop
+
+**Files Modified:**
+- `lib/domain/entities/time_range.dart` - Added shortName
+- `lib/presentation/pages/dashboard_page.dart` - Overflow menu, padding
+- `lib/presentation/pages/subscription_list_page.dart` - Responsive padding
+- `lib/presentation/widgets/kpi_card.dart` - FittedBox, compact mode
+- `lib/presentation/widgets/subscription_tile.dart` - Responsive sizing
+- `lib/presentation/widgets/time_range_selector.dart` - Compact mode

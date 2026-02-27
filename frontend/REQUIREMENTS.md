@@ -64,8 +64,8 @@ lib/
 
 ### Dashboard
 - [x] Overview (MRR, Renewal Rate, At Risk, Revenue Mix, Risk Distribution)
-- [ ] Subscription List
-- [ ] Subscription Detail
+- [x] Subscription List
+- [x] Subscription Detail
 
 ### Admin
 - [x] Manual Integration (Admin-only token entry)
@@ -112,6 +112,8 @@ dev_dependencies:
 
 ## Notes
 
-- Web-first, but structure supports mobile later
-- No UI implementation in initial setup
-- Firebase core only (auth screens come later)
+- Web-first with mobile-responsive layouts
+- Responsive breakpoints: 400px (compact), 600px (mobile), 800px (tablet)
+- Firebase Auth integrated
+- AppBar overflow menu on small screens
+- KPI cards scale down for narrow widths

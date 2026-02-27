@@ -609,3 +609,62 @@
 - Updated frontend/IMPLEMENTATION_LOG.md
 - Updated frontend/prompts.md
 - All tests passing (29/29 Flutter)
+
+### [2026-02-27] KPI Dashboard Upgrade: Time Filtering and Delta Comparison
+**Original:**
+> (Plan file provided) KPI Dashboard Upgrade with time filtering and delta comparison. Backend: time range value objects, period metrics, aggregation service, API endpoint. Frontend: time range selector, delta indicators on KPI cards.
+
+**Improved:**
+> Implement Play Store-style analytics upgrade for KPI dashboard:
+> **Backend:**
+> 1. Create TimeRangePreset value object and DateRange helpers
+> 2. Create PeriodMetrics entity with current, previous, and delta
+> 3. Create MetricsAggregationService for period aggregation
+> 4. Add GetMetricsByPeriod handler with start/end query params
+> 5. Delta calculation with good/bad semantics
+> **Frontend:**
+> 6. Create TimeRange entity and TimeRangeSelector widget
+> 7. Add TimeRangeChanged event to DashboardBloc
+> 8. Add MetricsDelta and DeltaIndicator to dashboard_metrics.dart
+> 9. Update KpiCard with delta badges (green/red based on semantics)
+> 10. Wire TimeRangeSelector to dashboard app bar
+> 11. Update tests for new timeRange parameter
+
+**Result:**
+- Backend:
+  - internal/domain/valueobject/time_range.go - TimeRangePreset, DateRange
+  - internal/domain/entity/period_metrics.go - PeriodMetrics, MetricsDelta
+  - internal/application/service/metrics_aggregation_service.go + tests
+  - internal/interfaces/http/handler/metrics.go - GetMetricsByPeriod
+  - internal/interfaces/http/router/router.go - New route
+- Frontend:
+  - lib/domain/entities/time_range.dart - TimeRange, TimeRangePreset
+  - lib/domain/entities/dashboard_metrics.dart - MetricsDelta, DeltaIndicator
+  - lib/presentation/widgets/time_range_selector.dart - Time range dropdown
+  - lib/presentation/widgets/kpi_card.dart - Delta badges
+  - lib/presentation/blocs/dashboard/* - TimeRangeChanged event
+  - lib/presentation/pages/dashboard_page.dart - Wired together
+  - Tests updated for timeRange parameter
+- All backend tests passing (124/124)
+- All frontend dashboard tests passing (32/32)
+
+### [2026-02-27] Live FetchTransactions from Shopify Partner API
+**Original:**
+> is FetchTransactions from live data? → yes, implement it
+
+**Improved:**
+> Implement live FetchTransactions in ShopifyPartnerClient:
+> 1. Add FetchTransactions method with GraphQL pagination
+> 2. Support all transaction types (AppSubscriptionSale, AppUsageSale, AppOneTimeSale, AppCredit, AppSaleAdjustment)
+> 3. Add context-based organization ID passing via WithOrganizationID
+> 4. Update SyncService to pass organization ID via context
+> 5. Wire ShopifyPartnerClient as TransactionFetcher in main.go
+> 6. Add comprehensive tests for FetchTransactions
+> 7. Fix FetchApps tests to match new implementation
+
+**Result:**
+- infrastructure/external/shopify_partner_client.go - FetchTransactions, WithOrganizationID
+- infrastructure/external/shopify_partner_client_test.go - 7 new tests
+- application/service/sync_service.go - Context with organization ID
+- cmd/server/main.go - Wired ShopifyPartnerClient as TransactionFetcher
+- All backend tests passing (124/124)

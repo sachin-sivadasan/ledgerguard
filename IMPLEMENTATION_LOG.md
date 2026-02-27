@@ -640,3 +640,97 @@ internal/interfaces/http/
 pkg/crypto/                     → AES-256-GCM encryption
 migrations/                     → SQL migrations
 ```
+
+---
+
+## [2026-02-27] KPI Dashboard Upgrade: Time Filtering and Delta Comparison
+
+**Commit:** feat: implement KPI dashboard time filtering and delta comparison
+
+**Summary:**
+Implemented Play Store-style analytics with time-based filtering and period-over-period delta comparisons for the executive dashboard.
+
+**Implemented:**
+
+1. **Domain Layer:**
+   - `TimeRangePreset` value object (THIS_MONTH, LAST_MONTH, LAST_30_DAYS, LAST_90_DAYS, CUSTOM)
+   - `DateRange` helper with factory methods for each preset
+   - `PeriodMetrics` entity with current, previous, and delta
+   - `MetricsSummary` with all KPI fields and period dates
+   - `MetricsDelta` with percentage changes and good/bad semantics
+
+2. **Application Layer:**
+   - `MetricsAggregationService` with `GetPeriodMetrics(ctx, appID, start, end)`
+   - Aggregates daily snapshots into period summaries
+   - Point-in-time metrics: End-of-period snapshot (MRR, risk counts)
+   - Cumulative metrics: Sum across period (revenue totals)
+   - Delta calculation with divide-by-zero protection
+
+3. **Interfaces Layer:**
+   - `GetMetricsByPeriod` handler with start/end query params
+   - Route: `GET /api/v1/apps/{appID}/metrics`
+   - Backward compatible with existing `/metrics/latest` endpoint
+
+4. **Delta Semantics:**
+   - Higher is good: Renewal Success Rate, Active MRR, Usage Revenue
+   - Lower is good: Revenue at Risk, Churn Count
+   - Colors: Green for good change, Red for bad change
+
+5. **API Response Structure:**
+   ```json
+   {
+     "period": { "start": "2024-02-01", "end": "2024-02-27" },
+     "current": { ... },
+     "previous": { ... },
+     "delta": {
+       "active_mrr_percent": 5.93,
+       "revenue_at_risk_percent": -8.5,
+       "renewal_success_rate_percent": 2.1
+     }
+   }
+   ```
+
+**Tests:** 5 new tests in MetricsAggregationService (total backend: 117)
+
+---
+
+## [2026-02-27] Live FetchTransactions from Shopify Partner API
+
+**Commit:** feat: implement live FetchTransactions from Shopify Partner API
+
+**Summary:**
+Implemented live transaction fetching from Shopify Partner API with GraphQL pagination, replacing the mock fetcher.
+
+**Implemented:**
+
+1. **Infrastructure Layer - ShopifyPartnerClient:**
+   - `FetchTransactions(ctx, accessToken, appID, from, to)` method
+   - GraphQL query with pagination (100 per page)
+   - Support for all transaction types:
+     - AppSubscriptionSale → RECURRING
+     - AppUsageSale → RECURRING
+     - AppOneTimeSale → ONE_TIME
+     - AppCredit → REFUND
+     - AppSaleAdjustment → RECURRING
+   - Context-based organization ID passing via `WithOrganizationID`
+   - Amount parsing from decimal strings to cents
+
+2. **Application Layer - SyncService:**
+   - Updated to pass organization ID via context
+   - Uses `external.WithOrganizationID(ctx, partnerAccount.PartnerID)`
+
+3. **Main Integration:**
+   - Wired `ShopifyPartnerClient` as `TransactionFetcher` in main.go
+   - Previously was `nil`, now fetches live data
+
+4. **Tests:**
+   - `TestFetchTransactions_Success` - Basic transaction fetching
+   - `TestFetchTransactions_Pagination` - Multi-page fetching
+   - `TestFetchTransactions_NoOrganizationID` - Error handling
+   - `TestFetchTransactions_GraphQLError` - GraphQL error handling
+   - `TestFetchTransactions_HTTPError` - HTTP error handling
+   - `TestFetchTransactions_EmptyTransactions` - Empty result handling
+   - `TestFetchTransactions_AppCredit` - AppCredit classified as REFUND
+   - Fixed `TestFetchApps_Success` to match new implementation
+
+**Tests:** 7 new tests (total backend: 124)

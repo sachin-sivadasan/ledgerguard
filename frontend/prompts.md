@@ -522,3 +522,45 @@ Track all prompts executed for the Flutter frontend.
 - All frontend tests passing (325/325)
 
 ---
+
+## Prompt 016 – KPI Dashboard Upgrade: Time Filtering and Delta Comparison
+**Date:** 2026-02-27
+**Status:** Complete
+
+**Prompt:**
+> (Plan file provided) KPI Dashboard Upgrade with time filtering and delta comparison featuring Play Store-style analytics.
+
+**Improved:**
+> Implement time-based filtering and period-over-period delta comparison:
+> 1. Create TimeRange entity with TimeRangePreset enum
+> 2. Add factory methods for each preset (thisMonth, lastMonth, etc.)
+> 3. Create MetricsDelta class with percentage changes
+> 4. Create DeltaIndicator helper for direction and color semantics
+> 5. Add TimeRangeChanged event to DashboardBloc
+> 6. Update DashboardLoaded state with timeRange field
+> 7. Create TimeRangeSelector widget for app bar
+> 8. Update KpiCard with delta badges (green/red coloring)
+> 9. Update repository to pass TimeRange to API
+> 10. Update all tests with new timeRange parameter
+
+**Changes:**
+- Domain layer:
+  - Created `lib/domain/entities/time_range.dart` - TimeRange, TimeRangePreset
+  - Updated `lib/domain/entities/dashboard_metrics.dart` - MetricsDelta, DeltaIndicator
+  - Updated `lib/domain/repositories/dashboard_repository.dart` - Added TimeRange param
+- Data layer:
+  - Updated `lib/data/repositories/api_dashboard_repository.dart` - New API endpoint with query params
+  - Updated `lib/data/repositories/mock_dashboard_repository.dart` - Mock delta data
+- Presentation layer:
+  - Updated `lib/presentation/blocs/dashboard/dashboard_event.dart` - TimeRangeChanged
+  - Updated `lib/presentation/blocs/dashboard/dashboard_state.dart` - timeRange in DashboardLoaded
+  - Updated `lib/presentation/blocs/dashboard/dashboard_bloc.dart` - Handle TimeRangeChanged
+  - Created `lib/presentation/widgets/time_range_selector.dart` - PopupMenuButton widget
+  - Updated `lib/presentation/widgets/kpi_card.dart` - Delta badges with semantics
+  - Updated `lib/presentation/pages/dashboard_page.dart` - Wired TimeRangeSelector
+- Tests:
+  - Updated `test/presentation/blocs/dashboard_bloc_test.dart` - TimeRange in seed/mocks
+  - Updated `test/presentation/pages/dashboard_page_test.dart` - TimeRange in all states
+- All dashboard tests passing (32/32)
+
+---

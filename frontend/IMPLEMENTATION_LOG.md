@@ -483,6 +483,77 @@ Connected dashboard to backend API endpoint. Added Total Revenue KPI, empty stat
 
 ---
 
+## [2026-02-27] KPI Dashboard Upgrade: Time Filtering and Delta Comparison
+
+**Commit:** feat: implement KPI dashboard time filtering and delta comparison
+
+**Summary:**
+Upgraded dashboard with Play Store-style analytics featuring time-based filtering and period-over-period delta comparisons on KPI cards.
+
+**Implemented:**
+
+1. **Domain Layer:**
+   - `TimeRange` entity with `TimeRangePreset` enum (thisMonth, lastMonth, last30Days, last90Days, custom)
+   - Factory methods: `TimeRange.thisMonth()`, `TimeRange.lastMonth()`, etc.
+   - Date formatting helpers for API calls
+   - `MetricsDelta` class with percentage changes for each KPI
+   - `DeltaIndicator` helper for determining direction and color
+
+2. **Data Layer:**
+   - Updated `ApiDashboardRepository` to call `/api/v1/apps/{appId}/metrics` with start/end query params
+   - Parse delta from API response
+   - Updated `MockDashboardRepository` with mock delta data
+
+3. **Presentation Layer - BLoC:**
+   - Added `TimeRangeChanged` event to `DashboardEvent`
+   - Added `timeRange` field to `DashboardLoaded` state
+   - `DashboardBloc` now tracks current time range and passes to repository
+
+4. **Presentation Layer - Widgets:**
+   - Created `TimeRangeSelector` - PopupMenuButton with preset options in app bar
+   - Updated `KpiCard` with delta display:
+     - `_DeltaBadge` for large cards
+     - `_DeltaBadgeSmall` for compact cards
+     - Arrow icon (up/down) with percentage
+     - Green for good changes, red for bad changes
+
+5. **Presentation Layer - Pages:**
+   - Updated `DashboardPage` with `TimeRangeSelector` in app bar
+   - Pass delta indicators to all KPI cards
+   - Period subtitle shows selected range (e.g., "This Month")
+
+6. **Delta Semantics:**
+   | Metric | Higher is Good? | Green When |
+   |--------|-----------------|------------|
+   | Renewal Success Rate | Yes | Positive delta |
+   | Active MRR | Yes | Positive delta |
+   | Revenue at Risk | No | Negative delta |
+   | Churn Count | No | Negative delta |
+   | Usage Revenue | Yes | Positive delta |
+
+**Tests:**
+- Updated `dashboard_bloc_test.dart` - Added TimeRange to DashboardLoaded
+- Updated `dashboard_page_test.dart` - Added TimeRange to all state tests
+- All dashboard tests passing (32/32)
+
+**Files Created/Modified:**
+- `lib/domain/entities/time_range.dart` (created)
+- `lib/domain/entities/dashboard_metrics.dart` (modified)
+- `lib/domain/repositories/dashboard_repository.dart` (modified)
+- `lib/data/repositories/api_dashboard_repository.dart` (modified)
+- `lib/data/repositories/mock_dashboard_repository.dart` (modified)
+- `lib/presentation/blocs/dashboard/dashboard_event.dart` (modified)
+- `lib/presentation/blocs/dashboard/dashboard_state.dart` (modified)
+- `lib/presentation/blocs/dashboard/dashboard_bloc.dart` (modified)
+- `lib/presentation/widgets/time_range_selector.dart` (created)
+- `lib/presentation/widgets/kpi_card.dart` (modified)
+- `lib/presentation/pages/dashboard_page.dart` (modified)
+- Tests updated
+
+**Tests:** All dashboard tests passing
+
+---
+
 ## Test Summary
 
 | Layer | Tests |

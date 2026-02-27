@@ -1613,6 +1613,412 @@ end note
 
 ---
 
+## Use Cases & Scenarios
+
+### Category 1: Access Control & Feature Gating
+
+| # | Scenario | API Call | Customer Action |
+|---|----------|----------|-----------------|
+| 1.1 | **Hard Block Non-Paying Stores** | `GET /v1/subscription/{gid}/status` | If `months_overdue >= 2` → redirect to "Payment Required" page |
+| 1.2 | **Soft Block (Grace Period)** | Check `months_overdue == 1` | Show warning banner, allow limited access for 7 days |
+| 1.3 | **Churned Store Block** | Check `risk_state == CHURNED` | Disable app entirely, show "Subscription Expired" |
+| 1.4 | **Feature Tier Enforcement** | Check `is_paid_current_cycle` | Free tier features only if false |
+| 1.5 | **Usage Limit Enforcement** | `GET /v1/usage/{gid}/status` | If unbilled usage > threshold → pause service |
+| 1.6 | **Trial Expiry Check** | Check status + dates | Convert to paid or disable premium features |
+| 1.7 | **API Rate Limiting by Plan** | Check subscription status | Paid = 1000 req/min, Free = 100 req/min |
+| 1.8 | **SLA Enforcement** | Check `is_paid_current_cycle` | Only provide premium support if paid |
+| 1.9 | **White-label Feature Access** | Check plan + payment status | Enable white-label only for paid Enterprise |
+| 1.10 | **Data Export Limits** | Check payment status | Limit export rows for non-paying stores |
+
+```javascript
+// Example: Middleware for feature gating
+async function featureGateMiddleware(req, res, next) {
+  const shopDomain = req.session.shop;
+  const status = await ledgerguard.getSubscriptionByDomain(shopDomain);
+
+  // Attach to request for downstream use
+  req.subscriptionStatus = status;
+  req.isPaid = status.is_paid_current_cycle;
+  req.monthsOverdue = status.months_overdue;
+
+  // Hard block
+  if (status.risk_state === 'CHURNED') {
+    return res.redirect('/subscription-expired');
+  }
+
+  // Soft block with grace period
+  if (status.months_overdue >= 2) {
+    return res.redirect('/payment-required');
+  }
+
+  // Warning banner
+  if (status.months_overdue === 1) {
+    req.showPaymentWarning = true;
+  }
+
+  next();
+}
+```
+
+---
+
+### Category 2: Usage Billing & Verification
+
+| # | Scenario | API Call | Customer Action |
+|---|----------|----------|-----------------|
+| 2.1 | **Verify Before Service Delivery** | `GET /v1/usage/{gid}/status` | Only deliver (email, SMS, export) if `billed == true` |
+| 2.2 | **Usage Reconciliation** | `POST /v1/usage/status/batch` | Match local records with Shopify billing |
+| 2.3 | **Billing Failure Alert** | Check `billed == false` after 24h | Alert support team to investigate |
+| 2.4 | **Metered Billing Audit** | Batch all usage records | Ensure all usage charges are captured |
+| 2.5 | **Credit System Sync** | Check usage billing | Deduct credits only after Shopify bills |
+| 2.6 | **Overage Billing Check** | Track usage vs plan limits | Verify overage charges are billed |
+| 2.7 | **Usage Cap Warning** | Monitor usage amounts | Alert merchant approaching limit |
+| 2.8 | **Refund Detection** | Check for negative amounts | Handle refunded usage charges |
+| 2.9 | **Automated Invoice Generation** | Get all billed usage | Generate detailed invoice PDF |
+| 2.10 | **Usage Analytics Dashboard** | Aggregate usage data | Show merchant their usage patterns |
+
+```javascript
+// Example: Verify usage before delivering service
+async function deliverPremiumService(usageGid, servicePayload) {
+  // Wait for Shopify to bill the usage
+  const maxRetries = 5;
+  const retryDelay = 60000; // 1 minute
+
+  for (let i = 0; i < maxRetries; i++) {
+    const usage = await ledgerguard.getUsageStatus(usageGid);
+
+    if (usage.billed) {
+      // Safe to deliver service
+      await deliverService(servicePayload);
+      return { success: true, billedAt: usage.billing_date };
+    }
+
+    // Check if subscription is healthy
+    if (usage.subscription.risk_state !== 'SAFE') {
+      return {
+        success: false,
+        reason: 'subscription_unhealthy',
+        riskState: usage.subscription.risk_state
+      };
+    }
+
+    await sleep(retryDelay);
+  }
+
+  return { success: false, reason: 'billing_timeout' };
+}
+```
+
+---
+
+### Category 3: Churn Prevention & Customer Success
+
+| # | Scenario | API Call | Customer Action |
+|---|----------|----------|-----------------|
+| 3.1 | **Early Warning Detection** | Check `months_overdue == 1` | Trigger proactive outreach |
+| 3.2 | **Automated Payment Reminder** | Batch check all subscriptions | Send email: "Update payment method" |
+| 3.3 | **Win-back Campaign** | Filter `risk_state == CHURNED` | Offer discount to return |
+| 3.4 | **Health Score Calculation** | Aggregate payment history | Score: 100 (healthy) to 0 (churned) |
+| 3.5 | **Churn Prediction Input** | Feed to ML model | Predict who will churn next month |
+| 3.6 | **Customer Success Prioritization** | Sort by `months_overdue` | Focus on highest-risk accounts first |
+| 3.7 | **Dunning Sequence Trigger** | Status change detection | Day 1, 3, 7, 14 email sequence |
+| 3.8 | **Personal Outreach Trigger** | High-value + at-risk | Founder sends personal email |
+| 3.9 | **Exit Survey Trigger** | `risk_state == CHURNED` | Send "Why did you leave?" survey |
+| 3.10 | **Re-engagement Campaign** | Churned > 30 days | "We miss you" email with offer |
+
+```javascript
+// Example: Daily churn prevention job
+async function dailyChurnPrevention() {
+  const allSubscriptions = await getAllMySubscriptions();
+  const statuses = await ledgerguard.batchSubscriptionStatus(allSubscriptions);
+
+  const segments = {
+    healthy: [],
+    earlyWarning: [],  // 1 month overdue
+    critical: [],      // 2 months overdue
+    churned: []
+  };
+
+  for (const sub of statuses.results) {
+    if (sub.risk_state === 'SAFE') {
+      segments.healthy.push(sub);
+    } else if (sub.months_overdue === 1) {
+      segments.earlyWarning.push(sub);
+    } else if (sub.months_overdue >= 2 && sub.risk_state !== 'CHURNED') {
+      segments.critical.push(sub);
+    } else if (sub.risk_state === 'CHURNED') {
+      segments.churned.push(sub);
+    }
+  }
+
+  // Trigger appropriate actions
+  await sendPaymentReminders(segments.earlyWarning);
+  await triggerDunningSequence(segments.critical);
+  await sendWinbackOffers(segments.churned);
+
+  // Alert team
+  await slack.send({
+    channel: '#revenue',
+    text: `📊 Daily Health: ${segments.healthy.length} healthy, ` +
+          `⚠️ ${segments.earlyWarning.length} early warning, ` +
+          `🚨 ${segments.critical.length} critical, ` +
+          `💀 ${segments.churned.length} churned`
+  });
+}
+```
+
+---
+
+### Category 4: Billing Dashboard & Reporting
+
+| # | Scenario | API Call | Customer Action |
+|---|----------|----------|-----------------|
+| 4.1 | **Merchant-Facing Billing Page** | `GET /v1/subscription/status?domain=...` | Show in app settings |
+| 4.2 | **Admin Revenue Dashboard** | `POST /v1/subscriptions/status/batch` | Display all subscriptions |
+| 4.3 | **Revenue Reconciliation** | Compare with Shopify Partner | Identify discrepancies |
+| 4.4 | **Export for Accounting** | Batch + transform | Generate CSV for QuickBooks |
+| 4.5 | **MRR Calculation** | Sum healthy subscriptions | Track MRR trends |
+| 4.6 | **Revenue at Risk Report** | Filter by risk state | Show $ amount at risk |
+| 4.7 | **Cohort Retention Report** | Group by signup month | Track retention curves |
+| 4.8 | **Plan Distribution Report** | Group by plan name | See which plans are popular |
+| 4.9 | **Geographic Revenue Report** | Group by store region | Revenue by country |
+| 4.10 | **Payment Method Analysis** | Track failure patterns | Identify card expiry issues |
+
+```javascript
+// Example: Generate revenue report
+async function generateRevenueReport(month) {
+  const subscriptions = await ledgerguard.batchSubscriptionStatus(allGids);
+
+  const report = {
+    period: month,
+    generated_at: new Date().toISOString(),
+    summary: {
+      total_subscriptions: subscriptions.results.length,
+      active_subscriptions: 0,
+      mrr_cents: 0,
+      mrr_at_risk_cents: 0,
+      churned_mrr_cents: 0
+    },
+    by_risk_state: {
+      SAFE: { count: 0, mrr_cents: 0 },
+      ONE_CYCLE_MISSED: { count: 0, mrr_cents: 0 },
+      TWO_CYCLES_MISSED: { count: 0, mrr_cents: 0 },
+      CHURNED: { count: 0, mrr_cents: 0 }
+    },
+    by_plan: {},
+    subscriptions: []
+  };
+
+  for (const sub of subscriptions.results) {
+    // Aggregate by risk state
+    report.by_risk_state[sub.risk_state].count++;
+    report.by_risk_state[sub.risk_state].mrr_cents += sub.plan_price_cents;
+
+    // Aggregate by plan
+    if (!report.by_plan[sub.plan_name]) {
+      report.by_plan[sub.plan_name] = { count: 0, mrr_cents: 0 };
+    }
+    report.by_plan[sub.plan_name].count++;
+    report.by_plan[sub.plan_name].mrr_cents += sub.plan_price_cents;
+
+    // Summary calculations
+    if (sub.risk_state === 'SAFE') {
+      report.summary.mrr_cents += sub.plan_price_cents;
+      report.summary.active_subscriptions++;
+    } else if (sub.risk_state === 'CHURNED') {
+      report.summary.churned_mrr_cents += sub.plan_price_cents;
+    } else {
+      report.summary.mrr_at_risk_cents += sub.plan_price_cents;
+    }
+
+    report.subscriptions.push(sub);
+  }
+
+  return report;
+}
+```
+
+---
+
+### Category 5: Multi-Store & Agency Management
+
+| # | Scenario | API Call | Customer Action |
+|---|----------|----------|-----------------|
+| 5.1 | **Agency Dashboard** | `POST /v1/subscriptions/status/batch` | Monitor all client stores |
+| 5.2 | **Client Health Report** | Group by client | Generate per-client summary |
+| 5.3 | **Prioritize Support** | Sort by `months_overdue` | Help most at-risk first |
+| 5.4 | **White-label Billing Portal** | Per-client queries | Let clients see their status |
+| 5.5 | **Bulk Store Management** | Batch operations | Manage 100+ stores efficiently |
+| 5.6 | **Client Onboarding Check** | Verify subscription active | Confirm setup complete |
+| 5.7 | **Client Offboarding** | Detect churned | Trigger offboarding workflow |
+| 5.8 | **Revenue Share Calculation** | Track by referral source | Calculate partner commissions |
+| 5.9 | **Multi-brand Portfolio** | Group by brand | Separate reporting per brand |
+| 5.10 | **Franchise Management** | Hierarchical view | Parent company sees all franchisees |
+
+---
+
+### Category 6: Integrations & Automation
+
+| # | Scenario | API Call | Customer Action |
+|---|----------|----------|-----------------|
+| 6.1 | **CRM Sync (HubSpot/Salesforce)** | Batch status | Update deal stage based on payment |
+| 6.2 | **Support Ticket Context (Zendesk)** | `GET /v1/subscription/status?domain=...` | Show payment status in ticket |
+| 6.3 | **Slack Alerts** | Status change detection | Post to #revenue channel |
+| 6.4 | **Zapier/Make Trigger** | Poll for changes | Trigger any automation |
+| 6.5 | **Intercom User Data** | Sync payment status | Segment by payment health |
+| 6.6 | **Email Platform Sync (Klaviyo)** | Sync risk state | Target campaigns by status |
+| 6.7 | **Analytics Platform (Mixpanel)** | Track payment events | Analyze conversion funnels |
+| 6.8 | **Accounting Sync (Xero/QB)** | Export billing data | Automated bookkeeping |
+| 6.9 | **Data Warehouse (BigQuery)** | Batch export | Historical analysis |
+| 6.10 | **Custom Webhook Trigger** | Status changes | POST to customer's endpoint |
+
+```javascript
+// Example: Sync to HubSpot CRM
+async function syncToHubSpot() {
+  const subscriptions = await ledgerguard.batchSubscriptionStatus(allGids);
+
+  for (const sub of subscriptions.results) {
+    const hubspotDeal = await hubspot.findDealByDomain(sub.myshopify_domain);
+
+    if (hubspotDeal) {
+      await hubspot.updateDeal(hubspotDeal.id, {
+        properties: {
+          payment_status: sub.risk_state,
+          months_overdue: sub.months_overdue,
+          last_payment_date: sub.last_successful_charge_date,
+          mrr: sub.plan_price_cents / 100
+        }
+      });
+
+      // Update deal stage based on payment
+      if (sub.risk_state === 'CHURNED') {
+        await hubspot.updateDealStage(hubspotDeal.id, 'closedlost');
+      } else if (sub.risk_state === 'SAFE') {
+        await hubspot.updateDealStage(hubspotDeal.id, 'customer');
+      }
+    }
+  }
+}
+```
+
+---
+
+### Category 7: Compliance & Audit
+
+| # | Scenario | API Call | Customer Action |
+|---|----------|----------|-----------------|
+| 7.1 | **Billing Audit Trail** | Query audit log | Track all billing events |
+| 7.2 | **Revenue Recognition** | Track billing dates | GAAP/IFRS compliance |
+| 7.3 | **Tax Reporting** | Export by region | Generate tax reports |
+| 7.4 | **SOC2 Evidence** | Audit log export | Provide to auditors |
+| 7.5 | **GDPR Data Export** | Per-store history | Include in data export |
+| 7.6 | **Dispute Evidence** | Payment history | Provide for chargebacks |
+| 7.7 | **Contract Compliance** | Track SLA delivery | Prove service delivery |
+| 7.8 | **Partner Agreement Audit** | Revenue share tracking | Verify commission accuracy |
+| 7.9 | **Internal Fraud Detection** | Unusual patterns | Alert on suspicious activity |
+| 7.10 | **Historical Reconciliation** | Point-in-time queries | Audit past periods |
+
+---
+
+### Category 8: Analytics & Insights
+
+| # | Scenario | API Call | Customer Action |
+|---|----------|----------|-----------------|
+| 8.1 | **Churn Rate Calculation** | Track state changes | Monthly churn % |
+| 8.2 | **LTV Calculation** | Payment history | Average lifetime value |
+| 8.3 | **Cohort Analysis** | Group by signup date | Retention by cohort |
+| 8.4 | **Plan Conversion Rate** | Track upgrades | Free → Paid conversion |
+| 8.5 | **Seasonal Patterns** | Analyze by month | Holiday impact on payments |
+| 8.6 | **Payment Velocity** | Time to first payment | Optimize onboarding |
+| 8.7 | **Upgrade/Downgrade Tracking** | Plan changes | Revenue expansion analysis |
+| 8.8 | **Geographic Analysis** | Group by country | Payment issues by region |
+| 8.9 | **Industry Benchmarking** | Compare metrics | How do I compare? |
+| 8.10 | **Predictive Analytics** | ML model input | Forecast next month's MRR |
+
+---
+
+### Category 9: Shopify-Specific Scenarios
+
+| # | Scenario | API Call | Customer Action |
+|---|----------|----------|-----------------|
+| 9.1 | **App Store Review Prep** | Verify billing working | Ensure no billing issues before review |
+| 9.2 | **Development Store Detection** | Check subscription exists | Exclude dev stores from metrics |
+| 9.3 | **Shopify Plus Detection** | Check plan/pricing | Enable Plus-only features |
+| 9.4 | **Currency Handling** | Track multi-currency | Handle USD, EUR, GBP, etc. |
+| 9.5 | **Annual Billing Detection** | Check billing interval | Handle annual vs monthly differently |
+| 9.6 | **Trial Period Tracking** | Monitor trial status | Convert before expiry |
+| 9.7 | **Shopify Billing Cycle Sync** | Track Shopify's 30-day cycle | Align with Shopify's billing |
+| 9.8 | **App Credit Usage** | Track Shopify app credits | Monitor credit consumption |
+| 9.9 | **Partner Dashboard Comparison** | Compare with Shopify data | Validate accuracy |
+| 9.10 | **Embedded App Billing** | Check from embedded context | Seamless billing status |
+
+---
+
+### Category 10: Developer Experience
+
+| # | Scenario | API Call | Customer Action |
+|---|----------|----------|-----------------|
+| 10.1 | **SDK Integration** | Use official SDK | Quick integration |
+| 10.2 | **Webhook vs Polling** | Subscribe to events | Real-time vs batch |
+| 10.3 | **Caching Strategy** | Cache responses | Reduce API calls |
+| 10.4 | **Error Handling** | Handle rate limits | Graceful degradation |
+| 10.5 | **Testing/Sandbox** | Use test mode | Develop without real data |
+| 10.6 | **Bulk Operations** | Batch endpoints | Efficient large-scale queries |
+| 10.7 | **Idempotency** | Safe retries | Handle network failures |
+| 10.8 | **Versioning** | Use /v1/ prefix | Future-proof integration |
+| 10.9 | **Documentation** | Interactive docs | Easy onboarding |
+| 10.10 | **Support Escalation** | API error context | Quick issue resolution |
+
+---
+
+## Phase 2 (GraphQL) Additional Scenarios
+
+### Category 11: Advanced Queries
+
+| # | Scenario | GraphQL Query | Benefit |
+|---|----------|---------------|---------|
+| 11.1 | **Flexible Field Selection** | `{ subscription { riskState } }` | Minimal payload |
+| 11.2 | **Nested Subscription + Usage** | `{ subscription { usageRecords { ... } } }` | Single request |
+| 11.3 | **Filtered Lists** | `subscriptions(riskState: CHURNED)` | Server-side filtering |
+| 11.4 | **Aggregations** | `subscriptionStats { totalMrr }` | Built-in analytics |
+| 11.5 | **Cursor Pagination** | `subscriptions(after: "cursor")` | Efficient pagination |
+| 11.6 | **Full-text Search** | `subscriptions(search: "acme")` | Find by name |
+| 11.7 | **Date Range Queries** | `subscriptions(chargedAfter: "2024-01")` | Time-based filtering |
+| 11.8 | **Sorting Options** | `subscriptions(orderBy: MRR_DESC)` | Custom ordering |
+| 11.9 | **Multiple Root Queries** | `{ sub1: subscription(...) sub2: subscription(...) }` | Batch in single request |
+| 11.10 | **Introspection** | `{ __schema { ... } }` | Self-documenting API |
+
+---
+
+### Category 12: Real-time Features (Phase 2)
+
+| # | Scenario | GraphQL Subscription | Benefit |
+|---|----------|---------------------|---------|
+| 12.1 | **Live Dashboard** | `subscription { statusChanged }` | Real-time updates |
+| 12.2 | **Instant Alerts** | `subscription { riskStateChanged }` | Immediate notification |
+| 12.3 | **Usage Billing Events** | `subscription { usageBilled }` | Know when billed |
+| 12.4 | **New Subscription** | `subscription { subscriptionCreated }` | Instant onboarding trigger |
+| 12.5 | **Churn Event** | `subscription { subscriptionChurned }` | Immediate win-back |
+| 12.6 | **Payment Success** | `subscription { paymentReceived }` | Confirm payment |
+| 12.7 | **Payment Failed** | `subscription { paymentFailed }` | Trigger dunning |
+| 12.8 | **Plan Changed** | `subscription { planChanged }` | Update features |
+| 12.9 | **Bulk Status Update** | `subscription { bulkStatusChanged }` | Batch notifications |
+| 12.10 | **System Health** | `subscription { syncCompleted }` | Know when data fresh |
+
+---
+
+## Use Case Priority Matrix
+
+| Priority | Phase | Use Cases | Business Impact |
+|----------|-------|-----------|-----------------|
+| **P0 - Critical** | 1 | 1.1, 1.3, 2.1, 3.1, 4.1 | Core value proposition |
+| **P1 - High** | 1 | 1.2, 2.2, 3.2, 4.2, 5.1, 6.1-6.3 | Revenue protection |
+| **P2 - Medium** | 1 | 3.3-3.5, 4.3-4.6, 6.4-6.7 | Growth & analytics |
+| **P3 - Nice to have** | 1 | 7.x, 8.x, 9.x, 10.x | Compliance & DX |
+| **P4 - Future** | 2 | 11.x, 12.x | Advanced features |
+
+---
+
 ## Implementation Checklist
 
 ### Phase 1: REST Revenue API

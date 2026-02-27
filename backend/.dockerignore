@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Config (use env vars in container)
+config.yaml
+config.local.yaml
+firebase-credentials.json
+
+# Binaries
+bin/
+dist/
+*.exe
+*.test
+
+# Docs
+*.md
+docs/
+
+# Test files
+*_test.go
+coverage.*

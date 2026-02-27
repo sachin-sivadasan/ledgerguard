@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:ledgerguard/domain/entities/dashboard_metrics.dart';
+import 'package:ledgerguard/domain/entities/time_range.dart';
 import 'package:ledgerguard/domain/repositories/dashboard_repository.dart';
 import 'package:ledgerguard/presentation/blocs/dashboard/dashboard.dart';
 
@@ -47,7 +48,7 @@ void main() {
       blocTest<DashboardBloc, DashboardState>(
         'emits [Loading, Loaded] when metrics are fetched successfully',
         build: () {
-          when(() => mockRepository.fetchMetrics())
+          when(() => mockRepository.fetchMetrics(timeRange: any(named: 'timeRange')))
               .thenAnswer((_) async => testMetrics);
           return DashboardBloc(repository: mockRepository);
         },
@@ -62,7 +63,7 @@ void main() {
       blocTest<DashboardBloc, DashboardState>(
         'emits [Loading, Error] when fetch fails',
         build: () {
-          when(() => mockRepository.fetchMetrics())
+          when(() => mockRepository.fetchMetrics(timeRange: any(named: 'timeRange')))
               .thenThrow(const DashboardException('Network error'));
           return DashboardBloc(repository: mockRepository);
         },
@@ -77,7 +78,7 @@ void main() {
       blocTest<DashboardBloc, DashboardState>(
         'emits [Loading, Empty] when no metrics available',
         build: () {
-          when(() => mockRepository.fetchMetrics())
+          when(() => mockRepository.fetchMetrics(timeRange: any(named: 'timeRange')))
               .thenAnswer((_) async => null);
           return DashboardBloc(repository: mockRepository);
         },
@@ -93,11 +94,11 @@ void main() {
       blocTest<DashboardBloc, DashboardState>(
         'emits [Loaded(refreshing), Loaded] when refresh succeeds',
         build: () {
-          when(() => mockRepository.refreshMetrics())
+          when(() => mockRepository.refreshMetrics(timeRange: any(named: 'timeRange')))
               .thenAnswer((_) async => testMetrics);
           return DashboardBloc(repository: mockRepository);
         },
-        seed: () => DashboardLoaded(metrics: testMetrics),
+        seed: () => DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         act: (bloc) => bloc.add(const RefreshDashboardRequested()),
         expect: () => [
           isA<DashboardLoaded>()
@@ -110,11 +111,11 @@ void main() {
       blocTest<DashboardBloc, DashboardState>(
         'keeps current data when refresh fails',
         build: () {
-          when(() => mockRepository.refreshMetrics())
+          when(() => mockRepository.refreshMetrics(timeRange: any(named: 'timeRange')))
               .thenThrow(const DashboardException('Refresh failed'));
           return DashboardBloc(repository: mockRepository);
         },
-        seed: () => DashboardLoaded(metrics: testMetrics),
+        seed: () => DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         act: (bloc) => bloc.add(const RefreshDashboardRequested()),
         expect: () => [
           isA<DashboardLoaded>()
@@ -128,7 +129,7 @@ void main() {
       blocTest<DashboardBloc, DashboardState>(
         'triggers load when not in loaded state',
         build: () {
-          when(() => mockRepository.fetchMetrics())
+          when(() => mockRepository.fetchMetrics(timeRange: any(named: 'timeRange')))
               .thenAnswer((_) async => testMetrics);
           return DashboardBloc(repository: mockRepository);
         },
@@ -142,11 +143,11 @@ void main() {
       blocTest<DashboardBloc, DashboardState>(
         'emits [Loaded(refreshing), Empty] when refresh returns null',
         build: () {
-          when(() => mockRepository.refreshMetrics())
+          when(() => mockRepository.refreshMetrics(timeRange: any(named: 'timeRange')))
               .thenAnswer((_) async => null);
           return DashboardBloc(repository: mockRepository);
         },
-        seed: () => DashboardLoaded(metrics: testMetrics),
+        seed: () => DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         act: (bloc) => bloc.add(const RefreshDashboardRequested()),
         expect: () => [
           isA<DashboardLoaded>()

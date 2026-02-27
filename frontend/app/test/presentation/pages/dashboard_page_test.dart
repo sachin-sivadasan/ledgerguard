@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:ledgerguard/domain/entities/dashboard_metrics.dart';
+import 'package:ledgerguard/domain/entities/time_range.dart';
 import 'package:ledgerguard/domain/entities/user_profile.dart';
 import 'package:ledgerguard/presentation/blocs/dashboard/dashboard.dart';
 import 'package:ledgerguard/presentation/blocs/insight/insight.dart';
@@ -116,7 +117,7 @@ void main() {
   group('DashboardPage', () {
     testWidgets('renders page title', (tester) async {
       await tester.pumpWidget(buildTestWidget(
-        state: DashboardLoaded(metrics: testMetrics),
+        state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
       ));
 
       expect(find.text('Executive Dashboard'), findsOneWidget);
@@ -198,7 +199,7 @@ void main() {
     group('Primary KPIs', () {
       testWidgets('displays Renewal Success Rate', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         expect(find.text('Renewal Success Rate'), findsOneWidget);
@@ -207,7 +208,7 @@ void main() {
 
       testWidgets('displays Active MRR', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         expect(find.text('Active MRR'), findsOneWidget);
@@ -216,7 +217,7 @@ void main() {
 
       testWidgets('displays Revenue at Risk', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         expect(find.text('Revenue at Risk'), findsOneWidget);
@@ -226,7 +227,7 @@ void main() {
       testWidgets('displays Churned metrics', (tester) async {
         await setLargeScreen(tester);
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         // 'Churned' appears in both primary KPI and risk distribution
@@ -239,7 +240,7 @@ void main() {
     group('Secondary Section', () {
       testWidgets('displays Usage Revenue', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         expect(find.text('Usage Revenue'), findsOneWidget);
@@ -248,7 +249,7 @@ void main() {
 
       testWidgets('displays Total Revenue', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         expect(find.text('Total Revenue'), findsOneWidget);
@@ -257,7 +258,7 @@ void main() {
 
       testWidgets('displays Revenue Mix chart', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         expect(find.text('Revenue Mix'), findsOneWidget);
@@ -268,7 +269,7 @@ void main() {
 
       testWidgets('displays Risk Distribution chart', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         expect(find.text('Risk Distribution'), findsOneWidget);
@@ -280,7 +281,7 @@ void main() {
 
       testWidgets('displays risk counts', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         expect(find.text('842'), findsOneWidget); // Safe
@@ -292,7 +293,7 @@ void main() {
     group('Refresh functionality', () {
       testWidgets('shows refresh button in app bar', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         expect(find.byIcon(Icons.refresh), findsOneWidget);
@@ -301,7 +302,7 @@ void main() {
       testWidgets('dispatches RefreshDashboardRequested on refresh tap',
           (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         await tester.tap(find.byIcon(Icons.refresh));
@@ -312,7 +313,7 @@ void main() {
 
       testWidgets('shows loading indicator when refreshing', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics, isRefreshing: true),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth(), isRefreshing: true),
         ));
 
         // Should show a small progress indicator in the app bar
@@ -321,7 +322,7 @@ void main() {
 
       testWidgets('disables refresh button when refreshing', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics, isRefreshing: true),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth(), isRefreshing: true),
         ));
 
         // Find the refresh icon button - it should be disabled
@@ -333,7 +334,7 @@ void main() {
     group('Section headers', () {
       testWidgets('displays Primary KPIs section header', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         expect(find.text('Primary KPIs'), findsOneWidget);
@@ -341,7 +342,7 @@ void main() {
 
       testWidgets('displays Revenue & Risk section header', (tester) async {
         await tester.pumpWidget(buildTestWidget(
-          state: DashboardLoaded(metrics: testMetrics),
+          state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
         ));
 
         expect(find.text('Revenue & Risk'), findsOneWidget);

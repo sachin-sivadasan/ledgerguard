@@ -223,6 +223,15 @@ func run() error {
 		log.Println("Subscription handler initialized")
 	}
 
+	// Initialize revenue (earnings timeline) handler
+	var revenueHandler *handler.RevenueHandler
+	if db != nil && partnerRepo != nil && appRepo != nil {
+		revenueRepo := persistence.NewPostgresRevenueRepository(db.Pool)
+		revenueSvc := appservice.NewRevenueMetricsService(revenueRepo)
+		revenueHandler = handler.NewRevenueHandler(revenueSvc, partnerRepo, appRepo)
+		log.Println("Revenue handler initialized")
+	}
+
 	// Initialize API key handler
 	var apiKeyHandler *apikeyhandler.APIKeyHandler
 	if db != nil {
@@ -252,6 +261,7 @@ func run() error {
 		IntegrationStatusHandler: integrationStatusHandler,
 		AppHandler:               appHandler,
 		MetricsHandler:           metricsHandler,
+		RevenueHandler:           revenueHandler,
 		SyncHandler:              syncHandler,
 		SubscriptionHandler:      subscriptionHandler,
 		APIKeyHandler:            apiKeyHandler,

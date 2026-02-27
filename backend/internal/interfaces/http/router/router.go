@@ -18,6 +18,7 @@ type Config struct {
 	IntegrationStatusHandler *handler.IntegrationStatusHandler
 	AppHandler               *handler.AppHandler
 	MetricsHandler           *handler.MetricsHandler
+	RevenueHandler           *handler.RevenueHandler
 	SyncHandler              *handler.SyncHandler
 	SubscriptionHandler      *handler.SubscriptionHandler
 	APIKeyHandler            *apikeyhandler.APIKeyHandler
@@ -93,6 +94,11 @@ func New(cfg Config) *chi.Mux {
 				if cfg.SubscriptionHandler != nil {
 					r.Get("/{appID}/subscriptions", cfg.SubscriptionHandler.List)
 					r.Get("/{appID}/subscriptions/{subscriptionID}", cfg.SubscriptionHandler.GetByID)
+				}
+
+				// Earnings timeline routes
+				if cfg.RevenueHandler != nil {
+					r.Get("/{appID}/earnings", cfg.RevenueHandler.GetMonthlyEarnings)
 				}
 			})
 		}

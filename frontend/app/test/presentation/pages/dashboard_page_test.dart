@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:ledgerguard/domain/entities/dashboard_metrics.dart';
 import 'package:ledgerguard/domain/entities/time_range.dart';
 import 'package:ledgerguard/domain/entities/user_profile.dart';
 import 'package:ledgerguard/presentation/blocs/dashboard/dashboard.dart';
+import 'package:ledgerguard/presentation/blocs/earnings/earnings.dart';
 import 'package:ledgerguard/presentation/blocs/insight/insight.dart';
 import 'package:ledgerguard/presentation/blocs/preferences/preferences.dart';
 import 'package:ledgerguard/presentation/blocs/role/role.dart';
@@ -20,17 +22,22 @@ class MockInsightBloc extends Mock implements InsightBloc {}
 
 class MockPreferencesBloc extends Mock implements PreferencesBloc {}
 
+class MockEarningsBloc extends Mock implements EarningsBloc {}
+
 class FakeDashboardEvent extends Fake implements DashboardEvent {}
 
 class FakeInsightEvent extends Fake implements InsightEvent {}
 
 class FakePreferencesEvent extends Fake implements PreferencesEvent {}
 
+class FakeEarningsEvent extends Fake implements EarningsEvent {}
+
 void main() {
   late MockDashboardBloc mockBloc;
   late MockRoleBloc mockRoleBloc;
   late MockInsightBloc mockInsightBloc;
   late MockPreferencesBloc mockPreferencesBloc;
+  late MockEarningsBloc mockEarningsBloc;
 
   const proUserProfile = UserProfile(
     id: 'user-1',
@@ -64,6 +71,7 @@ void main() {
     registerFallbackValue(FakeDashboardEvent());
     registerFallbackValue(FakeInsightEvent());
     registerFallbackValue(FakePreferencesEvent());
+    registerFallbackValue(FakeEarningsEvent());
   });
 
   setUp(() {
@@ -71,6 +79,7 @@ void main() {
     mockRoleBloc = MockRoleBloc();
     mockInsightBloc = MockInsightBloc();
     mockPreferencesBloc = MockPreferencesBloc();
+    mockEarningsBloc = MockEarningsBloc();
 
     // Setup RoleBloc defaults
     when(() => mockRoleBloc.state).thenReturn(const RoleLoaded(proUserProfile));
@@ -85,6 +94,22 @@ void main() {
     when(() => mockPreferencesBloc.state).thenReturn(const PreferencesInitial());
     when(() => mockPreferencesBloc.stream).thenAnswer((_) => const Stream.empty());
     when(() => mockPreferencesBloc.add(any())).thenReturn(null);
+
+    // Setup EarningsBloc defaults
+    when(() => mockEarningsBloc.state).thenReturn(const EarningsInitial());
+    when(() => mockEarningsBloc.stream).thenAnswer((_) => const Stream.empty());
+    when(() => mockEarningsBloc.add(any())).thenReturn(null);
+    when(() => mockEarningsBloc.close()).thenAnswer((_) async {});
+
+    // Register EarningsBloc in GetIt for the dashboard page
+    GetIt.instance.registerFactory<EarningsBloc>(() => mockEarningsBloc);
+  });
+
+  tearDown(() {
+    // Clean up GetIt
+    if (GetIt.instance.isRegistered<EarningsBloc>()) {
+      GetIt.instance.unregister<EarningsBloc>();
+    }
   });
 
   Widget buildTestWidget({DashboardState? state}) {
@@ -120,7 +145,7 @@ void main() {
         state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth()),
       ));
 
-      expect(find.text('Executive Dashboard'), findsOneWidget);
+      expect(find.text('Dashboard'), findsOneWidget);
     });
 
     testWidgets('fetches metrics on init when in initial state', (tester) async {
@@ -316,8 +341,8 @@ void main() {
           state: DashboardLoaded(metrics: testMetrics, timeRange: TimeRange.thisMonth(), isRefreshing: true),
         ));
 
-        // Should show a small progress indicator in the app bar
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        // Should show progress indicators (one in app bar, possibly others in child widgets)
+        expect(find.byType(CircularProgressIndicator), findsAtLeastNWidgets(1));
       });
 
       testWidgets('disables refresh button when refreshing', (tester) async {

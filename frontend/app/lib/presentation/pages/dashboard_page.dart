@@ -8,9 +8,11 @@ import '../../domain/entities/dashboard_metrics.dart';
 import '../../domain/entities/time_range.dart';
 import '../../domain/repositories/app_repository.dart';
 import '../blocs/dashboard/dashboard.dart';
+import '../blocs/earnings/earnings.dart';
 import '../blocs/preferences/preferences.dart';
 import '../widgets/ai_insight_card.dart';
 import '../widgets/dashboard_config_dialog.dart';
+import '../widgets/earnings_timeline_chart.dart';
 import '../widgets/kpi_card.dart';
 import '../widgets/revenue_mix_chart.dart';
 import '../widgets/risk_distribution_chart.dart';
@@ -274,6 +276,13 @@ class DashboardPage extends StatelessWidget {
             _buildSectionHeader(context, 'Primary KPIs'),
             const SizedBox(height: 16),
             _buildPrimaryKpis(context, metrics, timeRange),
+            const SizedBox(height: 32),
+            _buildSectionHeader(context, 'Earnings Timeline'),
+            const SizedBox(height: 16),
+            BlocProvider(
+              create: (_) => GetIt.instance<EarningsBloc>(),
+              child: const EarningsTimelineChart(),
+            ),
             const SizedBox(height: 32),
             _buildSectionHeader(context, 'Revenue & Risk'),
             const SizedBox(height: 16),

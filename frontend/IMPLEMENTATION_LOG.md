@@ -695,3 +695,81 @@ Added responsive layouts for small screens (phones) across dashboard and subscri
 - `lib/presentation/widgets/kpi_card.dart` - FittedBox, compact mode
 - `lib/presentation/widgets/subscription_tile.dart` - Responsive sizing
 - `lib/presentation/widgets/time_range_selector.dart` - Compact mode
+
+---
+
+## [2026-02-28] API Key Management Frontend
+
+**Commit:** feat(frontend): implement API key management for Revenue API
+
+**Summary:**
+Created API Key management screens allowing users to create, view, and revoke API keys for accessing the Revenue API (REST/GraphQL).
+
+**Implemented:**
+
+1. **Domain Layer:**
+   - `ApiKey` entity with id, name, keyPrefix, createdAt, lastUsedAt
+   - `ApiKeyCreationResult` for returning full key (shown only once after creation)
+   - `ApiKeyRepository` interface with getApiKeys, createApiKey, revokeApiKey
+   - Exception classes: `ApiKeyException`, `ApiKeyLimitException`, `ApiKeyNotFoundException`, `ApiKeyUnauthorizedException`
+
+2. **Data Layer:**
+   - `ApiApiKeyRepository` - API implementation calling `/v1/api-keys` endpoints
+   - Uses Dio with Bearer token authentication
+   - Handles error responses with proper exception mapping
+
+3. **Presentation Layer (Bloc):**
+   - **ApiKeyBloc** - Manages API key state
+   - **Events:**
+     - `LoadApiKeysRequested` - Load all API keys
+     - `CreateApiKeyRequested(name)` - Create new key
+     - `RevokeApiKeyRequested(keyId)` - Revoke/delete key
+     - `DismissKeyCreatedRequested` - Dismiss key created dialog
+   - **States:**
+     - `ApiKeyInitial` - Before load
+     - `ApiKeyLoading` - Loading keys
+     - `ApiKeyLoaded(apiKeys, isCreating, isRevoking, revokingKeyId)` - Keys loaded
+     - `ApiKeyCreated(apiKeys, fullKey, keyName)` - Key created with full secret
+     - `ApiKeyEmpty` - No keys exist
+     - `ApiKeyError(message, previousKeys)` - Error with recovery
+
+4. **API Key List Page:**
+   - List of existing API keys with name, prefix, dates
+   - Create button in app bar opens dialog
+   - Create dialog with name validation
+   - Key created dialog shows full key once with copy button and warning
+   - Revoke confirmation dialog with warning about breaking apps
+   - Pull-to-refresh functionality
+   - Empty state with create button
+   - Error state with retry button
+   - Route: `/settings/api-keys`
+
+5. **Widgets:**
+   - `ApiKeyTile` - Card showing key name, masked prefix, created date, last used
+   - Copy prefix button, revoke button with loading indicator
+
+6. **Profile Page Integration:**
+   - Added "API Keys" navigation tile in Settings section
+   - Links to `/settings/api-keys`
+
+**Tests (TDD):**
+- ApiKeyBloc: 14 tests
+  - Initial state
+  - Load success/empty/error
+  - Create from loaded/empty state, error with limit
+  - Revoke success/empty result/error
+  - Dismiss key created state
+
+**Files Created/Modified:**
+- `lib/domain/entities/api_key.dart` (created)
+- `lib/domain/repositories/api_key_repository.dart` (created)
+- `lib/data/repositories/api_api_key_repository.dart` (created)
+- `lib/presentation/blocs/api_key/` - Bloc, events, states, barrel (created)
+- `lib/presentation/pages/api_key_list_page.dart` (created)
+- `lib/presentation/widgets/api_key_tile.dart` (created)
+- `lib/presentation/pages/profile_page.dart` (modified - added API Keys link)
+- `lib/presentation/router/app_router.dart` (modified - added route)
+- `lib/core/di/injection.config.dart` (modified - registered DI)
+- `test/presentation/blocs/api_key_bloc_test.dart` (created)
+
+**Tests:** 14 passing (ApiKeyBloc)

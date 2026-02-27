@@ -3,10 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
+import '../blocs/api_key/api_key.dart';
 import '../blocs/auth/auth.dart';
 import '../blocs/subscription_detail/subscription_detail.dart';
 import '../blocs/subscription_list/subscription_list.dart';
 import '../pages/admin/manual_integration_page.dart';
+import '../pages/api_key_list_page.dart';
 import '../pages/app_selection_page.dart';
 import '../pages/dashboard_page.dart';
 import '../pages/login_page.dart';
@@ -101,6 +103,14 @@ class AppRouter {
         path: '/profile',
         name: 'profile',
         builder: (context, state) => const ProfilePage(),
+      ),
+      GoRoute(
+        path: '/settings/api-keys',
+        name: 'api-keys',
+        builder: (context, state) => BlocProvider(
+          create: (_) => GetIt.instance<ApiKeyBloc>(),
+          child: const ApiKeyListPage(),
+        ),
       ),
       GoRoute(
         path: '/apps/:appId/subscriptions',

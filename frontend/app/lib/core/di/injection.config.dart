@@ -9,6 +9,7 @@
 import 'package:get_it/get_it.dart' as _i1;
 import 'package:injectable/injectable.dart' as _i2;
 
+import '../../data/repositories/api_api_key_repository.dart';
 import '../../data/repositories/api_dashboard_repository.dart';
 import '../../data/repositories/api_dashboard_preferences_repository.dart';
 import '../../data/repositories/api_insight_repository.dart';
@@ -19,6 +20,7 @@ import '../../data/repositories/api_user_profile_repository.dart';
 import '../../data/repositories/firebase_auth_repository.dart';
 import '../../data/repositories/api_app_repository.dart';
 import '../../data/repositories/api_partner_integration_repository.dart';
+import '../../domain/repositories/api_key_repository.dart';
 import '../../domain/repositories/app_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/dashboard_repository.dart';
@@ -29,6 +31,7 @@ import '../../domain/repositories/partner_integration_repository.dart';
 import '../../domain/repositories/risk_repository.dart';
 import '../../domain/repositories/subscription_repository.dart';
 import '../../domain/repositories/user_profile_repository.dart';
+import '../../presentation/blocs/api_key/api_key_bloc.dart';
 import '../../presentation/blocs/app_selection/app_selection_bloc.dart';
 import '../../presentation/blocs/auth/auth_bloc.dart';
 import '../../presentation/blocs/dashboard/dashboard_bloc.dart';
@@ -87,6 +90,9 @@ extension GetItInjectableX on _i1.GetIt {
     registerLazySingleton<SubscriptionRepository>(() => ApiSubscriptionRepository(
           apiClient: get<ApiClient>(),
         ));
+    registerLazySingleton<ApiKeyRepository>(() => ApiApiKeyRepository(
+          authRepository: get<AuthRepository>(),
+        ));
 
     // Blocs
     registerFactory<AuthBloc>(() => AuthBloc(authRepository: get<AuthRepository>()));
@@ -100,6 +106,7 @@ extension GetItInjectableX on _i1.GetIt {
     registerFactory<RiskBloc>(() => RiskBloc(repository: get<RiskRepository>()));
     registerFactory<SubscriptionListBloc>(() => SubscriptionListBloc(repository: get<SubscriptionRepository>()));
     registerFactory<SubscriptionDetailBloc>(() => SubscriptionDetailBloc(repository: get<SubscriptionRepository>()));
+    registerFactory<ApiKeyBloc>(() => ApiKeyBloc(repository: get<ApiKeyRepository>()));
 
     return this;
   }

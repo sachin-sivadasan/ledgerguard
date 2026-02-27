@@ -139,6 +139,13 @@ class ProfilePage extends StatelessWidget {
                 label: 'Notification Settings',
                 onTap: () => context.push('/settings/notifications'),
               ),
+              const Divider(height: 1),
+              _buildNavigationTile(
+                context,
+                icon: Icons.key_outlined,
+                label: 'API Keys',
+                onTap: () => context.push('/settings/api-keys'),
+              ),
             ],
           ),
 

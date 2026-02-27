@@ -205,24 +205,28 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 				edges {
 					cursor
 					node {
+						__typename
 						id
 						createdAt
 						... on AppSubscriptionSale {
 							chargeId
 							app { id name }
-							shop { myshopifyDomain }
+							shop { myshopifyDomain name }
+							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
 						}
 						... on AppUsageSale {
 							chargeId
 							app { id name }
-							shop { myshopifyDomain }
+							shop { myshopifyDomain name }
+							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
 						}
 						... on AppOneTimeSale {
 							chargeId
 							app { id name }
-							shop { myshopifyDomain }
+							shop { myshopifyDomain name }
+							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
 						}
 					}
@@ -318,6 +322,7 @@ type transactionsResponse struct {
 
 // transactionNode represents a transaction from the Partner API
 type transactionNode struct {
+	Typename  string `json:"__typename"`
 	ID        string `json:"id"`
 	CreatedAt string `json:"createdAt"`
 	ChargeID  string `json:"chargeId,omitempty"`
@@ -327,7 +332,12 @@ type transactionNode struct {
 	} `json:"app,omitempty"`
 	Shop *struct {
 		MyshopifyDomain string `json:"myshopifyDomain"`
+		Name            string `json:"name"`
 	} `json:"shop,omitempty"`
+	GrossAmount *struct {
+		Amount       string `json:"amount"`
+		CurrencyCode string `json:"currencyCode"`
+	} `json:"grossAmount,omitempty"`
 	NetAmount *struct {
 		Amount       string `json:"amount"`
 		CurrencyCode string `json:"currencyCode"`
@@ -341,15 +351,17 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 	}
 	// Shop can be nil for ReferralTransaction
 	shopDomain := ""
+	shopName := ""
 	if node.Shop != nil {
 		shopDomain = node.Shop.MyshopifyDomain
+		shopName = node.Shop.Name
 	}
 
 	// Determine charge type based on transaction type (inferred from fields present)
 	chargeType := c.inferChargeType(node)
 
-	// Get amount - either netAmount or amount (for credits)
-	amountCents, currency := c.parseAmount(node)
+	// Get both amounts - gross (subscription price) and net (revenue)
+	grossCents, netCents, currency := c.parseAmounts(node)
 
 	// Parse transaction date
 	transactionDate, err := time.Parse(time.RFC3339, node.CreatedAt)
@@ -362,45 +374,54 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 		appID,
 		node.ID,
 		shopDomain,
+		shopName,
 		chargeType,
-		amountCents,
+		grossCents,
+		netCents,
 		currency,
 		transactionDate,
 	)
 }
 
-// inferChargeType determines the charge type based on transaction characteristics
+// inferChargeType determines the charge type based on GraphQL __typename
 func (c *ShopifyPartnerClient) inferChargeType(node transactionNode) valueobject.ChargeType {
-	// Check if it's a one-time charge (no chargeId typically means usage or subscription)
-	// The actual type would be determined by the GraphQL typename, but since we're
-	// using inline fragments, we infer from context
-
-	// For now, default to RECURRING as the most common case
-	// In practice, you'd want to track the __typename or use separate queries
-	if node.ChargeID != "" {
-		// Has a chargeId - could be subscription, usage, or one-time
-		// We'll default to recurring for subscription-like charges
+	switch node.Typename {
+	case "AppSubscriptionSale":
+		return valueobject.ChargeTypeRecurring
+	case "AppUsageSale":
+		return valueobject.ChargeTypeUsage
+	case "AppOneTimeSale":
+		return valueobject.ChargeTypeOneTime
+	case "AppCredit":
+		return valueobject.ChargeTypeRefund
+	default:
 		return valueobject.ChargeTypeRecurring
 	}
-
-	return valueobject.ChargeTypeRecurring
 }
 
-// parseAmount extracts amount in cents and currency from the transaction
-func (c *ShopifyPartnerClient) parseAmount(node transactionNode) (int64, string) {
-	if node.NetAmount == nil {
-		return 0, "USD"
+// parseAmounts extracts both gross and net amounts in cents and currency from the transaction
+// - grossAmount: Subscription price (what customer pays)
+// - netAmount: Revenue (what you receive after Shopify's cut)
+func (c *ShopifyPartnerClient) parseAmounts(node transactionNode) (grossCents, netCents int64, currency string) {
+	currency = "USD"
+
+	if node.GrossAmount != nil {
+		var dollars float64
+		fmt.Sscanf(node.GrossAmount.Amount, "%f", &dollars)
+		grossCents = int64(dollars * 100)
+		currency = node.GrossAmount.CurrencyCode
 	}
 
-	amountStr := node.NetAmount.Amount
-	currency := node.NetAmount.CurrencyCode
+	if node.NetAmount != nil {
+		var dollars float64
+		fmt.Sscanf(node.NetAmount.Amount, "%f", &dollars)
+		netCents = int64(dollars * 100)
+		if currency == "USD" && node.NetAmount.CurrencyCode != "" {
+			currency = node.NetAmount.CurrencyCode
+		}
+	}
 
-	// Parse amount string to cents (Shopify returns decimal strings like "10.50")
-	var dollars float64
-	fmt.Sscanf(amountStr, "%f", &dollars)
-	cents := int64(dollars * 100)
-
-	return cents, currency
+	return grossCents, netCents, currency
 }
 
 // getOrganizationID retrieves the organization ID from context

@@ -24,9 +24,12 @@ func NewPostgresTransactionRepository(pool *pgxpool.Pool) *PostgresTransactionRe
 
 func (r *PostgresTransactionRepository) Upsert(ctx context.Context, tx *entity.Transaction) error {
 	query := `
-		INSERT INTO transactions (id, app_id, shopify_gid, myshopify_domain, charge_type, amount_cents, currency, transaction_date, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO transactions (id, app_id, shopify_gid, myshopify_domain, shop_name, charge_type, gross_amount_cents, amount_cents, currency, transaction_date, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		ON CONFLICT (shopify_gid) DO UPDATE SET
+			shop_name = EXCLUDED.shop_name,
+			charge_type = EXCLUDED.charge_type,
+			gross_amount_cents = EXCLUDED.gross_amount_cents,
 			amount_cents = EXCLUDED.amount_cents,
 			currency = EXCLUDED.currency
 	`
@@ -36,8 +39,10 @@ func (r *PostgresTransactionRepository) Upsert(ctx context.Context, tx *entity.T
 		tx.AppID,
 		tx.ShopifyGID,
 		tx.MyshopifyDomain,
+		tx.ShopName,
 		tx.ChargeType.String(),
-		tx.AmountCents,
+		tx.GrossAmountCents,
+		tx.NetAmountCents,
 		tx.Currency,
 		tx.TransactionDate,
 		tx.CreatedAt,
@@ -53,9 +58,12 @@ func (r *PostgresTransactionRepository) UpsertBatch(ctx context.Context, txs []*
 
 	batch := &pgx.Batch{}
 	query := `
-		INSERT INTO transactions (id, app_id, shopify_gid, myshopify_domain, charge_type, amount_cents, currency, transaction_date, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO transactions (id, app_id, shopify_gid, myshopify_domain, shop_name, charge_type, gross_amount_cents, amount_cents, currency, transaction_date, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		ON CONFLICT (shopify_gid) DO UPDATE SET
+			shop_name = EXCLUDED.shop_name,
+			charge_type = EXCLUDED.charge_type,
+			gross_amount_cents = EXCLUDED.gross_amount_cents,
 			amount_cents = EXCLUDED.amount_cents,
 			currency = EXCLUDED.currency
 	`
@@ -66,8 +74,10 @@ func (r *PostgresTransactionRepository) UpsertBatch(ctx context.Context, txs []*
 			tx.AppID,
 			tx.ShopifyGID,
 			tx.MyshopifyDomain,
+			tx.ShopName,
 			tx.ChargeType.String(),
-			tx.AmountCents,
+			tx.GrossAmountCents,
+			tx.NetAmountCents,
 			tx.Currency,
 			tx.TransactionDate,
 			tx.CreatedAt,
@@ -88,7 +98,7 @@ func (r *PostgresTransactionRepository) UpsertBatch(ctx context.Context, txs []*
 
 func (r *PostgresTransactionRepository) FindByAppID(ctx context.Context, appID uuid.UUID, from, to time.Time) ([]*entity.Transaction, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, charge_type, amount_cents, currency, transaction_date, created_at
+		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, charge_type, gross_amount_cents, amount_cents, currency, transaction_date, created_at
 		FROM transactions
 		WHERE app_id = $1 AND transaction_date >= $2 AND transaction_date <= $3
 		ORDER BY transaction_date DESC
@@ -104,14 +114,18 @@ func (r *PostgresTransactionRepository) FindByAppID(ctx context.Context, appID u
 	for rows.Next() {
 		var tx entity.Transaction
 		var chargeType string
+		var shopName *string
+		var grossAmountCents *int64
 
 		err := rows.Scan(
 			&tx.ID,
 			&tx.AppID,
 			&tx.ShopifyGID,
 			&tx.MyshopifyDomain,
+			&shopName,
 			&chargeType,
-			&tx.AmountCents,
+			&grossAmountCents,
+			&tx.NetAmountCents,
 			&tx.Currency,
 			&tx.TransactionDate,
 			&tx.CreatedAt,
@@ -121,6 +135,12 @@ func (r *PostgresTransactionRepository) FindByAppID(ctx context.Context, appID u
 		}
 
 		tx.ChargeType = valueobject.ChargeType(chargeType)
+		if shopName != nil {
+			tx.ShopName = *shopName
+		}
+		if grossAmountCents != nil {
+			tx.GrossAmountCents = *grossAmountCents
+		}
 		transactions = append(transactions, &tx)
 	}
 
@@ -129,21 +149,25 @@ func (r *PostgresTransactionRepository) FindByAppID(ctx context.Context, appID u
 
 func (r *PostgresTransactionRepository) FindByShopifyGID(ctx context.Context, shopifyGID string) (*entity.Transaction, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, charge_type, amount_cents, currency, transaction_date, created_at
+		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, charge_type, gross_amount_cents, amount_cents, currency, transaction_date, created_at
 		FROM transactions
 		WHERE shopify_gid = $1
 	`
 
 	var tx entity.Transaction
 	var chargeType string
+	var shopName *string
+	var grossAmountCents *int64
 
 	err := r.pool.QueryRow(ctx, query, shopifyGID).Scan(
 		&tx.ID,
 		&tx.AppID,
 		&tx.ShopifyGID,
 		&tx.MyshopifyDomain,
+		&shopName,
 		&chargeType,
-		&tx.AmountCents,
+		&grossAmountCents,
+		&tx.NetAmountCents,
 		&tx.Currency,
 		&tx.TransactionDate,
 		&tx.CreatedAt,
@@ -157,6 +181,12 @@ func (r *PostgresTransactionRepository) FindByShopifyGID(ctx context.Context, sh
 	}
 
 	tx.ChargeType = valueobject.ChargeType(chargeType)
+	if shopName != nil {
+		tx.ShopName = *shopName
+	}
+	if grossAmountCents != nil {
+		tx.GrossAmountCents = *grossAmountCents
+	}
 	return &tx, nil
 }
 

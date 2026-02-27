@@ -67,10 +67,10 @@ func TestMetricsEngine_CalculateUsageRevenue(t *testing.T) {
 	engine := NewMetricsEngine()
 
 	transactions := []*entity.Transaction{
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeUsage, AmountCents: 500},
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeUsage, AmountCents: 750},
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRecurring, AmountCents: 2000},
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeOneTime, AmountCents: 100},
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeUsage, NetAmountCents: 500},
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeUsage, NetAmountCents: 750},
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2000},
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeOneTime, NetAmountCents: 100},
 	}
 
 	// Only USAGE transactions count
@@ -86,10 +86,10 @@ func TestMetricsEngine_CalculateTotalRevenue(t *testing.T) {
 	engine := NewMetricsEngine()
 
 	transactions := []*entity.Transaction{
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRecurring, AmountCents: 2000},
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeUsage, AmountCents: 500},
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeOneTime, AmountCents: 100},
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRefund, AmountCents: 200},
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2000},
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeUsage, NetAmountCents: 500},
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeOneTime, NetAmountCents: 100},
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRefund, NetAmountCents: 200},
 	}
 
 	// RECURRING + USAGE + ONE_TIME - REFUNDS
@@ -163,10 +163,10 @@ func TestMetricsEngine_ComputeAllMetrics(t *testing.T) {
 	}
 
 	transactions := []*entity.Transaction{
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRecurring, AmountCents: 5000},
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeUsage, AmountCents: 1000},
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeOneTime, AmountCents: 200},
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRefund, AmountCents: 100},
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 5000},
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeUsage, NetAmountCents: 1000},
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeOneTime, NetAmountCents: 200},
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRefund, NetAmountCents: 100},
 	}
 
 	snapshot := engine.ComputeAllMetrics(appID, subscriptions, transactions, now)

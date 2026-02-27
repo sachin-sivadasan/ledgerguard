@@ -24,12 +24,13 @@ func NewPostgresSubscriptionRepository(pool *pgxpool.Pool) *PostgresSubscription
 func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscription *entity.Subscription) error {
 	query := `
 		INSERT INTO subscriptions (
-			id, app_id, shopify_gid, myshopify_domain, plan_name,
+			id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		ON CONFLICT (shopify_gid) DO UPDATE SET
+			shop_name = EXCLUDED.shop_name,
 			plan_name = EXCLUDED.plan_name,
 			base_price_cents = EXCLUDED.base_price_cents,
 			currency = EXCLUDED.currency,
@@ -46,6 +47,7 @@ func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscriptio
 		subscription.AppID,
 		subscription.ShopifyGID,
 		subscription.MyshopifyDomain,
+		subscription.ShopName,
 		subscription.PlanName,
 		subscription.BasePriceCents,
 		subscription.Currency,
@@ -63,7 +65,7 @@ func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscriptio
 
 func (r *PostgresSubscriptionRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.Subscription, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, plan_name,
+		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at
@@ -76,13 +78,13 @@ func (r *PostgresSubscriptionRepository) FindByID(ctx context.Context, id uuid.U
 
 func (r *PostgresSubscriptionRepository) FindByAppID(ctx context.Context, appID uuid.UUID) ([]*entity.Subscription, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, plan_name,
+		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at
 		FROM subscriptions
 		WHERE app_id = $1
-		ORDER BY myshopify_domain
+		ORDER BY COALESCE(shop_name, myshopify_domain)
 	`
 
 	rows, err := r.pool.Query(ctx, query, appID)
@@ -96,7 +98,7 @@ func (r *PostgresSubscriptionRepository) FindByAppID(ctx context.Context, appID 
 
 func (r *PostgresSubscriptionRepository) FindByShopifyGID(ctx context.Context, shopifyGID string) (*entity.Subscription, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, plan_name,
+		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at
@@ -109,7 +111,7 @@ func (r *PostgresSubscriptionRepository) FindByShopifyGID(ctx context.Context, s
 
 func (r *PostgresSubscriptionRepository) FindByAppIDAndDomain(ctx context.Context, appID uuid.UUID, myshopifyDomain string) (*entity.Subscription, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, plan_name,
+		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at
@@ -122,13 +124,13 @@ func (r *PostgresSubscriptionRepository) FindByAppIDAndDomain(ctx context.Contex
 
 func (r *PostgresSubscriptionRepository) FindByRiskState(ctx context.Context, appID uuid.UUID, riskState valueobject.RiskState) ([]*entity.Subscription, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, plan_name,
+		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at
 		FROM subscriptions
 		WHERE app_id = $1 AND risk_state = $2
-		ORDER BY myshopify_domain
+		ORDER BY COALESCE(shop_name, myshopify_domain)
 	`
 
 	rows, err := r.pool.Query(ctx, query, appID, riskState.String())
@@ -150,12 +152,14 @@ func (r *PostgresSubscriptionRepository) scanSubscription(row pgx.Row) (*entity.
 	var sub entity.Subscription
 	var billingInterval string
 	var riskState string
+	var shopName *string
 
 	err := row.Scan(
 		&sub.ID,
 		&sub.AppID,
 		&sub.ShopifyGID,
 		&sub.MyshopifyDomain,
+		&shopName,
 		&sub.PlanName,
 		&sub.BasePriceCents,
 		&sub.Currency,
@@ -175,6 +179,9 @@ func (r *PostgresSubscriptionRepository) scanSubscription(row pgx.Row) (*entity.
 		return nil, err
 	}
 
+	if shopName != nil {
+		sub.ShopName = *shopName
+	}
 	sub.BillingInterval = valueobject.BillingInterval(billingInterval)
 	sub.RiskState = valueobject.RiskState(riskState)
 
@@ -188,12 +195,14 @@ func (r *PostgresSubscriptionRepository) scanSubscriptions(rows pgx.Rows) ([]*en
 		var sub entity.Subscription
 		var billingInterval string
 		var riskState string
+		var shopName *string
 
 		err := rows.Scan(
 			&sub.ID,
 			&sub.AppID,
 			&sub.ShopifyGID,
 			&sub.MyshopifyDomain,
+			&shopName,
 			&sub.PlanName,
 			&sub.BasePriceCents,
 			&sub.Currency,
@@ -209,6 +218,9 @@ func (r *PostgresSubscriptionRepository) scanSubscriptions(rows pgx.Rows) ([]*en
 			return nil, err
 		}
 
+		if shopName != nil {
+			sub.ShopName = *shopName
+		}
 		sub.BillingInterval = valueobject.BillingInterval(billingInterval)
 		sub.RiskState = valueobject.RiskState(riskState)
 		subscriptions = append(subscriptions, &sub)

@@ -86,7 +86,7 @@ func TestLedgerService_RebuildFromTransactions_Success(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			AmountCents:     2999,
+			NetAmountCents:     2999,
 			Currency:        "USD",
 			TransactionDate: now.AddDate(0, -1, 0), // 1 month ago
 		},
@@ -96,7 +96,7 @@ func TestLedgerService_RebuildFromTransactions_Success(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/2",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			AmountCents:     2999,
+			NetAmountCents:     2999,
 			Currency:        "USD",
 			TransactionDate: now, // Today
 		},
@@ -106,7 +106,7 @@ func TestLedgerService_RebuildFromTransactions_Success(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/3",
 			MyshopifyDomain: "store2.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			AmountCents:     4999,
+			NetAmountCents:     4999,
 			Currency:        "USD",
 			TransactionDate: now,
 		},
@@ -156,7 +156,7 @@ func TestLedgerService_RebuildFromTransactions_SeparatesRecurringAndUsage(t *tes
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			AmountCents:     2999,
+			NetAmountCents:     2999,
 			Currency:        "USD",
 			TransactionDate: now,
 		},
@@ -166,7 +166,7 @@ func TestLedgerService_RebuildFromTransactions_SeparatesRecurringAndUsage(t *tes
 			ShopifyGID:      "gid://shopify/Transaction/2",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeUsage,
-			AmountCents:     500,
+			NetAmountCents:     500,
 			Currency:        "USD",
 			TransactionDate: now,
 		},
@@ -176,7 +176,7 @@ func TestLedgerService_RebuildFromTransactions_SeparatesRecurringAndUsage(t *tes
 			ShopifyGID:      "gid://shopify/Transaction/3",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeUsage,
-			AmountCents:     300,
+			NetAmountCents:     300,
 			Currency:        "USD",
 			TransactionDate: now,
 		},
@@ -216,7 +216,7 @@ func TestLedgerService_RebuildFromTransactions_ComputesExpectedRenewalDate(t *te
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			AmountCents:     2999,
+			NetAmountCents:     2999,
 			Currency:        "USD",
 			TransactionDate: lastChargeDate,
 		},
@@ -272,7 +272,7 @@ func TestLedgerService_RebuildFromTransactions_ClassifiesRiskState(t *testing.T)
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			AmountCents:     2999,
+			NetAmountCents:     2999,
 			Currency:        "USD",
 			TransactionDate: oldChargeDate,
 		},
@@ -338,7 +338,7 @@ func TestLedgerService_RebuildFromTransactions_Deterministic(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store-b.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			AmountCents:     2999,
+			NetAmountCents:     2999,
 			TransactionDate: now,
 		},
 		{
@@ -347,7 +347,7 @@ func TestLedgerService_RebuildFromTransactions_Deterministic(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/2",
 			MyshopifyDomain: "store-a.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			AmountCents:     4999,
+			NetAmountCents:     4999,
 			TransactionDate: now,
 		},
 	}
@@ -422,7 +422,7 @@ func TestLedgerService_DetectsBillingInterval_Annual(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			AmountCents:     29900, // $299/year
+			NetAmountCents:     29900, // $299/year
 			TransactionDate: now.AddDate(-1, 0, 0), // 1 year ago
 		},
 		{
@@ -431,7 +431,7 @@ func TestLedgerService_DetectsBillingInterval_Annual(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/2",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			AmountCents:     29900,
+			NetAmountCents:     29900,
 			TransactionDate: now,
 		},
 	}

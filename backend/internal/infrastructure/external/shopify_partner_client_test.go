@@ -204,6 +204,11 @@ func TestFetchTransactions_Success(t *testing.T) {
 								},
 								"shop": map[string]interface{}{
 									"myshopifyDomain": "test-shop.myshopify.com",
+									"name":            "Test Shop",
+								},
+								"grossAmount": map[string]interface{}{
+									"amount":       "35.99",
+									"currencyCode": "USD",
 								},
 								"netAmount": map[string]interface{}{
 									"amount":       "29.99",
@@ -223,6 +228,11 @@ func TestFetchTransactions_Success(t *testing.T) {
 								},
 								"shop": map[string]interface{}{
 									"myshopifyDomain": "another-shop.myshopify.com",
+									"name":            "Another Shop",
+								},
+								"grossAmount": map[string]interface{}{
+									"amount":       "7.00",
+									"currencyCode": "USD",
 								},
 								"netAmount": map[string]interface{}{
 									"amount":       "5.50",
@@ -269,8 +279,14 @@ func TestFetchTransactions_Success(t *testing.T) {
 	if transactions[0].MyshopifyDomain != "test-shop.myshopify.com" {
 		t.Errorf("expected myshopify domain 'test-shop.myshopify.com', got %s", transactions[0].MyshopifyDomain)
 	}
-	if transactions[0].AmountCents != 2999 {
-		t.Errorf("expected amount 2999 cents, got %d", transactions[0].AmountCents)
+	if transactions[0].ShopName != "Test Shop" {
+		t.Errorf("expected shop name 'Test Shop', got %s", transactions[0].ShopName)
+	}
+	if transactions[0].GrossAmountCents != 3599 {
+		t.Errorf("expected gross amount 3599 cents, got %d", transactions[0].GrossAmountCents)
+	}
+	if transactions[0].AmountCents() != 2999 {
+		t.Errorf("expected net amount 2999 cents, got %d", transactions[0].AmountCents())
 	}
 	if transactions[0].Currency != "USD" {
 		t.Errorf("expected currency USD, got %s", transactions[0].Currency)
@@ -280,8 +296,14 @@ func TestFetchTransactions_Success(t *testing.T) {
 	}
 
 	// Verify second transaction
-	if transactions[1].AmountCents != 550 {
-		t.Errorf("expected amount 550 cents, got %d", transactions[1].AmountCents)
+	if transactions[1].ShopName != "Another Shop" {
+		t.Errorf("expected shop name 'Another Shop', got %s", transactions[1].ShopName)
+	}
+	if transactions[1].GrossAmountCents != 700 {
+		t.Errorf("expected gross amount 700 cents, got %d", transactions[1].GrossAmountCents)
+	}
+	if transactions[1].AmountCents() != 550 {
+		t.Errorf("expected net amount 550 cents, got %d", transactions[1].AmountCents())
 	}
 }
 

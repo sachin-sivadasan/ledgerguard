@@ -12,6 +12,7 @@ type Subscription struct {
 	AppID                   uuid.UUID
 	ShopifyGID              string // Shopify subscription GID
 	MyshopifyDomain         string
+	ShopName                string // Human-readable shop name
 	PlanName                string
 	BasePriceCents          int64
 	Currency                string
@@ -28,6 +29,7 @@ func NewSubscription(
 	appID uuid.UUID,
 	shopifyGID string,
 	myshopifyDomain string,
+	shopName string,
 	planName string,
 	basePriceCents int64,
 	currency string,
@@ -39,6 +41,7 @@ func NewSubscription(
 		AppID:           appID,
 		ShopifyGID:      shopifyGID,
 		MyshopifyDomain: myshopifyDomain,
+		ShopName:        shopName,
 		PlanName:        planName,
 		BasePriceCents:  basePriceCents,
 		Currency:        currency,

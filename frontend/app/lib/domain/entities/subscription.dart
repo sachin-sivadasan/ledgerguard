@@ -79,6 +79,7 @@ class Subscription extends Equatable {
   final String id;
   final String shopifyGid;
   final String myshopifyDomain;
+  final String? shopName;
   final String planName;
   final int basePriceCents;
   final BillingInterval billingInterval;
@@ -92,6 +93,7 @@ class Subscription extends Equatable {
     required this.id,
     required this.shopifyGid,
     required this.myshopifyDomain,
+    this.shopName,
     required this.planName,
     required this.basePriceCents,
     required this.billingInterval,
@@ -101,6 +103,9 @@ class Subscription extends Equatable {
     this.expectedNextCharge,
     this.lastChargeDate,
   });
+
+  /// Display name for the subscription (shop name or domain)
+  String get displayName => shopName?.isNotEmpty == true ? shopName! : myshopifyDomain;
 
   /// Monthly recurring revenue in cents
   int get mrrCents {
@@ -125,6 +130,7 @@ class Subscription extends Equatable {
       id: json['id'] as String,
       shopifyGid: json['shopify_gid'] as String? ?? '',
       myshopifyDomain: json['myshopify_domain'] as String? ?? '',
+      shopName: json['shop_name'] as String?,
       planName: json['plan_name'] as String? ?? 'Unknown Plan',
       basePriceCents: json['base_price_cents'] as int? ?? 0,
       billingInterval: BillingInterval.fromString(
@@ -151,6 +157,7 @@ class Subscription extends Equatable {
         id,
         shopifyGid,
         myshopifyDomain,
+        shopName,
         planName,
         basePriceCents,
         billingInterval,

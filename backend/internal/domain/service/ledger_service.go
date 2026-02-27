@@ -183,18 +183,26 @@ func (s *LedgerService) buildSubscriptionFromTransactions(appID uuid.UUID, domai
 	billingInterval := s.detectBillingInterval(recurringTxs)
 
 	// Create subscription
+	// Use GrossAmountCents for subscription price (what customer pays)
+	// If GrossAmountCents is not set, fall back to NetAmountCents
+	basePriceCents := lastRecurring.GrossAmountCents
+	if basePriceCents == 0 {
+		basePriceCents = lastRecurring.NetAmountCents
+	}
+
 	sub := entity.NewSubscription(
 		appID,
 		"gid://shopify/AppSubscription/"+domain, // Generate a synthetic GID
 		domain,
-		"", // Plan name not available from transactions
-		lastRecurring.AmountCents,
+		lastRecurring.ShopName,    // Shop name from transaction
+		"",                        // Plan name not available from transactions
+		basePriceCents,
 		lastRecurring.Currency,
 		billingInterval,
 	)
 
 	// Update from the most recent charge
-	sub.UpdateFromRecurringCharge(lastRecurring.TransactionDate, lastRecurring.AmountCents)
+	sub.UpdateFromRecurringCharge(lastRecurring.TransactionDate, basePriceCents)
 
 	// Classify risk based on current date
 	sub.ClassifyRisk(now)
@@ -228,7 +236,7 @@ func (s *LedgerService) sumUsageRevenue(transactions []*entity.Transaction) int6
 	var total int64
 	for _, tx := range transactions {
 		if tx.ChargeType == valueobject.ChargeTypeUsage {
-			total += tx.AmountCents
+			total += tx.AmountCents()
 		}
 	}
 	return total

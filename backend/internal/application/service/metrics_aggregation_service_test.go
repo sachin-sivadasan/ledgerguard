@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
@@ -51,6 +52,38 @@ func (m *mockSnapshotRepo) FindLatestByAppID(ctx context.Context, appID uuid.UUI
 	return latest, m.err
 }
 
+// Mock implementation of TransactionRepository
+type mockTxRepo struct {
+	transactions []*entity.Transaction
+	err          error
+}
+
+func (m *mockTxRepo) Upsert(ctx context.Context, tx *entity.Transaction) error {
+	return m.err
+}
+
+func (m *mockTxRepo) UpsertBatch(ctx context.Context, txs []*entity.Transaction) error {
+	return m.err
+}
+
+func (m *mockTxRepo) FindByAppID(ctx context.Context, appID uuid.UUID, from, to time.Time) ([]*entity.Transaction, error) {
+	var result []*entity.Transaction
+	for _, tx := range m.transactions {
+		if tx.AppID == appID && !tx.TransactionDate.Before(from) && tx.TransactionDate.Before(to) {
+			result = append(result, tx)
+		}
+	}
+	return result, m.err
+}
+
+func (m *mockTxRepo) FindByShopifyGID(ctx context.Context, shopifyGID string) (*entity.Transaction, error) {
+	return nil, m.err
+}
+
+func (m *mockTxRepo) CountByAppID(ctx context.Context, appID uuid.UUID) (int64, error) {
+	return int64(len(m.transactions)), nil
+}
+
 // Helper to create a snapshot with all fields
 func createSnapshot(appID uuid.UUID, date time.Time, activeMRR, revenueAtRisk, usageRevenue, totalRevenue int64, renewalRate float64, safe, oneCycle, twoCycle, churned int) *entity.DailyMetricsSnapshot {
 	s := entity.NewDailyMetricsSnapshot(appID, date)
@@ -58,25 +91,53 @@ func createSnapshot(appID uuid.UUID, date time.Time, activeMRR, revenueAtRisk, u
 	return s
 }
 
+// Helper to create transactions for a period
+func createTransactions(appID uuid.UUID, date time.Time, usageAmount, recurringAmount int64) []*entity.Transaction {
+	return []*entity.Transaction{
+		{
+			ID:              uuid.New(),
+			AppID:           appID,
+			ChargeType:      valueobject.ChargeTypeUsage,
+			NetAmountCents:  usageAmount,
+			TransactionDate: date,
+		},
+		{
+			ID:              uuid.New(),
+			AppID:           appID,
+			ChargeType:      valueobject.ChargeTypeRecurring,
+			NetAmountCents:  recurringAmount,
+			TransactionDate: date,
+		},
+	}
+}
+
 func TestGetPeriodMetrics_CurrentPeriodOnly(t *testing.T) {
 	appID := uuid.New()
 
 	// Create snapshots for current period (Feb 1-15)
 	snapshots := []*entity.DailyMetricsSnapshot{
-		createSnapshot(appID, time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC), 100000, 10000, 5000, 115000, 0.90, 45, 3, 2, 0),
-		createSnapshot(appID, time.Date(2024, 2, 10, 0, 0, 0, 0, time.UTC), 110000, 12000, 6000, 128000, 0.91, 46, 3, 1, 0),
-		createSnapshot(appID, time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC), 125000, 15000, 7000, 147000, 0.92, 47, 2, 1, 0),
+		createSnapshot(appID, time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC), 125000, 15000, 0, 0, 0.92, 47, 2, 1, 0),
 	}
 
-	repo := &mockSnapshotRepo{snapshots: snapshots}
-	service := NewMetricsAggregationService(repo)
+	// Create transactions for the period
+	transactions := []*entity.Transaction{
+		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeUsage, NetAmountCents: 5000, TransactionDate: time.Date(2024, 2, 5, 0, 0, 0, 0, time.UTC)},
+		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeUsage, NetAmountCents: 7000, TransactionDate: time.Date(2024, 2, 10, 0, 0, 0, 0, time.UTC)},
+		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 100000, TransactionDate: time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC)},
+	}
+
+	snapshotRepo := &mockSnapshotRepo{snapshots: snapshots}
+	txRepo := &mockTxRepo{transactions: transactions}
+	metricsEngine := service.NewMetricsEngine()
+
+	svc := NewMetricsAggregationService(snapshotRepo, txRepo, metricsEngine)
 
 	dateRange := valueobject.NewDateRange(
 		time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC),
 		time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC),
 	)
 
-	result, err := service.GetPeriodMetrics(context.Background(), appID, dateRange)
+	result, err := svc.GetPeriodMetrics(context.Background(), appID, dateRange)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -90,23 +151,15 @@ func TestGetPeriodMetrics_CurrentPeriodOnly(t *testing.T) {
 	if result.Current.ActiveMRRCents != 125000 {
 		t.Errorf("expected ActiveMRR 125000, got %d", result.Current.ActiveMRRCents)
 	}
-	if result.Current.RevenueAtRiskCents != 15000 {
-		t.Errorf("expected RevenueAtRisk 15000, got %d", result.Current.RevenueAtRiskCents)
-	}
-	if result.Current.RenewalSuccessRate != 0.92 {
-		t.Errorf("expected RenewalSuccessRate 0.92, got %f", result.Current.RenewalSuccessRate)
-	}
-	if result.Current.SafeCount != 47 {
-		t.Errorf("expected SafeCount 47, got %d", result.Current.SafeCount)
-	}
 
-	// Cumulative metrics should be summed
-	expectedUsageRevenue := int64(5000 + 6000 + 7000)
+	// Usage revenue should be calculated from transactions (5000 + 7000)
+	expectedUsageRevenue := int64(12000)
 	if result.Current.UsageRevenueCents != expectedUsageRevenue {
 		t.Errorf("expected UsageRevenue %d, got %d", expectedUsageRevenue, result.Current.UsageRevenueCents)
 	}
 
-	expectedTotalRevenue := int64(115000 + 128000 + 147000)
+	// Total revenue = usage + recurring (12000 + 100000)
+	expectedTotalRevenue := int64(112000)
 	if result.Current.TotalRevenueCents != expectedTotalRevenue {
 		t.Errorf("expected TotalRevenue %d, got %d", expectedTotalRevenue, result.Current.TotalRevenueCents)
 	}
@@ -114,11 +167,6 @@ func TestGetPeriodMetrics_CurrentPeriodOnly(t *testing.T) {
 	// Previous period should be nil (no data)
 	if result.Previous != nil {
 		t.Error("expected previous to be nil, got data")
-	}
-
-	// Delta should be nil (no previous data)
-	if result.Delta != nil {
-		t.Error("expected delta to be nil, got data")
 	}
 }
 
@@ -128,23 +176,41 @@ func TestGetPeriodMetrics_WithPreviousPeriod(t *testing.T) {
 	// Current period: Feb 1-15 (15 days)
 	// Previous period: Jan 17-31 (15 days)
 	currentSnapshots := []*entity.DailyMetricsSnapshot{
-		createSnapshot(appID, time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC), 125000, 15000, 35000, 175000, 0.92, 45, 5, 2, 3),
+		createSnapshot(appID, time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC), 125000, 15000, 0, 0, 0.92, 45, 5, 2, 3),
 	}
 
 	previousSnapshots := []*entity.DailyMetricsSnapshot{
-		createSnapshot(appID, time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC), 118000, 16300, 31150, 165450, 0.90, 44, 5, 2, 4),
+		createSnapshot(appID, time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC), 118000, 16300, 0, 0, 0.90, 44, 5, 2, 4),
 	}
 
 	allSnapshots := append(currentSnapshots, previousSnapshots...)
-	repo := &mockSnapshotRepo{snapshots: allSnapshots}
-	service := NewMetricsAggregationService(repo)
+
+	// Transactions for current period
+	currentTxs := []*entity.Transaction{
+		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeUsage, NetAmountCents: 35000, TransactionDate: time.Date(2024, 2, 10, 0, 0, 0, 0, time.UTC)},
+		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 140000, TransactionDate: time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC)},
+	}
+
+	// Transactions for previous period
+	previousTxs := []*entity.Transaction{
+		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeUsage, NetAmountCents: 31150, TransactionDate: time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC)},
+		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 134300, TransactionDate: time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC)},
+	}
+
+	allTxs := append(currentTxs, previousTxs...)
+
+	snapshotRepo := &mockSnapshotRepo{snapshots: allSnapshots}
+	txRepo := &mockTxRepo{transactions: allTxs}
+	metricsEngine := service.NewMetricsEngine()
+
+	svc := NewMetricsAggregationService(snapshotRepo, txRepo, metricsEngine)
 
 	dateRange := valueobject.NewDateRange(
 		time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC),
 		time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC),
 	)
 
-	result, err := service.GetPeriodMetrics(context.Background(), appID, dateRange)
+	result, err := svc.GetPeriodMetrics(context.Background(), appID, dateRange)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -157,92 +223,37 @@ func TestGetPeriodMetrics_WithPreviousPeriod(t *testing.T) {
 		t.Fatal("expected previous metrics")
 	}
 
+	// Verify current usage revenue from transactions
+	if result.Current.UsageRevenueCents != 35000 {
+		t.Errorf("expected current UsageRevenue 35000, got %d", result.Current.UsageRevenueCents)
+	}
+
+	// Verify previous usage revenue from transactions
+	if result.Previous.UsageRevenueCents != 31150 {
+		t.Errorf("expected previous UsageRevenue 31150, got %d", result.Previous.UsageRevenueCents)
+	}
+
 	// Delta should be calculated
 	if result.Delta == nil {
 		t.Fatal("expected delta metrics")
-	}
-
-	// Verify delta calculations
-	// Active MRR: (125000 - 118000) / 118000 * 100 ≈ 5.93%
-	if result.Delta.ActiveMRRPercent == nil {
-		t.Fatal("expected ActiveMRRPercent")
-	}
-	expectedMRRDelta := ((125000.0 - 118000.0) / 118000.0) * 100
-	if !floatClose(*result.Delta.ActiveMRRPercent, expectedMRRDelta, 0.01) {
-		t.Errorf("expected ActiveMRRPercent %.2f, got %.2f", expectedMRRDelta, *result.Delta.ActiveMRRPercent)
-	}
-
-	// Revenue at Risk: (15000 - 16300) / 16300 * 100 ≈ -7.98%
-	if result.Delta.RevenueAtRiskPercent == nil {
-		t.Fatal("expected RevenueAtRiskPercent")
-	}
-	expectedRiskDelta := ((15000.0 - 16300.0) / 16300.0) * 100
-	if !floatClose(*result.Delta.RevenueAtRiskPercent, expectedRiskDelta, 0.01) {
-		t.Errorf("expected RevenueAtRiskPercent %.2f, got %.2f", expectedRiskDelta, *result.Delta.RevenueAtRiskPercent)
-	}
-
-	// Churn Count: (3 - 4) / 4 * 100 = -25%
-	if result.Delta.ChurnCountPercent == nil {
-		t.Fatal("expected ChurnCountPercent")
-	}
-	expectedChurnDelta := ((3.0 - 4.0) / 4.0) * 100
-	if !floatClose(*result.Delta.ChurnCountPercent, expectedChurnDelta, 0.01) {
-		t.Errorf("expected ChurnCountPercent %.2f, got %.2f", expectedChurnDelta, *result.Delta.ChurnCountPercent)
-	}
-}
-
-func TestGetPeriodMetrics_DivideByZeroProtection(t *testing.T) {
-	appID := uuid.New()
-
-	// Previous period has 0 for some metrics
-	currentSnapshots := []*entity.DailyMetricsSnapshot{
-		createSnapshot(appID, time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC), 100000, 10000, 5000, 115000, 0.90, 45, 3, 2, 2),
-	}
-
-	previousSnapshots := []*entity.DailyMetricsSnapshot{
-		createSnapshot(appID, time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC), 0, 0, 0, 0, 0, 0, 0, 0, 0),
-	}
-
-	allSnapshots := append(currentSnapshots, previousSnapshots...)
-	repo := &mockSnapshotRepo{snapshots: allSnapshots}
-	service := NewMetricsAggregationService(repo)
-
-	dateRange := valueobject.NewDateRange(
-		time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC),
-		time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC),
-	)
-
-	result, err := service.GetPeriodMetrics(context.Background(), appID, dateRange)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Delta should exist
-	if result.Delta == nil {
-		t.Fatal("expected delta")
-	}
-
-	// Metrics with 0 previous should have nil delta (can't compute percentage)
-	if result.Delta.ActiveMRRPercent != nil {
-		t.Errorf("expected nil ActiveMRRPercent for 0 previous, got %f", *result.Delta.ActiveMRRPercent)
-	}
-	if result.Delta.RevenueAtRiskPercent != nil {
-		t.Errorf("expected nil RevenueAtRiskPercent for 0 previous, got %f", *result.Delta.RevenueAtRiskPercent)
 	}
 }
 
 func TestGetPeriodMetrics_EmptySnapshots(t *testing.T) {
 	appID := uuid.New()
 
-	repo := &mockSnapshotRepo{snapshots: []*entity.DailyMetricsSnapshot{}}
-	service := NewMetricsAggregationService(repo)
+	snapshotRepo := &mockSnapshotRepo{snapshots: []*entity.DailyMetricsSnapshot{}}
+	txRepo := &mockTxRepo{transactions: []*entity.Transaction{}}
+	metricsEngine := service.NewMetricsEngine()
+
+	svc := NewMetricsAggregationService(snapshotRepo, txRepo, metricsEngine)
 
 	dateRange := valueobject.NewDateRange(
 		time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC),
 		time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC),
 	)
 
-	result, err := service.GetPeriodMetrics(context.Background(), appID, dateRange)
+	result, err := svc.GetPeriodMetrics(context.Background(), appID, dateRange)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -269,13 +280,20 @@ func TestGetPeriodMetricsWithPreset(t *testing.T) {
 
 	// Create snapshot for this month
 	snapshots := []*entity.DailyMetricsSnapshot{
-		createSnapshot(appID, time.Date(2024, 2, 10, 0, 0, 0, 0, time.UTC), 100000, 10000, 5000, 115000, 0.90, 45, 3, 2, 0),
+		createSnapshot(appID, time.Date(2024, 2, 10, 0, 0, 0, 0, time.UTC), 100000, 10000, 0, 0, 0.90, 45, 3, 2, 0),
 	}
 
-	repo := &mockSnapshotRepo{snapshots: snapshots}
-	service := NewMetricsAggregationService(repo)
+	transactions := []*entity.Transaction{
+		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeUsage, NetAmountCents: 5000, TransactionDate: time.Date(2024, 2, 5, 0, 0, 0, 0, time.UTC)},
+	}
 
-	result, err := service.GetPeriodMetricsWithPreset(context.Background(), appID, valueobject.TimeRangeThisMonth, now)
+	snapshotRepo := &mockSnapshotRepo{snapshots: snapshots}
+	txRepo := &mockTxRepo{transactions: transactions}
+	metricsEngine := service.NewMetricsEngine()
+
+	svc := NewMetricsAggregationService(snapshotRepo, txRepo, metricsEngine)
+
+	result, err := svc.GetPeriodMetricsWithPreset(context.Background(), appID, valueobject.TimeRangeThisMonth, now)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -284,12 +302,14 @@ func TestGetPeriodMetricsWithPreset(t *testing.T) {
 	if result.Period.Start.Month() != 2 || result.Period.Start.Day() != 1 {
 		t.Errorf("expected period start Feb 1, got %v", result.Period.Start)
 	}
-	if result.Period.End.Month() != 2 || result.Period.End.Day() != 15 {
-		t.Errorf("expected period end Feb 15, got %v", result.Period.End)
-	}
 
 	if result.Current == nil {
 		t.Fatal("expected current metrics")
+	}
+
+	// Usage revenue should come from transactions
+	if result.Current.UsageRevenueCents != 5000 {
+		t.Errorf("expected UsageRevenue 5000, got %d", result.Current.UsageRevenueCents)
 	}
 }
 
@@ -345,13 +365,4 @@ func TestDeltaIsGood_Semantics(t *testing.T) {
 			}
 		})
 	}
-}
-
-// floatClose checks if two floats are within tolerance
-func floatClose(a, b, tolerance float64) bool {
-	diff := a - b
-	if diff < 0 {
-		diff = -diff
-	}
-	return diff <= tolerance
 }

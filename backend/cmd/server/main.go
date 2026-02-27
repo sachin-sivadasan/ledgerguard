@@ -171,8 +171,9 @@ func run() error {
 
 	// Initialize metrics aggregation service and handler
 	var metricsHandler *handler.MetricsHandler
-	if snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
-		metricsAggregator := appservice.NewMetricsAggregationService(snapshotRepo)
+	if snapshotRepo != nil && appRepo != nil && partnerRepo != nil && txRepo != nil {
+		metricsEngine := domainservice.NewMetricsEngine()
+		metricsAggregator := appservice.NewMetricsAggregationService(snapshotRepo, txRepo, metricsEngine)
 		metricsHandler = handler.NewMetricsHandler(metricsAggregator, appRepo, partnerRepo)
 		log.Println("Metrics handler initialized with aggregation service")
 	} else {

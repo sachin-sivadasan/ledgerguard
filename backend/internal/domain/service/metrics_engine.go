@@ -44,7 +44,7 @@ func (m *MetricsEngine) CalculateUsageRevenue(transactions []*entity.Transaction
 	var total int64
 	for _, tx := range transactions {
 		if tx.ChargeType == valueobject.ChargeTypeUsage {
-			total += tx.AmountCents
+			total += tx.AmountCents()
 		}
 	}
 	return total
@@ -56,9 +56,9 @@ func (m *MetricsEngine) CalculateTotalRevenue(transactions []*entity.Transaction
 	for _, tx := range transactions {
 		switch tx.ChargeType {
 		case valueobject.ChargeTypeRecurring, valueobject.ChargeTypeUsage, valueobject.ChargeTypeOneTime:
-			total += tx.AmountCents
+			total += tx.AmountCents()
 		case valueobject.ChargeTypeRefund:
-			total -= tx.AmountCents
+			total -= tx.AmountCents()
 		}
 	}
 	return total

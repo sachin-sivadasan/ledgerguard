@@ -40,7 +40,7 @@ class SubscriptionTile extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    _getInitials(subscription.myshopifyDomain),
+                    _getInitials(subscription.displayName),
                     style: const TextStyle(
                       color: Colors.blue,
                       fontWeight: FontWeight.bold,
@@ -56,7 +56,7 @@ class SubscriptionTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _formatStoreName(subscription.myshopifyDomain),
+                      _formatDisplayName(subscription),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
@@ -104,24 +104,62 @@ class SubscriptionTile extends StatelessWidget {
     );
   }
 
-  String _getInitials(String domain) {
-    // Extract store name from domain (e.g., "store-name.myshopify.com" -> "SN")
-    final storeName = domain.replaceAll('.myshopify.com', '');
-    final parts = storeName.split(RegExp(r'[-_]'));
+  String _getInitials(String name) {
+    if (name.isEmpty) return '??';
+
+    // Handle both shop names and domains
+    final cleanName = name.replaceAll('.myshopify.com', '').trim();
+    if (cleanName.isEmpty) return '??';
+
+    // Filter out empty parts
+    final parts = cleanName
+        .split(RegExp(r'[-_\s]+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) return '??';
+
     if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+      final first = parts[0];
+      final second = parts[1];
+      if (first.isNotEmpty && second.isNotEmpty) {
+        return '${first[0]}${second[0]}'.toUpperCase();
+      }
     }
-    return storeName.substring(0, 2).toUpperCase();
+
+    // Use first part or cleanName
+    final firstPart = parts.isNotEmpty ? parts[0] : cleanName;
+    if (firstPart.length >= 2) {
+      return firstPart.substring(0, 2).toUpperCase();
+    }
+    if (firstPart.isNotEmpty) {
+      return firstPart[0].toUpperCase();
+    }
+    return '??';
   }
 
-  String _formatStoreName(String domain) {
+  String _formatDisplayName(Subscription sub) {
+    // Use shop name if available, otherwise format domain
+    if (sub.shopName?.isNotEmpty == true) {
+      return sub.shopName!;
+    }
+
     // Remove .myshopify.com and capitalize
-    return domain
-        .replaceAll('.myshopify.com', '')
-        .split(RegExp(r'[-_]'))
+    final cleanDomain = sub.myshopifyDomain.replaceAll('.myshopify.com', '');
+    if (cleanDomain.isEmpty) return sub.myshopifyDomain;
+
+    final parts = cleanDomain
+        .split(RegExp(r'[-_]+'))
+        .where((word) => word.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) return cleanDomain;
+
+    return parts
         .map((word) => word.isNotEmpty
             ? '${word[0].toUpperCase()}${word.substring(1)}'
             : '')
+        .where((w) => w.isNotEmpty)
         .join(' ');
   }
 }

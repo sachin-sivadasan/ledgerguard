@@ -217,6 +217,7 @@ func subscriptionToJSON(sub *entity.Subscription) map[string]interface{} {
 		"id":               sub.ID.String(),
 		"shopify_gid":      sub.ShopifyGID,
 		"myshopify_domain": sub.MyshopifyDomain,
+		"shop_name":        sub.ShopName,
 		"plan_name":        sub.PlanName,
 		"base_price_cents": sub.BasePriceCents,
 		"billing_interval": string(sub.BillingInterval),

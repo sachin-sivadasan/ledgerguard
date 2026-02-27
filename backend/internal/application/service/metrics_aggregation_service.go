@@ -7,18 +7,27 @@ import (
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
 // MetricsAggregationService aggregates daily metrics into period summaries
 type MetricsAggregationService struct {
 	snapshotRepo repository.DailyMetricsSnapshotRepository
+	txRepo       repository.TransactionRepository
+	metrics      *service.MetricsEngine
 }
 
 // NewMetricsAggregationService creates a new MetricsAggregationService
-func NewMetricsAggregationService(snapshotRepo repository.DailyMetricsSnapshotRepository) *MetricsAggregationService {
+func NewMetricsAggregationService(
+	snapshotRepo repository.DailyMetricsSnapshotRepository,
+	txRepo repository.TransactionRepository,
+	metrics *service.MetricsEngine,
+) *MetricsAggregationService {
 	return &MetricsAggregationService{
 		snapshotRepo: snapshotRepo,
+		txRepo:       txRepo,
+		metrics:      metrics,
 	}
 }
 
@@ -43,54 +52,63 @@ func (s *MetricsAggregationService) GetPeriodMetrics(
 		return nil, err
 	}
 
+	// Get transactions for current period (for usage and total revenue)
+	currentTxs, err := s.txRepo.FindByAppID(ctx, appID, dateRange.Start, dateRange.End.Add(24*time.Hour))
+	if err != nil {
+		return nil, err
+	}
+
+	// Get transactions for previous period
+	previousTxs, err := s.txRepo.FindByAppID(ctx, appID, previousRange.Start, previousRange.End.Add(24*time.Hour))
+	if err != nil {
+		return nil, err
+	}
+
 	// Aggregate current period
 	var currentSummary *entity.MetricsSummary
 	if len(currentSnapshots) > 0 {
-		currentSummary = s.aggregateSnapshots(currentSnapshots, dateRange)
+		currentSummary = s.aggregateSnapshots(currentSnapshots, currentTxs, dateRange)
 	}
 
 	// Aggregate previous period
 	var previousSummary *entity.MetricsSummary
 	if len(previousSnapshots) > 0 {
-		previousSummary = s.aggregateSnapshots(previousSnapshots, previousRange)
+		previousSummary = s.aggregateSnapshots(previousSnapshots, previousTxs, previousRange)
 	}
 
 	return entity.NewPeriodMetrics(dateRange, currentSummary, previousSummary), nil
 }
 
 // aggregateSnapshots combines multiple daily snapshots into a period summary
-// Uses end-of-period snapshot for point-in-time metrics, sum for cumulative metrics
+// Uses end-of-period snapshot for point-in-time metrics
+// Calculates revenue from transactions for the specific period
 func (s *MetricsAggregationService) aggregateSnapshots(
 	snapshots []*entity.DailyMetricsSnapshot,
+	transactions []*entity.Transaction,
 	dateRange valueobject.DateRange,
 ) *entity.MetricsSummary {
 	if len(snapshots) == 0 {
 		return nil
 	}
 
-	// Sort snapshots by date to find the latest (end-of-period)
+	// Find the latest snapshot for point-in-time metrics
 	var latestSnapshot *entity.DailyMetricsSnapshot
 	var latestDate time.Time
 
-	// Cumulative totals
-	var totalUsageRevenue int64
-	var totalRevenue int64
-
 	for _, snap := range snapshots {
-		// Track latest snapshot for point-in-time metrics
 		if snap.Date.After(latestDate) {
 			latestDate = snap.Date
 			latestSnapshot = snap
 		}
-
-		// Sum cumulative metrics
-		totalUsageRevenue += snap.UsageRevenueCents
-		totalRevenue += snap.TotalRevenueCents
 	}
 
 	if latestSnapshot == nil {
 		return nil
 	}
+
+	// Calculate revenue from transactions for this specific period
+	usageRevenue := s.metrics.CalculateUsageRevenue(transactions)
+	totalRevenue := s.metrics.CalculateTotalRevenue(transactions)
 
 	return &entity.MetricsSummary{
 		PeriodStart: dateRange.Start,
@@ -103,8 +121,8 @@ func (s *MetricsAggregationService) aggregateSnapshots(
 		OneCycleMissedCount:  latestSnapshot.OneCycleMissedCount,
 		TwoCyclesMissedCount: latestSnapshot.TwoCyclesMissedCount,
 		ChurnedCount:         latestSnapshot.ChurnedCount,
-		// Cumulative metrics summed across period
-		UsageRevenueCents: totalUsageRevenue,
+		// Revenue calculated from transactions for this specific period
+		UsageRevenueCents: usageRevenue,
 		TotalRevenueCents: totalRevenue,
 	}
 }

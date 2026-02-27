@@ -14,4 +14,6 @@ type PartnerAccountRepository interface {
 	FindByPartnerID(ctx context.Context, partnerID string) (*entity.PartnerAccount, error)
 	Update(ctx context.Context, account *entity.PartnerAccount) error
 	Delete(ctx context.Context, userID uuid.UUID) error
+	// GetAllIDs returns all partner account IDs (for scheduled sync)
+	GetAllIDs(ctx context.Context) ([]uuid.UUID, error)
 }

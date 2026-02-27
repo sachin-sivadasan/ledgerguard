@@ -65,6 +65,13 @@ func (m *mockPartnerRepoForManual) Delete(ctx context.Context, userID uuid.UUID)
 	return nil
 }
 
+func (m *mockPartnerRepoForManual) GetAllIDs(ctx context.Context) ([]uuid.UUID, error) {
+	if m.account != nil {
+		return []uuid.UUID{m.account.ID}, nil
+	}
+	return []uuid.UUID{}, nil
+}
+
 type mockEncryptorForManual struct {
 	encrypted []byte
 	decrypted []byte

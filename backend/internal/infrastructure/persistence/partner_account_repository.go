@@ -159,3 +159,24 @@ func (r *PostgresPartnerAccountRepository) Delete(ctx context.Context, userID uu
 
 	return nil
 }
+
+func (r *PostgresPartnerAccountRepository) GetAllIDs(ctx context.Context) ([]uuid.UUID, error) {
+	query := `SELECT id FROM partner_accounts`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+
+	return ids, rows.Err()
+}

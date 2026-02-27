@@ -11,6 +11,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sachin-sivadasan/ledgerguard/internal/application/scheduler"
+	appservice "github.com/sachin-sivadasan/ledgerguard/internal/application/service"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/cache"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/config"
@@ -86,11 +89,15 @@ func run() error {
 	var userRepo *persistence.PostgresUserRepository
 	var partnerRepo *persistence.PostgresPartnerAccountRepository
 	var appRepo *persistence.PostgresAppRepository
+	var txRepo *persistence.PostgresTransactionRepository
+	var subscriptionRepo *persistence.PostgresSubscriptionRepository
 
 	if db != nil {
 		userRepo = persistence.NewPostgresUserRepository(db.Pool)
 		partnerRepo = persistence.NewPostgresPartnerAccountRepository(db.Pool)
 		appRepo = persistence.NewPostgresAppRepository(db.Pool)
+		txRepo = persistence.NewPostgresTransactionRepository(db.Pool)
+		subscriptionRepo = persistence.NewPostgresSubscriptionRepository(db.Pool)
 	}
 
 	// Initialize OAuth state store (10 minute TTL)
@@ -136,6 +143,34 @@ func run() error {
 		log.Println("App handler initialized")
 	}
 
+	// Initialize sync service and handler
+	var syncService *appservice.SyncService
+	var syncHandler *handler.SyncHandler
+	var syncScheduler *scheduler.SyncScheduler
+
+	if txRepo != nil && appRepo != nil && partnerRepo != nil && encryptor != nil && subscriptionRepo != nil {
+		// Initialize ledger service for rebuilding after sync
+		ledgerService := domainservice.NewLedgerService(txRepo, subscriptionRepo)
+
+		// Initialize sync service (no external fetcher in dev - would need Shopify Partner client)
+		syncService = appservice.NewSyncService(
+			nil, // TransactionFetcher - would be ShopifyPartnerClient in production
+			txRepo,
+			appRepo,
+			partnerRepo,
+			encryptor,
+			ledgerService,
+		)
+
+		syncHandler = handler.NewSyncHandler(syncService, partnerRepo, appRepo)
+		log.Println("Sync handler initialized")
+
+		// Initialize and start scheduler
+		syncScheduler = scheduler.NewSyncScheduler(syncService, partnerRepo)
+		syncScheduler.Start(ctx)
+		log.Println("Sync scheduler started (12-hour interval)")
+	}
+
 	// Initialize auth middleware
 	var authMW func(http.Handler) http.Handler
 	if firebaseAuth != nil && userRepo != nil {
@@ -153,7 +188,7 @@ func run() error {
 		OAuthHandler:       oauthHandler,
 		ManualTokenHandler: manualTokenHandler,
 		AppHandler:         appHandler,
-		SyncHandler:        nil, // SyncHandler needs SyncService which requires more dependencies
+		SyncHandler:        syncHandler,
 		AuthMW:             authMW,
 		AdminMW:            adminMW,
 	}
@@ -180,6 +215,12 @@ func run() error {
 	<-quit
 
 	log.Println("Shutting down server...")
+
+	// Stop scheduler gracefully
+	if syncScheduler != nil {
+		syncScheduler.Stop()
+		log.Println("Sync scheduler stopped")
+	}
 
 	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()

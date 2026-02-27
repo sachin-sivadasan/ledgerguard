@@ -110,6 +110,13 @@ func (m *mockSyncPartnerRepo) Delete(ctx context.Context, userID uuid.UUID) erro
 	return nil
 }
 
+func (m *mockSyncPartnerRepo) GetAllIDs(ctx context.Context) ([]uuid.UUID, error) {
+	if m.account != nil {
+		return []uuid.UUID{m.account.ID}, nil
+	}
+	return []uuid.UUID{}, nil
+}
+
 type mockSyncDecryptor struct {
 	decrypted []byte
 	err       error

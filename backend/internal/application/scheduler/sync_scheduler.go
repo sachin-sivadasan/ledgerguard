@@ -13,7 +13,7 @@ import (
 // SyncScheduler handles scheduled synchronization of transactions
 type SyncScheduler struct {
 	syncService *service.SyncService
-	appRepo     repository.AppRepository
+	partnerRepo repository.PartnerAccountRepository
 	interval    time.Duration
 	stopCh      chan struct{}
 	doneCh      chan struct{}
@@ -22,11 +22,11 @@ type SyncScheduler struct {
 // NewSyncScheduler creates a new SyncScheduler with 12-hour interval
 func NewSyncScheduler(
 	syncService *service.SyncService,
-	appRepo repository.AppRepository,
+	partnerRepo repository.PartnerAccountRepository,
 ) *SyncScheduler {
 	return &SyncScheduler{
 		syncService: syncService,
-		appRepo:     appRepo,
+		partnerRepo: partnerRepo,
 		interval:    12 * time.Hour,
 		stopCh:      make(chan struct{}),
 		doneCh:      make(chan struct{}),
@@ -98,13 +98,7 @@ func (s *SyncScheduler) syncAll(ctx context.Context) {
 }
 
 func (s *SyncScheduler) getPartnerAccountIDs(ctx context.Context) ([]uuid.UUID, error) {
-	// This would ideally be a dedicated repository method
-	// For now, we'll need to iterate through all apps
-	// In production, add a method like: partnerRepo.GetAllIDs(ctx)
-
-	// Placeholder: This should be replaced with actual implementation
-	// that fetches all unique partner account IDs
-	return []uuid.UUID{}, nil
+	return s.partnerRepo.GetAllIDs(ctx)
 }
 
 // SetInterval allows customizing the sync interval (for testing)

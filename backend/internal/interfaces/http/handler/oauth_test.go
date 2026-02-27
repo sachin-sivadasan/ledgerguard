@@ -69,6 +69,10 @@ func (m *mockPartnerAccountRepo) Delete(ctx context.Context, userID uuid.UUID) e
 	return nil
 }
 
+func (m *mockPartnerAccountRepo) GetAllIDs(ctx context.Context) ([]uuid.UUID, error) {
+	return []uuid.UUID{}, nil
+}
+
 type mockUserRepo struct {
 	user *entity.User
 	err  error

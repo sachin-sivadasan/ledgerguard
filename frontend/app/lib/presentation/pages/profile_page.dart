@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../domain/entities/user_profile.dart';
 import '../blocs/auth/auth.dart';
 import '../blocs/role/role.dart';
+import '../widgets/shared.dart';
 
 /// Profile page displaying user information and settings
 class ProfilePage extends StatelessWidget {
@@ -52,33 +53,9 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildErrorState(BuildContext context, String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[300],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to load profile',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return ErrorStateWidget(
+      title: 'Failed to load profile',
+      message: message,
     );
   }
 
@@ -284,51 +261,11 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildRoleBadge(BuildContext context, UserRole role) {
-    final color = role == UserRole.owner ? AppTheme.primary : AppTheme.secondary;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Text(
-        role.displayName,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
+    return RoleBadge(role: role);
   }
 
   Widget _buildPlanBadge(BuildContext context, PlanTier tier) {
-    final color = tier == PlanTier.pro ? AppTheme.warning : Colors.grey;
-    final icon = tier == PlanTier.pro ? Icons.star : Icons.star_border;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            tier.displayName,
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
+    return PlanBadge(tier: tier);
   }
 
   Widget _buildUpgradeCard(BuildContext context) {

@@ -36,14 +36,25 @@ import '../../presentation/blocs/partner_integration/partner_integration_bloc.da
 import '../../presentation/blocs/preferences/preferences_bloc.dart';
 import '../../presentation/blocs/risk/risk_bloc.dart';
 import '../../presentation/blocs/role/role_bloc.dart';
+import '../network/api_client.dart';
+import '../services/snackbar_service.dart';
 
 extension GetItInjectableX on _i1.GetIt {
   _i1.GetIt init({
     String? environment,
     _i2.EnvironmentFilter? environmentFilter,
   }) {
+    // Services
+    registerLazySingleton<SnackbarService>(() => SnackbarService());
+
     // Repositories
     registerLazySingleton<AuthRepository>(() => FirebaseAuthRepository());
+
+    // API Client (depends on AuthRepository and SnackbarService)
+    registerLazySingleton<ApiClient>(() => ApiClient(
+          authRepository: get<AuthRepository>(),
+          snackbarService: get<SnackbarService>(),
+        ));
     registerLazySingleton<UserProfileRepository>(() => ApiUserProfileRepository());
     registerLazySingleton<PartnerIntegrationRepository>(() => MockPartnerIntegrationRepository());
     registerLazySingleton<AppRepository>(() => MockAppRepository());

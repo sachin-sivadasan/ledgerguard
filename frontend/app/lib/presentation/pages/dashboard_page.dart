@@ -13,6 +13,7 @@ import '../widgets/kpi_card.dart';
 import '../widgets/revenue_mix_chart.dart';
 import '../widgets/risk_distribution_chart.dart';
 import '../widgets/role_guard.dart';
+import '../widgets/shared.dart';
 
 /// Executive Dashboard page displaying key metrics
 class DashboardPage extends StatelessWidget {
@@ -99,86 +100,23 @@ class DashboardPage extends StatelessWidget {
   }
 
   Widget _buildErrorState(BuildContext context, String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[300],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to load dashboard',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () {
-                context
-                    .read<DashboardBloc>()
-                    .add(const LoadDashboardRequested());
-              },
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
-          ],
-        ),
-      ),
+    return ErrorStateWidget(
+      title: 'Failed to load dashboard',
+      message: message,
+      onRetry: () =>
+          context.read<DashboardBloc>().add(const LoadDashboardRequested()),
     );
   }
 
   Widget _buildEmptyState(BuildContext context, String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.analytics_outlined,
-              size: 80,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No Metrics Yet',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () {
-                context
-                    .read<DashboardBloc>()
-                    .add(const RefreshDashboardRequested());
-              },
-              icon: const Icon(Icons.sync),
-              label: const Text('Sync Data'),
-            ),
-          ],
-        ),
-      ),
+    return EmptyStateWidget(
+      title: 'No Metrics Yet',
+      message: message,
+      icon: Icons.analytics_outlined,
+      actionLabel: 'Sync Data',
+      actionIcon: Icons.sync,
+      onAction: () =>
+          context.read<DashboardBloc>().add(const RefreshDashboardRequested()),
     );
   }
 

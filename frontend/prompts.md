@@ -434,3 +434,46 @@ Track all prompts executed for the Flutter frontend.
 - All tests passing (288/288)
 
 ---
+
+## Prompt 014 – Global Error Handling & Shared Components
+**Date:** 2026-02-27
+**Status:** Complete
+
+**Prompt:**
+> Implement global error snackbar, loading overlay component, API error interceptor, token refresh handling. Refactor duplicated UI elements into shared components.
+
+**Improved:**
+> Implement global error handling and shared UI components:
+> 1. SnackbarService - showError(), showSuccess(), showInfo(), showWarning()
+> 2. LoadingOverlay widget - semi-transparent overlay with spinner
+> 3. ApiClient with Dio interceptors for auth and error handling
+> 4. Token refresh on 401 with automatic retry
+> 5. Shared widgets: ErrorStateWidget, EmptyStateWidget, SectionHeader, StatusBadge, InfoTile, CardSection
+
+**Changes:**
+- Core services:
+  - Created `core/services/snackbar_service.dart` - Global snackbar service
+  - Created `core/network/api_client.dart` - Centralized API client with interceptors
+    - AuthInterceptor: Adds auth token to requests
+    - ErrorInterceptor: Global error handling, token refresh, user-friendly messages
+- Presentation widgets:
+  - Created `presentation/widgets/error_state_widget.dart` - Error state with retry
+  - Created `presentation/widgets/empty_state_widget.dart` - Empty state with action
+  - Created `presentation/widgets/section_header.dart` - Section/subsection headers
+  - Created `presentation/widgets/status_badge.dart` - StatusBadge, RoleBadge, PlanBadge, RiskBadge
+  - Created `presentation/widgets/info_tile.dart` - InfoTile, NavigationTile
+  - Created `presentation/widgets/card_section.dart` - CardSection, ContentCard
+  - Created `presentation/widgets/loading_overlay.dart` - LoadingOverlay, FullScreenLoading
+  - Created `presentation/widgets/shared.dart` - Barrel export file
+- Refactored pages to use shared components:
+  - Updated `dashboard_page.dart` - Uses ErrorStateWidget, EmptyStateWidget
+  - Updated `risk_breakdown_page.dart` - Uses ErrorStateWidget, EmptyStateWidget
+  - Updated `profile_page.dart` - Uses ErrorStateWidget, RoleBadge, PlanBadge
+- Updated `app.dart` - Integrated SnackbarService with ScaffoldMessengerKey
+- Updated `core/di/injection.config.dart` - Registered SnackbarService and ApiClient
+- Tests:
+  - Created `test/core/services/snackbar_service_test.dart` - 6 tests
+  - Created `test/presentation/widgets/shared_widgets_test.dart` - 37 tests
+- All tests passing (331/331)
+
+---

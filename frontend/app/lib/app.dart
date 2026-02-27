@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/di/injection.dart';
+import 'core/services/snackbar_service.dart';
 import 'core/theme/app_theme.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'presentation/blocs/app_selection/app_selection.dart';
@@ -35,6 +36,9 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
   late final RiskBloc _riskBloc;
   late final AppRouter _appRouter;
   late final AuthRepository _authRepository;
+  late final SnackbarService _snackbarService;
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   @override
   void initState() {
@@ -50,6 +54,10 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
     _preferencesBloc = getIt<PreferencesBloc>();
     _riskBloc = getIt<RiskBloc>();
     _appRouter = AppRouter(authBloc: _authBloc);
+
+    // Initialize snackbar service
+    _snackbarService = getIt<SnackbarService>();
+    _snackbarService.init(_scaffoldMessengerKey);
 
     // Check auth state on startup
     _authBloc.add(const AuthCheckRequested());
@@ -103,6 +111,7 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           routerConfig: _appRouter.router,
+          scaffoldMessengerKey: _scaffoldMessengerKey,
         ),
       ),
     );

@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/risk_summary.dart';
 import '../blocs/risk/risk.dart';
+import '../widgets/shared.dart';
 
 /// Risk Breakdown page displaying subscription risk distribution
 class RiskBreakdownPage extends StatelessWidget {
@@ -72,66 +73,19 @@ class RiskBreakdownPage extends StatelessWidget {
   }
 
   Widget _buildEmptyState(BuildContext context, String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.pie_chart_outline, size: 80, color: Colors.grey[400]),
-            const SizedBox(height: 24),
-            Text(
-              'No Risk Data',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return EmptyStateWidget(
+      title: 'No Risk Data',
+      message: message,
+      icon: Icons.pie_chart_outline,
     );
   }
 
   Widget _buildErrorState(BuildContext context, String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to load risk data',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => context
-                  .read<RiskBloc>()
-                  .add(const LoadRiskSummaryRequested()),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
-          ],
-        ),
-      ),
+    return ErrorStateWidget(
+      title: 'Failed to load risk data',
+      message: message,
+      onRetry: () =>
+          context.read<RiskBloc>().add(const LoadRiskSummaryRequested()),
     );
   }
 

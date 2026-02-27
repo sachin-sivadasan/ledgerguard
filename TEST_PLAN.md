@@ -776,6 +776,101 @@ go test ./... -race
 
 ---
 
+### F11. SnackbarService Tests
+
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FS-001 | showError displays error snackbar | Error icon and message visible | ✓ |
+| FS-002 | showSuccess displays success snackbar | Check icon and message visible | ✓ |
+| FS-003 | showInfo displays info snackbar | Info icon and message visible | ✓ |
+| FS-004 | showWarning displays warning snackbar | Warning icon and message visible | ✓ |
+| FS-005 | hide removes current snackbar | Snackbar dismissed | ✓ |
+| FS-006 | Does nothing when not initialized | No crash, no snackbar | ✓ |
+
+---
+
+### F12. Shared Widgets Tests
+
+#### F12.1 ErrorStateWidget
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-230 | Renders title and message | Both text visible | ✓ |
+| FW-231 | Shows retry button when onRetry provided | Button visible and clickable | ✓ |
+| FW-232 | Hides retry button when onRetry null | Button not visible | ✓ |
+| FW-233 | Uses custom icon | Custom icon visible | ✓ |
+
+#### F12.2 EmptyStateWidget
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-234 | Renders title, message, and icon | All visible | ✓ |
+| FW-235 | Shows action button when provided | Button visible and clickable | ✓ |
+| FW-236 | Hides action button when not provided | Button not visible | ✓ |
+
+#### F12.3 SectionHeader
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-237 | Renders title | Title text visible | ✓ |
+| FW-238 | Renders trailing widget | Trailing widget visible | ✓ |
+
+#### F12.4 StatusBadge
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-239 | Renders label and color | Label with colored background | ✓ |
+| FW-240 | Renders icon when provided | Icon visible | ✓ |
+
+#### F12.5 RoleBadge
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-241 | Renders owner badge | "Owner" text with primary color | ✓ |
+| FW-242 | Renders admin badge | "Admin" text with secondary color | ✓ |
+
+#### F12.6 PlanBadge
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-243 | Renders pro badge | "Pro" text with star icon | ✓ |
+| FW-244 | Renders free badge | "Free" text with star outline | ✓ |
+
+#### F12.7 RiskBadge
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-245 | Renders safe badge | "Safe" text with green color | ✓ |
+| FW-246 | Renders one cycle missed badge | Text with warning color | ✓ |
+| FW-247 | Renders two cycles missed badge | Text with danger color | ✓ |
+| FW-248 | Renders churned badge | "Churned" text with grey color | ✓ |
+
+#### F12.8 InfoTile
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-249 | Renders icon, label, and value | All visible | ✓ |
+| FW-250 | Renders trailing widget | Trailing visible | ✓ |
+| FW-251 | Handles tap | Callback invoked | ✓ |
+
+#### F12.9 NavigationTile
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-252 | Renders with chevron icon | Chevron visible | ✓ |
+| FW-253 | Handles tap | Callback invoked | ✓ |
+
+#### F12.10 LoadingOverlay
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-254 | Shows child when not loading | Child visible, no spinner | ✓ |
+| FW-255 | Shows overlay when loading | Spinner visible over child | ✓ |
+| FW-256 | Shows message when provided | Message text visible | ✓ |
+
+#### F12.11 CardSection
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-257 | Renders title and children | Title and children visible | ✓ |
+| FW-258 | Renders without title | Children visible, no title | ✓ |
+
+#### F12.12 ContentCard
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FW-259 | Renders child | Child visible in card | ✓ |
+
+---
+
 ### Running Frontend Tests
 
 ```bash

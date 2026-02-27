@@ -369,10 +369,16 @@
 >    - Total Revenue = RECURRING + USAGE + ONE_TIME - REFUNDS
 > 2. Create DailyMetricsSnapshot entity
 > 3. Create DailyMetricsSnapshotRepository interface and PostgreSQL implementation
-> 4. Create migration 000006_create_daily_metrics_snapshot_table
+> 4. Create migration 000006_create_daily_metrics_snapshot_table with ALL columns:
+>    - id, app_id, date
+>    - active_mrr_cents, revenue_at_risk_cents, usage_revenue_cents, total_revenue_cents
+>    - renewal_success_rate
+>    - safe_count, one_cycle_missed_count, two_cycles_missed_count, churned_count, total_subscriptions
+>    - created_at, updated_at
 > 5. Integrate with LedgerService to store snapshot after rebuild
-> 6. Write tests first (TDD)
-> 7. Update documentation
+> 6. In main.go, configure ledger service: `ledgerService.WithSnapshotRepository(snapshotRepo)`
+> 7. Write tests first (TDD)
+> 8. Update documentation
 
 **Result:**
 - domain/entity/daily_metrics_snapshot.go - DailyMetricsSnapshot entity
@@ -655,16 +661,20 @@
 **Improved:**
 > Implement live FetchTransactions in ShopifyPartnerClient:
 > 1. Add FetchTransactions method with GraphQL pagination
-> 2. Support all transaction types (AppSubscriptionSale, AppUsageSale, AppOneTimeSale, AppCredit, AppSaleAdjustment)
+> 2. Support only Shopify-supported transaction types: AppSubscriptionSale, AppUsageSale, AppOneTimeSale
+>    - NOTE: AppCredit, ServiceSale, ReferralTransaction are NOT supported in transactions query
 > 3. Add context-based organization ID passing via WithOrganizationID
 > 4. Update SyncService to pass organization ID via context
 > 5. Wire ShopifyPartnerClient as TransactionFetcher in main.go
-> 6. Add comprehensive tests for FetchTransactions
-> 7. Fix FetchApps tests to match new implementation
+> 6. Configure ledger service with snapshot repository: `ledgerService.WithSnapshotRepository(snapshotRepo)`
+> 7. Add comprehensive tests for FetchTransactions
+> 8. Add debug logging to auth middleware and metrics handler for troubleshooting
 
 **Result:**
 - infrastructure/external/shopify_partner_client.go - FetchTransactions, WithOrganizationID
-- infrastructure/external/shopify_partner_client_test.go - 7 new tests
+- infrastructure/external/shopify_partner_client_test.go - 6 new tests
 - application/service/sync_service.go - Context with organization ID
-- cmd/server/main.go - Wired ShopifyPartnerClient as TransactionFetcher
-- All backend tests passing (124/124)
+- cmd/server/main.go - Wired ShopifyPartnerClient + WithSnapshotRepository
+- interfaces/http/handler/metrics.go - Added error logging
+- interfaces/http/middleware/auth.go - Added token verification error logging
+- All backend tests passing (123/123)

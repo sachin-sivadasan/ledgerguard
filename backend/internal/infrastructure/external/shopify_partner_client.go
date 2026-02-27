@@ -225,16 +225,6 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 							shop { myshopifyDomain }
 							netAmount { amount currencyCode }
 						}
-						... on AppCredit {
-							app { id name }
-							shop { myshopifyDomain }
-							amount { amount currencyCode }
-						}
-						... on AppSaleAdjustment {
-							app { id name }
-							shop { myshopifyDomain }
-							netAmount { amount currencyCode }
-						}
 					}
 				}
 				pageInfo {
@@ -342,16 +332,17 @@ type transactionNode struct {
 		Amount       string `json:"amount"`
 		CurrencyCode string `json:"currencyCode"`
 	} `json:"netAmount,omitempty"`
-	Amount *struct {
-		Amount       string `json:"amount"`
-		CurrencyCode string `json:"currencyCode"`
-	} `json:"amount,omitempty"` // Used by AppCredit
 }
 
 // parseTransaction converts a Partner API transaction to a domain entity
 func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid.UUID) *entity.Transaction {
-	if node.App == nil || node.Shop == nil {
+	if node.App == nil {
 		return nil
+	}
+	// Shop can be nil for ReferralTransaction
+	shopDomain := ""
+	if node.Shop != nil {
+		shopDomain = node.Shop.MyshopifyDomain
 	}
 
 	// Determine charge type based on transaction type (inferred from fields present)
@@ -370,7 +361,7 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 	return entity.NewTransaction(
 		appID,
 		node.ID,
-		node.Shop.MyshopifyDomain,
+		shopDomain,
 		chargeType,
 		amountCents,
 		currency,
@@ -380,11 +371,6 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 
 // inferChargeType determines the charge type based on transaction characteristics
 func (c *ShopifyPartnerClient) inferChargeType(node transactionNode) valueobject.ChargeType {
-	// AppCredit transactions use "amount" field instead of "netAmount"
-	if node.Amount != nil && node.NetAmount == nil {
-		return valueobject.ChargeTypeRefund
-	}
-
 	// Check if it's a one-time charge (no chargeId typically means usage or subscription)
 	// The actual type would be determined by the GraphQL typename, but since we're
 	// using inline fragments, we infer from context
@@ -402,17 +388,12 @@ func (c *ShopifyPartnerClient) inferChargeType(node transactionNode) valueobject
 
 // parseAmount extracts amount in cents and currency from the transaction
 func (c *ShopifyPartnerClient) parseAmount(node transactionNode) (int64, string) {
-	var amountStr, currency string
-
-	if node.NetAmount != nil {
-		amountStr = node.NetAmount.Amount
-		currency = node.NetAmount.CurrencyCode
-	} else if node.Amount != nil {
-		amountStr = node.Amount.Amount
-		currency = node.Amount.CurrencyCode
-	} else {
+	if node.NetAmount == nil {
 		return 0, "USD"
 	}
+
+	amountStr := node.NetAmount.Amount
+	currency := node.NetAmount.CurrencyCode
 
 	// Parse amount string to cents (Shopify returns decimal strings like "10.50")
 	var dollars float64

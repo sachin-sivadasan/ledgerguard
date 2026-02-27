@@ -706,12 +706,11 @@ Implemented live transaction fetching from Shopify Partner API with GraphQL pagi
 1. **Infrastructure Layer - ShopifyPartnerClient:**
    - `FetchTransactions(ctx, accessToken, appID, from, to)` method
    - GraphQL query with pagination (100 per page)
-   - Support for all transaction types:
+   - Supported transaction types (Shopify Partner API only supports these):
      - AppSubscriptionSale → RECURRING
      - AppUsageSale → RECURRING
      - AppOneTimeSale → ONE_TIME
-     - AppCredit → REFUND
-     - AppSaleAdjustment → RECURRING
+   - NOTE: AppCredit, ServiceSale, ReferralTransaction are NOT supported in transactions query
    - Context-based organization ID passing via `WithOrganizationID`
    - Amount parsing from decimal strings to cents
 
@@ -721,16 +720,24 @@ Implemented live transaction fetching from Shopify Partner API with GraphQL pagi
 
 3. **Main Integration:**
    - Wired `ShopifyPartnerClient` as `TransactionFetcher` in main.go
-   - Previously was `nil`, now fetches live data
+   - Configured ledger service with snapshot repository: `ledgerService.WithSnapshotRepository(snapshotRepo)`
+   - This enables daily snapshots to be saved after each sync
 
-4. **Tests:**
+4. **Debug Logging:**
+   - Added token verification error logging to auth middleware
+   - Added metrics fetch error logging to metrics handler
+
+5. **Tests:**
    - `TestFetchTransactions_Success` - Basic transaction fetching
    - `TestFetchTransactions_Pagination` - Multi-page fetching
    - `TestFetchTransactions_NoOrganizationID` - Error handling
    - `TestFetchTransactions_GraphQLError` - GraphQL error handling
    - `TestFetchTransactions_HTTPError` - HTTP error handling
    - `TestFetchTransactions_EmptyTransactions` - Empty result handling
-   - `TestFetchTransactions_AppCredit` - AppCredit classified as REFUND
    - Fixed `TestFetchApps_Success` to match new implementation
 
-**Tests:** 7 new tests (total backend: 124)
+**Database Notes:**
+- `daily_metrics_snapshot` table requires columns: `total_revenue_cents`, `total_subscriptions`, `updated_at`
+- If table exists without these columns, run ALTER TABLE to add them
+
+**Tests:** 6 new tests (total backend: 123)

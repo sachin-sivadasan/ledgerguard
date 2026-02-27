@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 
@@ -40,6 +41,7 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 
 		claims, err := m.tokenVerifier.VerifyIDToken(r.Context(), token)
 		if err != nil {
+			log.Printf("Token verification failed: %v", err)
 			writeError(w, http.StatusUnauthorized, "invalid token")
 			return
 		}

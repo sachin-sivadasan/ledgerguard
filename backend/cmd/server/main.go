@@ -189,6 +189,9 @@ func run() error {
 	if txRepo != nil && appRepo != nil && partnerRepo != nil && encryptor != nil && subscriptionRepo != nil {
 		// Initialize ledger service for rebuilding after sync
 		ledgerService := domainservice.NewLedgerService(txRepo, subscriptionRepo)
+		if snapshotRepo != nil {
+			ledgerService = ledgerService.WithSnapshotRepository(snapshotRepo)
+		}
 
 		// Initialize sync service with Shopify Partner client for live transaction fetching
 		syncService = appservice.NewSyncService(

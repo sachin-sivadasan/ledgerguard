@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -164,6 +165,7 @@ func (h *MetricsHandler) GetMetricsByPeriod(w http.ResponseWriter, r *http.Reque
 	// Get period metrics
 	periodMetrics, err := h.aggregator.GetPeriodMetrics(r.Context(), app.ID, dateRange)
 	if err != nil {
+		log.Printf("Failed to get period metrics for app %s: %v", app.ID, err)
 		writeJSONError(w, http.StatusInternalServerError, "failed to fetch metrics")
 		return
 	}

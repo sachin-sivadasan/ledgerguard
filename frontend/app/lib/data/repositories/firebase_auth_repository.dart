@@ -91,6 +91,37 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<UserEntity> signUpWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    final auth = _auth;
+    if (auth == null) {
+      throw const AuthException(
+        'Firebase not configured. Run: flutterfire configure',
+        code: 'firebase-not-configured',
+      );
+    }
+    try {
+      final credential = await auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final user = _mapFirebaseUser(credential.user);
+      if (user == null) {
+        throw const AuthException('Failed to create account');
+      }
+      return user;
+    } on FirebaseAuthException catch (e) {
+      throw _mapFirebaseException(e);
+    } on FirebaseException catch (e) {
+      throw _mapFirebaseException(e);
+    } catch (e) {
+      throw AuthException('Account creation failed: ${e.runtimeType}');
+    }
+  }
+
+  @override
   Future<UserEntity> signInWithGoogle() async {
     final auth = _auth;
     if (auth == null) {

@@ -26,8 +26,10 @@ class _SignupPageState extends State<SignupPage> {
 
   void _onCreateAccount() {
     if (_formKey.currentState?.validate() ?? false) {
-      // TODO: Implement signup with email
-      // For now, we'll use Google sign in as the primary method
+      context.read<AuthBloc>().add(SignUpWithEmailRequested(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          ));
     }
   }
 
@@ -176,12 +178,7 @@ class _SignupPageState extends State<SignupPage> {
                           height: 48,
                           child: OutlinedButton.icon(
                             onPressed: isLoading ? null : _onGoogleSignIn,
-                            icon: Image.network(
-                              'https://www.google.com/favicon.ico',
-                              height: 18,
-                              width: 18,
-                              errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata),
-                            ),
+                            icon: const Icon(Icons.g_mobiledata, size: 24),
                             label: const Text('Continue with Google'),
                           ),
                         ),

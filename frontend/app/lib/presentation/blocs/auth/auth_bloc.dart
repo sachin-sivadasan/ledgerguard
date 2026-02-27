@@ -13,6 +13,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         super(const AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignInWithEmailRequested>(_onSignInWithEmailRequested);
+    on<SignUpWithEmailRequested>(_onSignUpWithEmailRequested);
     on<SignInWithGoogleRequested>(_onSignInWithGoogleRequested);
     on<SignOutRequested>(_onSignOutRequested);
   }
@@ -43,6 +44,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     try {
       final user = await _authRepository.signInWithEmailAndPassword(
+        email: event.email,
+        password: event.password,
+      );
+      emit(Authenticated(user));
+    } on AuthException catch (e) {
+      emit(AuthError(e.message));
+    }
+  }
+
+  Future<void> _onSignUpWithEmailRequested(
+    SignUpWithEmailRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+
+    try {
+      final user = await _authRepository.signUpWithEmailAndPassword(
         email: event.email,
         password: event.password,
       );

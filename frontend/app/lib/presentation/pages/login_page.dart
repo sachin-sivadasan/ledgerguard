@@ -176,12 +176,7 @@ class _LoginPageState extends State<LoginPage> {
                           height: 48,
                           child: OutlinedButton.icon(
                             onPressed: isLoading ? null : _onGoogleSignIn,
-                            icon: Image.network(
-                              'https://www.google.com/favicon.ico',
-                              height: 18,
-                              width: 18,
-                              errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata),
-                            ),
+                            icon: const Icon(Icons.g_mobiledata, size: 24),
                             label: const Text('Continue with Google'),
                           ),
                         ),

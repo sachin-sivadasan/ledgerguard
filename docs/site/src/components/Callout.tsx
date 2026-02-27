@@ -1,4 +1,4 @@
-import { AlertCircle, Info, AlertTriangle, CheckCircle } from 'lucide-react'
+import { AlertCircle, Info as InfoIcon, AlertTriangle, CheckCircle } from 'lucide-react'
 import clsx from 'clsx'
 
 interface CalloutProps {
@@ -8,7 +8,7 @@ interface CalloutProps {
 }
 
 const icons = {
-  note: Info,
+  note: InfoIcon,
   warning: AlertTriangle,
   info: AlertCircle,
   success: CheckCircle,

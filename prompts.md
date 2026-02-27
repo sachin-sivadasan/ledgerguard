@@ -699,6 +699,25 @@
 - Frontend subscription pages and blocs
 - All tests passing
 
+### [2026-02-28] Revenue API Documentation Site
+**Original:**
+> this is need some documention site for my client. right? → what feels premium. since this is paid service → lets go with mintlify first and 2 for backup → now my own version → document stepts to deploy it to vercel
+
+**Improved:**
+> Create premium API documentation for Revenue API:
+> 1. Create Mintlify documentation site with OpenAPI spec
+> 2. Create custom Next.js documentation site as backup
+> 3. Include all REST and GraphQL endpoints
+> 4. Add code examples in cURL, Node.js, Python
+> 5. Document authentication, error codes, rate limits
+> 6. Add Vercel deployment instructions
+
+**Result:**
+- Mintlify docs: `docs/api/` with mint.json, openapi.yaml, MDX pages
+- Custom Next.js: `docs/site/` with 24 pages
+- DEPLOYMENT.md for Vercel deployment
+- Commits: 33686f6, bc4f61e, d1b8189, 100f3ef, 200af3c
+
 ### [2026-02-27] Shop Name, Gross Amount, and Period-Based Usage Revenue
 **Original:**
 > - show shop.name in subscription list instead of domain

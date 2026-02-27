@@ -908,3 +908,44 @@ Implemented external Revenue API for Shopify app developers to query subscriptio
 - 1 router
 
 **Tests:** Pending (Task #10)
+
+---
+
+## [2026-02-27] Revenue API Documentation Site
+
+**Commits:** `33686f6`, `bc4f61e`, `d1b8189`, `100f3ef`, `200af3c`
+
+**Summary:**
+Created comprehensive API documentation for clients using two platforms: Mintlify (hosted) and custom Next.js (self-hosted).
+
+**Implemented:**
+
+1. **Mintlify Documentation (`docs/api/`):**
+   - `mint.json` - Mintlify configuration with branding
+   - `openapi.yaml` - OpenAPI 3.1 specification
+   - MDX pages for all endpoints and concepts
+   - Endpoint pages: subscriptions (single, batch, by-domain), usage (single, batch)
+   - GraphQL documentation pages
+
+2. **Custom Next.js Documentation (`docs/site/`):**
+   - Next.js 14 with App Router
+   - TailwindCSS for styling
+   - Dark/light mode toggle
+   - Responsive sidebar navigation
+   - Code blocks with copy button and language tabs
+   - Components: Header, Sidebar, CodeBlock, CodeTabs, Callout, Endpoint
+
+3. **Documentation Pages:**
+   - Getting Started: Introduction, Quick Start, Authentication
+   - Core Concepts: Subscription Status, Risk States, Usage Billing
+   - REST API: Overview, 5 endpoint pages
+   - GraphQL: Overview, Schema, Queries, Examples
+   - Resources: Error Codes, Rate Limits, Best Practices, Changelog
+
+4. **Deployment:**
+   - `DEPLOYMENT.md` - Vercel deployment guide
+   - Custom domain setup instructions
+
+**Files Created:**
+- Mintlify: 25 files in `docs/api/`
+- Custom Next.js: 30+ files in `docs/site/`

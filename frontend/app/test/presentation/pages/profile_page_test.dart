@@ -114,8 +114,10 @@ void main() {
 
     testWidgets('shows user initials in avatar', (tester) async {
       await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
 
-      expect(find.text('TE'), findsOneWidget); // First 2 chars of 'test'
+      // Initials are derived from email: test@example.com -> 'T'
+      expect(find.text('T'), findsOneWidget);
     });
 
     testWidgets('shows role badge for owner', (tester) async {
@@ -151,57 +153,100 @@ void main() {
     });
 
     testWidgets('shows upgrade card for free tier', (tester) async {
+      // Use a larger screen to ensure content is visible
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       await tester.pumpWidget(buildTestWidget(
         roleState: const RoleLoaded(adminProfile),
       ));
+      await tester.pumpAndSettle();
 
+      // Upgrade card should be visible for free tier - shows "Upgrade to Pro" button
+      // and "Free Plan" text
+      expect(find.text('Free Plan'), findsOneWidget);
       expect(find.text('Upgrade to Pro'), findsOneWidget);
-      expect(find.text('Upgrade Now'), findsOneWidget);
     });
 
     testWidgets('hides upgrade card for pro tier', (tester) async {
       await tester.pumpWidget(buildTestWidget(
         roleState: const RoleLoaded(ownerProfile),
       ));
+      await tester.pumpAndSettle();
 
       expect(find.text('Upgrade to Pro'), findsNothing);
     });
 
     testWidgets('shows upgrade coming soon snackbar on tap', (tester) async {
+      // Use a larger screen to ensure content is visible
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       await tester.pumpWidget(buildTestWidget(
         roleState: const RoleLoaded(adminProfile),
       ));
-
-      // Scroll to make the upgrade button visible
-      await tester.ensureVisible(find.text('Upgrade Now'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Upgrade Now'));
+      await tester.tap(find.text('Upgrade to Pro'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Upgrade functionality coming soon!'), findsOneWidget);
+      expect(find.text('Upgrade coming soon!'), findsOneWidget);
     });
 
     testWidgets('shows notification settings link', (tester) async {
       await tester.pumpWidget(buildTestWidget());
 
-      expect(find.text('Notification Settings'), findsOneWidget);
+      // Scroll to find Notifications in Settings section
+      await tester.pumpAndSettle();
+      final notificationsFinder = find.text('Notifications');
+      if (notificationsFinder.evaluate().isEmpty) {
+        await tester.dragUntilVisible(
+          notificationsFinder,
+          find.byType(Scrollable),
+          const Offset(0, -100),
+        );
+      }
+      await tester.pumpAndSettle();
+
+      expect(notificationsFinder, findsOneWidget);
     });
 
     testWidgets('shows logout button', (tester) async {
+      // Use a larger screen to ensure all content is visible
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
 
       expect(find.text('Log Out'), findsOneWidget);
     });
 
     testWidgets('shows logout confirmation dialog on tap', (tester) async {
-      await tester.pumpWidget(buildTestWidget());
+      // Use a larger screen to ensure all content is visible
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-      // Scroll to make the logout button visible
-      await tester.ensureVisible(find.widgetWithText(OutlinedButton, 'Log Out'));
+      await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Log Out'));
+      await tester.tap(find.text('Log Out').first);
       await tester.pumpAndSettle();
 
       expect(find.text('Are you sure you want to log out?'), findsOneWidget);
@@ -209,13 +254,18 @@ void main() {
     });
 
     testWidgets('dismisses dialog on cancel', (tester) async {
-      await tester.pumpWidget(buildTestWidget());
+      // Use a larger screen to ensure all content is visible
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-      // Scroll to make the logout button visible
-      await tester.ensureVisible(find.widgetWithText(OutlinedButton, 'Log Out'));
+      await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Log Out'));
+      await tester.tap(find.text('Log Out').first);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Cancel'));
@@ -225,17 +275,22 @@ void main() {
     });
 
     testWidgets('dispatches SignOutRequested on confirm logout', (tester) async {
+      // Use a larger screen to ensure all content is visible
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       await tester.pumpWidget(buildTestWidget());
-
-      // Scroll to make the logout button visible
-      await tester.ensureVisible(find.widgetWithText(OutlinedButton, 'Log Out'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Log Out'));
+      await tester.tap(find.text('Log Out').first);
       await tester.pumpAndSettle();
 
-      // Tap the logout button in the dialog (not the page button)
-      await tester.tap(find.widgetWithText(TextButton, 'Log Out'));
+      // Tap the logout button in the dialog (ElevatedButton, not the page button)
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Log Out'));
       await tester.pumpAndSettle();
 
       verify(() => mockAuthBloc.add(any(that: isA<SignOutRequested>()))).called(1);
@@ -243,17 +298,47 @@ void main() {
 
     testWidgets('shows account section', (tester) async {
       await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
 
+      // Account section header
       expect(find.text('Account'), findsOneWidget);
-      expect(find.text('Email'), findsOneWidget);
-      expect(find.text('Role'), findsOneWidget);
-      expect(find.text('Plan'), findsOneWidget);
+      // Email Address tile within account section
+      expect(find.text('Email Address'), findsOneWidget);
+      // Account Security tile
+      expect(find.text('Account Security'), findsOneWidget);
     });
 
     testWidgets('shows settings section', (tester) async {
       await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
 
-      expect(find.text('Settings'), findsOneWidget);
+      // Scroll down to find Settings section
+      final settingsFinder = find.text('Settings');
+      await tester.dragUntilVisible(
+        settingsFinder,
+        find.byType(Scrollable),
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+
+      expect(settingsFinder, findsOneWidget);
+    });
+
+    testWidgets('shows integrations section', (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // Scroll to find Integrations section
+      final integrationsFinder = find.text('Integrations');
+      await tester.dragUntilVisible(
+        integrationsFinder,
+        find.byType(Scrollable),
+        const Offset(0, -100),
+      );
+      await tester.pumpAndSettle();
+
+      expect(integrationsFinder, findsOneWidget);
+      expect(find.text('Shopify Partner'), findsOneWidget);
     });
   });
 }

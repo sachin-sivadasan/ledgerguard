@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
@@ -73,6 +74,24 @@ func (m *mockSubRepoForLedger) DeleteByAppID(ctx context.Context, appID uuid.UUI
 	m.deleteCalls++
 	m.subscriptions = nil
 	return m.err
+}
+
+func (m *mockSubRepoForLedger) FindWithFilters(ctx context.Context, appID uuid.UUID, filters repository.SubscriptionFilters) (*repository.SubscriptionPage, error) {
+	return &repository.SubscriptionPage{
+		Subscriptions: m.subscriptions,
+		Total:         len(m.subscriptions),
+		Page:          1,
+		PageSize:      25,
+		TotalPages:    1,
+	}, nil
+}
+
+func (m *mockSubRepoForLedger) GetSummary(ctx context.Context, appID uuid.UUID) (*repository.SubscriptionSummary, error) {
+	return &repository.SubscriptionSummary{}, nil
+}
+
+func (m *mockSubRepoForLedger) GetPriceStats(ctx context.Context, appID uuid.UUID) (*repository.PriceStats, error) {
+	return &repository.PriceStats{}, nil
 }
 
 func TestLedgerService_RebuildFromTransactions_Success(t *testing.T) {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/shopify_app.dart';
 import '../blocs/app_selection/app_selection.dart';
+import '../widgets/tier_selector.dart';
 
 /// Page for selecting which Shopify app to track
 class AppSelectionPage extends StatefulWidget {
@@ -301,6 +302,8 @@ class _AppListTile extends StatelessWidget {
                             ),
                       ),
                     ],
+                    const SizedBox(height: 6),
+                    TierIndicator(tier: app.revenueShareTier),
                   ],
                 ),
               ),

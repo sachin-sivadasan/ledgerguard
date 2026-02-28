@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/network/api_client.dart';
 import '../../domain/entities/shopify_app.dart';
+import '../../domain/entities/revenue_share_tier.dart';
 import '../../domain/repositories/app_repository.dart';
 
 /// API implementation of AppRepository
@@ -9,6 +10,7 @@ class ApiAppRepository implements AppRepository {
   final ApiClient _apiClient;
   static const _selectedAppKey = 'selected_app_id';
   static const _selectedAppNameKey = 'selected_app_name';
+  static const _selectedAppTierKey = 'selected_app_tier';
 
   ShopifyApp? _selectedApp;
 
@@ -17,21 +19,13 @@ class ApiAppRepository implements AppRepository {
   @override
   Future<List<ShopifyApp>> fetchApps() async {
     try {
-      final response = await _apiClient.get('/api/v1/apps/available');
+      final response = await _apiClient.get('/api/v1/apps');
 
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         final apps = data['apps'] as List<dynamic>? ?? [];
 
-        return apps.map((app) {
-          final appMap = app as Map<String, dynamic>;
-          return ShopifyApp(
-            id: appMap['id'] as String,
-            name: appMap['name'] as String,
-            description: '',
-            installCount: 0,
-          );
-        }).toList();
+        return apps.map((app) => _parseApp(app as Map<String, dynamic>)).toList();
       }
 
       // Return mock apps for development when API fails
@@ -42,6 +36,25 @@ class ApiAppRepository implements AppRepository {
     }
   }
 
+  /// Parse app from API response
+  ShopifyApp _parseApp(Map<String, dynamic> appMap) {
+    return ShopifyApp(
+      id: appMap['id'] as String,
+      name: appMap['name'] as String,
+      description: appMap['description'] as String? ?? '',
+      installCount: appMap['install_count'] as int? ?? 0,
+      revenueShareTier: RevenueShareTier.fromCode(
+        appMap['revenue_share_tier'] as String?,
+      ),
+      createdAt: appMap['created_at'] != null
+          ? DateTime.tryParse(appMap['created_at'] as String)
+          : null,
+      updatedAt: appMap['updated_at'] != null
+          ? DateTime.tryParse(appMap['updated_at'] as String)
+          : null,
+    );
+  }
+
   /// Mock apps for development/testing
   List<ShopifyApp> _getMockApps() {
     return const [
@@ -50,12 +63,14 @@ class ApiAppRepository implements AppRepository {
         name: 'Demo App 1 (Development)',
         description: 'Mock app for testing',
         installCount: 100,
+        revenueShareTier: RevenueShareTier.default20,
       ),
       ShopifyApp(
         id: 'gid://partners/App/demo-2',
         name: 'Demo App 2 (Development)',
         description: 'Mock app for testing',
         installCount: 50,
+        revenueShareTier: RevenueShareTier.smallDev0,
       ),
     ];
   }
@@ -114,5 +129,107 @@ class ApiAppRepository implements AppRepository {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_selectedAppKey);
     await prefs.remove(_selectedAppNameKey);
+    await prefs.remove(_selectedAppTierKey);
+  }
+
+  @override
+  Future<ShopifyApp> updateAppTier(String appId, RevenueShareTier tier) async {
+    final response = await _apiClient.patch(
+      '/api/v1/apps/$appId/tier',
+      data: {'revenue_share_tier': tier.code},
+    );
+
+    if (response.statusCode == 200) {
+      final data = response.data as Map<String, dynamic>;
+
+      // Update cached app if it's the selected one
+      if (_selectedApp?.id == appId) {
+        _selectedApp = _selectedApp!.copyWith(revenueShareTier: tier);
+
+        // Update SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_selectedAppTierKey, tier.code);
+      }
+
+      // Return updated app info from response
+      return ShopifyApp(
+        id: appId,
+        name: _selectedApp?.name ?? '',
+        revenueShareTier: RevenueShareTier.fromCode(
+          data['revenue_share_tier'] as String?,
+        ),
+      );
+    }
+
+    throw const AppException('Failed to update tier');
+  }
+
+  @override
+  Future<FeeSummary> getFeeSummary(String appId, {DateTime? start, DateTime? end}) async {
+    final queryParams = <String, String>{};
+    if (start != null) {
+      queryParams['start'] = start.toIso8601String().split('T').first;
+    }
+    if (end != null) {
+      queryParams['end'] = end.toIso8601String().split('T').first;
+    }
+
+    final response = await _apiClient.get(
+      '/api/v1/apps/$appId/fees/summary',
+      queryParameters: queryParams,
+    );
+
+    if (response.statusCode == 200) {
+      return FeeSummary.fromJson(response.data as Map<String, dynamic>);
+    }
+
+    throw const AppException('Failed to fetch fee summary');
+  }
+
+  @override
+  Future<FeeBreakdownResponse> getFeeBreakdown(String appId, {int amountCents = 4900}) async {
+    final response = await _apiClient.get(
+      '/api/v1/apps/$appId/fees/breakdown',
+      queryParameters: {'amount_cents': amountCents.toString()},
+    );
+
+    if (response.statusCode == 200) {
+      final data = response.data as Map<String, dynamic>;
+      final currentTier = data['current_tier'] as Map<String, dynamic>;
+      final allTiers = data['all_tiers'] as List<dynamic>;
+
+      return FeeBreakdownResponse(
+        amountCents: data['amount_cents'] as int,
+        currentTierBreakdown: FeeBreakdown(
+          grossAmountCents: currentTier['gross_cents'] as int,
+          revenueShareCents: currentTier['revenue_share_cents'] as int,
+          processingFeeCents: currentTier['processing_fee_cents'] as int,
+          taxOnFeesCents: currentTier['tax_on_fees_cents'] as int,
+          totalFeesCents: currentTier['total_fees_cents'] as int,
+          netAmountCents: currentTier['net_cents'] as int,
+          revenueSharePercent: (currentTier['revenue_share_pct'] as num?)?.toDouble() ?? 0,
+          processingFeePercent: (currentTier['processing_fee_pct'] as num?)?.toDouble() ?? 2.9,
+        ),
+        allTiers: allTiers.map((tierData) {
+          final td = tierData as Map<String, dynamic>;
+          return TierBreakdown(
+            tier: RevenueShareTier.fromCode(td['tier'] as String?),
+            isCurrent: td['is_current'] as bool? ?? false,
+            breakdown: FeeBreakdown(
+              grossAmountCents: td['gross_cents'] as int,
+              revenueShareCents: td['revenue_share_cents'] as int,
+              processingFeeCents: td['processing_fee_cents'] as int,
+              taxOnFeesCents: td['tax_on_fees_cents'] as int,
+              totalFeesCents: td['total_fees_cents'] as int,
+              netAmountCents: td['net_cents'] as int,
+              revenueSharePercent: (td['revenue_share_pct'] as num?)?.toDouble() ?? 0,
+              processingFeePercent: (td['processing_fee_pct'] as num?)?.toDouble() ?? 2.9,
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    throw const AppException('Failed to fetch fee breakdown');
   }
 }

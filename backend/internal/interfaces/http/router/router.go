@@ -21,6 +21,7 @@ type Config struct {
 	RevenueHandler           *handler.RevenueHandler
 	SyncHandler              *handler.SyncHandler
 	SubscriptionHandler      *handler.SubscriptionHandler
+	FeeHandler               *handler.FeeHandler
 	APIKeyHandler            *apikeyhandler.APIKeyHandler
 	AuthMW                   func(next http.Handler) http.Handler
 	AdminMW                  func(next http.Handler) http.Handler // RequireRoles(ADMIN)
@@ -84,6 +85,9 @@ func New(cfg Config) *chi.Mux {
 				r.Post("/select", cfg.AppHandler.SelectApp)
 				r.Get("/", cfg.AppHandler.ListApps)
 
+				// App settings routes
+				r.Patch("/{appID}/tier", cfg.AppHandler.UpdateAppTier)
+
 				// Metrics routes (appID is numeric, backend adds gid://partners/App/ prefix)
 				if cfg.MetricsHandler != nil {
 					r.Get("/{appID}/metrics/latest", cfg.MetricsHandler.GetLatestMetrics)
@@ -102,7 +106,18 @@ func New(cfg Config) *chi.Mux {
 				if cfg.RevenueHandler != nil {
 					r.Get("/{appID}/earnings", cfg.RevenueHandler.GetEarnings)
 				}
+
+				// Fee breakdown routes
+				if cfg.FeeHandler != nil {
+					r.Get("/{appID}/fees/summary", cfg.FeeHandler.GetFeeSummary)
+					r.Get("/{appID}/fees/breakdown", cfg.FeeHandler.GetTierBreakdown)
+				}
 			})
+		}
+
+		// Tiers route (public info)
+		if cfg.FeeHandler != nil {
+			r.Get("/tiers", cfg.FeeHandler.ListAvailableTiers)
 		}
 
 		// Sync routes (requires auth)

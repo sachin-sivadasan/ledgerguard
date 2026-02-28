@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
@@ -143,10 +146,11 @@ func (h *AppHandler) SelectApp(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":        "App added successfully",
-		"id":             app.ID.String(),
-		"partner_app_id": app.PartnerAppID,
-		"name":           app.Name,
+		"message":            "App added successfully",
+		"id":                 app.ID.String(),
+		"partner_app_id":     app.PartnerAppID,
+		"name":               app.Name,
+		"revenue_share_tier": app.RevenueShareTier.String(),
 	})
 }
 
@@ -177,16 +181,81 @@ func (h *AppHandler) ListApps(w http.ResponseWriter, r *http.Request) {
 	appResponses := make([]map[string]interface{}, len(apps))
 	for i, app := range apps {
 		appResponses[i] = map[string]interface{}{
-			"id":               app.ID.String(),
-			"partner_app_id":   app.PartnerAppID,
-			"name":             app.Name,
-			"tracking_enabled": app.TrackingEnabled,
-			"created_at":       app.CreatedAt,
+			"id":                 app.ID.String(),
+			"partner_app_id":     app.PartnerAppID,
+			"name":               app.Name,
+			"tracking_enabled":   app.TrackingEnabled,
+			"revenue_share_tier": app.RevenueShareTier.String(),
+			"created_at":         app.CreatedAt,
+			"updated_at":         app.UpdatedAt,
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"apps": appResponses,
+	})
+}
+
+type updateAppTierRequest struct {
+	RevenueShareTier string `json:"revenue_share_tier"`
+}
+
+// UpdateAppTier updates the revenue share tier for an app
+// PATCH /api/v1/apps/{appID}/tier
+func (h *AppHandler) UpdateAppTier(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	// Get app ID from URL
+	appIDStr := chi.URLParam(r, "appID")
+	if appIDStr == "" {
+		writeJSONError(w, http.StatusBadRequest, "app_id is required")
+		return
+	}
+
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid app_id format")
+		return
+	}
+
+	var req updateAppTierRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Get app
+	app, err := h.appRepo.FindByID(r.Context(), appID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "app not found")
+		return
+	}
+
+	// Validate and set tier
+	tier := valueobject.ParseRevenueShareTier(req.RevenueShareTier)
+	if !tier.IsValid() {
+		writeJSONError(w, http.StatusBadRequest, "invalid revenue_share_tier")
+		return
+	}
+
+	app.SetRevenueShareTier(tier)
+
+	if err := h.appRepo.Update(r.Context(), app); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to update app")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message":            "Tier updated successfully",
+		"revenue_share_tier": app.RevenueShareTier.String(),
+		"display_name":       app.RevenueShareTier.DisplayName(),
+		"description":        app.RevenueShareTier.Description(),
+		"revenue_share_pct":  app.RevenueShareTier.RevenueSharePercent(),
 	})
 }

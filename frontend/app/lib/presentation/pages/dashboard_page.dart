@@ -13,6 +13,7 @@ import '../blocs/preferences/preferences.dart';
 import '../widgets/ai_insight_card.dart';
 import '../widgets/dashboard_config_dialog.dart';
 import '../widgets/earnings_timeline_chart.dart';
+import '../widgets/fee_insights_card.dart';
 import '../widgets/kpi_card.dart';
 import '../widgets/revenue_mix_chart.dart';
 import '../widgets/risk_distribution_chart.dart';
@@ -280,6 +281,10 @@ class DashboardPage extends StatelessWidget {
             _buildSectionHeader(context, 'Revenue & Risk'),
             const SizedBox(height: 16),
             _buildSecondarySection(context, metrics),
+            const SizedBox(height: 32),
+            _buildSectionHeader(context, 'Fee Insights'),
+            const SizedBox(height: 16),
+            FeeInsightsCard(totalGrossCents: metrics.totalRevenue),
             const SizedBox(height: 32),
             _buildSectionHeader(context, 'Earnings Timeline'),
             const SizedBox(height: 16),

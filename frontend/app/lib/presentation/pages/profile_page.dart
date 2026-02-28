@@ -127,6 +127,15 @@ class ProfilePage extends StatelessWidget {
                     subtitle: 'Connect your Partner account',
                     onTap: () => context.push('/partner-integration'),
                   ),
+                  _buildDivider(),
+                  _buildNavigationTile(
+                    context,
+                    icon: Icons.tune_outlined,
+                    iconColor: Colors.blue,
+                    title: 'App Settings',
+                    subtitle: 'Revenue share tier and fee settings',
+                    onTap: () => context.push('/settings/app'),
+                  ),
                 ],
               ),
 

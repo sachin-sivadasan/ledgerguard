@@ -14,16 +14,26 @@ type Transaction struct {
 	MyshopifyDomain string
 	ShopName        string // Human-readable shop name from Shopify
 	ChargeType      valueobject.ChargeType
-	GrossAmountCents int64  // Subscription price (what customer pays)
-	NetAmountCents   int64  // Revenue (what you receive after Shopify's cut)
-	Currency        string
-	TransactionDate time.Time
-	CreatedAt       time.Time
+	GrossAmountCents   int64 // What the merchant paid (from Shopify Partner API)
+	ShopifyFeeCents    int64 // Revenue share deducted (0%, 15%, or 20%)
+	ProcessingFeeCents int64 // Processing fee (2.9%)
+	TaxOnFeesCents     int64 // Tax on Shopify's fees
+	NetAmountCents     int64 // What the developer receives
+	Currency           string
+	TransactionDate    time.Time
+	CreatedAt          time.Time
 }
 
 // AmountCents returns the net amount for revenue calculations (backwards compatible)
 func (t *Transaction) AmountCents() int64 {
 	return t.NetAmountCents
+}
+
+// TransactionFees contains the fee breakdown for a transaction
+type TransactionFees struct {
+	ShopifyFeeCents    int64 // Revenue share (0%, 15%, or 20%)
+	ProcessingFeeCents int64 // Processing fee (2.9%)
+	TaxOnFeesCents     int64 // Tax on fees
 }
 
 func NewTransaction(
@@ -50,4 +60,45 @@ func NewTransaction(
 		TransactionDate:  transactionDate,
 		CreatedAt:        time.Now(),
 	}
+}
+
+// NewTransactionWithFees creates a transaction with full fee breakdown from Shopify Partner API
+func NewTransactionWithFees(
+	appID uuid.UUID,
+	shopifyGID string,
+	myshopifyDomain string,
+	shopName string,
+	chargeType valueobject.ChargeType,
+	grossAmountCents int64,
+	fees TransactionFees,
+	netAmountCents int64,
+	currency string,
+	transactionDate time.Time,
+) *Transaction {
+	return &Transaction{
+		ID:                 uuid.New(),
+		AppID:              appID,
+		ShopifyGID:         shopifyGID,
+		MyshopifyDomain:    myshopifyDomain,
+		ShopName:           shopName,
+		ChargeType:         chargeType,
+		GrossAmountCents:   grossAmountCents,
+		ShopifyFeeCents:    fees.ShopifyFeeCents,
+		ProcessingFeeCents: fees.ProcessingFeeCents,
+		TaxOnFeesCents:     fees.TaxOnFeesCents,
+		NetAmountCents:     netAmountCents,
+		Currency:           currency,
+		TransactionDate:    transactionDate,
+		CreatedAt:          time.Now(),
+	}
+}
+
+// TotalFeesCents returns the total fees deducted from gross amount
+func (t *Transaction) TotalFeesCents() int64 {
+	return t.ShopifyFeeCents + t.ProcessingFeeCents + t.TaxOnFeesCents
+}
+
+// HasFeeBreakdown returns true if the transaction has detailed fee breakdown
+func (t *Transaction) HasFeeBreakdown() bool {
+	return t.GrossAmountCents > 0 && (t.ShopifyFeeCents > 0 || t.ProcessingFeeCents > 0)
 }

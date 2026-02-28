@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
 var ErrAppNotFound = errors.New("app not found")
@@ -22,8 +23,8 @@ func NewPostgresAppRepository(pool *pgxpool.Pool) *PostgresAppRepository {
 
 func (r *PostgresAppRepository) Create(ctx context.Context, app *entity.App) error {
 	query := `
-		INSERT INTO apps (id, partner_account_id, partner_app_id, name, tracking_enabled, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO apps (id, partner_account_id, partner_app_id, name, tracking_enabled, revenue_share_tier, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -32,7 +33,9 @@ func (r *PostgresAppRepository) Create(ctx context.Context, app *entity.App) err
 		app.PartnerAppID,
 		app.Name,
 		app.TrackingEnabled,
+		string(app.RevenueShareTier),
 		app.CreatedAt,
+		app.UpdatedAt,
 	)
 
 	return err
@@ -40,19 +43,23 @@ func (r *PostgresAppRepository) Create(ctx context.Context, app *entity.App) err
 
 func (r *PostgresAppRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.App, error) {
 	query := `
-		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled, created_at
+		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled,
+		       COALESCE(revenue_share_tier, 'DEFAULT_20'), created_at, COALESCE(updated_at, created_at)
 		FROM apps
 		WHERE id = $1
 	`
 
 	var app entity.App
+	var tierStr string
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&app.ID,
 		&app.PartnerAccountID,
 		&app.PartnerAppID,
 		&app.Name,
 		&app.TrackingEnabled,
+		&tierStr,
 		&app.CreatedAt,
+		&app.UpdatedAt,
 	)
 
 	if err != nil {
@@ -62,12 +69,14 @@ func (r *PostgresAppRepository) FindByID(ctx context.Context, id uuid.UUID) (*en
 		return nil, err
 	}
 
+	app.RevenueShareTier = valueobject.ParseRevenueShareTier(tierStr)
 	return &app, nil
 }
 
 func (r *PostgresAppRepository) FindByPartnerAccountID(ctx context.Context, partnerAccountID uuid.UUID) ([]*entity.App, error) {
 	query := `
-		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled, created_at
+		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled,
+		       COALESCE(revenue_share_tier, 'DEFAULT_20'), created_at, COALESCE(updated_at, created_at)
 		FROM apps
 		WHERE partner_account_id = $1
 		ORDER BY name
@@ -82,17 +91,21 @@ func (r *PostgresAppRepository) FindByPartnerAccountID(ctx context.Context, part
 	var apps []*entity.App
 	for rows.Next() {
 		var app entity.App
+		var tierStr string
 		err := rows.Scan(
 			&app.ID,
 			&app.PartnerAccountID,
 			&app.PartnerAppID,
 			&app.Name,
 			&app.TrackingEnabled,
+			&tierStr,
 			&app.CreatedAt,
+			&app.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
+		app.RevenueShareTier = valueobject.ParseRevenueShareTier(tierStr)
 		apps = append(apps, &app)
 	}
 
@@ -101,19 +114,23 @@ func (r *PostgresAppRepository) FindByPartnerAccountID(ctx context.Context, part
 
 func (r *PostgresAppRepository) FindByPartnerAppID(ctx context.Context, partnerAccountID uuid.UUID, partnerAppID string) (*entity.App, error) {
 	query := `
-		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled, created_at
+		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled,
+		       COALESCE(revenue_share_tier, 'DEFAULT_20'), created_at, COALESCE(updated_at, created_at)
 		FROM apps
 		WHERE partner_account_id = $1 AND partner_app_id = $2
 	`
 
 	var app entity.App
+	var tierStr string
 	err := r.pool.QueryRow(ctx, query, partnerAccountID, partnerAppID).Scan(
 		&app.ID,
 		&app.PartnerAccountID,
 		&app.PartnerAppID,
 		&app.Name,
 		&app.TrackingEnabled,
+		&tierStr,
 		&app.CreatedAt,
+		&app.UpdatedAt,
 	)
 
 	if err != nil {
@@ -123,13 +140,14 @@ func (r *PostgresAppRepository) FindByPartnerAppID(ctx context.Context, partnerA
 		return nil, err
 	}
 
+	app.RevenueShareTier = valueobject.ParseRevenueShareTier(tierStr)
 	return &app, nil
 }
 
 func (r *PostgresAppRepository) Update(ctx context.Context, app *entity.App) error {
 	query := `
 		UPDATE apps
-		SET name = $2, tracking_enabled = $3
+		SET name = $2, tracking_enabled = $3, revenue_share_tier = $4, updated_at = $5
 		WHERE id = $1
 	`
 
@@ -137,6 +155,8 @@ func (r *PostgresAppRepository) Update(ctx context.Context, app *entity.App) err
 		app.ID,
 		app.Name,
 		app.TrackingEnabled,
+		string(app.RevenueShareTier),
+		app.UpdatedAt,
 	)
 	if err != nil {
 		return err

@@ -10,6 +10,7 @@ import '../blocs/subscription_list/subscription_list.dart';
 import '../pages/admin/manual_integration_page.dart';
 import '../pages/api_key_list_page.dart';
 import '../pages/app_selection_page.dart';
+import '../pages/app_settings_page.dart';
 import '../pages/dashboard_page.dart';
 import '../pages/login_page.dart';
 import '../pages/notification_settings_page.dart';
@@ -111,6 +112,11 @@ class AppRouter {
           create: (_) => GetIt.instance<ApiKeyBloc>(),
           child: const ApiKeyListPage(),
         ),
+      ),
+      GoRoute(
+        path: '/settings/app',
+        name: 'app-settings',
+        builder: (context, state) => const AppSettingsPage(),
       ),
       GoRoute(
         path: '/apps/:appId/subscriptions',

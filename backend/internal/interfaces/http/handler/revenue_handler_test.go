@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -21,7 +22,7 @@ type mockRevenueRepository struct {
 	err          error
 }
 
-func (m *mockRevenueRepository) GetMonthlyRevenue(ctx context.Context, appID uuid.UUID, year, month int) ([]repository.RevenueAggregation, error) {
+func (m *mockRevenueRepository) GetRevenueByDateRange(ctx context.Context, appID uuid.UUID, startDate, endDate time.Time) ([]repository.RevenueAggregation, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -100,7 +101,7 @@ func (m *mockAppRepoForRevenue) Delete(ctx context.Context, id uuid.UUID) error 
 	return nil
 }
 
-func TestRevenueHandler_GetMonthlyEarnings_Success(t *testing.T) {
+func TestRevenueHandler_GetEarnings_Success(t *testing.T) {
 	// Setup
 	userID := uuid.New()
 	partnerID := uuid.New()
@@ -145,7 +146,7 @@ func TestRevenueHandler_GetMonthlyEarnings_Success(t *testing.T) {
 	handler := NewRevenueHandler(revenueSvc, partnerRepo, appRepo)
 
 	// Create request with chi router context
-	req := httptest.NewRequest("GET", "/api/v1/apps/12345/earnings?year=2024&month=1&mode=split", nil)
+	req := httptest.NewRequest("GET", "/api/v1/apps/12345/earnings?start=2024-01-01&end=2024-01-31&mode=split", nil)
 
 	// Add chi URL params
 	rctx := chi.NewRouteContext()
@@ -160,7 +161,7 @@ func TestRevenueHandler_GetMonthlyEarnings_Success(t *testing.T) {
 
 	// Execute
 	rr := httptest.NewRecorder()
-	handler.GetMonthlyEarnings(rr, req)
+	handler.GetEarnings(rr, req)
 
 	// Assert
 	if rr.Code != http.StatusOK {
@@ -172,8 +173,8 @@ func TestRevenueHandler_GetMonthlyEarnings_Success(t *testing.T) {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
 
-	if response.Month != "2024-01" {
-		t.Errorf("expected month 2024-01, got %s", response.Month)
+	if response.StartDate != "2024-01-01" {
+		t.Errorf("expected start_date 2024-01-01, got %s", response.StartDate)
 	}
 
 	if len(response.Earnings) != 2 {
@@ -189,7 +190,7 @@ func TestRevenueHandler_GetMonthlyEarnings_Success(t *testing.T) {
 	}
 }
 
-func TestRevenueHandler_GetMonthlyEarnings_CombinedMode(t *testing.T) {
+func TestRevenueHandler_GetEarnings_CombinedMode(t *testing.T) {
 	// Setup
 	userID := uuid.New()
 	partnerID := uuid.New()
@@ -228,7 +229,7 @@ func TestRevenueHandler_GetMonthlyEarnings_CombinedMode(t *testing.T) {
 	handler := NewRevenueHandler(revenueSvc, partnerRepo, appRepo)
 
 	// Create request with combined mode (default)
-	req := httptest.NewRequest("GET", "/api/v1/apps/12345/earnings?year=2024&month=1", nil)
+	req := httptest.NewRequest("GET", "/api/v1/apps/12345/earnings?start=2024-01-01&end=2024-01-31", nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("appID", "12345")
@@ -241,7 +242,7 @@ func TestRevenueHandler_GetMonthlyEarnings_CombinedMode(t *testing.T) {
 
 	// Execute
 	rr := httptest.NewRecorder()
-	handler.GetMonthlyEarnings(rr, req)
+	handler.GetEarnings(rr, req)
 
 	// Assert
 	if rr.Code != http.StatusOK {
@@ -265,10 +266,10 @@ func TestRevenueHandler_GetMonthlyEarnings_CombinedMode(t *testing.T) {
 	}
 }
 
-func TestRevenueHandler_GetMonthlyEarnings_Unauthorized(t *testing.T) {
+func TestRevenueHandler_GetEarnings_Unauthorized(t *testing.T) {
 	handler := NewRevenueHandler(nil, nil, nil)
 
-	req := httptest.NewRequest("GET", "/api/v1/apps/12345/earnings?year=2024&month=1", nil)
+	req := httptest.NewRequest("GET", "/api/v1/apps/12345/earnings?start=2024-01-01&end=2024-01-31", nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("appID", "12345")
@@ -277,14 +278,14 @@ func TestRevenueHandler_GetMonthlyEarnings_Unauthorized(t *testing.T) {
 	// No user in context
 
 	rr := httptest.NewRecorder()
-	handler.GetMonthlyEarnings(rr, req)
+	handler.GetEarnings(rr, req)
 
 	if rr.Code != http.StatusUnauthorized {
 		t.Errorf("expected status 401, got %d", rr.Code)
 	}
 }
 
-func TestRevenueHandler_GetMonthlyEarnings_MissingParams(t *testing.T) {
+func TestRevenueHandler_GetEarnings_MissingParams(t *testing.T) {
 	userID := uuid.New()
 	partnerID := uuid.New()
 	appID := uuid.New()
@@ -307,11 +308,10 @@ func TestRevenueHandler_GetMonthlyEarnings_MissingParams(t *testing.T) {
 		},
 	}
 
-	revenueRepo := &mockRevenueRepository{}
-	revenueSvc := service.NewRevenueMetricsService(revenueRepo)
+	revenueSvc := service.NewRevenueMetricsService(&mockRevenueRepository{})
 	handler := NewRevenueHandler(revenueSvc, partnerRepo, appRepo)
 
-	// Missing year and month
+	// Missing start and end dates
 	req := httptest.NewRequest("GET", "/api/v1/apps/12345/earnings", nil)
 
 	rctx := chi.NewRouteContext()
@@ -324,61 +324,14 @@ func TestRevenueHandler_GetMonthlyEarnings_MissingParams(t *testing.T) {
 	}))
 
 	rr := httptest.NewRecorder()
-	handler.GetMonthlyEarnings(rr, req)
+	handler.GetEarnings(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("expected status 400, got %d", rr.Code)
 	}
 }
 
-func TestRevenueHandler_GetMonthlyEarnings_InvalidMonth(t *testing.T) {
-	userID := uuid.New()
-	partnerID := uuid.New()
-	appID := uuid.New()
-
-	partnerRepo := &mockPartnerRepoForRevenue{
-		account: &entity.PartnerAccount{
-			ID:     partnerID,
-			UserID: userID,
-		},
-	}
-
-	appRepo := &mockAppRepoForRevenue{
-		apps: []*entity.App{
-			{
-				ID:               appID,
-				PartnerAccountID: partnerID,
-				PartnerAppID:     "gid://partners/App/12345",
-				Name:             "Test App",
-			},
-		},
-	}
-
-	revenueRepo := &mockRevenueRepository{}
-	revenueSvc := service.NewRevenueMetricsService(revenueRepo)
-	handler := NewRevenueHandler(revenueSvc, partnerRepo, appRepo)
-
-	// Invalid month (13)
-	req := httptest.NewRequest("GET", "/api/v1/apps/12345/earnings?year=2024&month=13", nil)
-
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("appID", "12345")
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-
-	req = req.WithContext(middleware.SetUserContext(req.Context(), &entity.User{
-		ID:    userID,
-		Email: "test@example.com",
-	}))
-
-	rr := httptest.NewRecorder()
-	handler.GetMonthlyEarnings(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("expected status 400, got %d: %s", rr.Code, rr.Body.String())
-	}
-}
-
-func TestRevenueHandler_GetMonthlyEarnings_AppNotFound(t *testing.T) {
+func TestRevenueHandler_GetEarnings_AppNotFound(t *testing.T) {
 	userID := uuid.New()
 	partnerID := uuid.New()
 
@@ -389,15 +342,15 @@ func TestRevenueHandler_GetMonthlyEarnings_AppNotFound(t *testing.T) {
 		},
 	}
 
+	// Empty app list - app not found
 	appRepo := &mockAppRepoForRevenue{
-		apps: []*entity.App{}, // No apps
+		apps: []*entity.App{},
 	}
 
-	revenueRepo := &mockRevenueRepository{}
-	revenueSvc := service.NewRevenueMetricsService(revenueRepo)
+	revenueSvc := service.NewRevenueMetricsService(&mockRevenueRepository{})
 	handler := NewRevenueHandler(revenueSvc, partnerRepo, appRepo)
 
-	req := httptest.NewRequest("GET", "/api/v1/apps/99999/earnings?year=2024&month=1", nil)
+	req := httptest.NewRequest("GET", "/api/v1/apps/99999/earnings?start=2024-01-01&end=2024-01-31", nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("appID", "99999")
@@ -409,9 +362,9 @@ func TestRevenueHandler_GetMonthlyEarnings_AppNotFound(t *testing.T) {
 	}))
 
 	rr := httptest.NewRecorder()
-	handler.GetMonthlyEarnings(rr, req)
+	handler.GetEarnings(rr, req)
 
 	if rr.Code != http.StatusNotFound {
-		t.Errorf("expected status 404, got %d: %s", rr.Code, rr.Body.String())
+		t.Errorf("expected status 404, got %d", rr.Code)
 	}
 }

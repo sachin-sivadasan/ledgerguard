@@ -4,24 +4,82 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/earnings_timeline.dart';
+import '../../domain/entities/time_range.dart';
 import '../blocs/earnings/earnings.dart';
 
 /// Earnings Timeline chart widget displaying daily earnings as a bar chart
-class EarningsTimelineChart extends StatelessWidget {
-  const EarningsTimelineChart({super.key});
+class EarningsTimelineChart extends StatefulWidget {
+  final TimeRange timeRange;
+
+  const EarningsTimelineChart({
+    super.key,
+    required this.timeRange,
+  });
+
+  @override
+  State<EarningsTimelineChart> createState() => _EarningsTimelineChartState();
+}
+
+class _EarningsTimelineChartState extends State<EarningsTimelineChart> {
+  TimeRange? _lastLoadedRange;
+  EarningsLoaded? _lastLoadedState;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDataIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(EarningsTimelineChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _loadDataIfNeeded();
+  }
+
+  void _loadDataIfNeeded() {
+    // Check if timeRange changed since last load
+    if (_lastLoadedRange != widget.timeRange) {
+      final isFirstLoad = _lastLoadedRange == null;
+      _lastLoadedRange = widget.timeRange;
+      if (isFirstLoad) {
+        context.read<EarningsBloc>().add(LoadEarningsRequested(widget.timeRange));
+      } else {
+        context.read<EarningsBloc>().add(EarningsTimeRangeChanged(widget.timeRange));
+      }
+    }
+  }
+
+  void _loadData() {
+    _lastLoadedRange = widget.timeRange;
+    context.read<EarningsBloc>().add(LoadEarningsRequested(widget.timeRange));
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Also check in build in case widget was recreated
+    if (_lastLoadedRange != widget.timeRange) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadDataIfNeeded();
+      });
+    }
+
     return BlocBuilder<EarningsBloc, EarningsState>(
       builder: (context, state) {
-        if (state is EarningsInitial) {
-          // Trigger load on first build
-          context.read<EarningsBloc>().add(const LoadEarningsRequested());
-          return _buildLoadingState();
+        // Cache the last loaded state for smooth transitions
+        if (state is EarningsLoaded) {
+          _lastLoadedState = state;
         }
 
+        if (state is EarningsInitial) {
+          return _buildLoadingState(state);
+        }
+
+        // Show previous chart with loading overlay during loading
         if (state is EarningsLoading) {
-          return _buildLoadingState();
+          if (_lastLoadedState != null) {
+            return _buildChartWithLoading(context, _lastLoadedState!, state);
+          }
+          return _buildLoadingState(state);
         }
 
         if (state is EarningsEmpty) {
@@ -33,7 +91,7 @@ class EarningsTimelineChart extends StatelessWidget {
         }
 
         if (state is EarningsLoaded) {
-          return _buildChart(context, state);
+          return _buildChart(context, state, isLoading: false);
         }
 
         return const SizedBox.shrink();
@@ -41,13 +99,39 @@ class EarningsTimelineChart extends StatelessWidget {
     );
   }
 
-  Widget _buildLoadingState() {
+  Widget _buildChartWithLoading(BuildContext context, EarningsLoaded loadedState, EarningsLoading loadingState) {
+    return _buildChart(
+      context,
+      loadedState.copyWith(
+        year: loadingState.year,
+        month: loadingState.month,
+        canGoNext: false,
+        canGoPrevious: false,
+      ),
+      isLoading: true,
+    );
+  }
+
+  Widget _buildLoadingState(EarningsState state) {
+    int year = DateTime.now().year;
+    int month = DateTime.now().month;
+    if (state is EarningsLoading) {
+      year = state.year;
+      month = state.month;
+    }
+
     return Card(
+      key: const ValueKey('earnings-card'),
       child: Container(
-        height: 320,
+        height: 300,
         padding: const EdgeInsets.all(16),
-        child: const Center(
-          child: CircularProgressIndicator(),
+        child: Column(
+          children: [
+            _buildHeader(context, year, month, false, false, EarningsMode.combined),
+            const Expanded(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ],
         ),
       ),
     );
@@ -55,22 +139,19 @@ class EarningsTimelineChart extends StatelessWidget {
 
   Widget _buildEmptyState(BuildContext context, EarningsEmpty state) {
     return Card(
+      key: const ValueKey('earnings-card'),
       child: Container(
-        height: 320,
+        height: 300,
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildHeader(context, state.year, state.month, false, true),
+            _buildHeader(context, state.year, state.month, state.canGoNext, state.canGoPrevious, EarningsMode.combined),
             const Expanded(
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.bar_chart,
-                      size: 48,
-                      color: Colors.grey,
-                    ),
+                    Icon(Icons.bar_chart, size: 48, color: Colors.grey),
                     SizedBox(height: 8),
                     Text(
                       'No earnings data for this month',
@@ -88,22 +169,19 @@ class EarningsTimelineChart extends StatelessWidget {
 
   Widget _buildErrorState(BuildContext context, EarningsError state) {
     return Card(
+      key: const ValueKey('earnings-card'),
       child: Container(
-        height: 320,
+        height: 300,
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildHeader(context, state.year, state.month, false, true),
+            _buildHeader(context, state.year, state.month, false, true, EarningsMode.combined),
             Expanded(
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
-                    ),
+                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
                     const SizedBox(height: 8),
                     Text(
                       state.message,
@@ -112,11 +190,7 @@ class EarningsTimelineChart extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     TextButton.icon(
-                      onPressed: () {
-                        context
-                            .read<EarningsBloc>()
-                            .add(const LoadEarningsRequested());
-                      },
+                      onPressed: _loadData,
                       icon: const Icon(Icons.refresh),
                       label: const Text('Retry'),
                     ),
@@ -130,34 +204,40 @@ class EarningsTimelineChart extends StatelessWidget {
     );
   }
 
-  Widget _buildChart(BuildContext context, EarningsLoaded state) {
+  Widget _buildChart(BuildContext context, EarningsLoaded state, {bool isLoading = false}) {
     final timeline = state.timeline;
     final isSplitMode = state.mode == EarningsMode.split;
 
     return Card(
-      child: Padding(
+      key: const ValueKey('earnings-card'),
+      child: Container(
+        height: 300,
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            _buildHeader(
-              context,
-              timeline.year,
-              timeline.monthNumber,
-              state.canGoNext,
-              state.canGoPrevious,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context, state.year, state.month, state.canGoNext, state.canGoPrevious, state.mode),
+                const SizedBox(height: 12),
+                _buildTotalSummary(context, timeline, isSplitMode),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: timeline.earnings.isEmpty
+                      ? const Center(child: Text('No data'))
+                      : _buildBarChart(context, timeline, isSplitMode),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            _buildModeToggle(context, state.mode),
-            const SizedBox(height: 16),
-            _buildTotalSummary(context, timeline, isSplitMode),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 200,
-              child: timeline.earnings.isEmpty
-                  ? const Center(child: Text('No data'))
-                  : _buildBarChart(context, timeline, isSplitMode),
-            ),
+            if (isLoading)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.white.withOpacity(0.7),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -170,65 +250,45 @@ class EarningsTimelineChart extends StatelessWidget {
     int month,
     bool canGoNext,
     bool canGoPrevious,
+    EarningsMode currentMode,
   ) {
     const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
     ];
     final monthName = months[month - 1];
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Earnings Timeline',
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '$monthName $year',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                '$monthName $year',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-              ),
-            ],
-          ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_left),
+              onPressed: canGoPrevious
+                  ? () => context.read<EarningsBloc>().add(const PreviousMonthRequested())
+                  : null,
+              tooltip: 'Previous month',
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right),
+              onPressed: canGoNext
+                  ? () => context.read<EarningsBloc>().add(const NextMonthRequested())
+                  : null,
+              tooltip: 'Next month',
+            ),
+          ],
         ),
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
-          onPressed: canGoPrevious
-              ? () {
-                  context
-                      .read<EarningsBloc>()
-                      .add(const PreviousMonthRequested());
-                }
-              : null,
-          tooltip: 'Previous month',
-        ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
-          onPressed: canGoNext
-              ? () {
-                  context.read<EarningsBloc>().add(const NextMonthRequested());
-                }
-              : null,
-          tooltip: 'Next month',
-        ),
+        const SizedBox(height: 8),
+        _buildModeToggle(context, currentMode),
       ],
     );
   }
@@ -243,9 +303,7 @@ class EarningsTimelineChart extends StatelessWidget {
           selected: currentMode == EarningsMode.combined,
           onSelected: (selected) {
             if (selected) {
-              context
-                  .read<EarningsBloc>()
-                  .add(const EarningsModeChanged(EarningsMode.combined));
+              context.read<EarningsBloc>().add(const EarningsModeChanged(EarningsMode.combined));
             }
           },
           visualDensity: VisualDensity.compact,
@@ -256,9 +314,7 @@ class EarningsTimelineChart extends StatelessWidget {
           selected: currentMode == EarningsMode.split,
           onSelected: (selected) {
             if (selected) {
-              context
-                  .read<EarningsBloc>()
-                  .add(const EarningsModeChanged(EarningsMode.split));
+              context.read<EarningsBloc>().add(const EarningsModeChanged(EarningsMode.split));
             }
           },
           visualDensity: VisualDensity.compact,
@@ -355,7 +411,7 @@ class EarningsTimelineChart extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: SizedBox(
-        width: timeline.earnings.length * 24.0 + 40, // Fixed width per bar
+        width: timeline.earnings.length * 20.0 + 40,
         child: BarChart(
           BarChartData(
             alignment: BarChartAlignment.spaceAround,
@@ -390,12 +446,8 @@ class EarningsTimelineChart extends StatelessWidget {
             ),
             titlesData: FlTitlesData(
               show: true,
-              rightTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              topTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
@@ -403,18 +455,12 @@ class EarningsTimelineChart extends StatelessWidget {
                     final index = value.toInt();
                     if (index >= 0 && index < timeline.earnings.length) {
                       final day = timeline.earnings[index].dayOfMonth;
-                      // Show every 5th day or first/last
-                      if (day == 1 ||
-                          day % 5 == 0 ||
-                          index == timeline.earnings.length - 1) {
+                      if (day == 1 || day % 5 == 0 || index == timeline.earnings.length - 1) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
                             '$day',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey,
-                            ),
+                            style: const TextStyle(fontSize: 10, color: Colors.grey),
                           ),
                         );
                       }
@@ -429,15 +475,10 @@ class EarningsTimelineChart extends StatelessWidget {
                   showTitles: true,
                   reservedSize: 40,
                   getTitlesWidget: (value, meta) {
-                    if (value == 0) {
-                      return const SizedBox.shrink();
-                    }
+                    if (value == 0) return const SizedBox.shrink();
                     return Text(
                       '\$${value.toInt()}',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey,
-                      ),
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
                     );
                   },
                 ),
@@ -449,14 +490,13 @@ class EarningsTimelineChart extends StatelessWidget {
               drawVerticalLine: false,
               horizontalInterval: maxY / 4,
               getDrawingHorizontalLine: (value) {
-                return FlLine(
-                  color: Colors.grey[200]!,
-                  strokeWidth: 1,
-                );
+                return FlLine(color: Colors.grey[200]!, strokeWidth: 1);
               },
             ),
             barGroups: _buildBarGroups(timeline, isSplitMode),
           ),
+          swapAnimationDuration: const Duration(milliseconds: 250),
+          swapAnimationCurve: Curves.easeInOut,
         ),
       ),
     );
@@ -471,14 +511,13 @@ class EarningsTimelineChart extends StatelessWidget {
       final data = entry.value;
 
       if (isSplitMode) {
-        // Stacked bars for subscription and usage
         return BarChartGroupData(
           x: index,
           barRods: [
             BarChartRodData(
               toY: data.subscriptionAmountCents / 100,
               color: AppTheme.success,
-              width: 16,
+              width: 12,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(4),
                 topRight: Radius.circular(4),
@@ -487,7 +526,7 @@ class EarningsTimelineChart extends StatelessWidget {
             BarChartRodData(
               toY: data.usageAmountCents / 100,
               color: AppTheme.secondary,
-              width: 16,
+              width: 12,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(4),
                 topRight: Radius.circular(4),
@@ -496,14 +535,13 @@ class EarningsTimelineChart extends StatelessWidget {
           ],
         );
       } else {
-        // Single bar for total
         return BarChartGroupData(
           x: index,
           barRods: [
             BarChartRodData(
               toY: data.totalAmountCents / 100,
               color: AppTheme.primary,
-              width: 16,
+              width: 12,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(4),
                 topRight: Radius.circular(4),

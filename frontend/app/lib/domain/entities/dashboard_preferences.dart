@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 
 /// Available KPI types for the dashboard
 enum KpiType {
@@ -24,15 +25,17 @@ enum KpiType {
 
 /// Available secondary widgets for the dashboard
 enum SecondaryWidget {
-  usageRevenue('usage_revenue', 'Usage Revenue'),
-  totalRevenue('total_revenue', 'Total Revenue'),
-  revenueMixChart('revenue_mix_chart', 'Revenue Mix Chart'),
-  riskDistributionChart('risk_distribution_chart', 'Risk Distribution Chart');
+  usageRevenue('usage_revenue', 'Usage Revenue', Icons.data_usage),
+  totalRevenue('total_revenue', 'Total Revenue', Icons.account_balance_wallet),
+  revenueMixChart('revenue_mix_chart', 'Revenue Mix', Icons.pie_chart_outline),
+  riskDistributionChart('risk_distribution_chart', 'Risk Distribution', Icons.donut_small),
+  earningsTimeline('earnings_timeline', 'Earnings Timeline', Icons.bar_chart);
 
   final String id;
   final String displayName;
+  final IconData icon;
 
-  const SecondaryWidget(this.id, this.displayName);
+  const SecondaryWidget(this.id, this.displayName, this.icon);
 
   static SecondaryWidget fromId(String id) {
     return SecondaryWidget.values.firstWhere(
@@ -69,6 +72,7 @@ class DashboardPreferences extends Equatable {
         SecondaryWidget.totalRevenue,
         SecondaryWidget.revenueMixChart,
         SecondaryWidget.riskDistributionChart,
+        SecondaryWidget.earningsTimeline,
       },
     );
   }

@@ -2,13 +2,13 @@ import '../entities/earnings_timeline.dart';
 
 /// Repository interface for earnings timeline data
 abstract class EarningsRepository {
-  /// Fetch earnings timeline for a specific month
-  /// [year] - The year (e.g., 2024)
-  /// [month] - The month (1-12)
+  /// Fetch earnings timeline for a date range
+  /// [startDate] - Start date of the range
+  /// [endDate] - End date of the range
   /// [mode] - Display mode (combined or split)
-  Future<EarningsTimeline> fetchMonthlyEarnings({
-    required int year,
-    required int month,
+  Future<EarningsTimeline> fetchEarnings({
+    required DateTime startDate,
+    required DateTime endDate,
     required EarningsMode mode,
   });
 }
@@ -31,17 +31,11 @@ class NoAppSelectedEarningsException extends EarningsException {
             code: 'no-app-selected');
 }
 
-/// Invalid month requested
-class InvalidMonthException extends EarningsException {
-  const InvalidMonthException()
-      : super('Invalid month. Month must be between 1 and 12.',
-            code: 'invalid-month');
-}
-
-/// Future month requested
-class FutureMonthException extends EarningsException {
-  const FutureMonthException()
-      : super('Cannot request future months.', code: 'future-month');
+/// Invalid date range requested
+class InvalidDateRangeException extends EarningsException {
+  const InvalidDateRangeException()
+      : super('Invalid date range. Start date must be before end date.',
+            code: 'invalid-date-range');
 }
 
 /// Unauthorized to access earnings

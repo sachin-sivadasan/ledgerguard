@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -16,7 +17,7 @@ type RevenueAggregation struct {
 
 // RevenueRepository defines the interface for revenue data access
 type RevenueRepository interface {
-	// GetMonthlyRevenue retrieves aggregated revenue data for a specific month
+	// GetRevenueByDateRange retrieves aggregated revenue data for a date range
 	// Groups transactions by date and sums amounts by charge type
-	GetMonthlyRevenue(ctx context.Context, appID uuid.UUID, year, month int) ([]RevenueAggregation, error)
+	GetRevenueByDateRange(ctx context.Context, appID uuid.UUID, startDate, endDate time.Time) ([]RevenueAggregation, error)
 }

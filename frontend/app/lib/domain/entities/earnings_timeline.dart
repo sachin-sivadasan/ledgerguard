@@ -74,20 +74,24 @@ class EarningsEntry extends Equatable {
       ];
 }
 
-/// Earnings timeline for a month
+/// Earnings timeline for a date range
 class EarningsTimeline extends Equatable {
-  /// Month in YYYY-MM format
-  final String month;
+  /// Start date in YYYY-MM-DD format
+  final String startDate;
+
+  /// End date in YYYY-MM-DD format
+  final String endDate;
 
   /// Daily earnings entries sorted by date
   final List<EarningsEntry> earnings;
 
   const EarningsTimeline({
-    required this.month,
+    required this.startDate,
+    required this.endDate,
     required this.earnings,
   });
 
-  /// Get total earnings for the month
+  /// Get total earnings for the period
   int get totalEarnings =>
       earnings.fold(0, (sum, e) => sum + e.totalAmountCents);
 
@@ -107,42 +111,28 @@ class EarningsTimeline extends Equatable {
     return earnings.map((e) => e.totalAmountCents).reduce((a, b) => a > b ? a : b);
   }
 
-  /// Get year from month string
-  int get year {
-    final parts = month.split('-');
-    return int.tryParse(parts[0]) ?? DateTime.now().year;
+  /// Get display date range (e.g., "Jan 1 - Jan 31, 2024")
+  String get displayDateRange {
+    final start = _parseDate(startDate);
+    final end = _parseDate(endDate);
+    if (start == null || end == null) return '$startDate - $endDate';
+
+    final startStr = '${_monthAbbrev(start.month)} ${start.day}';
+    final endStr = '${_monthAbbrev(end.month)} ${end.day}, ${end.year}';
+    return '$startStr - $endStr';
   }
 
-  /// Get month number from month string
-  int get monthNumber {
-    final parts = month.split('-');
-    if (parts.length >= 2) {
-      return int.tryParse(parts[1]) ?? DateTime.now().month;
+  DateTime? _parseDate(String dateStr) {
+    try {
+      return DateTime.parse(dateStr);
+    } catch (_) {
+      return null;
     }
-    return DateTime.now().month;
   }
 
-  /// Get display name for month (e.g., "January 2024")
-  String get displayMonth {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    final monthIndex = monthNumber - 1;
-    if (monthIndex >= 0 && monthIndex < 12) {
-      return '${months[monthIndex]} $year';
-    }
-    return month;
+  String _monthAbbrev(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
   }
 
   String _formatCurrency(int cents) {
@@ -157,7 +147,8 @@ class EarningsTimeline extends Equatable {
 
   factory EarningsTimeline.fromJson(Map<String, dynamic> json) {
     return EarningsTimeline(
-      month: json['month'] as String,
+      startDate: json['start_date'] as String,
+      endDate: json['end_date'] as String,
       earnings: (json['earnings'] as List<dynamic>)
           .map((e) => EarningsEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -165,5 +156,5 @@ class EarningsTimeline extends Equatable {
   }
 
   @override
-  List<Object?> get props => [month, earnings];
+  List<Object?> get props => [startDate, endDate, earnings];
 }

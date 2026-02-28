@@ -19,17 +19,13 @@ func NewPostgresRevenueRepository(pool *pgxpool.Pool) *PostgresRevenueRepository
 	return &PostgresRevenueRepository{pool: pool}
 }
 
-// GetMonthlyRevenue retrieves aggregated revenue data for a specific month
+// GetRevenueByDateRange retrieves aggregated revenue data for a date range
 // Groups transactions by date and sums amounts by charge type
-func (r *PostgresRevenueRepository) GetMonthlyRevenue(
+func (r *PostgresRevenueRepository) GetRevenueByDateRange(
 	ctx context.Context,
 	appID uuid.UUID,
-	year, month int,
+	startDate, endDate time.Time,
 ) ([]repository.RevenueAggregation, error) {
-	// Calculate date range for the month
-	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
-	endDate := startDate.AddDate(0, 1, 0) // First day of next month
-
 	// Query to aggregate transactions by date and charge type
 	query := `
 		WITH daily_totals AS (
@@ -41,7 +37,7 @@ func (r *PostgresRevenueRepository) GetMonthlyRevenue(
 			FROM transactions
 			WHERE app_id = $1
 				AND transaction_date >= $2
-				AND transaction_date < $3
+				AND transaction_date <= $3
 				AND charge_type IN ('RECURRING', 'USAGE')
 			GROUP BY DATE(transaction_date)
 			ORDER BY revenue_date ASC

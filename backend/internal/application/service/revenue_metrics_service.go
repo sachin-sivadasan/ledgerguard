@@ -36,42 +36,43 @@ type EarningsEntryResponse struct {
 	UsageAmountCents        int64  `json:"usage_amount_cents,omitempty"`
 }
 
-// EarningsTimelineResponse represents the API response for monthly earnings
+// EarningsTimelineResponse represents the API response for earnings timeline
 type EarningsTimelineResponse struct {
-	Month    string                  `json:"month"`
-	Earnings []EarningsEntryResponse `json:"earnings"`
+	StartDate string                  `json:"start_date"`
+	EndDate   string                  `json:"end_date"`
+	Earnings  []EarningsEntryResponse `json:"earnings"`
 }
 
-// GetMonthlyEarnings retrieves earnings timeline for a specific month
-func (s *RevenueMetricsService) GetMonthlyEarnings(
+// GetEarningsByDateRange retrieves earnings timeline for a date range
+func (s *RevenueMetricsService) GetEarningsByDateRange(
 	ctx context.Context,
 	appID uuid.UUID,
-	year, month int,
+	startDate, endDate time.Time,
 	mode RevenueMode,
 ) (*EarningsTimelineResponse, error) {
-	// Validate month
-	if month < 1 || month > 12 {
-		return nil, ErrInvalidMonth
+	// Don't allow future end dates
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	if endDate.After(today) {
+		endDate = today
 	}
 
-	// Don't allow future months
-	now := time.Now()
-	requestedMonth := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
-	currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	if requestedMonth.After(currentMonth) {
-		return nil, ErrFutureMonth
+	// Validate date range
+	if startDate.After(endDate) {
+		return nil, ErrInvalidDateRange
 	}
 
 	// Get aggregated revenue data from repository
-	aggregations, err := s.revenueRepo.GetMonthlyRevenue(ctx, appID, year, month)
+	aggregations, err := s.revenueRepo.GetRevenueByDateRange(ctx, appID, startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
 
 	// Convert to response format
 	response := &EarningsTimelineResponse{
-		Month:    time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC).Format("2006-01"),
-		Earnings: make([]EarningsEntryResponse, 0, len(aggregations)),
+		StartDate: startDate.Format("2006-01-02"),
+		EndDate:   endDate.Format("2006-01-02"),
+		Earnings:  make([]EarningsEntryResponse, 0, len(aggregations)),
 	}
 
 	for _, agg := range aggregations {
@@ -94,8 +95,7 @@ func (s *RevenueMetricsService) GetMonthlyEarnings(
 
 // Errors
 var (
-	ErrInvalidMonth = &RevenueError{Message: "invalid month: must be 1-12"}
-	ErrFutureMonth  = &RevenueError{Message: "cannot request future months"}
+	ErrInvalidDateRange = &RevenueError{Message: "invalid date range: start date must be before end date"}
 )
 
 // RevenueError represents a revenue service error

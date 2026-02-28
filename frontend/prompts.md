@@ -665,3 +665,56 @@ Track all prompts executed for the Flutter frontend.
 - Total tests: 188 passing (2 pre-existing failures in partner_integration_page_test.dart)
 
 ---
+
+## Prompt 020 – Earnings Timeline Enhancements
+**Date:** 2026-02-28
+**Status:** Complete
+
+**Prompt:**
+> Multiple requests for earnings timeline improvements:
+> 1. Remove individual date switcher, use top dashboard date filter
+> 2. What date for "Last 30 Days"? → Use date range API
+> 3. Add month navigator back with dashboard sync
+> 4. Add to dashboard configuration settings
+> 5. Fix scroll jump when switching modes/months
+> 6. Fix animation not working
+
+**Improved:**
+> Enhance Earnings Timeline chart with:
+> 1. Change API from year/month to start/end date range to support "Last 30 Days" spanning multiple months
+> 2. Sync chart month with dashboard time range (extract appropriate month from preset)
+> 3. Keep month navigation arrows for manual browsing within current data
+> 4. Add `earningsTimeline` to SecondaryWidget enum for dashboard config toggle
+> 5. Premium-styled dashboard config dialog with gradient header, icons
+> 6. Fix scroll jump by maintaining consistent 300px card height across all states
+> 7. Fix animation by preserving chart during loading (overlay indicator instead of replacing chart)
+
+**Changes:**
+- Backend:
+  - Updated `revenue_repository.go` - `GetRevenueByDateRange(startDate, endDate)`
+  - Updated `revenue_handler.go` - Parse start/end query params
+  - Updated `router.go` - Use new handler method name
+- Frontend Domain:
+  - Updated `earnings_timeline.dart` - Date range based entity
+  - Updated `earnings_repository.dart` - `fetchEarnings(startDate, endDate, mode)`
+- Frontend Data:
+  - Updated `api_earnings_repository.dart` - start/end query params
+- Frontend Bloc:
+  - Updated `earnings_bloc.dart` - `_getTargetMonth(TimeRange)`, `EarningsTimeRangeChanged`
+  - Updated `earnings_event.dart` - Added `EarningsTimeRangeChanged`
+  - Updated `earnings_state.dart` - Added `copyWith` method
+- Frontend Widgets:
+  - Updated `earnings_timeline_chart.dart`:
+    - Cache `_lastLoadedState` for smooth transitions
+    - Show overlay loading indicator instead of replacing chart
+    - 300px fixed height for all states
+    - `ValueKey('earnings-card')` for widget identity
+    - BarChart animation: 250ms easeInOut
+  - Updated `dashboard_config_dialog.dart` - Premium styling
+  - Updated `dashboard_preferences.dart` - Added `earningsTimeline` to SecondaryWidget
+- Tests:
+  - Updated `dashboard_config_dialog_test.dart` - 5 switches instead of 4
+- All dashboard tests passing (24/24)
+- All config dialog tests passing (15/15)
+
+---

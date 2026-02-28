@@ -17,10 +17,7 @@ class EarningsInitial extends EarningsState {
 
 /// Loading state while fetching earnings data
 class EarningsLoading extends EarningsState {
-  /// Current year being loaded
   final int year;
-
-  /// Current month being loaded
   final int month;
 
   const EarningsLoading({
@@ -40,10 +37,13 @@ class EarningsLoaded extends EarningsState {
   /// Current display mode
   final EarningsMode mode;
 
-  /// Whether we're currently refreshing
-  final bool isRefreshing;
+  /// Current year being displayed
+  final int year;
 
-  /// Whether we can navigate to next month (limited to current month)
+  /// Current month being displayed (1-12)
+  final int month;
+
+  /// Whether we can navigate to next month
   final bool canGoNext;
 
   /// Whether we can navigate to previous month
@@ -52,7 +52,8 @@ class EarningsLoaded extends EarningsState {
   const EarningsLoaded({
     required this.timeline,
     required this.mode,
-    this.isRefreshing = false,
+    required this.year,
+    required this.month,
     this.canGoNext = false,
     this.canGoPrevious = true,
   });
@@ -61,27 +62,23 @@ class EarningsLoaded extends EarningsState {
   EarningsLoaded copyWith({
     EarningsTimeline? timeline,
     EarningsMode? mode,
-    bool? isRefreshing,
+    int? year,
+    int? month,
     bool? canGoNext,
     bool? canGoPrevious,
   }) {
     return EarningsLoaded(
       timeline: timeline ?? this.timeline,
       mode: mode ?? this.mode,
-      isRefreshing: isRefreshing ?? this.isRefreshing,
+      year: year ?? this.year,
+      month: month ?? this.month,
       canGoNext: canGoNext ?? this.canGoNext,
       canGoPrevious: canGoPrevious ?? this.canGoPrevious,
     );
   }
 
   @override
-  List<Object?> get props => [
-        timeline,
-        mode,
-        isRefreshing,
-        canGoNext,
-        canGoPrevious,
-      ];
+  List<Object?> get props => [timeline, mode, year, month, canGoNext, canGoPrevious];
 }
 
 /// Empty state when no earnings data exists
@@ -89,15 +86,19 @@ class EarningsEmpty extends EarningsState {
   final String message;
   final int year;
   final int month;
+  final bool canGoNext;
+  final bool canGoPrevious;
 
   const EarningsEmpty({
     required this.message,
     required this.year,
     required this.month,
+    this.canGoNext = false,
+    this.canGoPrevious = true,
   });
 
   @override
-  List<Object?> get props => [message, year, month];
+  List<Object?> get props => [message, year, month, canGoNext, canGoPrevious];
 }
 
 /// Error state when loading fails

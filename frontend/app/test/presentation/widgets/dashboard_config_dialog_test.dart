@@ -102,8 +102,9 @@ void main() {
 
       expect(find.text('Usage Revenue'), findsOneWidget);
       expect(find.text('Total Revenue'), findsOneWidget);
-      expect(find.text('Revenue Mix Chart'), findsOneWidget);
-      expect(find.text('Risk Distribution Chart'), findsOneWidget);
+      expect(find.text('Revenue Mix'), findsOneWidget);
+      expect(find.text('Risk Distribution'), findsOneWidget);
+      expect(find.text('Earnings Timeline'), findsOneWidget);
     });
 
     testWidgets('shows unsaved changes indicator', (tester) async {
@@ -146,7 +147,7 @@ void main() {
 
       // Find the Usage Revenue switch (first switch) and toggle it
       final switches = find.byType(Switch);
-      expect(switches, findsNWidgets(4));
+      expect(switches, findsNWidgets(5));
 
       await tester.tap(switches.first);
       await tester.pump();

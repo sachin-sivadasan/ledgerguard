@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../domain/entities/earnings_timeline.dart';
+import '../../../domain/entities/time_range.dart';
 import '../../../domain/repositories/earnings_repository.dart';
 import 'earnings_event.dart';
 import 'earnings_state.dart';
@@ -9,76 +10,62 @@ import 'earnings_state.dart';
 class EarningsBloc extends Bloc<EarningsEvent, EarningsState> {
   final EarningsRepository _earningsRepository;
 
-  int _currentYear;
-  int _currentMonth;
-  EarningsMode _currentMode;
+  int _currentYear = DateTime.now().year;
+  int _currentMonth = DateTime.now().month;
+  EarningsMode _currentMode = EarningsMode.combined;
 
   EarningsBloc({
     required EarningsRepository earningsRepository,
   })  : _earningsRepository = earningsRepository,
-        _currentYear = DateTime.now().year,
-        _currentMonth = DateTime.now().month,
-        _currentMode = EarningsMode.combined,
         super(const EarningsInitial()) {
     on<LoadEarningsRequested>(_onLoadEarningsRequested);
+    on<EarningsTimeRangeChanged>(_onTimeRangeChanged);
     on<PreviousMonthRequested>(_onPreviousMonthRequested);
     on<NextMonthRequested>(_onNextMonthRequested);
     on<EarningsModeChanged>(_onEarningsModeChanged);
-    on<RefreshEarningsRequested>(_onRefreshEarningsRequested);
+  }
+
+  /// Extract target month from TimeRange preset
+  (int year, int month) _getTargetMonth(TimeRange timeRange) {
+    switch (timeRange.preset) {
+      case TimeRangePreset.lastMonth:
+        // Use start date for "Last Month"
+        return (timeRange.start.year, timeRange.start.month);
+      case TimeRangePreset.thisMonth:
+      case TimeRangePreset.last30Days:
+      case TimeRangePreset.last90Days:
+      case TimeRangePreset.custom:
+        // Use end date for all others
+        return (timeRange.end.year, timeRange.end.month);
+    }
   }
 
   Future<void> _onLoadEarningsRequested(
     LoadEarningsRequested event,
     Emitter<EarningsState> emit,
   ) async {
-    // Reset to current month on initial load
-    _currentYear = DateTime.now().year;
-    _currentMonth = DateTime.now().month;
+    final (year, month) = _getTargetMonth(event.timeRange);
+    _currentYear = year;
+    _currentMonth = month;
 
-    emit(EarningsLoading(year: _currentYear, month: _currentMonth));
+    await _loadMonth(emit);
+  }
 
-    try {
-      final timeline = await _earningsRepository.fetchMonthlyEarnings(
-        year: _currentYear,
-        month: _currentMonth,
-        mode: _currentMode,
-      );
+  Future<void> _onTimeRangeChanged(
+    EarningsTimeRangeChanged event,
+    Emitter<EarningsState> emit,
+  ) async {
+    final (year, month) = _getTargetMonth(event.timeRange);
+    _currentYear = year;
+    _currentMonth = month;
 
-      if (timeline.earnings.isEmpty) {
-        emit(EarningsEmpty(
-          message: 'No earnings data for this month.',
-          year: _currentYear,
-          month: _currentMonth,
-        ));
-        return;
-      }
-
-      emit(EarningsLoaded(
-        timeline: timeline,
-        mode: _currentMode,
-        canGoNext: false, // Current month, can't go forward
-        canGoPrevious: true,
-      ));
-    } on EarningsException catch (e) {
-      emit(EarningsError(
-        message: e.message,
-        year: _currentYear,
-        month: _currentMonth,
-      ));
-    } catch (e) {
-      emit(EarningsError(
-        message: 'Failed to load earnings: $e',
-        year: _currentYear,
-        month: _currentMonth,
-      ));
-    }
+    await _loadMonth(emit);
   }
 
   Future<void> _onPreviousMonthRequested(
     PreviousMonthRequested event,
     Emitter<EarningsState> emit,
   ) async {
-    // Navigate to previous month
     if (_currentMonth == 1) {
       _currentMonth = 12;
       _currentYear--;
@@ -100,7 +87,6 @@ class EarningsBloc extends Bloc<EarningsEvent, EarningsState> {
       return;
     }
 
-    // Navigate to next month
     if (_currentMonth == 12) {
       _currentMonth = 1;
       _currentYear++;
@@ -116,78 +102,33 @@ class EarningsBloc extends Bloc<EarningsEvent, EarningsState> {
     Emitter<EarningsState> emit,
   ) async {
     _currentMode = event.mode;
-
-    // Reload with new mode
     await _loadMonth(emit);
-  }
-
-  Future<void> _onRefreshEarningsRequested(
-    RefreshEarningsRequested event,
-    Emitter<EarningsState> emit,
-  ) async {
-    if (state is EarningsLoaded) {
-      emit((state as EarningsLoaded).copyWith(isRefreshing: true));
-    }
-
-    try {
-      final timeline = await _earningsRepository.fetchMonthlyEarnings(
-        year: _currentYear,
-        month: _currentMonth,
-        mode: _currentMode,
-      );
-
-      final now = DateTime.now();
-      final canGoNext =
-          _currentYear < now.year || _currentMonth < now.month;
-
-      if (timeline.earnings.isEmpty) {
-        emit(EarningsEmpty(
-          message: 'No earnings data for this month.',
-          year: _currentYear,
-          month: _currentMonth,
-        ));
-        return;
-      }
-
-      emit(EarningsLoaded(
-        timeline: timeline,
-        mode: _currentMode,
-        canGoNext: canGoNext,
-        canGoPrevious: true,
-      ));
-    } on EarningsException catch (e) {
-      if (state is EarningsLoaded) {
-        // Keep current data but show error
-        emit((state as EarningsLoaded).copyWith(isRefreshing: false));
-      } else {
-        emit(EarningsError(
-          message: e.message,
-          year: _currentYear,
-          month: _currentMonth,
-        ));
-      }
-    }
   }
 
   Future<void> _loadMonth(Emitter<EarningsState> emit) async {
     emit(EarningsLoading(year: _currentYear, month: _currentMonth));
 
     try {
-      final timeline = await _earningsRepository.fetchMonthlyEarnings(
-        year: _currentYear,
-        month: _currentMonth,
+      // Create date range for the month
+      final startDate = DateTime(_currentYear, _currentMonth, 1);
+      final endDate = DateTime(_currentYear, _currentMonth + 1, 0); // Last day of month
+
+      final timeline = await _earningsRepository.fetchEarnings(
+        startDate: startDate,
+        endDate: endDate,
         mode: _currentMode,
       );
 
       final now = DateTime.now();
-      final canGoNext =
-          _currentYear < now.year || _currentMonth < now.month;
+      final canGoNext = _currentYear < now.year || _currentMonth < now.month;
 
       if (timeline.earnings.isEmpty) {
         emit(EarningsEmpty(
           message: 'No earnings data for this month.',
           year: _currentYear,
           month: _currentMonth,
+          canGoNext: canGoNext,
+          canGoPrevious: true,
         ));
         return;
       }
@@ -195,6 +136,8 @@ class EarningsBloc extends Bloc<EarningsEvent, EarningsState> {
       emit(EarningsLoaded(
         timeline: timeline,
         mode: _currentMode,
+        year: _currentYear,
+        month: _currentMonth,
         canGoNext: canGoNext,
         canGoPrevious: true,
       ));

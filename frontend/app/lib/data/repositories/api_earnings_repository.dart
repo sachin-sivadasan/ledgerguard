@@ -21,9 +21,9 @@ class ApiEarningsRepository implements EarningsRepository {
         _appRepository = appRepository;
 
   @override
-  Future<EarningsTimeline> fetchMonthlyEarnings({
-    required int year,
-    required int month,
+  Future<EarningsTimeline> fetchEarnings({
+    required DateTime startDate,
+    required DateTime endDate,
     required EarningsMode mode,
   }) async {
     // Get the selected app
@@ -42,10 +42,14 @@ class ApiEarningsRepository implements EarningsRepository {
       // Extract numeric ID from full GID
       final appId = _extractNumericId(selectedApp.id);
 
+      // Format dates as YYYY-MM-DD
+      String formatDate(DateTime d) =>
+          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
       // Build query parameters
       final queryParams = <String, dynamic>{
-        'year': year,
-        'month': month,
+        'start': formatDate(startDate),
+        'end': formatDate(endDate),
         'mode': mode == EarningsMode.split ? 'split' : 'combined',
       };
 
@@ -64,7 +68,8 @@ class ApiEarningsRepository implements EarningsRepository {
 
       // Return empty timeline for no data
       return EarningsTimeline(
-        month: '$year-${month.toString().padLeft(2, '0')}',
+        startDate: formatDate(startDate),
+        endDate: formatDate(endDate),
         earnings: [],
       );
     } on DioException catch (e) {
@@ -73,11 +78,8 @@ class ApiEarningsRepository implements EarningsRepository {
       }
       if (e.response?.statusCode == 400) {
         final message = e.response?.data?['error']?['message'] as String? ?? '';
-        if (message.contains('invalid month')) {
-          throw const InvalidMonthException();
-        }
-        if (message.contains('future')) {
-          throw const FutureMonthException();
+        if (message.contains('invalid date range')) {
+          throw const InvalidDateRangeException();
         }
       }
       throw EarningsException(

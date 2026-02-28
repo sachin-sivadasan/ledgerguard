@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -33,9 +33,9 @@ func NewRevenueHandler(
 	}
 }
 
-// GetMonthlyEarnings handles GET /api/v1/apps/{appID}/earnings
-// Query params: year (required), month (required), mode (optional: combined|split)
-func (h *RevenueHandler) GetMonthlyEarnings(w http.ResponseWriter, r *http.Request) {
+// GetEarnings handles GET /api/v1/apps/{appID}/earnings
+// Query params: start (required, YYYY-MM-DD), end (required, YYYY-MM-DD), mode (optional: combined|split)
+func (h *RevenueHandler) GetEarnings(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Get authenticated user
@@ -60,24 +60,24 @@ func (h *RevenueHandler) GetMonthlyEarnings(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Parse query parameters
-	yearStr := r.URL.Query().Get("year")
-	monthStr := r.URL.Query().Get("month")
+	startStr := r.URL.Query().Get("start")
+	endStr := r.URL.Query().Get("end")
 	mode := r.URL.Query().Get("mode")
 
-	if yearStr == "" || monthStr == "" {
-		writeJSONErrorResponse(w, http.StatusBadRequest, "year and month are required")
+	if startStr == "" || endStr == "" {
+		writeJSONErrorResponse(w, http.StatusBadRequest, "start and end dates are required (format: YYYY-MM-DD)")
 		return
 	}
 
-	year, err := strconv.Atoi(yearStr)
+	startDate, err := time.Parse("2006-01-02", startStr)
 	if err != nil {
-		writeJSONErrorResponse(w, http.StatusBadRequest, "invalid year")
+		writeJSONErrorResponse(w, http.StatusBadRequest, "invalid start date format, use YYYY-MM-DD")
 		return
 	}
 
-	month, err := strconv.Atoi(monthStr)
+	endDate, err := time.Parse("2006-01-02", endStr)
 	if err != nil {
-		writeJSONErrorResponse(w, http.StatusBadRequest, "invalid month")
+		writeJSONErrorResponse(w, http.StatusBadRequest, "invalid end date format, use YYYY-MM-DD")
 		return
 	}
 
@@ -88,13 +88,9 @@ func (h *RevenueHandler) GetMonthlyEarnings(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Get earnings metrics
-	metrics, err := h.revenueService.GetMonthlyEarnings(ctx, app.ID, year, month, revenueMode)
+	metrics, err := h.revenueService.GetEarningsByDateRange(ctx, app.ID, startDate, endDate, revenueMode)
 	if err != nil {
-		if err == service.ErrInvalidMonth {
-			writeJSONErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-		if err == service.ErrFutureMonth {
+		if err == service.ErrInvalidDateRange {
 			writeJSONErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}

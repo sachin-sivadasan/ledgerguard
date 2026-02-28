@@ -773,3 +773,54 @@ Created API Key management screens allowing users to create, view, and revoke AP
 - `test/presentation/blocs/api_key_bloc_test.dart` (created)
 
 **Tests:** 14 passing (ApiKeyBloc)
+
+---
+
+## [2026-02-28] Earnings Timeline Enhancements
+
+**Commit:** feat: enhance earnings timeline with date range sync and animations
+
+**Summary:**
+Enhanced the Earnings Timeline chart with dashboard time range synchronization, smooth animations, and configurable visibility in dashboard settings.
+
+**Implemented:**
+
+1. **Backend Changes:**
+   - Changed API from `year/month` to `start/end` date parameters
+   - Updated `RevenueRepository` interface with `GetRevenueByDateRange(startDate, endDate)`
+   - Updated handler to parse ISO date strings from query params
+
+2. **Frontend - Domain Layer:**
+   - Updated `EarningsTimeline` entity for date range-based queries
+   - Updated `EarningsRepository` interface with `fetchEarnings(startDate, endDate, mode)`
+
+3. **Frontend - Data Layer:**
+   - Updated `ApiEarningsRepository` to use start/end query parameters
+
+4. **Frontend - Presentation Layer (Bloc):**
+   - Added `EarningsTimeRangeChanged` event for dashboard sync
+   - Added `_getTargetMonth(TimeRange)` to extract appropriate month from presets
+   - Month navigation syncs with dashboard filter but allows manual browsing
+
+5. **Frontend - Widget Enhancements:**
+   - Added `earningsTimeline` to `SecondaryWidget` enum for dashboard config
+   - Premium-styled `DashboardConfigDialog` with gradient header, icons
+   - Smooth chart animations (250ms easeInOut) when data changes
+   - Loading overlay preserves chart during data fetch (prevents scroll jumps)
+   - Consistent 300px card height across all states
+   - `ValueKey` for widget identity preservation
+
+6. **Animation Fix:**
+   - Cache `_lastLoadedState` to preserve chart during loading
+   - Show semi-transparent overlay with spinner during data fetch
+   - BarChart widget persists for smooth fl_chart animations
+
+**Files Modified:**
+- Backend: `revenue_repository.go`, `revenue_metrics_service.go`, `revenue_handler.go`, `router.go`
+- Frontend: `earnings_timeline.dart`, `earnings_repository.dart`, `api_earnings_repository.dart`
+- Frontend: `earnings_bloc.dart`, `earnings_event.dart`, `earnings_state.dart`
+- Frontend: `earnings_timeline_chart.dart`, `dashboard_page.dart`
+- Frontend: `dashboard_preferences.dart`, `dashboard_config_dialog.dart`
+- Tests: `dashboard_config_dialog_test.dart`
+
+**Tests:** All dashboard tests passing (24/24), config dialog tests passing (15/15)

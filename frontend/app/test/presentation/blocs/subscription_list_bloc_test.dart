@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:ledgerguard/domain/entities/subscription.dart';
+import 'package:ledgerguard/domain/entities/subscription_filter.dart';
 import 'package:ledgerguard/domain/repositories/subscription_repository.dart';
 import 'package:ledgerguard/presentation/blocs/subscription_list/subscription_list.dart';
 
@@ -52,25 +53,42 @@ void main() {
     createdAt: DateTime(2024, 1, 5),
   );
 
-  final testResponse = SubscriptionListResponse(
+  const testSummary = SubscriptionSummary(
+    activeCount: 10,
+    atRiskCount: 3,
+    churnedCount: 2,
+    avgPriceCents: 2999,
+    totalCount: 15,
+  );
+
+  const testPriceStats = PriceStats(
+    minCents: 999,
+    maxCents: 9999,
+    avgCents: 2999,
+  );
+
+  final testPaginatedResponse = PaginatedSubscriptionResponse(
     subscriptions: [testSubscription1, testSubscription2],
     total: 2,
-    limit: 50,
-    offset: 0,
+    page: 1,
+    pageSize: 25,
+    totalPages: 1,
   );
 
-  final testResponseWithMore = SubscriptionListResponse(
+  final testPaginatedResponseWithMore = PaginatedSubscriptionResponse(
     subscriptions: [testSubscription1, testSubscription2],
     total: 100,
-    limit: 50,
-    offset: 0,
+    page: 1,
+    pageSize: 25,
+    totalPages: 4,
   );
 
-  final emptyResponse = const SubscriptionListResponse(
+  final emptyPaginatedResponse = const PaginatedSubscriptionResponse(
     subscriptions: [],
     total: 0,
-    limit: 50,
-    offset: 0,
+    page: 1,
+    pageSize: 25,
+    totalPages: 0,
   );
 
   setUp(() {
@@ -79,7 +97,15 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(RiskState.safe);
+    registerFallbackValue(const SubscriptionFilters());
   });
+
+  void setupDefaultMocks() {
+    when(() => mockRepository.getSummary(any()))
+        .thenAnswer((_) async => testSummary);
+    when(() => mockRepository.getPriceStats(any()))
+        .thenAnswer((_) async => testPriceStats);
+  }
 
   group('SubscriptionListBloc', () {
     test('initial state is SubscriptionListInitial', () {
@@ -88,19 +114,20 @@ void main() {
       bloc.close();
     });
 
-    group('FetchSubscriptionsRequested', () {
+    group('LoadSubscriptionsRequested', () {
       blocTest<SubscriptionListBloc, SubscriptionListState>(
         'emits [Loading, Loaded] when subscriptions are fetched successfully',
         build: () {
-          when(() => mockRepository.getSubscriptions(
+          setupDefaultMocks();
+          when(() => mockRepository.getSubscriptionsFiltered(
                 testAppId,
-                riskState: any(named: 'riskState'),
-                limit: any(named: 'limit'),
-                offset: any(named: 'offset'),
-              )).thenAnswer((_) async => testResponse);
+                filters: any(named: 'filters'),
+                page: any(named: 'page'),
+                pageSize: any(named: 'pageSize'),
+              )).thenAnswer((_) async => testPaginatedResponse);
           return SubscriptionListBloc(repository: mockRepository);
         },
-        act: (bloc) => bloc.add(const FetchSubscriptionsRequested(appId: testAppId)),
+        act: (bloc) => bloc.add(LoadSubscriptionsRequested(appId: testAppId)),
         expect: () => [
           isA<SubscriptionListLoading>(),
           isA<SubscriptionListLoaded>()
@@ -113,15 +140,16 @@ void main() {
       blocTest<SubscriptionListBloc, SubscriptionListState>(
         'emits [Loading, Empty] when no subscriptions found',
         build: () {
-          when(() => mockRepository.getSubscriptions(
+          setupDefaultMocks();
+          when(() => mockRepository.getSubscriptionsFiltered(
                 testAppId,
-                riskState: any(named: 'riskState'),
-                limit: any(named: 'limit'),
-                offset: any(named: 'offset'),
-              )).thenAnswer((_) async => emptyResponse);
+                filters: any(named: 'filters'),
+                page: any(named: 'page'),
+                pageSize: any(named: 'pageSize'),
+              )).thenAnswer((_) async => emptyPaginatedResponse);
           return SubscriptionListBloc(repository: mockRepository);
         },
-        act: (bloc) => bloc.add(const FetchSubscriptionsRequested(appId: testAppId)),
+        act: (bloc) => bloc.add(LoadSubscriptionsRequested(appId: testAppId)),
         expect: () => [
           isA<SubscriptionListLoading>(),
           isA<SubscriptionListEmpty>()
@@ -132,15 +160,16 @@ void main() {
       blocTest<SubscriptionListBloc, SubscriptionListState>(
         'emits [Loading, Error] when fetch fails with SubscriptionException',
         build: () {
-          when(() => mockRepository.getSubscriptions(
+          setupDefaultMocks();
+          when(() => mockRepository.getSubscriptionsFiltered(
                 testAppId,
-                riskState: any(named: 'riskState'),
-                limit: any(named: 'limit'),
-                offset: any(named: 'offset'),
+                filters: any(named: 'filters'),
+                page: any(named: 'page'),
+                pageSize: any(named: 'pageSize'),
               )).thenThrow(const SubscriptionException('Network error'));
           return SubscriptionListBloc(repository: mockRepository);
         },
-        act: (bloc) => bloc.add(const FetchSubscriptionsRequested(appId: testAppId)),
+        act: (bloc) => bloc.add(LoadSubscriptionsRequested(appId: testAppId)),
         expect: () => [
           isA<SubscriptionListLoading>(),
           isA<SubscriptionListError>()
@@ -151,15 +180,16 @@ void main() {
       blocTest<SubscriptionListBloc, SubscriptionListState>(
         'emits [Loading, Error] when fetch fails with generic exception',
         build: () {
-          when(() => mockRepository.getSubscriptions(
+          setupDefaultMocks();
+          when(() => mockRepository.getSubscriptionsFiltered(
                 testAppId,
-                riskState: any(named: 'riskState'),
-                limit: any(named: 'limit'),
-                offset: any(named: 'offset'),
+                filters: any(named: 'filters'),
+                page: any(named: 'page'),
+                pageSize: any(named: 'pageSize'),
               )).thenThrow(Exception('Unknown error'));
           return SubscriptionListBloc(repository: mockRepository);
         },
-        act: (bloc) => bloc.add(const FetchSubscriptionsRequested(appId: testAppId)),
+        act: (bloc) => bloc.add(LoadSubscriptionsRequested(appId: testAppId)),
         expect: () => [
           isA<SubscriptionListLoading>(),
           isA<SubscriptionListError>()
@@ -170,15 +200,16 @@ void main() {
       blocTest<SubscriptionListBloc, SubscriptionListState>(
         'sets hasMore to true when more subscriptions available',
         build: () {
-          when(() => mockRepository.getSubscriptions(
+          setupDefaultMocks();
+          when(() => mockRepository.getSubscriptionsFiltered(
                 testAppId,
-                riskState: any(named: 'riskState'),
-                limit: any(named: 'limit'),
-                offset: any(named: 'offset'),
-              )).thenAnswer((_) async => testResponseWithMore);
+                filters: any(named: 'filters'),
+                page: any(named: 'page'),
+                pageSize: any(named: 'pageSize'),
+              )).thenAnswer((_) async => testPaginatedResponseWithMore);
           return SubscriptionListBloc(repository: mockRepository);
         },
-        act: (bloc) => bloc.add(const FetchSubscriptionsRequested(appId: testAppId)),
+        act: (bloc) => bloc.add(LoadSubscriptionsRequested(appId: testAppId)),
         expect: () => [
           isA<SubscriptionListLoading>(),
           isA<SubscriptionListLoaded>()
@@ -192,20 +223,22 @@ void main() {
       blocTest<SubscriptionListBloc, SubscriptionListState>(
         'filters subscriptions by risk state',
         build: () {
-          when(() => mockRepository.getSubscriptions(
+          setupDefaultMocks();
+          when(() => mockRepository.getSubscriptionsFiltered(
                 testAppId,
-                riskState: any(named: 'riskState'),
-                limit: any(named: 'limit'),
-                offset: any(named: 'offset'),
-              )).thenAnswer((_) async => SubscriptionListResponse(
+                filters: any(named: 'filters'),
+                page: any(named: 'page'),
+                pageSize: any(named: 'pageSize'),
+              )).thenAnswer((_) async => PaginatedSubscriptionResponse(
                 subscriptions: [testSubscription1],
                 total: 1,
-                limit: 50,
-                offset: 0,
+                page: 1,
+                pageSize: 25,
+                totalPages: 1,
               ));
           final bloc = SubscriptionListBloc(repository: mockRepository);
-          // Set up current app ID by calling fetch first
-          bloc.add(const FetchSubscriptionsRequested(appId: testAppId));
+          // Set up current app ID by calling load first
+          bloc.add(LoadSubscriptionsRequested(appId: testAppId));
           return bloc;
         },
         act: (bloc) async {
@@ -215,7 +248,7 @@ void main() {
         skip: 2, // Skip initial Loading and Loaded states
         expect: () => [
           isA<SubscriptionListLoaded>()
-              .having((s) => s.isRefreshing, 'isRefreshing', true),
+              .having((s) => s.isLoading, 'isLoading', true),
           isA<SubscriptionListLoaded>()
               .having((s) => s.filterRiskState, 'filterRiskState', RiskState.safe)
               .having((s) => s.subscriptions.length, 'subscriptions count', 1),
@@ -225,20 +258,22 @@ void main() {
       blocTest<SubscriptionListBloc, SubscriptionListState>(
         'emits Empty when filter returns no results',
         build: () {
-          when(() => mockRepository.getSubscriptions(
+          setupDefaultMocks();
+          var callCount = 0;
+          when(() => mockRepository.getSubscriptionsFiltered(
                 testAppId,
-                riskState: any(named: 'riskState'),
-                limit: any(named: 'limit'),
-                offset: any(named: 'offset'),
-              )).thenAnswer((invocation) async {
-            final riskState = invocation.namedArguments[#riskState];
-            if (riskState == RiskState.churned) {
-              return emptyResponse;
+                filters: any(named: 'filters'),
+                page: any(named: 'page'),
+                pageSize: any(named: 'pageSize'),
+              )).thenAnswer((_) async {
+            callCount++;
+            if (callCount > 1) {
+              return emptyPaginatedResponse;
             }
-            return testResponse;
+            return testPaginatedResponse;
           });
           final bloc = SubscriptionListBloc(repository: mockRepository);
-          bloc.add(const FetchSubscriptionsRequested(appId: testAppId));
+          bloc.add(LoadSubscriptionsRequested(appId: testAppId));
           return bloc;
         },
         act: (bloc) async {
@@ -248,7 +283,7 @@ void main() {
         skip: 2,
         expect: () => [
           isA<SubscriptionListLoaded>()
-              .having((s) => s.isRefreshing, 'isRefreshing', true),
+              .having((s) => s.isLoading, 'isLoading', true),
           isA<SubscriptionListEmpty>(),
         ],
       );
@@ -267,14 +302,15 @@ void main() {
       blocTest<SubscriptionListBloc, SubscriptionListState>(
         'refreshes subscriptions when in loaded state',
         build: () {
-          when(() => mockRepository.getSubscriptions(
+          setupDefaultMocks();
+          when(() => mockRepository.getSubscriptionsFiltered(
                 testAppId,
-                riskState: any(named: 'riskState'),
-                limit: any(named: 'limit'),
-                offset: any(named: 'offset'),
-              )).thenAnswer((_) async => testResponse);
+                filters: any(named: 'filters'),
+                page: any(named: 'page'),
+                pageSize: any(named: 'pageSize'),
+              )).thenAnswer((_) async => testPaginatedResponse);
           final bloc = SubscriptionListBloc(repository: mockRepository);
-          bloc.add(const FetchSubscriptionsRequested(appId: testAppId));
+          bloc.add(LoadSubscriptionsRequested(appId: testAppId));
           return bloc;
         },
         act: (bloc) async {
@@ -293,21 +329,22 @@ void main() {
       blocTest<SubscriptionListBloc, SubscriptionListState>(
         'keeps current state when refresh fails',
         build: () {
+          setupDefaultMocks();
           var callCount = 0;
-          when(() => mockRepository.getSubscriptions(
+          when(() => mockRepository.getSubscriptionsFiltered(
                 testAppId,
-                riskState: any(named: 'riskState'),
-                limit: any(named: 'limit'),
-                offset: any(named: 'offset'),
+                filters: any(named: 'filters'),
+                page: any(named: 'page'),
+                pageSize: any(named: 'pageSize'),
               )).thenAnswer((_) async {
             callCount++;
             if (callCount > 1) {
               throw Exception('Refresh failed');
             }
-            return testResponse;
+            return testPaginatedResponse;
           });
           final bloc = SubscriptionListBloc(repository: mockRepository);
-          bloc.add(const FetchSubscriptionsRequested(appId: testAppId));
+          bloc.add(LoadSubscriptionsRequested(appId: testAppId));
           return bloc;
         },
         act: (bloc) async {
@@ -329,26 +366,28 @@ void main() {
       blocTest<SubscriptionListBloc, SubscriptionListState>(
         'loads more subscriptions when hasMore is true',
         build: () {
+          setupDefaultMocks();
           var callCount = 0;
-          when(() => mockRepository.getSubscriptions(
+          when(() => mockRepository.getSubscriptionsFiltered(
                 testAppId,
-                riskState: any(named: 'riskState'),
-                limit: any(named: 'limit'),
-                offset: any(named: 'offset'),
+                filters: any(named: 'filters'),
+                page: any(named: 'page'),
+                pageSize: any(named: 'pageSize'),
               )).thenAnswer((_) async {
             callCount++;
             if (callCount == 1) {
-              return testResponseWithMore;
+              return testPaginatedResponseWithMore;
             }
-            return SubscriptionListResponse(
+            return PaginatedSubscriptionResponse(
               subscriptions: [testSubscription3],
               total: 100,
-              limit: 50,
-              offset: 50,
+              page: 2,
+              pageSize: 25,
+              totalPages: 4,
             );
           });
           final bloc = SubscriptionListBloc(repository: mockRepository);
-          bloc.add(const FetchSubscriptionsRequested(appId: testAppId));
+          bloc.add(LoadSubscriptionsRequested(appId: testAppId));
           return bloc;
         },
         act: (bloc) async {
@@ -358,24 +397,24 @@ void main() {
         skip: 2,
         expect: () => [
           isA<SubscriptionListLoaded>()
-              .having((s) => s.isLoadingMore, 'isLoadingMore', true),
+              .having((s) => s.isLoading, 'isLoading', true),
           isA<SubscriptionListLoaded>()
-              .having((s) => s.isLoadingMore, 'isLoadingMore', false)
-              .having((s) => s.subscriptions.length, 'subscriptions count', 3),
+              .having((s) => s.isLoading, 'isLoading', false),
         ],
       );
 
       blocTest<SubscriptionListBloc, SubscriptionListState>(
         'does nothing when hasMore is false',
         build: () {
-          when(() => mockRepository.getSubscriptions(
+          setupDefaultMocks();
+          when(() => mockRepository.getSubscriptionsFiltered(
                 testAppId,
-                riskState: any(named: 'riskState'),
-                limit: any(named: 'limit'),
-                offset: any(named: 'offset'),
-              )).thenAnswer((_) async => testResponse);
+                filters: any(named: 'filters'),
+                page: any(named: 'page'),
+                pageSize: any(named: 'pageSize'),
+              )).thenAnswer((_) async => testPaginatedResponse);
           final bloc = SubscriptionListBloc(repository: mockRepository);
-          bloc.add(const FetchSubscriptionsRequested(appId: testAppId));
+          bloc.add(LoadSubscriptionsRequested(appId: testAppId));
           return bloc;
         },
         act: (bloc) async {

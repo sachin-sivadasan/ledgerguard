@@ -3,11 +3,15 @@ package persistence
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
@@ -227,4 +231,204 @@ func (r *PostgresSubscriptionRepository) scanSubscriptions(rows pgx.Rows) ([]*en
 	}
 
 	return subscriptions, rows.Err()
+}
+
+func (r *PostgresSubscriptionRepository) FindWithFilters(ctx context.Context, appID uuid.UUID, filters repository.SubscriptionFilters) (*repository.SubscriptionPage, error) {
+	// Build dynamic WHERE clause
+	var conditions []string
+	var args []interface{}
+	argNum := 1
+
+	conditions = append(conditions, fmt.Sprintf("app_id = $%d", argNum))
+	args = append(args, appID)
+	argNum++
+
+	// Risk states filter (multi-select)
+	if len(filters.RiskStates) > 0 {
+		placeholders := make([]string, len(filters.RiskStates))
+		for i, rs := range filters.RiskStates {
+			placeholders[i] = fmt.Sprintf("$%d", argNum)
+			args = append(args, rs.String())
+			argNum++
+		}
+		conditions = append(conditions, fmt.Sprintf("risk_state IN (%s)", strings.Join(placeholders, ", ")))
+	}
+
+	// Price range filter
+	if filters.PriceMinCents != nil {
+		conditions = append(conditions, fmt.Sprintf("base_price_cents >= $%d", argNum))
+		args = append(args, *filters.PriceMinCents)
+		argNum++
+	}
+	if filters.PriceMaxCents != nil {
+		conditions = append(conditions, fmt.Sprintf("base_price_cents <= $%d", argNum))
+		args = append(args, *filters.PriceMaxCents)
+		argNum++
+	}
+
+	// Billing interval filter
+	if filters.BillingInterval != nil {
+		conditions = append(conditions, fmt.Sprintf("billing_interval = $%d", argNum))
+		args = append(args, filters.BillingInterval.String())
+		argNum++
+	}
+
+	// Search filter (shop_name or myshopify_domain)
+	if filters.SearchTerm != "" {
+		searchPattern := "%" + strings.ToLower(filters.SearchTerm) + "%"
+		conditions = append(conditions, fmt.Sprintf("(LOWER(shop_name) LIKE $%d OR LOWER(myshopify_domain) LIKE $%d)", argNum, argNum))
+		args = append(args, searchPattern)
+		argNum++
+	}
+
+	whereClause := strings.Join(conditions, " AND ")
+
+	// Build ORDER BY clause
+	orderBy := "COALESCE(shop_name, myshopify_domain)"
+	if filters.SortBy != "" {
+		switch filters.SortBy {
+		case "risk_state":
+			orderBy = "risk_state"
+		case "base_price_cents":
+			orderBy = "base_price_cents"
+		case "shop_name":
+			orderBy = "COALESCE(shop_name, myshopify_domain)"
+		}
+	}
+	sortOrder := "ASC"
+	if strings.ToLower(filters.SortOrder) == "desc" {
+		sortOrder = "DESC"
+	}
+
+	// Set defaults for pagination
+	page := filters.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := filters.PageSize
+	if pageSize < 1 {
+		pageSize = 25
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	offset := (page - 1) * pageSize
+
+	// Get total count
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM subscriptions WHERE %s", whereClause)
+	var total int
+	err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, fmt.Errorf("count query failed: %w", err)
+	}
+
+	// Get paginated results
+	query := fmt.Sprintf(`
+		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
+			base_price_cents, currency, billing_interval, status,
+			last_recurring_charge_date, expected_next_charge_date, risk_state,
+			created_at, updated_at
+		FROM subscriptions
+		WHERE %s
+		ORDER BY %s %s
+		LIMIT $%d OFFSET $%d
+	`, whereClause, orderBy, sortOrder, argNum, argNum+1)
+	args = append(args, pageSize, offset)
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select query failed: %w", err)
+	}
+	defer rows.Close()
+
+	subscriptions, err := r.scanSubscriptions(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := int(math.Ceil(float64(total) / float64(pageSize)))
+
+	return &repository.SubscriptionPage{
+		Subscriptions: subscriptions,
+		Total:         total,
+		Page:          page,
+		PageSize:      pageSize,
+		TotalPages:    totalPages,
+	}, nil
+}
+
+func (r *PostgresSubscriptionRepository) GetSummary(ctx context.Context, appID uuid.UUID) (*repository.SubscriptionSummary, error) {
+	query := `
+		SELECT
+			COUNT(*) FILTER (WHERE risk_state = 'SAFE') as active_count,
+			COUNT(*) FILTER (WHERE risk_state IN ('ONE_CYCLE_MISSED', 'TWO_CYCLES_MISSED')) as at_risk_count,
+			COUNT(*) FILTER (WHERE risk_state = 'CHURNED') as churned_count,
+			COALESCE(AVG(base_price_cents), 0)::bigint as avg_price_cents,
+			COUNT(*) as total_count
+		FROM subscriptions
+		WHERE app_id = $1
+	`
+
+	var summary repository.SubscriptionSummary
+	err := r.pool.QueryRow(ctx, query, appID).Scan(
+		&summary.ActiveCount,
+		&summary.AtRiskCount,
+		&summary.ChurnedCount,
+		&summary.AvgPriceCents,
+		&summary.TotalCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &summary, nil
+}
+
+func (r *PostgresSubscriptionRepository) GetPriceStats(ctx context.Context, appID uuid.UUID) (*repository.PriceStats, error) {
+	// Get min, max, avg
+	statsQuery := `
+		SELECT
+			COALESCE(MIN(base_price_cents), 0),
+			COALESCE(MAX(base_price_cents), 0),
+			COALESCE(AVG(base_price_cents)::bigint, 0)
+		FROM subscriptions
+		WHERE app_id = $1 AND base_price_cents > 0
+	`
+
+	var stats repository.PriceStats
+	err := r.pool.QueryRow(ctx, statsQuery, appID).Scan(&stats.MinCents, &stats.MaxCents, &stats.AvgCents)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get distinct prices with counts, sorted by price
+	pricesQuery := `
+		SELECT base_price_cents, COUNT(*) as count
+		FROM subscriptions
+		WHERE app_id = $1 AND base_price_cents > 0
+		GROUP BY base_price_cents
+		ORDER BY base_price_cents ASC
+	`
+
+	rows, err := r.pool.Query(ctx, pricesQuery, appID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var prices []repository.PricePoint
+	for rows.Next() {
+		var pp repository.PricePoint
+		if err := rows.Scan(&pp.PriceCents, &pp.Count); err != nil {
+			return nil, err
+		}
+		prices = append(prices, pp)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	stats.Prices = prices
+	return &stats, nil
 }

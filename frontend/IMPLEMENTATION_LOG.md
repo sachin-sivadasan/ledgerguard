@@ -824,3 +824,157 @@ Enhanced the Earnings Timeline chart with dashboard time range synchronization, 
 - Tests: `dashboard_config_dialog_test.dart`
 
 **Tests:** All dashboard tests passing (24/24), config dialog tests passing (15/15)
+
+---
+
+## [2026-02-28] Subscriptions Page Premium Analytics
+
+**Commit:** feat: upgrade subscriptions page with advanced filtering, sorting, and pagination
+
+**Summary:**
+Transformed the basic subscriptions list into a premium SaaS-level reporting interface with server-side filtering, sorting, and pagination. Includes summary statistics, dynamic price ranges, and sortable table headers.
+
+**Implemented:**
+
+1. **Domain Layer:**
+   - `SubscriptionFilters` class with riskStates, priceRange, billingInterval, searchQuery, sort, sortAscending
+   - `PriceRange` entity with label, minCents, maxCents, count
+   - `SubscriptionSummary` entity with activeCount, atRiskCount, churnedCount, avgPriceCents, totalCount
+   - `SubscriptionSort` enum with apiValue and displayName (riskState, price, shopName)
+   - `PaginatedSubscriptionResponse` with page, pageSize, totalPages, hasNextPage, hasPreviousPage, rangeText
+
+2. **Data Layer:**
+   - Updated `SubscriptionRepository` interface with:
+     - `getSubscriptionsFiltered(appId, filters, page, pageSize)`
+     - `getSummary(appId)` - Returns subscription statistics
+     - `getPriceRanges(appId)` - Returns dynamic price tiers
+   - Updated `ApiSubscriptionRepository` with new endpoint implementations
+
+3. **Presentation Layer (Bloc):**
+   - **New Events:**
+     - `LoadSubscriptionsRequested` - Initial load with summary + price ranges + list
+     - `ApplyFiltersRequested` - Apply filter changes (resets to page 1)
+     - `ChangePageRequested` - Navigate to specific page
+     - `ChangePageSizeRequested` - Change rows per page (resets to page 1)
+     - `ChangeSortRequested` - Change sort column and direction
+     - `SearchRequested` - Debounced search (resets to page 1)
+     - `ClearFiltersRequested` - Reset all filters
+   - **Enhanced State:**
+     - `SubscriptionListLoaded` now includes summary, priceRanges, filters, page, pageSize, totalPages
+     - `SubscriptionListEmpty` includes summary and filters for showing filter bar
+   - Cached summary and priceRanges to avoid refetching on filter/page changes
+   - Backward compatibility maintained with legacy events
+
+4. **New Widgets:**
+   - `SubscriptionSummaryBar` - 4 stat cards (Active, At Risk, Churned, Avg Price)
+     - Horizontal scrollable on mobile
+     - Color-coded icons matching risk semantics
+     - Loading state with shimmer effect
+   - `SubscriptionFilterBar` - Advanced filtering UI
+     - Multi-select risk state chips
+     - Price range dropdown (populated from API)
+     - Billing interval dropdown (Monthly/Annual)
+     - Search input with debounce (300ms)
+     - Clear filters button with active filter count badge
+   - `PaginationControls` - Server-side pagination
+     - Page size selector (10, 25, 50)
+     - Page navigation with ellipsis for large page counts
+     - "Showing X-Y of Z" range text
+
+5. **Subscription List Page:**
+   - New structure: SummaryBar → FilterBar → TableHeader → ListView → PaginationControls
+   - Sortable table header (Shop, Price, Risk) with sort indicators
+   - Loading overlay preserves list during filter/page changes
+   - Empty state varies based on filters (shows Clear Filters button if filters active)
+   - Pull-to-refresh functionality
+
+**Page Structure:**
+```
+Scaffold
+├── AppBar (title, refresh button)
+└── Column
+    ├── SubscriptionSummaryBar
+    ├── SubscriptionFilterBar
+    ├── _SubscriptionTableHeader (sortable)
+    ├── Expanded(ListView with SubscriptionTiles)
+    └── PaginationControls
+```
+
+**Files Created:**
+- `lib/domain/entities/subscription_filter.dart`
+- `lib/presentation/widgets/subscription_summary_bar.dart`
+- `lib/presentation/widgets/subscription_filter_bar.dart`
+- `lib/presentation/widgets/pagination_controls.dart`
+
+**Files Modified:**
+- `lib/domain/entities/subscription.dart` - Added apiValue to BillingInterval
+- `lib/domain/repositories/subscription_repository.dart` - Added new methods
+- `lib/data/repositories/api_subscription_repository.dart` - Implemented new endpoints
+- `lib/presentation/blocs/subscription_list/subscription_list_event.dart` - New events
+- `lib/presentation/blocs/subscription_list/subscription_list_state.dart` - Enhanced states
+- `lib/presentation/blocs/subscription_list/subscription_list_bloc.dart` - New handlers
+- `lib/presentation/pages/subscription_list_page.dart` - Complete rewrite
+
+**Backend Integration:**
+- Uses `/api/v1/apps/{appId}/subscriptions` with query params: status, priceMin, priceMax, billingInterval, search, sortBy, sortOrder, page, pageSize
+- Uses `/api/v1/apps/{appId}/subscriptions/summary` for summary stats
+- Uses `/api/v1/apps/{appId}/subscriptions/price-stats` for distinct prices
+
+---
+
+## [2026-02-28] Price Stats with Distinct Prices
+
+**Commit:** feat: change price filter to distinct prices dropdown
+
+**Summary:**
+Changed the price filter from tier-based ranges to a dropdown showing all distinct prices with counts, allowing developers to accurately filter by exact price points.
+
+**Implemented:**
+
+1. **Domain Layer:**
+   - `PricePoint` entity with priceCents, count, and formatted getter
+   - Updated `PriceStats` to include `prices: List<PricePoint>` (sorted ascending)
+   - Removed `PriceRange` entity (replaced by PricePoint)
+   - Updated `SubscriptionFilters` to use `priceMinCents/priceMaxCents` for exact price matching
+
+2. **Data Layer:**
+   - Updated `SubscriptionRepository.getPriceStats()` to parse prices array
+   - `PriceStats.fromJson()` parses prices list from API response
+
+3. **Presentation Layer (Bloc):**
+   - Changed `priceRanges` to `priceStats` in `SubscriptionListLoaded` state
+   - Updated bloc to call `getPriceStats()` instead of `getPriceRanges()`
+   - Cached `priceStats` to avoid refetching on filter/page changes
+
+4. **Widget Changes - SubscriptionFilterBar:**
+   - Changed price filter from dialog to `_FilterDropdown<int?>` widget
+   - Dropdown shows "All prices" + all distinct prices from API
+   - Each option displays formatted price with count: `$4.99 (281)`
+   - `_setPriceFilter(int? priceCents)` sets both priceMin and priceMax to same value for exact match
+   - `_getCurrentPriceFilter()` returns current price filter if min == max, null otherwise
+   - Prices displayed in ascending order (sorted by backend)
+
+5. **Backend API Response:**
+   ```json
+   {
+     "minCents": 499,
+     "maxCents": 40499,
+     "avgCents": 4389,
+     "prices": [
+       { "priceCents": 499, "count": 281 },
+       { "priceCents": 1283, "count": 1 },
+       { "priceCents": 4999, "count": 156 }
+     ]
+   }
+   ```
+
+**Files Modified:**
+- `lib/domain/entities/subscription_filter.dart` - Added PricePoint, updated PriceStats
+- `lib/data/repositories/api_subscription_repository.dart` - Updated parsing
+- `lib/presentation/blocs/subscription_list/subscription_list_state.dart` - Changed to priceStats
+- `lib/presentation/blocs/subscription_list/subscription_list_bloc.dart` - Updated caching
+- `lib/presentation/widgets/subscription_filter_bar.dart` - Changed to dropdown
+- `lib/presentation/pages/subscription_list_page.dart` - Pass priceStats instead of priceRanges
+- `test/presentation/blocs/subscription_list_bloc_test.dart` - Updated mocks
+
+---

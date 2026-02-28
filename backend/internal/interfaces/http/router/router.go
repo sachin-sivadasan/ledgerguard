@@ -92,6 +92,8 @@ func New(cfg Config) *chi.Mux {
 
 				// Subscription routes
 				if cfg.SubscriptionHandler != nil {
+					r.Get("/{appID}/subscriptions/summary", cfg.SubscriptionHandler.Summary)
+					r.Get("/{appID}/subscriptions/price-stats", cfg.SubscriptionHandler.PriceStats)
 					r.Get("/{appID}/subscriptions", cfg.SubscriptionHandler.List)
 					r.Get("/{appID}/subscriptions/{subscriptionID}", cfg.SubscriptionHandler.GetByID)
 				}

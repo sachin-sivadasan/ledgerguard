@@ -4,14 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
@@ -19,8 +22,12 @@ import (
 type mockSubscriptionRepo struct {
 	subscriptions []*entity.Subscription
 	subscription  *entity.Subscription
+	summary       *repository.SubscriptionSummary
+	priceStats    *repository.PriceStats
 	findErr       error
 	findAllErr    error
+	summaryErr    error
+	priceStatsErr error
 }
 
 func (m *mockSubscriptionRepo) Upsert(ctx context.Context, sub *entity.Subscription) error {
@@ -65,6 +72,162 @@ func (m *mockSubscriptionRepo) FindByRiskState(ctx context.Context, appID uuid.U
 
 func (m *mockSubscriptionRepo) DeleteByAppID(ctx context.Context, appID uuid.UUID) error {
 	return nil
+}
+
+func (m *mockSubscriptionRepo) FindWithFilters(ctx context.Context, appID uuid.UUID, filters repository.SubscriptionFilters) (*repository.SubscriptionPage, error) {
+	if m.findAllErr != nil {
+		return nil, m.findAllErr
+	}
+
+	// Apply filters to subscriptions
+	filtered := m.subscriptions
+
+	// Filter by risk states
+	if len(filters.RiskStates) > 0 {
+		var result []*entity.Subscription
+		for _, sub := range filtered {
+			for _, rs := range filters.RiskStates {
+				if sub.RiskState == rs {
+					result = append(result, sub)
+					break
+				}
+			}
+		}
+		filtered = result
+	}
+
+	// Filter by price range
+	if filters.PriceMinCents != nil {
+		var result []*entity.Subscription
+		for _, sub := range filtered {
+			if sub.BasePriceCents >= *filters.PriceMinCents {
+				result = append(result, sub)
+			}
+		}
+		filtered = result
+	}
+	if filters.PriceMaxCents != nil {
+		var result []*entity.Subscription
+		for _, sub := range filtered {
+			if sub.BasePriceCents <= *filters.PriceMaxCents {
+				result = append(result, sub)
+			}
+		}
+		filtered = result
+	}
+
+	// Filter by billing interval
+	if filters.BillingInterval != nil {
+		var result []*entity.Subscription
+		for _, sub := range filtered {
+			if sub.BillingInterval == *filters.BillingInterval {
+				result = append(result, sub)
+			}
+		}
+		filtered = result
+	}
+
+	// Filter by search term
+	if filters.SearchTerm != "" {
+		searchLower := strings.ToLower(filters.SearchTerm)
+		var result []*entity.Subscription
+		for _, sub := range filtered {
+			if strings.Contains(strings.ToLower(sub.ShopName), searchLower) ||
+				strings.Contains(strings.ToLower(sub.MyshopifyDomain), searchLower) {
+				result = append(result, sub)
+			}
+		}
+		filtered = result
+	}
+
+	// Apply pagination
+	total := len(filtered)
+	page := filters.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := filters.PageSize
+	if pageSize < 1 {
+		pageSize = 25
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	start := (page - 1) * pageSize
+	end := start + pageSize
+	if start > total {
+		start = total
+	}
+	if end > total {
+		end = total
+	}
+
+	return &repository.SubscriptionPage{
+		Subscriptions: filtered[start:end],
+		Total:         total,
+		Page:          page,
+		PageSize:      pageSize,
+		TotalPages:    int(math.Ceil(float64(total) / float64(pageSize))),
+	}, nil
+}
+
+func (m *mockSubscriptionRepo) GetSummary(ctx context.Context, appID uuid.UUID) (*repository.SubscriptionSummary, error) {
+	if m.summaryErr != nil {
+		return nil, m.summaryErr
+	}
+	if m.summary != nil {
+		return m.summary, nil
+	}
+
+	// Calculate from subscriptions
+	var activeCount, atRiskCount, churnedCount, totalCents int64
+	for _, sub := range m.subscriptions {
+		switch sub.RiskState {
+		case valueobject.RiskStateSafe:
+			activeCount++
+		case valueobject.RiskStateOneCycleMissed, valueobject.RiskStateTwoCyclesMissed:
+			atRiskCount++
+		case valueobject.RiskStateChurned:
+			churnedCount++
+		}
+		totalCents += sub.BasePriceCents
+	}
+
+	var avgPrice int64
+	if len(m.subscriptions) > 0 {
+		avgPrice = totalCents / int64(len(m.subscriptions))
+	}
+
+	return &repository.SubscriptionSummary{
+		ActiveCount:   int(activeCount),
+		AtRiskCount:   int(atRiskCount),
+		ChurnedCount:  int(churnedCount),
+		AvgPriceCents: avgPrice,
+		TotalCount:    len(m.subscriptions),
+	}, nil
+}
+
+func (m *mockSubscriptionRepo) GetPriceStats(ctx context.Context, appID uuid.UUID) (*repository.PriceStats, error) {
+	if m.priceStatsErr != nil {
+		return nil, m.priceStatsErr
+	}
+	if m.priceStats != nil {
+		return m.priceStats, nil
+	}
+
+	// Return default stats for testing
+	return &repository.PriceStats{
+		MinCents: 499,
+		MaxCents: 9999,
+		AvgCents: 3999,
+		Prices: []repository.PricePoint{
+			{PriceCents: 499, Count: 10},
+			{PriceCents: 2999, Count: 25},
+			{PriceCents: 4999, Count: 15},
+			{PriceCents: 9999, Count: 5},
+		},
+	}, nil
 }
 
 // Mock partner repo for subscription tests
@@ -559,5 +722,475 @@ func TestSubscriptionHandler_GetByID_NoUser(t *testing.T) {
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	}
+}
+
+// Tests for Summary endpoint
+func TestSubscriptionHandler_Summary_Success(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{
+		ID:     uuid.New(),
+		UserID: uuid.New(),
+	}
+
+	appID := uuid.New()
+	numericAppID := "4599915"
+	app := &entity.App{
+		ID:               appID,
+		PartnerAccountID: partnerAccount.ID,
+		PartnerAppID:     "gid://partners/App/" + numericAppID,
+	}
+
+	subscriptions := []*entity.Subscription{
+		{ID: uuid.New(), AppID: appID, BasePriceCents: 2999, RiskState: valueobject.RiskStateSafe},
+		{ID: uuid.New(), AppID: appID, BasePriceCents: 4999, RiskState: valueobject.RiskStateSafe},
+		{ID: uuid.New(), AppID: appID, BasePriceCents: 1999, RiskState: valueobject.RiskStateOneCycleMissed},
+		{ID: uuid.New(), AppID: appID, BasePriceCents: 999, RiskState: valueobject.RiskStateChurned},
+	}
+
+	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
+	appRepo := &mockAppRepoForSub{app: app}
+	subRepo := &mockSubscriptionRepo{subscriptions: subscriptions}
+
+	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions/summary", nil)
+	req = withURLParam(req, "appID", numericAppID)
+	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
+	req = req.WithContext(contextWithUser(req.Context(), user))
+
+	rec := httptest.NewRecorder()
+	handler.Summary(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var resp map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&resp)
+
+	if int(resp["activeCount"].(float64)) != 2 {
+		t.Errorf("expected activeCount 2, got %v", resp["activeCount"])
+	}
+	if int(resp["atRiskCount"].(float64)) != 1 {
+		t.Errorf("expected atRiskCount 1, got %v", resp["atRiskCount"])
+	}
+	if int(resp["churnedCount"].(float64)) != 1 {
+		t.Errorf("expected churnedCount 1, got %v", resp["churnedCount"])
+	}
+	if int(resp["totalCount"].(float64)) != 4 {
+		t.Errorf("expected totalCount 4, got %v", resp["totalCount"])
+	}
+}
+
+func TestSubscriptionHandler_Summary_NoUser(t *testing.T) {
+	handler := NewSubscriptionHandler(nil, nil, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/4599915/subscriptions/summary", nil)
+	req = withURLParam(req, "appID", "4599915")
+
+	rec := httptest.NewRecorder()
+	handler.Summary(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	}
+}
+
+// Tests for PriceStats endpoint
+func TestSubscriptionHandler_PriceStats_Success(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{
+		ID:     uuid.New(),
+		UserID: uuid.New(),
+	}
+
+	appID := uuid.New()
+	numericAppID := "4599915"
+	app := &entity.App{
+		ID:               appID,
+		PartnerAccountID: partnerAccount.ID,
+		PartnerAppID:     "gid://partners/App/" + numericAppID,
+	}
+
+	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
+	appRepo := &mockAppRepoForSub{app: app}
+	subRepo := &mockSubscriptionRepo{} // Uses default stats
+
+	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions/price-stats", nil)
+	req = withURLParam(req, "appID", numericAppID)
+	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
+	req = req.WithContext(contextWithUser(req.Context(), user))
+
+	rec := httptest.NewRecorder()
+	handler.PriceStats(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var resp map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&resp)
+
+	// Verify price stats fields
+	if _, ok := resp["minCents"]; !ok {
+		t.Error("expected minCents in response")
+	}
+	if _, ok := resp["maxCents"]; !ok {
+		t.Error("expected maxCents in response")
+	}
+	if _, ok := resp["avgCents"]; !ok {
+		t.Error("expected avgCents in response")
+	}
+
+	// Check values from mock
+	if resp["minCents"].(float64) != 499 {
+		t.Errorf("expected minCents 499, got %v", resp["minCents"])
+	}
+
+	// Verify prices array
+	prices, ok := resp["prices"].([]interface{})
+	if !ok {
+		t.Fatal("expected prices array in response")
+	}
+	if len(prices) != 4 {
+		t.Errorf("expected 4 price points, got %d", len(prices))
+	}
+
+	// Check first price
+	firstPrice := prices[0].(map[string]interface{})
+	if firstPrice["priceCents"].(float64) != 499 {
+		t.Errorf("expected first price 499, got %v", firstPrice["priceCents"])
+	}
+	if firstPrice["count"].(float64) != 10 {
+		t.Errorf("expected first count 10, got %v", firstPrice["count"])
+	}
+}
+
+func TestSubscriptionHandler_PriceStats_NoUser(t *testing.T) {
+	handler := NewSubscriptionHandler(nil, nil, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/4599915/subscriptions/price-stats", nil)
+	req = withURLParam(req, "appID", "4599915")
+
+	rec := httptest.NewRecorder()
+	handler.PriceStats(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	}
+}
+
+// Tests for enhanced List filtering
+func TestSubscriptionHandler_List_MultipleStatusFilter(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{
+		ID:     uuid.New(),
+		UserID: uuid.New(),
+	}
+
+	appID := uuid.New()
+	numericAppID := "4599915"
+	app := &entity.App{
+		ID:               appID,
+		PartnerAccountID: partnerAccount.ID,
+		PartnerAppID:     "gid://partners/App/" + numericAppID,
+	}
+
+	subscriptions := []*entity.Subscription{
+		{ID: uuid.New(), AppID: appID, RiskState: valueobject.RiskStateSafe},
+		{ID: uuid.New(), AppID: appID, RiskState: valueobject.RiskStateOneCycleMissed},
+		{ID: uuid.New(), AppID: appID, RiskState: valueobject.RiskStateTwoCyclesMissed},
+		{ID: uuid.New(), AppID: appID, RiskState: valueobject.RiskStateChurned},
+	}
+
+	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
+	appRepo := &mockAppRepoForSub{app: app}
+	subRepo := &mockSubscriptionRepo{subscriptions: subscriptions}
+
+	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
+
+	// Filter for SAFE and ONE_CYCLE_MISSED
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?status=SAFE,ONE_CYCLE_MISSED", nil)
+	req = withURLParam(req, "appID", numericAppID)
+	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
+	req = req.WithContext(contextWithUser(req.Context(), user))
+
+	rec := httptest.NewRecorder()
+	handler.List(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var resp map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&resp)
+
+	total := int(resp["total"].(float64))
+	if total != 2 {
+		t.Errorf("expected total 2 (filtered), got %d", total)
+	}
+}
+
+func TestSubscriptionHandler_List_PriceRangeFilter(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{
+		ID:     uuid.New(),
+		UserID: uuid.New(),
+	}
+
+	appID := uuid.New()
+	numericAppID := "4599915"
+	app := &entity.App{
+		ID:               appID,
+		PartnerAccountID: partnerAccount.ID,
+		PartnerAppID:     "gid://partners/App/" + numericAppID,
+	}
+
+	subscriptions := []*entity.Subscription{
+		{ID: uuid.New(), AppID: appID, BasePriceCents: 1000, RiskState: valueobject.RiskStateSafe},
+		{ID: uuid.New(), AppID: appID, BasePriceCents: 2500, RiskState: valueobject.RiskStateSafe},
+		{ID: uuid.New(), AppID: appID, BasePriceCents: 5000, RiskState: valueobject.RiskStateSafe},
+		{ID: uuid.New(), AppID: appID, BasePriceCents: 10000, RiskState: valueobject.RiskStateSafe},
+	}
+
+	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
+	appRepo := &mockAppRepoForSub{app: app}
+	subRepo := &mockSubscriptionRepo{subscriptions: subscriptions}
+
+	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
+
+	// Filter for $20-$60 (2000-6000 cents)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?priceMin=2000&priceMax=6000", nil)
+	req = withURLParam(req, "appID", numericAppID)
+	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
+	req = req.WithContext(contextWithUser(req.Context(), user))
+
+	rec := httptest.NewRecorder()
+	handler.List(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var resp map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&resp)
+
+	total := int(resp["total"].(float64))
+	if total != 2 {
+		t.Errorf("expected total 2 (filtered by price), got %d", total)
+	}
+}
+
+func TestSubscriptionHandler_List_BillingIntervalFilter(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{
+		ID:     uuid.New(),
+		UserID: uuid.New(),
+	}
+
+	appID := uuid.New()
+	numericAppID := "4599915"
+	app := &entity.App{
+		ID:               appID,
+		PartnerAccountID: partnerAccount.ID,
+		PartnerAppID:     "gid://partners/App/" + numericAppID,
+	}
+
+	subscriptions := []*entity.Subscription{
+		{ID: uuid.New(), AppID: appID, BillingInterval: valueobject.BillingIntervalMonthly, RiskState: valueobject.RiskStateSafe},
+		{ID: uuid.New(), AppID: appID, BillingInterval: valueobject.BillingIntervalMonthly, RiskState: valueobject.RiskStateSafe},
+		{ID: uuid.New(), AppID: appID, BillingInterval: valueobject.BillingIntervalAnnual, RiskState: valueobject.RiskStateSafe},
+	}
+
+	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
+	appRepo := &mockAppRepoForSub{app: app}
+	subRepo := &mockSubscriptionRepo{subscriptions: subscriptions}
+
+	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
+
+	// Filter for ANNUAL only
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?billingInterval=ANNUAL", nil)
+	req = withURLParam(req, "appID", numericAppID)
+	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
+	req = req.WithContext(contextWithUser(req.Context(), user))
+
+	rec := httptest.NewRecorder()
+	handler.List(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var resp map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&resp)
+
+	total := int(resp["total"].(float64))
+	if total != 1 {
+		t.Errorf("expected total 1 (ANNUAL only), got %d", total)
+	}
+}
+
+func TestSubscriptionHandler_List_SearchFilter(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{
+		ID:     uuid.New(),
+		UserID: uuid.New(),
+	}
+
+	appID := uuid.New()
+	numericAppID := "4599915"
+	app := &entity.App{
+		ID:               appID,
+		PartnerAccountID: partnerAccount.ID,
+		PartnerAppID:     "gid://partners/App/" + numericAppID,
+	}
+
+	subscriptions := []*entity.Subscription{
+		{ID: uuid.New(), AppID: appID, ShopName: "Acme Store", MyshopifyDomain: "acme.myshopify.com", RiskState: valueobject.RiskStateSafe},
+		{ID: uuid.New(), AppID: appID, ShopName: "Best Shop", MyshopifyDomain: "best.myshopify.com", RiskState: valueobject.RiskStateSafe},
+		{ID: uuid.New(), AppID: appID, ShopName: "Cool Store", MyshopifyDomain: "cool.myshopify.com", RiskState: valueobject.RiskStateSafe},
+	}
+
+	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
+	appRepo := &mockAppRepoForSub{app: app}
+	subRepo := &mockSubscriptionRepo{subscriptions: subscriptions}
+
+	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
+
+	// Search for "acme"
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?search=acme", nil)
+	req = withURLParam(req, "appID", numericAppID)
+	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
+	req = req.WithContext(contextWithUser(req.Context(), user))
+
+	rec := httptest.NewRecorder()
+	handler.List(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var resp map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&resp)
+
+	total := int(resp["total"].(float64))
+	if total != 1 {
+		t.Errorf("expected total 1 (search 'acme'), got %d", total)
+	}
+}
+
+func TestSubscriptionHandler_List_Pagination(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{
+		ID:     uuid.New(),
+		UserID: uuid.New(),
+	}
+
+	appID := uuid.New()
+	numericAppID := "4599915"
+	app := &entity.App{
+		ID:               appID,
+		PartnerAccountID: partnerAccount.ID,
+		PartnerAppID:     "gid://partners/App/" + numericAppID,
+	}
+
+	// Create 30 subscriptions
+	subscriptions := make([]*entity.Subscription, 30)
+	for i := 0; i < 30; i++ {
+		subscriptions[i] = &entity.Subscription{
+			ID:        uuid.New(),
+			AppID:     appID,
+			RiskState: valueobject.RiskStateSafe,
+		}
+	}
+
+	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
+	appRepo := &mockAppRepoForSub{app: app}
+	subRepo := &mockSubscriptionRepo{subscriptions: subscriptions}
+
+	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
+
+	// Request page 2 with pageSize 10
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?page=2&pageSize=10", nil)
+	req = withURLParam(req, "appID", numericAppID)
+	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
+	req = req.WithContext(contextWithUser(req.Context(), user))
+
+	rec := httptest.NewRecorder()
+	handler.List(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var resp map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&resp)
+
+	page := int(resp["page"].(float64))
+	pageSize := int(resp["pageSize"].(float64))
+	total := int(resp["total"].(float64))
+	totalPages := int(resp["totalPages"].(float64))
+
+	if page != 2 {
+		t.Errorf("expected page 2, got %d", page)
+	}
+	if pageSize != 10 {
+		t.Errorf("expected pageSize 10, got %d", pageSize)
+	}
+	if total != 30 {
+		t.Errorf("expected total 30, got %d", total)
+	}
+	if totalPages != 3 {
+		t.Errorf("expected totalPages 3, got %d", totalPages)
+	}
+
+	subs := resp["subscriptions"].([]interface{})
+	if len(subs) != 10 {
+		t.Errorf("expected 10 subscriptions on page 2, got %d", len(subs))
+	}
+}
+
+func TestSubscriptionHandler_List_CombinedFilters(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{
+		ID:     uuid.New(),
+		UserID: uuid.New(),
+	}
+
+	appID := uuid.New()
+	numericAppID := "4599915"
+	app := &entity.App{
+		ID:               appID,
+		PartnerAccountID: partnerAccount.ID,
+		PartnerAppID:     "gid://partners/App/" + numericAppID,
+	}
+
+	subscriptions := []*entity.Subscription{
+		{ID: uuid.New(), AppID: appID, BasePriceCents: 5000, BillingInterval: valueobject.BillingIntervalMonthly, RiskState: valueobject.RiskStateSafe, ShopName: "Acme"},
+		{ID: uuid.New(), AppID: appID, BasePriceCents: 5000, BillingInterval: valueobject.BillingIntervalAnnual, RiskState: valueobject.RiskStateSafe, ShopName: "Beta"},
+		{ID: uuid.New(), AppID: appID, BasePriceCents: 10000, BillingInterval: valueobject.BillingIntervalMonthly, RiskState: valueobject.RiskStateSafe, ShopName: "Acme Plus"},
+		{ID: uuid.New(), AppID: appID, BasePriceCents: 5000, BillingInterval: valueobject.BillingIntervalMonthly, RiskState: valueobject.RiskStateChurned, ShopName: "Acme Old"},
+	}
+
+	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
+	appRepo := &mockAppRepoForSub{app: app}
+	subRepo := &mockSubscriptionRepo{subscriptions: subscriptions}
+
+	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
+
+	// Combine filters: SAFE, MONTHLY, price <= 6000, search "acme"
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?status=SAFE&billingInterval=MONTHLY&priceMax=6000&search=acme", nil)
+	req = withURLParam(req, "appID", numericAppID)
+	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
+	req = req.WithContext(contextWithUser(req.Context(), user))
+
+	rec := httptest.NewRecorder()
+	handler.List(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var resp map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&resp)
+
+	total := int(resp["total"].(float64))
+	if total != 1 {
+		t.Errorf("expected total 1 (combined filters), got %d", total)
 	}
 }

@@ -63,6 +63,15 @@ enum BillingInterval {
     }
   }
 
+  String get apiValue {
+    switch (this) {
+      case BillingInterval.monthly:
+        return 'MONTHLY';
+      case BillingInterval.annual:
+        return 'ANNUAL';
+    }
+  }
+
   static BillingInterval fromString(String value) {
     switch (value.toUpperCase()) {
       case 'ANNUAL':

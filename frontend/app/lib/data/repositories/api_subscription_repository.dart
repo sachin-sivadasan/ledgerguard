@@ -1,5 +1,6 @@
 import '../../core/network/api_client.dart';
 import '../../domain/entities/subscription.dart';
+import '../../domain/entities/subscription_filter.dart';
 import '../../domain/repositories/subscription_repository.dart';
 
 /// API implementation of SubscriptionRepository
@@ -104,6 +105,115 @@ class ApiSubscriptionRepository implements SubscriptionRepository {
     } catch (e) {
       if (e is SubscriptionException) rethrow;
       throw SubscriptionException(e.toString());
+    }
+  }
+
+  @override
+  Future<PaginatedSubscriptionResponse> getSubscriptionsFiltered(
+    String appId, {
+    SubscriptionFilters? filters,
+    int page = 1,
+    int pageSize = 25,
+  }) async {
+    try {
+      final numericAppId = _extractNumericId(appId);
+
+      final queryParams = <String, dynamic>{
+        'page': page.toString(),
+        'pageSize': pageSize.toString(),
+      };
+
+      // Add filter params
+      if (filters != null) {
+        queryParams.addAll(filters.toQueryParams());
+      }
+
+      final response = await _apiClient.get(
+        '/api/v1/apps/$numericAppId/subscriptions',
+        queryParameters: queryParams,
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return PaginatedSubscriptionResponse.fromJson(data);
+      }
+
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw const SubscriptionUnauthorizedException();
+      }
+
+      if (response.statusCode == 404) {
+        throw const SubscriptionNotFoundException();
+      }
+
+      throw FetchSubscriptionsException(
+        'Failed to fetch subscriptions: ${response.statusCode}',
+      );
+    } catch (e) {
+      if (e is SubscriptionException) rethrow;
+      throw FetchSubscriptionsException(e.toString());
+    }
+  }
+
+  @override
+  Future<SubscriptionSummary> getSummary(String appId) async {
+    try {
+      final numericAppId = _extractNumericId(appId);
+
+      final response = await _apiClient.get(
+        '/api/v1/apps/$numericAppId/subscriptions/summary',
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return SubscriptionSummary.fromJson(data);
+      }
+
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw const SubscriptionUnauthorizedException();
+      }
+
+      if (response.statusCode == 404) {
+        throw const SubscriptionNotFoundException();
+      }
+
+      throw FetchSubscriptionsException(
+        'Failed to fetch summary: ${response.statusCode}',
+      );
+    } catch (e) {
+      if (e is SubscriptionException) rethrow;
+      throw FetchSubscriptionsException(e.toString());
+    }
+  }
+
+  @override
+  Future<PriceStats> getPriceStats(String appId) async {
+    try {
+      final numericAppId = _extractNumericId(appId);
+
+      final response = await _apiClient.get(
+        '/api/v1/apps/$numericAppId/subscriptions/price-stats',
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return PriceStats.fromJson(data);
+      }
+
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw const SubscriptionUnauthorizedException();
+      }
+
+      if (response.statusCode == 404) {
+        throw const SubscriptionNotFoundException();
+      }
+
+      throw FetchSubscriptionsException(
+        'Failed to fetch price stats: ${response.statusCode}',
+      );
+    } catch (e) {
+      if (e is SubscriptionException) rethrow;
+      throw FetchSubscriptionsException(e.toString());
     }
   }
 }

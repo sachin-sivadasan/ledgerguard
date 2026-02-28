@@ -949,3 +949,84 @@ Created comprehensive API documentation for clients using two platforms: Mintlif
 **Files Created:**
 - Mintlify: 25 files in `docs/api/`
 - Custom Next.js: 30+ files in `docs/site/`
+
+---
+
+## [2026-02-28] Subscriptions Page Premium Analytics
+
+**Commit:** feat: upgrade subscriptions page with advanced filtering, sorting, and pagination
+
+**Summary:**
+Transformed the basic subscriptions list into a premium SaaS-level reporting interface with server-side filtering, sorting, pagination, and distinct price-based filtering.
+
+**Implemented:**
+
+1. **New Endpoints:**
+   - `GET /api/v1/apps/{appID}/subscriptions/summary` - Returns aggregate statistics
+   - `GET /api/v1/apps/{appID}/subscriptions/price-stats` - Returns distinct prices with counts
+
+2. **Enhanced List Endpoint:**
+   - Multi-select status filter (comma-separated risk states)
+   - Price range filter (priceMin, priceMax in cents)
+   - Billing interval filter (MONTHLY, ANNUAL)
+   - Search filter (shop_name or myshopify_domain)
+   - Sort parameters (sortBy, sortOrder)
+   - Pagination (page, pageSize)
+
+3. **Domain Layer - Repository:**
+   - `SubscriptionFilters` struct with RiskStates, PriceMinCents, PriceMaxCents, BillingInterval, SearchTerm, SortBy, SortOrder, Page, PageSize
+   - `SubscriptionPage` struct with Subscriptions, Total, Page, PageSize, TotalPages
+   - `SubscriptionSummary` struct with ActiveCount, AtRiskCount, ChurnedCount, AvgPriceCents, TotalCount
+   - `PriceStats` struct with MinCents, MaxCents, AvgCents, Prices (distinct prices with counts)
+   - `PricePoint` struct with PriceCents and Count
+
+4. **Infrastructure Layer - Persistence:**
+   - `FindWithFilters(ctx, appID, filters)` - Dynamic SQL with WHERE conditions
+   - `GetSummary(ctx, appID)` - Aggregate statistics query
+   - `GetPriceStats(ctx, appID)` - Distinct prices with counts, sorted ascending
+
+5. **Handler:**
+   - `Summary()` - Returns subscription statistics
+   - `PriceStats()` - Returns distinct prices with counts for filter dropdown
+   - Enhanced `List()` with all new query parameters
+   - Legacy support for `risk_state` and `limit/offset` params
+
+6. **Database Indexes:**
+   - `idx_subscriptions_filters` - Composite index on (app_id, risk_state, base_price_cents, billing_interval)
+   - `idx_subscriptions_search` - Index on (app_id, lower(shop_name), lower(myshopify_domain))
+
+**API Response Examples:**
+
+Summary endpoint:
+```json
+{
+  "activeCount": 847,
+  "atRiskCount": 23,
+  "churnedCount": 12,
+  "avgPriceCents": 4999,
+  "totalCount": 882
+}
+```
+
+Price stats endpoint:
+```json
+{
+  "minCents": 499,
+  "maxCents": 40499,
+  "avgCents": 4389,
+  "prices": [
+    { "priceCents": 499, "count": 281 },
+    { "priceCents": 1283, "count": 1 },
+    { "priceCents": 4999, "count": 156 }
+  ]
+}
+```
+
+**Files Modified:**
+- `internal/domain/repository/subscription_repository.go` - Added filter types, PriceStats, PricePoint
+- `internal/infrastructure/persistence/subscription_repository.go` - Implemented FindWithFilters, GetSummary, GetPriceStats
+- `internal/interfaces/http/handler/subscription.go` - Added Summary, PriceStats handlers
+- `internal/interfaces/http/router/router.go` - Added new routes
+- `migrations/000016_add_subscription_filter_indexes` - New indexes
+
+**Tests:** Updated subscription handler tests

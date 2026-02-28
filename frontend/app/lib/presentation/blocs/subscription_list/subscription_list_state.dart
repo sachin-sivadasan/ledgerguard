@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../domain/entities/subscription.dart';
+import '../../../domain/entities/subscription_filter.dart';
 
 /// Base class for subscription list states
 abstract class SubscriptionListState extends Equatable {
@@ -23,53 +24,78 @@ class SubscriptionListLoading extends SubscriptionListState {
 /// Subscriptions loaded successfully
 class SubscriptionListLoaded extends SubscriptionListState {
   final List<Subscription> subscriptions;
+  final SubscriptionSummary summary;
+  final PriceStats? priceStats;
+  final SubscriptionFilters filters;
+  final int page;
+  final int pageSize;
   final int total;
-  final bool hasMore;
-  final bool isRefreshing;
-  final bool isLoadingMore;
-  final RiskState? filterRiskState;
+  final int totalPages;
   final String appId;
+  final bool isLoading;
+  final bool isRefreshing;
 
   const SubscriptionListLoaded({
     required this.subscriptions,
+    required this.summary,
+    this.priceStats,
+    required this.filters,
+    required this.page,
+    required this.pageSize,
     required this.total,
+    required this.totalPages,
     required this.appId,
-    this.hasMore = false,
+    this.isLoading = false,
     this.isRefreshing = false,
-    this.isLoadingMore = false,
-    this.filterRiskState,
   });
+
+  /// For backward compatibility
+  bool get hasMore => page < totalPages;
+  RiskState? get filterRiskState =>
+      filters.riskStates.length == 1 ? filters.riskStates.first : null;
+  bool get isLoadingMore => isLoading && page > 1;
 
   SubscriptionListLoaded copyWith({
     List<Subscription>? subscriptions,
+    SubscriptionSummary? summary,
+    PriceStats? priceStats,
+    SubscriptionFilters? filters,
+    int? page,
+    int? pageSize,
     int? total,
-    bool? hasMore,
-    bool? isRefreshing,
-    bool? isLoadingMore,
-    RiskState? filterRiskState,
-    bool clearFilter = false,
+    int? totalPages,
     String? appId,
+    bool? isLoading,
+    bool? isRefreshing,
   }) {
     return SubscriptionListLoaded(
       subscriptions: subscriptions ?? this.subscriptions,
+      summary: summary ?? this.summary,
+      priceStats: priceStats ?? this.priceStats,
+      filters: filters ?? this.filters,
+      page: page ?? this.page,
+      pageSize: pageSize ?? this.pageSize,
       total: total ?? this.total,
-      hasMore: hasMore ?? this.hasMore,
-      isRefreshing: isRefreshing ?? this.isRefreshing,
-      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
-      filterRiskState: clearFilter ? null : (filterRiskState ?? this.filterRiskState),
+      totalPages: totalPages ?? this.totalPages,
       appId: appId ?? this.appId,
+      isLoading: isLoading ?? this.isLoading,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
     );
   }
 
   @override
   List<Object?> get props => [
         subscriptions,
+        summary,
+        priceStats,
+        filters,
+        page,
+        pageSize,
         total,
-        hasMore,
-        isRefreshing,
-        isLoadingMore,
-        filterRiskState,
+        totalPages,
         appId,
+        isLoading,
+        isRefreshing,
       ];
 }
 
@@ -77,14 +103,20 @@ class SubscriptionListLoaded extends SubscriptionListState {
 class SubscriptionListEmpty extends SubscriptionListState {
   final String message;
   final String appId;
+  final SubscriptionSummary? summary;
+  final PriceStats? priceStats;
+  final SubscriptionFilters filters;
 
   const SubscriptionListEmpty({
     this.message = 'No subscriptions found',
     required this.appId,
+    this.summary,
+    this.priceStats,
+    this.filters = const SubscriptionFilters(),
   });
 
   @override
-  List<Object?> get props => [message, appId];
+  List<Object?> get props => [message, appId, summary, priceStats, filters];
 }
 
 /// Error loading subscriptions

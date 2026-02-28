@@ -1,14 +1,30 @@
 import '../entities/subscription.dart';
+import '../entities/subscription_filter.dart';
 
 /// Repository interface for subscription operations
 abstract class SubscriptionRepository {
   /// Fetch subscriptions for an app with optional filtering
+  @Deprecated('Use getSubscriptionsFiltered instead')
   Future<SubscriptionListResponse> getSubscriptions(
     String appId, {
     RiskState? riskState,
     int limit = 50,
     int offset = 0,
   });
+
+  /// Fetch subscriptions with advanced filtering and pagination
+  Future<PaginatedSubscriptionResponse> getSubscriptionsFiltered(
+    String appId, {
+    SubscriptionFilters? filters,
+    int page = 1,
+    int pageSize = 25,
+  });
+
+  /// Get subscription summary statistics
+  Future<SubscriptionSummary> getSummary(String appId);
+
+  /// Get price statistics for filtering
+  Future<PriceStats> getPriceStats(String appId);
 
   /// Get a single subscription by ID
   Future<Subscription> getSubscription(String appId, String subscriptionId);

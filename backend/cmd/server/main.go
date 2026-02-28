@@ -239,6 +239,14 @@ func run() error {
 		log.Println("Revenue handler initialized")
 	}
 
+	// Initialize fee handler
+	var feeHandler *handler.FeeHandler
+	if appRepo != nil && txRepo != nil {
+		feeService := domainservice.NewFeeVerificationService()
+		feeHandler = handler.NewFeeHandler(appRepo, txRepo, feeService)
+		log.Println("Fee handler initialized")
+	}
+
 	// Initialize API key handler
 	var apiKeyHandler *apikeyhandler.APIKeyHandler
 	if db != nil {
@@ -269,6 +277,7 @@ func run() error {
 		AppHandler:               appHandler,
 		MetricsHandler:           metricsHandler,
 		RevenueHandler:           revenueHandler,
+		FeeHandler:               feeHandler,
 		SyncHandler:              syncHandler,
 		SubscriptionHandler:      subscriptionHandler,
 		StoreHealthHandler:       storeHealthHandler,

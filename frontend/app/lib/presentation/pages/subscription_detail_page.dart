@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/entities/subscription.dart';
@@ -96,6 +97,8 @@ class SubscriptionDetailPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildStoreCard(context, subscription),
+          const SizedBox(height: 12),
+          _buildStoreHealthButton(context, subscription),
           const SizedBox(height: 16),
           RiskStateIndicator(riskState: subscription.riskState),
           const SizedBox(height: 16),
@@ -362,5 +365,31 @@ class SubscriptionDetailPage extends StatelessWidget {
 
   bool _isOverdue(DateTime date) {
     return date.isBefore(DateTime.now());
+  }
+
+  Widget _buildStoreHealthButton(
+      BuildContext context, Subscription subscription) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () {
+          context.pushNamed(
+            'store-health',
+            pathParameters: {
+              'appId': appId,
+              'domain': subscription.myshopifyDomain,
+            },
+          );
+        },
+        icon: const Icon(Icons.health_and_safety),
+        label: const Text('View Store Health'),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -23,6 +23,26 @@ abstract class AppRepository {
 
   /// Get fee breakdown for a hypothetical amount
   Future<FeeBreakdownResponse> getFeeBreakdown(String appId, {int amountCents = 4900});
+
+  /// Trigger a data sync from Shopify Partner API
+  Future<SyncResult> syncData();
+}
+
+/// Result of a sync operation
+class SyncResult {
+  final int transactionCount;
+  final DateTime syncedAt;
+  final String? appName;
+  final String? error;
+
+  const SyncResult({
+    required this.transactionCount,
+    required this.syncedAt,
+    this.appName,
+    this.error,
+  });
+
+  bool get isSuccess => error == null;
 }
 
 /// Fee summary response from API

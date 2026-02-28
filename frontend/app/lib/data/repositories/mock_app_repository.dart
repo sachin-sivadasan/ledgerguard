@@ -139,4 +139,16 @@ class MockAppRepository implements AppRepository {
       allTiers: allTiers,
     );
   }
+
+  @override
+  Future<SyncResult> syncData() async {
+    await Future.delayed(delay);
+
+    // Return mock sync result
+    return SyncResult(
+      transactionCount: 42,
+      syncedAt: DateTime.now(),
+      appName: _selectedApp?.name ?? 'Mock App',
+    );
+  }
 }

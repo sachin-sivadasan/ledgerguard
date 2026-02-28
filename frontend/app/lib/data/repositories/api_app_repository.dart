@@ -232,4 +232,52 @@ class ApiAppRepository implements AppRepository {
 
     throw const AppException('Failed to fetch fee breakdown');
   }
+
+  @override
+  Future<SyncResult> syncData() async {
+    try {
+      final response = await _apiClient.post('/api/v1/sync');
+
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        final results = data['results'] as List<dynamic>? ?? [];
+
+        if (results.isEmpty) {
+          return SyncResult(
+            transactionCount: 0,
+            syncedAt: DateTime.now(),
+          );
+        }
+
+        // Aggregate results from all apps
+        int totalTransactions = 0;
+        String? lastError;
+        String? appName;
+
+        for (final result in results) {
+          final r = result as Map<String, dynamic>;
+          totalTransactions += (r['transaction_count'] as int?) ?? 0;
+          appName = r['app_name'] as String?;
+          if (r['error'] != null) {
+            lastError = r['error'] as String;
+          }
+        }
+
+        return SyncResult(
+          transactionCount: totalTransactions,
+          syncedAt: DateTime.now(),
+          appName: appName,
+          error: lastError,
+        );
+      }
+
+      throw const AppException('Failed to sync data');
+    } catch (e) {
+      return SyncResult(
+        transactionCount: 0,
+        syncedAt: DateTime.now(),
+        error: e.toString(),
+      );
+    }
+  }
 }

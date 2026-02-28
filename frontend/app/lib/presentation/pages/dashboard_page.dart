@@ -82,6 +82,9 @@ class DashboardPage extends StatelessWidget {
             tooltip: 'More options',
             onSelected: (value) {
               switch (value) {
+                case 'sync':
+                  _triggerSync(context);
+                  break;
                 case 'subscriptions':
                   _navigateToSubscriptions(context);
                   break;
@@ -97,6 +100,15 @@ class DashboardPage extends StatelessWidget {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'sync',
+                child: ListTile(
+                  leading: Icon(Icons.sync),
+                  title: Text('Sync Data'),
+                  contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
               const PopupMenuItem(
                 value: 'subscriptions',
                 child: ListTile(
@@ -169,6 +181,71 @@ class DashboardPage extends StatelessWidget {
     } else if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select an app first')),
+      );
+    }
+  }
+
+  Future<void> _triggerSync(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    // Show syncing indicator
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Syncing data from Shopify...'),
+          ],
+        ),
+        duration: Duration(seconds: 30),
+      ),
+    );
+
+    try {
+      final appRepository = GetIt.instance<AppRepository>();
+      final result = await appRepository.syncData();
+
+      scaffoldMessenger.hideCurrentSnackBar();
+
+      if (result.isSuccess) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Sync complete! ${result.transactionCount} transactions synced.',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Refresh dashboard after sync
+        if (context.mounted) {
+          context
+              .read<DashboardBloc>()
+              .add(const RefreshDashboardRequested());
+        }
+      } else {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Sync failed: ${result.error}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      scaffoldMessenger.hideCurrentSnackBar();
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Sync failed: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }

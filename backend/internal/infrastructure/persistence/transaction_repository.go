@@ -331,3 +331,84 @@ func (r *PostgresTransactionRepository) GetUpcomingAvailability(ctx context.Cont
 
 	return results, rows.Err()
 }
+
+func (r *PostgresTransactionRepository) FindByDomain(ctx context.Context, appID uuid.UUID, domain string, from, to time.Time) ([]*entity.Transaction, error) {
+	query := `
+		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, charge_type,
+		       COALESCE(gross_amount_cents, 0), COALESCE(shopify_fee_cents, 0),
+		       COALESCE(processing_fee_cents, 0), COALESCE(tax_on_fees_cents, 0),
+		       COALESCE(net_amount_cents, amount_cents), currency, transaction_date, created_at,
+		       created_date, available_date, earnings_status
+		FROM transactions
+		WHERE app_id = $1 AND myshopify_domain = $2 AND transaction_date >= $3 AND transaction_date <= $4
+		ORDER BY transaction_date DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query, appID, domain, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transactions []*entity.Transaction
+	for rows.Next() {
+		var tx entity.Transaction
+		var chargeType string
+		var shopName *string
+		var earningsStatus string
+
+		err := rows.Scan(
+			&tx.ID,
+			&tx.AppID,
+			&tx.ShopifyGID,
+			&tx.MyshopifyDomain,
+			&shopName,
+			&chargeType,
+			&tx.GrossAmountCents,
+			&tx.ShopifyFeeCents,
+			&tx.ProcessingFeeCents,
+			&tx.TaxOnFeesCents,
+			&tx.NetAmountCents,
+			&tx.Currency,
+			&tx.TransactionDate,
+			&tx.CreatedAt,
+			&tx.CreatedDate,
+			&tx.AvailableDate,
+			&earningsStatus,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		tx.ChargeType = valueobject.ChargeType(chargeType)
+		tx.EarningsStatus = entity.EarningsStatus(earningsStatus)
+		if shopName != nil {
+			tx.ShopName = *shopName
+		}
+		transactions = append(transactions, &tx)
+	}
+
+	return transactions, rows.Err()
+}
+
+func (r *PostgresTransactionRepository) GetEarningsSummaryByDomain(ctx context.Context, appID uuid.UUID, domain string) (*repository.EarningsSummary, error) {
+	query := `
+		SELECT
+			COALESCE(SUM(CASE WHEN earnings_status = 'PENDING' THEN net_amount_cents ELSE 0 END), 0) as pending,
+			COALESCE(SUM(CASE WHEN earnings_status = 'AVAILABLE' THEN net_amount_cents ELSE 0 END), 0) as available,
+			COALESCE(SUM(CASE WHEN earnings_status = 'PAID_OUT' THEN net_amount_cents ELSE 0 END), 0) as paid_out
+		FROM transactions
+		WHERE app_id = $1 AND myshopify_domain = $2
+	`
+
+	var summary repository.EarningsSummary
+	err := r.pool.QueryRow(ctx, query, appID, domain).Scan(
+		&summary.PendingCents,
+		&summary.AvailableCents,
+		&summary.PaidOutCents,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &summary, nil
+}

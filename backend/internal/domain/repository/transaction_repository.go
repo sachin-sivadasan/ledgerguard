@@ -45,4 +45,10 @@ type TransactionRepository interface {
 
 	// GetUpcomingAvailability returns earnings becoming available in the next N days
 	GetUpcomingAvailability(ctx context.Context, appID uuid.UUID, days int) ([]EarningsByDate, error)
+
+	// FindByDomain returns transactions for a specific store domain within an app
+	FindByDomain(ctx context.Context, appID uuid.UUID, domain string, from, to time.Time) ([]*entity.Transaction, error)
+
+	// GetEarningsSummaryByDomain returns aggregated earnings by status for a specific store
+	GetEarningsSummaryByDomain(ctx context.Context, appID uuid.UUID, domain string) (*EarningsSummary, error)
 }

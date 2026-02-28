@@ -21,6 +21,7 @@ type Config struct {
 	RevenueHandler           *handler.RevenueHandler
 	SyncHandler              *handler.SyncHandler
 	SubscriptionHandler      *handler.SubscriptionHandler
+	StoreHealthHandler       *handler.StoreHealthHandler
 	FeeHandler               *handler.FeeHandler
 	APIKeyHandler            *apikeyhandler.APIKeyHandler
 	AuthMW                   func(next http.Handler) http.Handler
@@ -112,6 +113,11 @@ func New(cfg Config) *chi.Mux {
 				if cfg.FeeHandler != nil {
 					r.Get("/{appID}/fees/summary", cfg.FeeHandler.GetFeeSummary)
 					r.Get("/{appID}/fees/breakdown", cfg.FeeHandler.GetTierBreakdown)
+				}
+
+				// Store health routes
+				if cfg.StoreHealthHandler != nil {
+					r.Get("/{appID}/stores/{domain}/health", cfg.StoreHealthHandler.GetStoreHealth)
 				}
 			})
 		}

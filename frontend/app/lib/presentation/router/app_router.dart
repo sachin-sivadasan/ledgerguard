@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../blocs/api_key/api_key.dart';
 import '../blocs/auth/auth.dart';
+import '../blocs/store_health/store_health.dart';
 import '../blocs/subscription_detail/subscription_detail.dart';
 import '../blocs/subscription_list/subscription_list.dart';
 import '../pages/admin/manual_integration_page.dart';
@@ -18,6 +19,7 @@ import '../pages/partner_integration_page.dart';
 import '../pages/profile_page.dart';
 import '../pages/risk_breakdown_page.dart';
 import '../pages/signup_page.dart';
+import '../pages/store_health_page.dart';
 import '../pages/placeholder_page.dart';
 import '../pages/subscription_detail_page.dart';
 import '../pages/subscription_list_page.dart';
@@ -140,6 +142,21 @@ class AppRouter {
             child: SubscriptionDetailPage(
               appId: appId,
               subscriptionId: subscriptionId,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/apps/:appId/stores/:domain/health',
+        name: 'store-health',
+        builder: (context, state) {
+          final appId = state.pathParameters['appId']!;
+          final domain = state.pathParameters['domain']!;
+          return BlocProvider(
+            create: (_) => GetIt.instance<StoreHealthBloc>(),
+            child: StoreHealthPage(
+              appId: appId,
+              domain: domain,
             ),
           );
         },

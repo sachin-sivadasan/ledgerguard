@@ -223,6 +223,13 @@ func run() error {
 		log.Println("Subscription handler initialized")
 	}
 
+	// Initialize store health handler
+	var storeHealthHandler *handler.StoreHealthHandler
+	if subscriptionRepo != nil && txRepo != nil && partnerRepo != nil && appRepo != nil {
+		storeHealthHandler = handler.NewStoreHealthHandler(subscriptionRepo, txRepo, partnerRepo, appRepo)
+		log.Println("Store health handler initialized")
+	}
+
 	// Initialize revenue (earnings timeline) handler
 	var revenueHandler *handler.RevenueHandler
 	if db != nil && partnerRepo != nil && appRepo != nil {
@@ -264,6 +271,7 @@ func run() error {
 		RevenueHandler:           revenueHandler,
 		SyncHandler:              syncHandler,
 		SubscriptionHandler:      subscriptionHandler,
+		StoreHealthHandler:       storeHealthHandler,
 		APIKeyHandler:            apiKeyHandler,
 		AuthMW:                   authMW,
 		AdminMW:                  adminMW,

@@ -13,6 +13,7 @@ import '../../data/repositories/api_api_key_repository.dart';
 import '../../data/repositories/api_dashboard_repository.dart';
 import '../../data/repositories/api_dashboard_preferences_repository.dart';
 import '../../data/repositories/api_earnings_repository.dart';
+import '../../data/repositories/api_store_health_repository.dart';
 import '../../data/repositories/api_insight_repository.dart';
 import '../../data/repositories/api_notification_preferences_repository.dart';
 import '../../data/repositories/api_risk_repository.dart';
@@ -31,6 +32,7 @@ import '../../domain/repositories/insight_repository.dart';
 import '../../domain/repositories/notification_preferences_repository.dart';
 import '../../domain/repositories/partner_integration_repository.dart';
 import '../../domain/repositories/risk_repository.dart';
+import '../../domain/repositories/store_health_repository.dart';
 import '../../domain/repositories/subscription_repository.dart';
 import '../../domain/repositories/user_profile_repository.dart';
 import '../../presentation/blocs/api_key/api_key_bloc.dart';
@@ -44,6 +46,7 @@ import '../../presentation/blocs/partner_integration/partner_integration_bloc.da
 import '../../presentation/blocs/preferences/preferences_bloc.dart';
 import '../../presentation/blocs/risk/risk_bloc.dart';
 import '../../presentation/blocs/role/role_bloc.dart';
+import '../../presentation/blocs/store_health/store_health_bloc.dart';
 import '../../presentation/blocs/subscription_detail/subscription_detail_bloc.dart';
 import '../../presentation/blocs/subscription_list/subscription_list_bloc.dart';
 import '../network/api_client.dart';
@@ -100,6 +103,9 @@ extension GetItInjectableX on _i1.GetIt {
           authRepository: get<AuthRepository>(),
           appRepository: get<AppRepository>(),
         ));
+    registerLazySingleton<StoreHealthRepository>(() => ApiStoreHealthRepository(
+          get<ApiClient>(),
+        ));
 
     // Blocs
     registerFactory<AuthBloc>(() => AuthBloc(authRepository: get<AuthRepository>()));
@@ -115,6 +121,7 @@ extension GetItInjectableX on _i1.GetIt {
     registerFactory<SubscriptionDetailBloc>(() => SubscriptionDetailBloc(repository: get<SubscriptionRepository>()));
     registerFactory<ApiKeyBloc>(() => ApiKeyBloc(repository: get<ApiKeyRepository>()));
     registerFactory<EarningsBloc>(() => EarningsBloc(earningsRepository: get<EarningsRepository>()));
+    registerFactory<StoreHealthBloc>(() => StoreHealthBloc(get<StoreHealthRepository>()));
 
     return this;
   }

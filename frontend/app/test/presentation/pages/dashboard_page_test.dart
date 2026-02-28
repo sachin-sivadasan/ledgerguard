@@ -5,8 +5,11 @@ import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:ledgerguard/domain/entities/dashboard_metrics.dart';
+import 'package:ledgerguard/domain/entities/revenue_share_tier.dart';
+import 'package:ledgerguard/domain/entities/shopify_app.dart';
 import 'package:ledgerguard/domain/entities/time_range.dart';
 import 'package:ledgerguard/domain/entities/user_profile.dart';
+import 'package:ledgerguard/domain/repositories/app_repository.dart';
 import 'package:ledgerguard/presentation/blocs/dashboard/dashboard.dart';
 import 'package:ledgerguard/presentation/blocs/earnings/earnings.dart';
 import 'package:ledgerguard/presentation/blocs/insight/insight.dart';
@@ -15,6 +18,8 @@ import 'package:ledgerguard/presentation/blocs/role/role.dart';
 import 'package:ledgerguard/presentation/pages/dashboard_page.dart';
 
 class MockDashboardBloc extends Mock implements DashboardBloc {}
+
+class MockAppRepository extends Mock implements AppRepository {}
 
 class MockRoleBloc extends Mock implements RoleBloc {}
 
@@ -38,6 +43,7 @@ void main() {
   late MockInsightBloc mockInsightBloc;
   late MockPreferencesBloc mockPreferencesBloc;
   late MockEarningsBloc mockEarningsBloc;
+  late MockAppRepository mockAppRepository;
 
   const proUserProfile = UserProfile(
     id: 'user-1',
@@ -80,6 +86,36 @@ void main() {
     mockInsightBloc = MockInsightBloc();
     mockPreferencesBloc = MockPreferencesBloc();
     mockEarningsBloc = MockEarningsBloc();
+    mockAppRepository = MockAppRepository();
+
+    // Setup AppRepository defaults for FeeInsightsCard
+    when(() => mockAppRepository.getSelectedApp()).thenAnswer(
+      (_) async => const ShopifyApp(
+        id: 'test-app',
+        name: 'Test App',
+        revenueShareTier: RevenueShareTier.smallDev0,
+      ),
+    );
+    when(() => mockAppRepository.getFeeSummary(any())).thenAnswer(
+      (_) async => const FeeSummary(
+        transactionCount: 100,
+        totalGrossCents: 1000000,
+        totalRevenueShareCents: 0,
+        totalProcessingFeeCents: 29000,
+        totalTaxOnFeesCents: 2320,
+        totalFeesCents: 31320,
+        totalNetCents: 968680,
+        avgRevenueSharePct: 0,
+        avgProcessingFeePct: 2.9,
+        effectiveFeePct: 3.13,
+        savings: TierSavings(
+          defaultFeesCents: 229000,
+          currentFeesCents: 31320,
+          savingsCents: 197680,
+          savingsPct: 86.3,
+        ),
+      ),
+    );
 
     // Setup RoleBloc defaults
     when(() => mockRoleBloc.state).thenReturn(const RoleLoaded(proUserProfile));
@@ -103,12 +139,18 @@ void main() {
 
     // Register EarningsBloc in GetIt for the dashboard page
     GetIt.instance.registerFactory<EarningsBloc>(() => mockEarningsBloc);
+
+    // Register AppRepository in GetIt for FeeInsightsCard
+    GetIt.instance.registerSingleton<AppRepository>(mockAppRepository);
   });
 
   tearDown(() {
     // Clean up GetIt
     if (GetIt.instance.isRegistered<EarningsBloc>()) {
       GetIt.instance.unregister<EarningsBloc>();
+    }
+    if (GetIt.instance.isRegistered<AppRepository>()) {
+      GetIt.instance.unregister<AppRepository>();
     }
   });
 

@@ -1082,3 +1082,72 @@ ALTER TABLE transactions ADD COLUMN net_amount_cents BIGINT;
 **Tests:** All backend tests pass
 
 ---
+
+## [2026-03-01] Earnings Timeline Tracking (Phase 2)
+
+**Commit:** feat: add earnings timeline with pending/available status tracking
+
+**Summary:**
+Implemented Shopify earnings availability tracking. Shopify holds payments for a "cool-down" period before making them available for payout. This feature tracks when earnings become PENDING → AVAILABLE → PAID_OUT.
+
+**Key Features:**
+- Earnings availability calculation based on Shopify rules:
+  - RECURRING charges: 7-37 days (depending on transaction date in billing cycle)
+  - ONE_TIME charges: 7 days
+- Earnings status tracking: PENDING, AVAILABLE, PAID_OUT
+- API endpoint for earnings status summary
+- Dashboard widget showing pending vs available earnings
+
+**Backend Files Created:**
+- `internal/domain/service/earnings_calculator.go` - EarningsCalculator with:
+  - `CalculateAvailableDate(chargeType, createdDate)` - Calculates availability date
+  - `DetermineEarningsStatus(availableDate, now)` - Returns PENDING/AVAILABLE status
+  - `ProcessTransaction(tx, createdDate, now)` - Sets earnings fields on transaction
+  - `ProcessTransactions(txs, now)` - Batch processing
+  - `SummarizeEarnings(txs)` - Aggregates by status
+- `internal/domain/service/earnings_calculator_test.go` - TDD unit tests
+- `migrations/000018_add_earnings_tracking.up.sql` - Add earnings fields to transactions
+- `migrations/000018_add_earnings_tracking.down.sql` - Rollback migration
+
+**Backend Files Modified:**
+- `internal/domain/entity/transaction.go` - Added EarningsStatus type, CreatedDate, AvailableDate, EarningsStatus fields
+- `internal/domain/repository/transaction_repository.go` - Added EarningsSummary, EarningsByDate structs, GetEarningsSummary, GetPendingByAvailableDate, GetUpcomingAvailability methods
+- `internal/infrastructure/persistence/transaction_repository.go` - Implemented new repository methods with SQL queries
+- `internal/application/service/revenue_metrics_service.go` - Added GetEarningsStatus method
+- `internal/application/service/sync_service.go` - Integrated EarningsCalculator before storing transactions (critical fix for constraint violation)
+- `internal/interfaces/http/handler/revenue_handler.go` - Added GetEarningsStatus handler
+- `internal/interfaces/http/router/router.go` - Added route for earnings/status endpoint
+
+**New API Endpoint:**
+- `GET /api/v1/apps/{appID}/earnings/status` - Returns earnings summary
+  ```json
+  {
+    "total_pending_cents": 12500,
+    "total_available_cents": 45000,
+    "total_paid_out_cents": 120000,
+    "pending_by_date": [
+      { "date": "2026-03-08", "amount_cents": 5000 },
+      { "date": "2026-03-15", "amount_cents": 7500 }
+    ],
+    "upcoming_availability": [
+      { "date": "2026-03-08", "amount_cents": 5000 }
+    ]
+  }
+  ```
+
+**Database Changes:**
+```sql
+ALTER TABLE transactions ADD COLUMN created_date TIMESTAMPTZ;
+ALTER TABLE transactions ADD COLUMN available_date TIMESTAMPTZ;
+ALTER TABLE transactions ADD COLUMN earnings_status VARCHAR(20) DEFAULT 'PENDING';
+ALTER TABLE transactions ADD CONSTRAINT transactions_earnings_status_check
+  CHECK (earnings_status IN ('PENDING', 'AVAILABLE', 'PAID_OUT'));
+CREATE INDEX idx_transactions_earnings ON transactions(app_id, earnings_status, available_date);
+```
+
+**Configuration Change:**
+- Changed history sync window from 12 months to 3 months (sync_service.go and ledger_service.go)
+
+**Tests:** All backend tests pass
+
+---

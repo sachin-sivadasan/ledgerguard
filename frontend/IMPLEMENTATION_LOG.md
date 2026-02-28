@@ -1016,3 +1016,47 @@ Implemented frontend support for Shopify revenue share tier tracking. Users can 
 - Fixed profile_page_test.dart (21 tests) - matched tests to actual implementation
 
 ---
+
+## [2026-03-01] Earnings Timeline Tracking - Frontend (Phase 2)
+
+**Commit:** feat: add earnings timeline with pending/available status tracking
+
+**Summary:**
+Implemented frontend support for Shopify earnings availability tracking. Shows pending vs available earnings with upcoming availability dates.
+
+**Files Created:**
+- `lib/domain/entities/earnings_status.dart` - EarningsStatus and EarningsDateEntry entities with:
+  - `totalPendingCents`, `totalAvailableCents`, `totalPaidOutCents`
+  - `pendingByDate`, `upcomingAvailability` lists
+  - Formatting helpers: `formattedPending`, `formattedAvailable`, `formattedPaidOut`
+  - `nextAvailable`, `daysUntilNextAvailable` computed properties
+- `lib/presentation/widgets/earnings_status_card.dart` - Two display modes:
+  - **Full card**: Shows pending/available tiles, upcoming timeline, paid out summary
+  - **Compact card**: Shows available + pending in single row with "next available" badge
+  - **EarningsKpiCard**: Compact KPI version for dashboard grid
+
+**Files Modified:**
+- `lib/domain/repositories/earnings_repository.dart` - Added `fetchEarningsStatus()` method
+- `lib/data/repositories/api_earnings_repository.dart` - Implemented API call to `/api/v1/apps/{appId}/earnings/status`
+- `lib/core/network/api_client.dart` - Added missing `patch()` method for tier updates
+
+**Widget Features:**
+- Loading state with progress indicator
+- Error state with graceful fallback (shows empty)
+- Color-coded status indicators (amber for pending, green for available)
+- Upcoming availability timeline with days countdown
+- Refresh button on full card
+
+**Usage:**
+```dart
+// Full card
+EarningsStatusCard()
+
+// Compact card (for dashboard)
+EarningsStatusCard(compact: true)
+
+// KPI card (requires pre-loaded status)
+EarningsKpiCard(status: earningsStatus)
+```
+
+---

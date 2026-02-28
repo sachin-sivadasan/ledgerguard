@@ -59,8 +59,8 @@ func (s *LedgerService) WithSnapshotRepository(repo repository.DailyMetricsSnaps
 // RebuildFromTransactions rebuilds subscription state from transactions
 // This is deterministic: same transactions → same subscription state
 func (s *LedgerService) RebuildFromTransactions(ctx context.Context, appID uuid.UUID, now time.Time) (*LedgerRebuildResult, error) {
-	// Fetch all transactions for the app (12-month window)
-	from := now.AddDate(-1, 0, 0)
+	// Fetch all transactions for the app (3-month window)
+	from := now.AddDate(0, -3, 0)
 	transactions, err := s.txRepo.FindByAppID(ctx, appID, from, now)
 	if err != nil {
 		return nil, err

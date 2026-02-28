@@ -92,9 +92,9 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 		return nil, fmt.Errorf("failed to decrypt token: %w", err)
 	}
 
-	// Calculate 12-month window
+	// Calculate 3-month window
 	now := time.Now().UTC()
-	from := now.AddDate(-1, 0, 0) // 12 months ago
+	from := now.AddDate(0, -3, 0) // 3 months ago
 	to := now
 
 	// Add organization ID to context for the Partner API client
@@ -105,6 +105,10 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch transactions: %w", err)
 	}
+
+	// Process earnings tracking for each transaction
+	earningsCalc := domainservice.NewEarningsCalculator()
+	earningsCalc.ProcessTransactions(transactions, now)
 
 	// Store transactions (upsert for idempotency)
 	if len(transactions) > 0 {

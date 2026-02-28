@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
@@ -27,9 +28,10 @@ func (r *PostgresTransactionRepository) Upsert(ctx context.Context, tx *entity.T
 		INSERT INTO transactions (
 			id, app_id, shopify_gid, myshopify_domain, shop_name, charge_type,
 			gross_amount_cents, shopify_fee_cents, processing_fee_cents, tax_on_fees_cents,
-			net_amount_cents, amount_cents, currency, transaction_date, created_at
+			net_amount_cents, amount_cents, currency, transaction_date, created_at,
+			created_date, available_date, earnings_status
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 		ON CONFLICT (shopify_gid) DO UPDATE SET
 			shop_name = EXCLUDED.shop_name,
 			charge_type = EXCLUDED.charge_type,
@@ -39,7 +41,10 @@ func (r *PostgresTransactionRepository) Upsert(ctx context.Context, tx *entity.T
 			tax_on_fees_cents = EXCLUDED.tax_on_fees_cents,
 			net_amount_cents = EXCLUDED.net_amount_cents,
 			amount_cents = EXCLUDED.amount_cents,
-			currency = EXCLUDED.currency
+			currency = EXCLUDED.currency,
+			created_date = EXCLUDED.created_date,
+			available_date = EXCLUDED.available_date,
+			earnings_status = EXCLUDED.earnings_status
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -58,6 +63,9 @@ func (r *PostgresTransactionRepository) Upsert(ctx context.Context, tx *entity.T
 		tx.Currency,
 		tx.TransactionDate,
 		tx.CreatedAt,
+		tx.CreatedDate,
+		tx.AvailableDate,
+		string(tx.EarningsStatus),
 	)
 
 	return err
@@ -73,9 +81,10 @@ func (r *PostgresTransactionRepository) UpsertBatch(ctx context.Context, txs []*
 		INSERT INTO transactions (
 			id, app_id, shopify_gid, myshopify_domain, shop_name, charge_type,
 			gross_amount_cents, shopify_fee_cents, processing_fee_cents, tax_on_fees_cents,
-			net_amount_cents, amount_cents, currency, transaction_date, created_at
+			net_amount_cents, amount_cents, currency, transaction_date, created_at,
+			created_date, available_date, earnings_status
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 		ON CONFLICT (shopify_gid) DO UPDATE SET
 			shop_name = EXCLUDED.shop_name,
 			charge_type = EXCLUDED.charge_type,
@@ -85,7 +94,10 @@ func (r *PostgresTransactionRepository) UpsertBatch(ctx context.Context, txs []*
 			tax_on_fees_cents = EXCLUDED.tax_on_fees_cents,
 			net_amount_cents = EXCLUDED.net_amount_cents,
 			amount_cents = EXCLUDED.amount_cents,
-			currency = EXCLUDED.currency
+			currency = EXCLUDED.currency,
+			created_date = EXCLUDED.created_date,
+			available_date = EXCLUDED.available_date,
+			earnings_status = EXCLUDED.earnings_status
 	`
 
 	for _, tx := range txs {
@@ -105,6 +117,9 @@ func (r *PostgresTransactionRepository) UpsertBatch(ctx context.Context, txs []*
 			tx.Currency,
 			tx.TransactionDate,
 			tx.CreatedAt,
+			tx.CreatedDate,
+			tx.AvailableDate,
+			string(tx.EarningsStatus),
 		)
 	}
 
@@ -125,7 +140,8 @@ func (r *PostgresTransactionRepository) FindByAppID(ctx context.Context, appID u
 		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, charge_type,
 		       COALESCE(gross_amount_cents, 0), COALESCE(shopify_fee_cents, 0),
 		       COALESCE(processing_fee_cents, 0), COALESCE(tax_on_fees_cents, 0),
-		       COALESCE(net_amount_cents, amount_cents), currency, transaction_date, created_at
+		       COALESCE(net_amount_cents, amount_cents), currency, transaction_date, created_at,
+		       created_date, available_date, earnings_status
 		FROM transactions
 		WHERE app_id = $1 AND transaction_date >= $2 AND transaction_date <= $3
 		ORDER BY transaction_date DESC
@@ -142,6 +158,7 @@ func (r *PostgresTransactionRepository) FindByAppID(ctx context.Context, appID u
 		var tx entity.Transaction
 		var chargeType string
 		var shopName *string
+		var earningsStatus string
 
 		err := rows.Scan(
 			&tx.ID,
@@ -158,12 +175,16 @@ func (r *PostgresTransactionRepository) FindByAppID(ctx context.Context, appID u
 			&tx.Currency,
 			&tx.TransactionDate,
 			&tx.CreatedAt,
+			&tx.CreatedDate,
+			&tx.AvailableDate,
+			&earningsStatus,
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		tx.ChargeType = valueobject.ChargeType(chargeType)
+		tx.EarningsStatus = entity.EarningsStatus(earningsStatus)
 		if shopName != nil {
 			tx.ShopName = *shopName
 		}
@@ -178,7 +199,8 @@ func (r *PostgresTransactionRepository) FindByShopifyGID(ctx context.Context, sh
 		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, charge_type,
 		       COALESCE(gross_amount_cents, 0), COALESCE(shopify_fee_cents, 0),
 		       COALESCE(processing_fee_cents, 0), COALESCE(tax_on_fees_cents, 0),
-		       COALESCE(net_amount_cents, amount_cents), currency, transaction_date, created_at
+		       COALESCE(net_amount_cents, amount_cents), currency, transaction_date, created_at,
+		       created_date, available_date, earnings_status
 		FROM transactions
 		WHERE shopify_gid = $1
 	`
@@ -186,6 +208,7 @@ func (r *PostgresTransactionRepository) FindByShopifyGID(ctx context.Context, sh
 	var tx entity.Transaction
 	var chargeType string
 	var shopName *string
+	var earningsStatus string
 
 	err := r.pool.QueryRow(ctx, query, shopifyGID).Scan(
 		&tx.ID,
@@ -202,6 +225,9 @@ func (r *PostgresTransactionRepository) FindByShopifyGID(ctx context.Context, sh
 		&tx.Currency,
 		&tx.TransactionDate,
 		&tx.CreatedAt,
+		&tx.CreatedDate,
+		&tx.AvailableDate,
+		&earningsStatus,
 	)
 
 	if err != nil {
@@ -212,6 +238,7 @@ func (r *PostgresTransactionRepository) FindByShopifyGID(ctx context.Context, sh
 	}
 
 	tx.ChargeType = valueobject.ChargeType(chargeType)
+	tx.EarningsStatus = entity.EarningsStatus(earningsStatus)
 	if shopName != nil {
 		tx.ShopName = *shopName
 	}
@@ -224,4 +251,83 @@ func (r *PostgresTransactionRepository) CountByAppID(ctx context.Context, appID 
 	var count int64
 	err := r.pool.QueryRow(ctx, query, appID).Scan(&count)
 	return count, err
+}
+
+func (r *PostgresTransactionRepository) GetEarningsSummary(ctx context.Context, appID uuid.UUID) (*repository.EarningsSummary, error) {
+	query := `
+		SELECT
+			COALESCE(SUM(CASE WHEN earnings_status = 'PENDING' THEN net_amount_cents ELSE 0 END), 0) as pending,
+			COALESCE(SUM(CASE WHEN earnings_status = 'AVAILABLE' THEN net_amount_cents ELSE 0 END), 0) as available,
+			COALESCE(SUM(CASE WHEN earnings_status = 'PAID_OUT' THEN net_amount_cents ELSE 0 END), 0) as paid_out
+		FROM transactions
+		WHERE app_id = $1
+	`
+
+	var summary repository.EarningsSummary
+	err := r.pool.QueryRow(ctx, query, appID).Scan(
+		&summary.PendingCents,
+		&summary.AvailableCents,
+		&summary.PaidOutCents,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &summary, nil
+}
+
+func (r *PostgresTransactionRepository) GetPendingByAvailableDate(ctx context.Context, appID uuid.UUID) ([]repository.EarningsByDate, error) {
+	query := `
+		SELECT available_date, SUM(net_amount_cents) as amount
+		FROM transactions
+		WHERE app_id = $1 AND earnings_status = 'PENDING'
+		GROUP BY available_date
+		ORDER BY available_date ASC
+	`
+
+	rows, err := r.pool.Query(ctx, query, appID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []repository.EarningsByDate
+	for rows.Next() {
+		var entry repository.EarningsByDate
+		if err := rows.Scan(&entry.Date, &entry.AmountCents); err != nil {
+			return nil, err
+		}
+		results = append(results, entry)
+	}
+
+	return results, rows.Err()
+}
+
+func (r *PostgresTransactionRepository) GetUpcomingAvailability(ctx context.Context, appID uuid.UUID, days int) ([]repository.EarningsByDate, error) {
+	query := `
+		SELECT available_date, SUM(net_amount_cents) as amount
+		FROM transactions
+		WHERE app_id = $1
+			AND earnings_status = 'PENDING'
+			AND available_date >= NOW()
+			AND available_date <= NOW() + $2 * INTERVAL '1 day'
+		GROUP BY available_date
+		ORDER BY available_date ASC
+	`
+
+	rows, err := r.pool.Query(ctx, query, appID, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []repository.EarningsByDate
+	for rows.Next() {
+		var entry repository.EarningsByDate
+		if err := rows.Scan(&entry.Date, &entry.AmountCents); err != nil {
+			return nil, err
+		}
+		results = append(results, entry)
+	}
+
+	return results, rows.Err()
 }

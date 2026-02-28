@@ -7,6 +7,15 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
+// EarningsStatus represents the availability status of earnings
+type EarningsStatus string
+
+const (
+	EarningsStatusPending   EarningsStatus = "PENDING"   // Earnings not yet available
+	EarningsStatusAvailable EarningsStatus = "AVAILABLE" // Earnings ready for payout
+	EarningsStatusPaidOut   EarningsStatus = "PAID_OUT"  // Earnings have been disbursed
+)
+
 type Transaction struct {
 	ID              uuid.UUID
 	AppID           uuid.UUID
@@ -22,6 +31,10 @@ type Transaction struct {
 	Currency           string
 	TransactionDate    time.Time
 	CreatedAt          time.Time
+	// Earnings tracking
+	CreatedDate     time.Time      // When the charge was created in Shopify
+	AvailableDate   time.Time      // When earnings become available for payout
+	EarningsStatus  EarningsStatus // PENDING, AVAILABLE, or PAID_OUT
 }
 
 // AmountCents returns the net amount for revenue calculations (backwards compatible)
@@ -101,4 +114,38 @@ func (t *Transaction) TotalFeesCents() int64 {
 // HasFeeBreakdown returns true if the transaction has detailed fee breakdown
 func (t *Transaction) HasFeeBreakdown() bool {
 	return t.GrossAmountCents > 0 && (t.ShopifyFeeCents > 0 || t.ProcessingFeeCents > 0)
+}
+
+// IsPending returns true if earnings are not yet available
+func (t *Transaction) IsPending() bool {
+	return t.EarningsStatus == EarningsStatusPending
+}
+
+// IsAvailable returns true if earnings are available for payout
+func (t *Transaction) IsAvailable() bool {
+	return t.EarningsStatus == EarningsStatusAvailable
+}
+
+// IsPaidOut returns true if earnings have been disbursed
+func (t *Transaction) IsPaidOut() bool {
+	return t.EarningsStatus == EarningsStatusPaidOut
+}
+
+// SetEarningsTracking sets the earnings tracking fields
+func (t *Transaction) SetEarningsTracking(createdDate, availableDate time.Time, status EarningsStatus) {
+	t.CreatedDate = createdDate
+	t.AvailableDate = availableDate
+	t.EarningsStatus = status
+}
+
+// UpdateEarningsStatus updates status based on current time
+func (t *Transaction) UpdateEarningsStatus(now time.Time) {
+	if t.EarningsStatus == EarningsStatusPaidOut {
+		return // Don't change if already paid out
+	}
+	if now.Before(t.AvailableDate) {
+		t.EarningsStatus = EarningsStatusPending
+	} else {
+		t.EarningsStatus = EarningsStatusAvailable
+	}
 }

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../core/config/app_config.dart';
+import '../../domain/entities/earnings_status.dart';
 import '../../domain/entities/earnings_timeline.dart';
 import '../../domain/repositories/app_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -84,6 +85,49 @@ class ApiEarningsRepository implements EarningsRepository {
       }
       throw EarningsException(
         e.message ?? 'Failed to fetch earnings',
+        code: 'network-error',
+      );
+    }
+  }
+
+  @override
+  Future<EarningsStatus> fetchEarningsStatus() async {
+    // Get the selected app
+    final selectedApp = await _appRepository.getSelectedApp();
+    if (selectedApp == null) {
+      throw const NoAppSelectedEarningsException();
+    }
+
+    // Get auth token
+    final token = await _authRepository.getIdToken();
+    if (token == null) {
+      throw const UnauthorizedEarningsException();
+    }
+
+    try {
+      // Extract numeric ID from full GID
+      final appId = _extractNumericId(selectedApp.id);
+
+      final response = await _dio.get(
+        '/api/v1/apps/$appId/earnings/status',
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return EarningsStatus.fromJson(data);
+      }
+
+      // Return empty status for no data
+      return EarningsStatus.empty;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw const UnauthorizedEarningsException();
+      }
+      throw EarningsException(
+        e.message ?? 'Failed to fetch earnings status',
         code: 'network-error',
       );
     }

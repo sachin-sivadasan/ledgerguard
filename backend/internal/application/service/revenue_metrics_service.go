@@ -8,6 +8,8 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 )
 
+const upcomingAvailabilityDays = 30
+
 // RevenueMode specifies how revenue data should be returned
 type RevenueMode string
 
@@ -18,13 +20,25 @@ const (
 
 // RevenueMetricsService handles revenue aggregation logic
 type RevenueMetricsService struct {
-	revenueRepo repository.RevenueRepository
+	revenueRepo     repository.RevenueRepository
+	transactionRepo repository.TransactionRepository
 }
 
 // NewRevenueMetricsService creates a new RevenueMetricsService
 func NewRevenueMetricsService(revenueRepo repository.RevenueRepository) *RevenueMetricsService {
 	return &RevenueMetricsService{
 		revenueRepo: revenueRepo,
+	}
+}
+
+// NewRevenueMetricsServiceWithTransactions creates a RevenueMetricsService with transaction repo
+func NewRevenueMetricsServiceWithTransactions(
+	revenueRepo repository.RevenueRepository,
+	transactionRepo repository.TransactionRepository,
+) *RevenueMetricsService {
+	return &RevenueMetricsService{
+		revenueRepo:     revenueRepo,
+		transactionRepo: transactionRepo,
 	}
 }
 
@@ -93,9 +107,75 @@ func (s *RevenueMetricsService) GetEarningsByDateRange(
 	return response, nil
 }
 
+// EarningsStatusResponse represents earnings availability status
+type EarningsStatusResponse struct {
+	TotalPendingCents      int64                     `json:"total_pending_cents"`
+	TotalAvailableCents    int64                     `json:"total_available_cents"`
+	TotalPaidOutCents      int64                     `json:"total_paid_out_cents"`
+	PendingByDate          []EarningsDateEntry       `json:"pending_by_date"`
+	UpcomingAvailability   []EarningsDateEntry       `json:"upcoming_availability"`
+}
+
+// EarningsDateEntry represents earnings for a specific date
+type EarningsDateEntry struct {
+	Date        string `json:"date"`
+	AmountCents int64  `json:"amount_cents"`
+}
+
+// GetEarningsStatus retrieves earnings availability status for an app
+func (s *RevenueMetricsService) GetEarningsStatus(ctx context.Context, appID uuid.UUID) (*EarningsStatusResponse, error) {
+	if s.transactionRepo == nil {
+		return nil, ErrTransactionRepoRequired
+	}
+
+	// Get summary totals
+	summary, err := s.transactionRepo.GetEarningsSummary(ctx, appID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get pending by available date
+	pendingByDate, err := s.transactionRepo.GetPendingByAvailableDate(ctx, appID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get upcoming availability (next 30 days)
+	upcoming, err := s.transactionRepo.GetUpcomingAvailability(ctx, appID, upcomingAvailabilityDays)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build response
+	response := &EarningsStatusResponse{
+		TotalPendingCents:   summary.PendingCents,
+		TotalAvailableCents: summary.AvailableCents,
+		TotalPaidOutCents:   summary.PaidOutCents,
+		PendingByDate:       make([]EarningsDateEntry, 0, len(pendingByDate)),
+		UpcomingAvailability: make([]EarningsDateEntry, 0, len(upcoming)),
+	}
+
+	for _, entry := range pendingByDate {
+		response.PendingByDate = append(response.PendingByDate, EarningsDateEntry{
+			Date:        entry.Date.Format("2006-01-02"),
+			AmountCents: entry.AmountCents,
+		})
+	}
+
+	for _, entry := range upcoming {
+		response.UpcomingAvailability = append(response.UpcomingAvailability, EarningsDateEntry{
+			Date:        entry.Date.Format("2006-01-02"),
+			AmountCents: entry.AmountCents,
+		})
+	}
+
+	return response, nil
+}
+
 // Errors
 var (
-	ErrInvalidDateRange = &RevenueError{Message: "invalid date range: start date must be before end date"}
+	ErrInvalidDateRange       = &RevenueError{Message: "invalid date range: start date must be before end date"}
+	ErrTransactionRepoRequired = &RevenueError{Message: "transaction repository required for earnings status"}
 )
 
 // RevenueError represents a revenue service error

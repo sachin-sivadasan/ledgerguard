@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
@@ -48,6 +49,18 @@ func (m *mockTransactionRepo) FindByShopifyGID(ctx context.Context, shopifyGID s
 
 func (m *mockTransactionRepo) CountByAppID(ctx context.Context, appID uuid.UUID) (int64, error) {
 	return int64(len(m.upsertBatchTxs)), nil
+}
+
+func (m *mockTransactionRepo) GetEarningsSummary(ctx context.Context, appID uuid.UUID) (*repository.EarningsSummary, error) {
+	return &repository.EarningsSummary{}, nil
+}
+
+func (m *mockTransactionRepo) GetPendingByAvailableDate(ctx context.Context, appID uuid.UUID) ([]repository.EarningsByDate, error) {
+	return nil, nil
+}
+
+func (m *mockTransactionRepo) GetUpcomingAvailability(ctx context.Context, appID uuid.UUID, days int) ([]repository.EarningsByDate, error) {
+	return nil, nil
 }
 
 type mockAppRepoForSync struct {

@@ -1,3 +1,4 @@
+import '../entities/earnings_status.dart';
 import '../entities/earnings_timeline.dart';
 
 /// Repository interface for earnings timeline data
@@ -11,6 +12,10 @@ abstract class EarningsRepository {
     required DateTime endDate,
     required EarningsMode mode,
   });
+
+  /// Fetch earnings availability status
+  /// Returns pending, available, and paid out earnings totals
+  Future<EarningsStatus> fetchEarningsStatus();
 }
 
 /// Exception for earnings-related errors

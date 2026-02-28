@@ -37,6 +37,18 @@ func (m *mockTxRepoForLedger) CountByAppID(ctx context.Context, appID uuid.UUID)
 	return int64(len(m.transactions)), nil
 }
 
+func (m *mockTxRepoForLedger) GetEarningsSummary(ctx context.Context, appID uuid.UUID) (*repository.EarningsSummary, error) {
+	return &repository.EarningsSummary{}, nil
+}
+
+func (m *mockTxRepoForLedger) GetPendingByAvailableDate(ctx context.Context, appID uuid.UUID) ([]repository.EarningsByDate, error) {
+	return nil, nil
+}
+
+func (m *mockTxRepoForLedger) GetUpcomingAvailability(ctx context.Context, appID uuid.UUID, days int) ([]repository.EarningsByDate, error) {
+	return nil, nil
+}
+
 type mockSubRepoForLedger struct {
 	subscriptions []*entity.Subscription
 	upsertCalls   int

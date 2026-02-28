@@ -33,6 +33,43 @@ func NewRevenueHandler(
 	}
 }
 
+// GetEarningsStatus handles GET /api/v1/apps/{appID}/earnings/status
+// Returns earnings availability status (pending, available, paid out)
+func (h *RevenueHandler) GetEarningsStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get authenticated user
+	user := middleware.UserFromContext(ctx)
+	if user == nil {
+		writeJSONErrorResponse(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	// Parse app ID from URL
+	appIDStr := chi.URLParam(r, "appID")
+	if appIDStr == "" {
+		writeJSONErrorResponse(w, http.StatusBadRequest, "app ID is required")
+		return
+	}
+
+	// Convert numeric app ID to UUID by looking up the app
+	app, err := h.lookupAppByNumericID(ctx, user.ID, appIDStr)
+	if err != nil {
+		writeJSONErrorResponse(w, http.StatusNotFound, "app not found")
+		return
+	}
+
+	// Get earnings status
+	status, err := h.revenueService.GetEarningsStatus(ctx, app.ID)
+	if err != nil {
+		writeJSONErrorResponse(w, http.StatusInternalServerError, "failed to fetch earnings status")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(status)
+}
+
 // GetEarnings handles GET /api/v1/apps/{appID}/earnings
 // Query params: start (required, YYYY-MM-DD), end (required, YYYY-MM-DD), mode (optional: combined|split)
 func (h *RevenueHandler) GetEarnings(w http.ResponseWriter, r *http.Request) {

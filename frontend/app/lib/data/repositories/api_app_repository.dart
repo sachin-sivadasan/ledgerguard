@@ -166,6 +166,7 @@ class ApiAppRepository implements AppRepository {
 
   @override
   Future<FeeSummary> getFeeSummary(String appId, {DateTime? start, DateTime? end}) async {
+    final numericAppId = _extractNumericId(appId);
     final queryParams = <String, String>{};
     if (start != null) {
       queryParams['start'] = start.toIso8601String().split('T').first;
@@ -175,7 +176,7 @@ class ApiAppRepository implements AppRepository {
     }
 
     final response = await _apiClient.get(
-      '/api/v1/apps/$appId/fees/summary',
+      '/api/v1/apps/$numericAppId/fees/summary',
       queryParameters: queryParams,
     );
 
@@ -188,8 +189,9 @@ class ApiAppRepository implements AppRepository {
 
   @override
   Future<FeeBreakdownResponse> getFeeBreakdown(String appId, {int amountCents = 4900}) async {
+    final numericAppId = _extractNumericId(appId);
     final response = await _apiClient.get(
-      '/api/v1/apps/$appId/fees/breakdown',
+      '/api/v1/apps/$numericAppId/fees/breakdown',
       queryParameters: {'amount_cents': amountCents.toString()},
     );
 
@@ -279,5 +281,12 @@ class ApiAppRepository implements AppRepository {
         error: e.toString(),
       );
     }
+  }
+
+  /// Extracts numeric ID from Shopify GID
+  /// e.g., "gid://partners/App/4599915" -> "4599915"
+  String _extractNumericId(String gid) {
+    final parts = gid.split('/');
+    return parts.isNotEmpty ? parts.last : gid;
   }
 }

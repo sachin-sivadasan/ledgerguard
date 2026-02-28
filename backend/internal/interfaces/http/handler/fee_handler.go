@@ -13,44 +13,78 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
+const feeAppGIDPrefix = "gid://partners/App/"
+
 type FeeHandler struct {
 	appRepo         repository.AppRepository
+	partnerRepo     repository.PartnerAccountRepository
 	transactionRepo repository.TransactionRepository
 	feeService      *service.FeeVerificationService
 }
 
 func NewFeeHandler(
 	appRepo repository.AppRepository,
+	partnerRepo repository.PartnerAccountRepository,
 	transactionRepo repository.TransactionRepository,
 	feeService *service.FeeVerificationService,
 ) *FeeHandler {
 	return &FeeHandler{
 		appRepo:         appRepo,
+		partnerRepo:     partnerRepo,
 		transactionRepo: transactionRepo,
 		feeService:      feeService,
 	}
 }
 
-// GetFeeSummary returns aggregated fee information for an app
-// GET /api/v1/apps/{appID}/fees/summary?start=YYYY-MM-DD&end=YYYY-MM-DD
-func (h *FeeHandler) GetFeeSummary(w http.ResponseWriter, r *http.Request) {
+// getAppFromRequest resolves app from numeric Shopify app ID
+func (h *FeeHandler) getAppFromRequest(r *http.Request) (*uuid.UUID, *valueobject.RevenueShareTier, error) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return
+		return nil, nil, &feeError{http.StatusUnauthorized, "authentication required"}
 	}
 
+	// Get partner account
+	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
+	if err != nil {
+		return nil, nil, &feeError{http.StatusNotFound, "no partner account found"}
+	}
+
+	// Get numeric appID from URL and construct full GID
 	appIDStr := chi.URLParam(r, "appID")
-	appID, err := uuid.Parse(appIDStr)
+	if appIDStr == "" {
+		return nil, nil, &feeError{http.StatusBadRequest, "app ID is required"}
+	}
+	fullAppGID := feeAppGIDPrefix + appIDStr
+
+	// Find app by partner app ID (GID)
+	app, err := h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, fullAppGID)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid app_id format")
-		return
+		return nil, nil, &feeError{http.StatusNotFound, "app not found"}
 	}
 
-	// Get app to determine tier
-	app, err := h.appRepo.FindByID(r.Context(), appID)
+	return &app.ID, &app.RevenueShareTier, nil
+}
+
+type feeError struct {
+	statusCode int
+	message    string
+}
+
+func (e *feeError) Error() string {
+	return e.message
+}
+
+// GetFeeSummary returns aggregated fee information for an app
+// GET /api/v1/apps/{appID}/fees/summary?start=YYYY-MM-DD&end=YYYY-MM-DD
+// appID is numeric Shopify app ID (e.g., "4599915")
+func (h *FeeHandler) GetFeeSummary(w http.ResponseWriter, r *http.Request) {
+	appID, tier, err := h.getAppFromRequest(r)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "app not found")
+		if fe, ok := err.(*feeError); ok {
+			writeFeeError(w, fe.statusCode, fe.message)
+		} else {
+			writeFeeError(w, http.StatusInternalServerError, "internal error")
+		}
 		return
 	}
 
@@ -71,9 +105,9 @@ func (h *FeeHandler) GetFeeSummary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get transactions
-	transactions, err := h.transactionRepo.FindByAppID(r.Context(), appID, start, end)
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to fetch transactions")
+	transactions, err2 := h.transactionRepo.FindByAppID(r.Context(), *appID, start, end)
+	if err2 != nil {
+		writeFeeError(w, http.StatusInternalServerError, "failed to fetch transactions")
 		return
 	}
 
@@ -81,7 +115,7 @@ func (h *FeeHandler) GetFeeSummary(w http.ResponseWriter, r *http.Request) {
 	summary := h.feeService.CalculateFeeSummary(transactions)
 
 	// Calculate tier savings
-	savings := h.feeService.CalculateTierSavings(summary.TotalGrossAmountCents, app.RevenueShareTier)
+	savings := h.feeService.CalculateTierSavings(summary.TotalGrossAmountCents, *tier)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -90,12 +124,12 @@ func (h *FeeHandler) GetFeeSummary(w http.ResponseWriter, r *http.Request) {
 			"end":   end.Format("2006-01-02"),
 		},
 		"tier": map[string]interface{}{
-			"code":                app.RevenueShareTier.String(),
-			"display_name":        app.RevenueShareTier.DisplayName(),
-			"description":         app.RevenueShareTier.Description(),
-			"revenue_share_pct":   app.RevenueShareTier.RevenueSharePercent(),
+			"code":                tier.String(),
+			"display_name":        tier.DisplayName(),
+			"description":         tier.Description(),
+			"revenue_share_pct":   tier.RevenueSharePercent(),
 			"processing_fee_pct":  valueobject.ProcessingFeePercent,
-			"is_reduced_plan":     app.RevenueShareTier.IsReducedPlan(),
+			"is_reduced_plan":     tier.IsReducedPlan(),
 		},
 		"summary": map[string]interface{}{
 			"transaction_count":       summary.TransactionCount,
@@ -119,26 +153,28 @@ func (h *FeeHandler) GetFeeSummary(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func writeFeeError(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"error": map[string]string{
+			"code":    http.StatusText(statusCode),
+			"message": message,
+		},
+	})
+}
+
 // GetTierBreakdown returns the fee breakdown for a hypothetical amount
 // GET /api/v1/apps/{appID}/fees/breakdown?amount_cents=4900
+// appID is numeric Shopify app ID (e.g., "4599915")
 func (h *FeeHandler) GetTierBreakdown(w http.ResponseWriter, r *http.Request) {
-	user := middleware.UserFromContext(r.Context())
-	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return
-	}
-
-	appIDStr := chi.URLParam(r, "appID")
-	appID, err := uuid.Parse(appIDStr)
+	_, currentTier, err := h.getAppFromRequest(r)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid app_id format")
-		return
-	}
-
-	// Get app to determine tier
-	app, err := h.appRepo.FindByID(r.Context(), appID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "app not found")
+		if fe, ok := err.(*feeError); ok {
+			writeFeeError(w, fe.statusCode, fe.message)
+		} else {
+			writeFeeError(w, http.StatusInternalServerError, "internal error")
+		}
 		return
 	}
 
@@ -167,7 +203,7 @@ func (h *FeeHandler) GetTierBreakdown(w http.ResponseWriter, r *http.Request) {
 		breakdowns[i] = map[string]interface{}{
 			"tier":                 tier.String(),
 			"tier_display_name":    tier.DisplayName(),
-			"is_current":           tier == app.RevenueShareTier,
+			"is_current":           tier == *currentTier,
 			"gross_cents":          breakdown.GrossAmountCents,
 			"revenue_share_cents":  breakdown.RevenueShareCents,
 			"processing_fee_cents": breakdown.ProcessingFeeCents,
@@ -179,15 +215,15 @@ func (h *FeeHandler) GetTierBreakdown(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	currentBreakdown := app.RevenueShareTier.CalculateFeeBreakdown(amountCents, taxRate)
+	currentBreakdown := currentTier.CalculateFeeBreakdown(amountCents, taxRate)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"amount_cents": amountCents,
 		"tax_rate":     taxRate,
 		"current_tier": map[string]interface{}{
-			"code":                 app.RevenueShareTier.String(),
-			"display_name":         app.RevenueShareTier.DisplayName(),
+			"code":                 currentTier.String(),
+			"display_name":         currentTier.DisplayName(),
 			"gross_cents":          currentBreakdown.GrossAmountCents,
 			"revenue_share_cents":  currentBreakdown.RevenueShareCents,
 			"processing_fee_cents": currentBreakdown.ProcessingFeeCents,

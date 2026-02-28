@@ -241,9 +241,9 @@ func run() error {
 
 	// Initialize fee handler
 	var feeHandler *handler.FeeHandler
-	if appRepo != nil && txRepo != nil {
+	if appRepo != nil && partnerRepo != nil && txRepo != nil {
 		feeService := domainservice.NewFeeVerificationService()
-		feeHandler = handler.NewFeeHandler(appRepo, txRepo, feeService)
+		feeHandler = handler.NewFeeHandler(appRepo, partnerRepo, txRepo, feeService)
 		log.Println("Fee handler initialized")
 	}
 

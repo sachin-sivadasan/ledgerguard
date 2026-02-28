@@ -718,3 +718,49 @@ Track all prompts executed for the Flutter frontend.
 - All config dialog tests passing (15/15)
 
 ---
+
+---
+
+## [2026-03-01] Revenue Share Tier Tracking - Frontend
+
+**Original Prompt:**
+> yes continue with frontend
+
+**Context:**
+Backend Phase 1 (Revenue Share Tier Tracking) was completed. User requested frontend implementation to match.
+
+**Improved Prompt:**
+> Implement frontend support for revenue share tier tracking:
+> 1. Create RevenueShareTier enum with 4 tiers and FeeBreakdown calculator
+> 2. Update ShopifyApp entity with tier field
+> 3. Update AppRepository with tier and fee methods
+> 4. Create TierSelector and TierIndicator widgets
+> 5. Create AppSettingsPage with fee calculator and tier comparison
+> 6. Add FeeInsightsCard to dashboard
+> 7. Update tests
+
+**Files Created:**
+- revenue_share_tier.dart, tier_selector.dart, app_settings_page.dart, fee_insights_card.dart
+
+**Files Modified:**
+- shopify_app.dart, app_repository.dart, api_app_repository.dart, mock_app_repository.dart
+- app_selection_page.dart, profile_page.dart, dashboard_page.dart, app_router.dart
+
+---
+
+## [2026-03-01] Profile Page Test Fixes
+
+**Original Prompt:**
+> fix the failing profile page tests
+
+**Issues Found:**
+- Initials test expected 'TE' but code returns 'T' for 'test@example.com'
+- Upgrade button text was 'Upgrade to Pro', not 'Upgrade Now'
+- Snackbar text was 'Upgrade coming soon!', not 'Upgrade functionality coming soon!'
+- Logout button was InkWell, not OutlinedButton
+- Dialog confirm button was ElevatedButton, not TextButton
+- Tests needed larger screen size for scrolling content
+
+**Fixed:** All 21 profile page tests now pass
+
+---

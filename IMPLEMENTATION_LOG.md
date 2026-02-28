@@ -1030,3 +1030,55 @@ Price stats endpoint:
 - `migrations/000016_add_subscription_filter_indexes` - New indexes
 
 **Tests:** Updated subscription handler tests
+
+---
+
+## [2026-03-01] Revenue Share Tier Tracking (Phase 1)
+
+**Commit:** feat: add revenue share tier tracking with fee breakdown
+
+**Summary:**
+Implemented accurate Shopify revenue share tier tracking based on Shopify Partner API documentation. Revenue share is NOT always 20% - it varies by tier (0%, 15%, or 20%). Processing fee of 2.9% always applies. Tax is calculated on Shopify's fees, not gross revenue.
+
+**Key Features:**
+- 4 revenue share tiers: DEFAULT_20 (20%), SMALL_DEV_0 (0%), SMALL_DEV_15 (15%), LARGE_DEV_15 (15%)
+- Fee breakdown calculation: gross → revenue share → processing fee (2.9%) → tax on fees → net
+- Fee verification service to compare expected vs actual fees from Shopify
+- Tier savings comparison (how much saved vs default 20%)
+
+**Backend Files Created:**
+- `internal/domain/valueobject/revenue_share_tier.go` - RevenueShareTier value object with 4 tiers, FeeBreakdown struct, calculation methods
+- `internal/domain/valueobject/revenue_share_tier_test.go` - Unit tests
+- `internal/domain/service/fee_verification_service.go` - Service for verifying fees and calculating summaries
+- `internal/domain/service/fee_verification_service_test.go` - Unit tests
+- `internal/interfaces/http/handler/fee_handler.go` - HTTP handlers for fee endpoints
+- `migrations/000017_add_revenue_share_tier.up.sql` - Database migration
+- `migrations/000017_add_revenue_share_tier.down.sql` - Rollback migration
+
+**Backend Files Modified:**
+- `internal/domain/entity/app.go` - Added RevenueShareTier field, SetRevenueShareTier method
+- `internal/domain/entity/transaction.go` - Added fee breakdown fields (ShopifyFeeCents, ProcessingFeeCents, TaxOnFeesCents)
+- `internal/infrastructure/persistence/app_repository.go` - Updated queries for tier field
+- `internal/infrastructure/persistence/transaction_repository.go` - Updated queries for fee breakdown
+- `internal/interfaces/http/handler/app.go` - Added UpdateAppTier handler
+- `internal/interfaces/http/router/router.go` - Added routes for tier and fee endpoints
+
+**New API Endpoints:**
+- `PATCH /api/v1/apps/{appID}/tier` - Update app's revenue share tier
+- `GET /api/v1/apps/{appID}/fees/summary` - Get fee summary with savings
+- `GET /api/v1/apps/{appID}/fees/breakdown` - Get fee breakdown for amount
+
+**Database Changes:**
+```sql
+ALTER TABLE apps ADD COLUMN revenue_share_tier VARCHAR(20) DEFAULT 'DEFAULT_20';
+ALTER TABLE apps ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE transactions ADD COLUMN gross_amount_cents BIGINT;
+ALTER TABLE transactions ADD COLUMN shopify_fee_cents BIGINT;
+ALTER TABLE transactions ADD COLUMN processing_fee_cents BIGINT;
+ALTER TABLE transactions ADD COLUMN tax_on_fees_cents BIGINT;
+ALTER TABLE transactions ADD COLUMN net_amount_cents BIGINT;
+```
+
+**Tests:** All backend tests pass
+
+---

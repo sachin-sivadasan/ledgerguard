@@ -903,3 +903,31 @@
 - frontend/app/lib/core/di/injection.config.dart (modified)
 - test/presentation/blocs/api_key_bloc_test.dart
 - 14 passing tests
+
+---
+
+## [2026-03-01] Revenue Share Tier Tracking Implementation
+
+**Original Prompt:**
+> is the new finding from shoify helpfult to improve any areas in the app we currently build. find anything by review and prepare stepby step backend/fronend changes promt and implement one by one. mainly logics and all
+
+**Improved Prompt:**
+> Review the Shopify Partner API documentation findings (shopify-money-flow-diagram.md) and identify gaps between the actual Shopify fee structure and our current implementation. Prepare a phased implementation plan with backend and frontend changes. Focus on:
+> 1. Revenue share tiers (0%, 15%, 20%) instead of hardcoded 20%
+> 2. Processing fee (2.9%) always applies
+> 3. Tax calculation on Shopify's fees, not gross revenue
+> 4. Earnings availability timeline (7-37 days)
+
+**Implementation:**
+- Phase 1: Revenue Share Tier Tracking (COMPLETED)
+  - Backend: RevenueShareTier value object, FeeVerificationService, FeeHandler, migration 000017
+  - Frontend: TierSelector, FeeInsightsCard, AppSettingsPage, updated repository/bloc
+
+**Follow-up Prompts:**
+1. "yes proceed with phase 1" - Confirmed starting Phase 1
+2. "yes continue with frontend" - Confirmed frontend implementation
+3. "commit and push" - Committed changes
+4. "run the tests" - Ran Go and Flutter tests
+5. "fix the failing profile page tests" - Fixed 10 failing tests
+
+---

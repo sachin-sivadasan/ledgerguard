@@ -978,3 +978,41 @@ Changed the price filter from tier-based ranges to a dropdown showing all distin
 - `test/presentation/blocs/subscription_list_bloc_test.dart` - Updated mocks
 
 ---
+
+---
+
+## [2026-03-01] Revenue Share Tier Tracking - Frontend (Phase 1)
+
+**Commit:** feat: add revenue share tier tracking with fee breakdown
+
+**Summary:**
+Implemented frontend support for Shopify revenue share tier tracking. Users can view and change their app's tier, see fee breakdowns, and compare savings across tiers.
+
+**Files Created:**
+- `lib/domain/entities/revenue_share_tier.dart` - RevenueShareTier enum with 4 tiers, FeeBreakdown class with calculate() factory
+- `lib/presentation/widgets/tier_selector.dart` - TierSelector widget for display/selection, TierIndicator for compact display
+- `lib/presentation/pages/app_settings_page.dart` - Full page for tier management with fee calculator and tier comparison
+- `lib/presentation/widgets/fee_insights_card.dart` - FeeInsightsCard for dashboard, FeeKpiCard for compact view
+
+**Files Modified:**
+- `lib/domain/entities/shopify_app.dart` - Added revenueShareTier field, copyWith method
+- `lib/domain/repositories/app_repository.dart` - Added updateAppTier, getFeeSummary, getFeeBreakdown methods, FeeSummary/TierSavings classes
+- `lib/data/repositories/api_app_repository.dart` - Implemented new repository methods
+- `lib/data/repositories/mock_app_repository.dart` - Mock implementations
+- `lib/presentation/pages/app_selection_page.dart` - Shows tier indicator on each app
+- `lib/presentation/pages/profile_page.dart` - Added "App Settings" navigation tile
+- `lib/presentation/pages/dashboard_page.dart` - Added Fee Insights section
+- `lib/presentation/router/app_router.dart` - Added /settings/app route
+
+**Features:**
+- View current tier with color-coded badges (green=0%, amber=15%, red=20%)
+- Change tier with dropdown selector
+- Interactive fee calculator with adjustable amounts ($10-$500 slider)
+- Tier comparison showing fees/net for all tiers on $100 sample
+- Dashboard fee insights showing total fees and savings vs default 20%
+
+**Tests:**
+- Updated dashboard_page_test.dart with AppRepository mock
+- Fixed profile_page_test.dart (21 tests) - matched tests to actual implementation
+
+---

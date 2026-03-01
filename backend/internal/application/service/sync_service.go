@@ -25,6 +25,7 @@ type Decryptor interface {
 // LedgerRebuilder interface for rebuilding ledger after sync
 type LedgerRebuilder interface {
 	RebuildFromTransactions(ctx context.Context, appID uuid.UUID, now time.Time) (*domainservice.LedgerRebuildResult, error)
+	BackfillHistoricalSnapshots(ctx context.Context, appID uuid.UUID, transactions []*entity.Transaction) (int, error)
 }
 
 // SyncResult contains the result of a sync operation
@@ -92,9 +93,9 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 		return nil, fmt.Errorf("failed to decrypt token: %w", err)
 	}
 
-	// Calculate 3-month window
+	// Calculate 12-month window for full history
 	now := time.Now().UTC()
-	from := now.AddDate(0, -3, 0) // 3 months ago
+	from := now.AddDate(-1, 0, 0) // 12 months ago
 	to := now
 
 	// Add organization ID to context for the Partner API client
@@ -133,6 +134,15 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 		// Calculate revenue at risk (ONE_CYCLE_MISSED + TWO_CYCLES_MISSED MRR)
 		// This would require access to subscriptions, simplified here
 		revenueAtRisk = 0 // Will be calculated by caller if needed
+
+		// Backfill historical snapshots from all stored transactions
+		// Fetch all transactions for the app (not just this sync's window)
+		allFrom := now.AddDate(-1, 0, 0) // 12 months of history
+		allTransactions, err := s.txRepo.FindByAppID(ctx, appID, allFrom, now)
+		if err == nil && len(allTransactions) > 0 {
+			_, _ = s.ledger.BackfillHistoricalSnapshots(ctx, appID, allTransactions)
+			// Ignore backfill errors - not critical for sync success
+		}
 	}
 
 	return &SyncResult{

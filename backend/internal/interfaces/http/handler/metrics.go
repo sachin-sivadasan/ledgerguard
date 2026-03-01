@@ -170,6 +170,14 @@ func (h *MetricsHandler) GetMetricsByPeriod(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// If no data found for the period, fall back to mock data
+	if periodMetrics.Current == nil && periodMetrics.Previous == nil {
+		log.Printf("No metrics data found for app %s in period %s to %s, returning mock data",
+			app.ID, dateRange.Start.Format("2006-01-02"), dateRange.End.Format("2006-01-02"))
+		h.writeMockPeriodMetrics(w, dateRange)
+		return
+	}
+
 	// Convert to response
 	resp := h.toMetricsResponse(periodMetrics)
 

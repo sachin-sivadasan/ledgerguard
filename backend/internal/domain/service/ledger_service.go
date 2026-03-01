@@ -59,8 +59,8 @@ func (s *LedgerService) WithSnapshotRepository(repo repository.DailyMetricsSnaps
 // RebuildFromTransactions rebuilds subscription state from transactions
 // This is deterministic: same transactions → same subscription state
 func (s *LedgerService) RebuildFromTransactions(ctx context.Context, appID uuid.UUID, now time.Time) (*LedgerRebuildResult, error) {
-	// Fetch all transactions for the app (3-month window)
-	from := now.AddDate(0, -3, 0)
+	// Fetch all transactions for the app (12-month window)
+	from := now.AddDate(-1, 0, 0)
 	transactions, err := s.txRepo.FindByAppID(ctx, appID, from, now)
 	if err != nil {
 		return nil, err
@@ -253,4 +253,89 @@ func (s *LedgerService) SeparateRevenue(transactions []*entity.Transaction) (rec
 		}
 	}
 	return recurring, usage
+}
+
+// BackfillHistoricalSnapshots creates daily snapshots for each month in the transaction history
+// This should be called after syncing transactions to populate historical metrics
+func (s *LedgerService) BackfillHistoricalSnapshots(ctx context.Context, appID uuid.UUID, transactions []*entity.Transaction) (int, error) {
+	if s.snapshotRepo == nil || s.metrics == nil || len(transactions) == 0 {
+		return 0, nil
+	}
+
+	// Find date range from transactions
+	var earliest, latest time.Time
+	for _, tx := range transactions {
+		if earliest.IsZero() || tx.TransactionDate.Before(earliest) {
+			earliest = tx.TransactionDate
+		}
+		if latest.IsZero() || tx.TransactionDate.After(latest) {
+			latest = tx.TransactionDate
+		}
+	}
+
+	// Create snapshots for the last day of each month
+	snapshotsCreated := 0
+	current := time.Date(earliest.Year(), earliest.Month(), 1, 0, 0, 0, 0, time.UTC)
+	today := time.Now().UTC()
+
+	for current.Before(latest) || current.Equal(latest) {
+		// Get end of month
+		endOfMonth := time.Date(current.Year(), current.Month()+1, 0, 23, 59, 59, 0, time.UTC)
+
+		// Don't create snapshots for future dates
+		snapshotDate := endOfMonth
+		if snapshotDate.After(today) {
+			snapshotDate = today
+		}
+
+		// Filter transactions up to this date
+		txsUpToDate := s.filterTransactionsUpTo(transactions, snapshotDate)
+		if len(txsUpToDate) == 0 {
+			current = current.AddDate(0, 1, 0)
+			continue
+		}
+
+		// Build subscriptions from transactions up to this date
+		byDomain := s.groupTransactionsByDomain(txsUpToDate)
+		subscriptions := s.rebuildSubscriptions(appID, byDomain, snapshotDate)
+
+		// Filter transactions for just this month (for revenue calculation)
+		startOfMonth := time.Date(current.Year(), current.Month(), 1, 0, 0, 0, 0, time.UTC)
+		txsThisMonth := s.filterTransactionsInRange(transactions, startOfMonth, endOfMonth)
+
+		// Compute and store snapshot
+		snapshot := s.metrics.ComputeAllMetrics(appID, subscriptions, txsThisMonth, snapshotDate)
+		if err := s.snapshotRepo.Upsert(ctx, snapshot); err != nil {
+			return snapshotsCreated, err
+		}
+		snapshotsCreated++
+
+		// Move to next month
+		current = current.AddDate(0, 1, 0)
+	}
+
+	return snapshotsCreated, nil
+}
+
+// filterTransactionsUpTo returns transactions on or before the given date
+func (s *LedgerService) filterTransactionsUpTo(transactions []*entity.Transaction, date time.Time) []*entity.Transaction {
+	var filtered []*entity.Transaction
+	for _, tx := range transactions {
+		if !tx.TransactionDate.After(date) {
+			filtered = append(filtered, tx)
+		}
+	}
+	return filtered
+}
+
+// filterTransactionsInRange returns transactions within the given date range
+func (s *LedgerService) filterTransactionsInRange(transactions []*entity.Transaction, start, end time.Time) []*entity.Transaction {
+	var filtered []*entity.Transaction
+	for _, tx := range transactions {
+		if (tx.TransactionDate.Equal(start) || tx.TransactionDate.After(start)) &&
+			(tx.TransactionDate.Equal(end) || tx.TransactionDate.Before(end)) {
+			filtered = append(filtered, tx)
+		}
+	}
+	return filtered
 }

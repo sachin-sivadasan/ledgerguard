@@ -610,78 +610,64 @@ function MetricsSection({ isActive, showDetails }: { isActive: boolean; showDeta
 // =============================================================================
 
 function OutputSection({ isActive, showDetails }: { isActive: boolean; showDetails: boolean }) {
+  const outputs = [
+    {
+      title: "Dashboard",
+      icon: "📱",
+      color: "cyan",
+      details: ["KPIs", "Charts", "Lists"],
+    },
+    {
+      title: "Alerts",
+      icon: "🔔",
+      color: "amber",
+      details: ["Slack", "Email", "Push"],
+    },
+    {
+      title: "AI Brief",
+      icon: "🤖",
+      color: "purple",
+      details: ["Daily", "Executive", "Pro"],
+    },
+    {
+      title: "API",
+      icon: "🔗",
+      color: "slate",
+      details: ["REST", "GraphQL", "Webhooks"],
+    },
+  ];
+
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-        <span className="w-8 h-8 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center text-sm font-bold">5</span>
-        Output Layer
+    <div className="space-y-3">
+      <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+        <span className="w-6 h-6 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center text-xs font-bold">5</span>
+        Output
       </h3>
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <EntityBox
-          title="Dashboard UI"
-          subtitle="Real-time visualization"
-          icon={<span className="text-lg">📱</span>}
-          color="cyan"
-          isActive={isActive}
-        >
-          {showDetails && (
-            <ul className="mt-2 text-xs text-slate-500 space-y-1">
-              <li>• KPI cards with deltas</li>
-              <li>• Risk distribution chart</li>
-              <li>• Cohort retention</li>
-              <li>• Subscription list</li>
-            </ul>
-          )}
-        </EntityBox>
-
-        <EntityBox
-          title="Push Alerts"
-          subtitle="Slack, Email, Push"
-          icon={<span className="text-lg">🔔</span>}
-          color="amber"
-          isActive={isActive}
-        >
-          {showDetails && (
-            <ul className="mt-2 text-xs text-slate-500 space-y-1">
-              <li>• Critical risk alerts</li>
-              <li>• Daily summary digest</li>
-              <li>• Churn notifications</li>
-            </ul>
-          )}
-        </EntityBox>
-
-        <EntityBox
-          title="AI Daily Brief"
-          subtitle="Claude-powered insights"
-          icon={<span className="text-lg">🤖</span>}
-          color="purple"
-          isActive={isActive}
-        >
-          {showDetails && (
-            <ul className="mt-2 text-xs text-slate-500 space-y-1">
-              <li>• 80-120 word summary</li>
-              <li>• Executive-ready</li>
-              <li>• Pro tier feature</li>
-            </ul>
-          )}
-        </EntityBox>
-
-        <EntityBox
-          title="Revenue API"
-          subtitle="REST + GraphQL"
-          icon={<span className="text-lg">🔗</span>}
-          color="slate"
-          isActive={isActive}
-        >
-          {showDetails && (
-            <ul className="mt-2 text-xs text-slate-500 space-y-1">
-              <li>• Query by shop GID</li>
-              <li>• Batch lookups</li>
-              <li>• Webhook events</li>
-            </ul>
-          )}
-        </EntityBox>
+      <div className="space-y-2">
+        {outputs.map((out) => (
+          <div
+            key={out.title}
+            className={`
+              rounded-lg border p-2 transition-all duration-300 bg-white
+              ${isActive ? 'border-cyan-300 shadow-sm' : 'border-slate-200'}
+            `}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm">{out.icon}</span>
+              <span className="text-xs font-semibold text-slate-900">{out.title}</span>
+            </div>
+            {showDetails && (
+              <div className="flex gap-1 mt-1 flex-wrap">
+                {out.details.map((d) => (
+                  <span key={d} className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
+                    {d}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -318,6 +318,13 @@ func (m *mockAppRepoForSub) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockAppRepoForSub) FindAllByPartnerAppID(ctx context.Context, partnerAppID string) ([]*entity.App, error) {
+	if m.app != nil {
+		return []*entity.App{m.app}, nil
+	}
+	return nil, m.findErr
+}
+
 // Helper to create a chi context with URL params
 func withURLParam(r *http.Request, key, value string) *http.Request {
 	rctx := chi.NewRouteContext()

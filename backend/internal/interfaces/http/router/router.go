@@ -24,6 +24,7 @@ type Config struct {
 	StoreHealthHandler       *handler.StoreHealthHandler
 	FeeHandler               *handler.FeeHandler
 	UserPreferencesHandler   *handler.UserPreferencesHandler
+	WebhookHandler           *handler.WebhookHandler
 	APIKeyHandler            *apikeyhandler.APIKeyHandler
 	AuthMW                   func(next http.Handler) http.Handler
 	AdminMW                  func(next http.Handler) http.Handler // RequireRoles(ADMIN)
@@ -48,6 +49,16 @@ func New(cfg Config) *chi.Mux {
 
 	// Public routes
 	r.Get("/health", cfg.HealthHandler.Health)
+
+	// Webhook routes (no auth - validated via HMAC)
+	if cfg.WebhookHandler != nil {
+		r.Route("/webhooks/shopify", func(r chi.Router) {
+			r.Post("/", cfg.WebhookHandler.HandleWebhook)
+			r.Post("/subscriptions", cfg.WebhookHandler.HandleSubscriptionUpdate)
+			r.Post("/uninstalled", cfg.WebhookHandler.HandleAppUninstalled)
+			r.Post("/billing-failure", cfg.WebhookHandler.HandleBillingFailure)
+		})
+	}
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {

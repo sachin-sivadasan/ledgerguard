@@ -30,3 +30,19 @@ func (r RiskState) IsAtRisk() bool {
 func (r RiskState) IsChurned() bool {
 	return r == RiskStateChurned
 }
+
+// ParseRiskState parses a string into a RiskState
+func ParseRiskState(s string) RiskState {
+	switch s {
+	case "SAFE":
+		return RiskStateSafe
+	case "ONE_CYCLE_MISSED":
+		return RiskStateOneCycleMissed
+	case "TWO_CYCLES_MISSED":
+		return RiskStateTwoCyclesMissed
+	case "CHURNED":
+		return RiskStateChurned
+	default:
+		return RiskStateSafe // Default to safe if unknown
+	}
+}

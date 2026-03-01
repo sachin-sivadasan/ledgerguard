@@ -102,6 +102,13 @@ func (m *mockSyncAppRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockSyncAppRepo) FindAllByPartnerAppID(ctx context.Context, partnerAppID string) ([]*entity.App, error) {
+	if m.app != nil {
+		return []*entity.App{m.app}, nil
+	}
+	return m.apps, m.err
+}
+
 type mockSyncPartnerRepo struct {
 	account *entity.PartnerAccount
 	err     error

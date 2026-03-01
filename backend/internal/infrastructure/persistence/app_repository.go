@@ -183,3 +183,44 @@ func (r *PostgresAppRepository) Delete(ctx context.Context, id uuid.UUID) error 
 
 	return nil
 }
+
+// FindAllByPartnerAppID finds all apps matching a partner app ID across all accounts
+// Used for webhook processing where we only have the Shopify app GID
+func (r *PostgresAppRepository) FindAllByPartnerAppID(ctx context.Context, partnerAppID string) ([]*entity.App, error) {
+	query := `
+		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled,
+		       COALESCE(revenue_share_tier, 'DEFAULT_20'), created_at, COALESCE(updated_at, created_at)
+		FROM apps
+		WHERE partner_app_id = $1
+		ORDER BY name
+	`
+
+	rows, err := r.pool.Query(ctx, query, partnerAppID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var apps []*entity.App
+	for rows.Next() {
+		var app entity.App
+		var tierStr string
+		err := rows.Scan(
+			&app.ID,
+			&app.PartnerAccountID,
+			&app.PartnerAppID,
+			&app.Name,
+			&app.TrackingEnabled,
+			&tierStr,
+			&app.CreatedAt,
+			&app.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		app.RevenueShareTier = valueobject.ParseRevenueShareTier(tierStr)
+		apps = append(apps, &app)
+	}
+
+	return apps, rows.Err()
+}

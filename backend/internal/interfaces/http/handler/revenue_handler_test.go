@@ -101,6 +101,10 @@ func (m *mockAppRepoForRevenue) Delete(ctx context.Context, id uuid.UUID) error 
 	return nil
 }
 
+func (m *mockAppRepoForRevenue) FindAllByPartnerAppID(ctx context.Context, partnerAppID string) ([]*entity.App, error) {
+	return m.apps, m.err
+}
+
 func TestRevenueHandler_GetEarnings_Success(t *testing.T) {
 	// Setup
 	userID := uuid.New()

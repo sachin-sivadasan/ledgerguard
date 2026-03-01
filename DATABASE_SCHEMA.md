@@ -12,6 +12,8 @@ users
   │               ├──< transactions
   │               │
   │               ├──< subscriptions
+  │               │         │
+  │               │         └──< subscription_events
   │               │
   │               ├──< daily_metrics_snapshot
   │               │
@@ -107,6 +109,27 @@ Current state of each subscription.
 | created_at | TIMESTAMPTZ | DEFAULT NOW() | First seen |
 | updated_at | TIMESTAMPTZ | DEFAULT NOW() | Last updated |
 | deleted_at | TIMESTAMPTZ | NULL | Soft delete timestamp (NULL = active) |
+
+### subscription_events
+Subscription lifecycle events for churn analysis and auditing.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK | Event ID |
+| subscription_id | UUID | FK → subscriptions.id, ON DELETE CASCADE | Parent subscription |
+| from_status | VARCHAR(50) | NOT NULL | Previous status |
+| to_status | VARCHAR(50) | NOT NULL | New status |
+| from_risk_state | VARCHAR(50) | NOT NULL | Previous risk state |
+| to_risk_state | VARCHAR(50) | NOT NULL | New risk state |
+| event_type | VARCHAR(50) | NOT NULL | webhook, sync, manual, billing_failure, app_uninstalled |
+| reason | TEXT | | Human-readable reason |
+| occurred_at | TIMESTAMPTZ | NOT NULL | When the event occurred |
+| created_at | TIMESTAMPTZ | DEFAULT NOW() | Record creation |
+
+**Indexes:**
+- `idx_subscription_events_subscription_id` - Find events by subscription
+- `idx_subscription_events_type_occurred` - Find events by type and date
+- `idx_subscription_events_churn` - Find churn events (WHERE to_risk_state = 'CHURNED')
 
 ### daily_metrics_snapshot
 Immutable daily KPI snapshots.

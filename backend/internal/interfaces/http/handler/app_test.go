@@ -62,6 +62,13 @@ func (m *mockAppRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockAppRepo) FindAllByPartnerAppID(ctx context.Context, partnerAppID string) ([]*entity.App, error) {
+	if m.app != nil {
+		return []*entity.App{m.app}, nil
+	}
+	return nil, m.findErr
+}
+
 type mockPartnerRepoForApp struct {
 	account *entity.PartnerAccount
 	findErr error

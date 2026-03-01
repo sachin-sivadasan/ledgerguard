@@ -1256,3 +1256,64 @@ Implemented Phase 1 fixes from comprehensive app review, focusing on data integr
 
 **Test Count:** 55+ domain service tests passing
 
+---
+
+## [2026-03-01] Phase 3: Real-time Capabilities - Webhook Integration
+
+**Commit:** feat: implement webhook integration for real-time subscription updates
+
+**Summary:**
+Implemented Phase 3 Task #1 - Webhook Integration (P1-8). Added support for Shopify webhooks to receive real-time updates for subscription status changes, app uninstalls, and billing failures. This enables immediate risk state updates instead of waiting for the next sync.
+
+**Implemented:**
+
+### 1. Subscription Event Entity
+- Created `SubscriptionEvent` entity for tracking lifecycle events
+- Fields: ID, SubscriptionID, FromStatus/ToStatus, FromRiskState/ToRiskState, EventType, Reason, OccurredAt, CreatedAt
+- Helper methods: `IsChurnEvent()`, `IsVoluntaryChurn()`, `IsInvoluntaryChurn()`, `IsReactivationEvent()`
+
+### 2. Webhook Service
+- HMAC signature validation for webhook security
+- Event processing for three webhook types:
+  - `app_subscriptions/update` - Status changes (ACTIVE, CANCELLED, FROZEN, EXPIRED)
+  - `app/uninstalled` - App uninstallation (soft delete subscription)
+  - `subscription_billing_attempts/failure` - Payment failures (escalate risk state)
+- Risk state escalation: SAFE → ONE_CYCLE_MISSED → TWO_CYCLES_MISSED → CHURNED
+- Lifecycle event recording for audit trail
+
+### 3. Webhook Handler
+- HTTP handler for `/webhooks/shopify/*` routes
+- Extracts headers: X-Shopify-Topic, X-Shopify-Shop-Domain, X-Shopify-Hmac-Sha256
+- Returns 200 OK even on processing errors (prevents Shopify retries)
+- Separate endpoints for each webhook type
+
+### 4. Repository Layer
+- `SubscriptionEventRepository` interface
+- PostgreSQL implementation with queries:
+  - FindBySubscriptionID, FindByAppID, FindChurnEvents, CountByEventType
+- Added `FindAllByPartnerAppID` to AppRepository for webhook lookups
+
+### 5. Database Migration
+- Migration 000023: subscription_events table
+- Indexes for subscription_id, event_type+occurred_at, churn events
+
+### 6. Value Object Updates
+- Added `ParseRiskState()` function for database deserialization
+
+**Files Created:**
+- `internal/domain/entity/subscription_event.go`
+- `internal/application/service/webhook_service.go`
+- `internal/interfaces/http/handler/webhook.go`
+- `internal/domain/repository/subscription_event_repository.go`
+- `internal/infrastructure/persistence/subscription_event_repository.go`
+- `migrations/000023_create_subscription_events_table.up.sql`
+- `migrations/000023_create_subscription_events_table.down.sql`
+
+**Files Updated:**
+- `internal/domain/repository/app_repository.go` - Added FindAllByPartnerAppID
+- `internal/infrastructure/persistence/app_repository.go` - Implemented FindAllByPartnerAppID
+- `internal/domain/valueobject/risk_state.go` - Added ParseRiskState
+- `internal/interfaces/http/router/router.go` - Added webhook routes
+- `DATABASE_SCHEMA.md` - Documented subscription_events table
+- Test mocks updated for new interface method
+

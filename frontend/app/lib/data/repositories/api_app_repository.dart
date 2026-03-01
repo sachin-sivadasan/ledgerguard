@@ -112,6 +112,7 @@ class ApiAppRepository implements AppRepository {
     final prefs = await SharedPreferences.getInstance();
     final appId = prefs.getString(_selectedAppKey);
     final appName = prefs.getString(_selectedAppNameKey);
+    final tierCode = prefs.getString(_selectedAppTierKey);
 
     if (appId != null && appName != null) {
       _selectedApp = ShopifyApp(
@@ -119,6 +120,7 @@ class ApiAppRepository implements AppRepository {
         name: appName,
         description: '',
         installCount: 0,
+        revenueShareTier: RevenueShareTier.fromCode(tierCode),
       );
       return _selectedApp;
     }

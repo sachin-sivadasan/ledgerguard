@@ -1317,3 +1317,52 @@ Implemented Phase 3 Task #1 - Webhook Integration (P1-8). Added support for Shop
 - `DATABASE_SCHEMA.md` - Documented subscription_events table
 - Test mocks updated for new interface method
 
+---
+
+## [2026-03-01] Phase 4: Architecture & Documentation
+
+**Commit:** docs: update ER diagrams, sequence diagrams, and API documentation
+
+**Summary:**
+Completed Phase 4 - Architecture documentation updates. Updated all PlantUML diagrams to match current implementation and extended OpenAPI specification with webhook endpoints.
+
+**Implemented:**
+
+### 1. ER Diagram Updates (P1-10)
+Updated `docs/ER_current.puml` to match actual database schema:
+- Added `subscription_events` table (Phase 3 addition)
+- Added `user_preferences` table (migration 000019)
+- Added `api_subscription_status` table (CQRS read model)
+- Added `api_usage_status` table (CQRS read model)
+- Added `api_audit_log` table
+- Updated `subscriptions` with `shopify_shop_gid`, `deleted_at` columns
+- Updated `transactions` with shop and subscription reference columns
+- Added all relationships and index documentation
+
+### 2. Manual Charge Handling Verification (P1-11)
+Verified correct implementation:
+- `ChargeTypeOneTime` defined in `charge_type.go`
+- ONE_TIME charges excluded from MRR (only RECURRING creates subscriptions)
+- ONE_TIME charges included in total revenue (`metrics_engine.go:58`)
+- Test coverage in `ledger_service_test.go`, `metrics_engine_test.go`
+
+### 3. Sequence Diagrams Updates (P2-17)
+Added missing flows to `docs/SEQUENCE_current.puml`:
+- **Webhook Processing Flow** (section 10): subscription updates, app uninstalls, billing failures
+- **AI Daily Brief Generation Flow** (section 11): scheduled generation and on-demand retrieval
+- **Revenue API Flow** (section 12): external API access with authentication and rate limiting
+
+### 4. API Documentation Updates (P2-16)
+Extended `docs/api/openapi.yaml`:
+- Added Webhooks tag and documentation
+- Added `/webhooks/shopify` endpoint (generic handler)
+- Added `/webhooks/shopify/subscriptions` endpoint
+- Added `/webhooks/shopify/uninstalled` endpoint
+- Added `/webhooks/shopify/billing-failure` endpoint
+- Added webhook payload schemas: `SubscriptionUpdatePayload`, `AppUninstalledPayload`, `BillingFailurePayload`
+
+**Files Updated:**
+- `docs/ER_current.puml` - Complete schema with all 14 tables
+- `docs/SEQUENCE_current.puml` - Added 3 new sequence diagrams
+- `docs/api/openapi.yaml` - Added webhook endpoint documentation
+

@@ -29,6 +29,11 @@ tags:
     description: Query subscription payment status
   - name: Usage
     description: Query usage billing status
+  - name: Webhooks
+    description: |
+      Shopify webhook endpoints for real-time subscription updates.
+      These endpoints are called by Shopify, not by your application.
+      Configure webhook subscriptions in your Shopify Partner dashboard.
 
 paths:
   /subscriptions/{shopify_gid}:
@@ -241,6 +246,167 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  # Webhook Endpoints (called by Shopify, not your application)
+  /webhooks/shopify:
+    post:
+      operationId: handleWebhook
+      summary: Handle Shopify webhook (generic)
+      description: |
+        Generic webhook handler that routes events based on the X-Shopify-Topic header.
+        Validates HMAC signature before processing.
+
+        **Note:** This endpoint is called by Shopify, not by your application.
+        Configure webhook subscriptions in your Shopify Partner dashboard.
+      tags:
+        - Webhooks
+      security: []  # No API key auth - validated via HMAC
+      parameters:
+        - name: X-Shopify-Topic
+          in: header
+          required: true
+          description: Webhook topic (e.g., app_subscriptions/update)
+          schema:
+            type: string
+            example: app_subscriptions/update
+        - name: X-Shopify-Hmac-Sha256
+          in: header
+          required: true
+          description: HMAC signature for validation
+          schema:
+            type: string
+        - name: X-Shopify-Shop-Domain
+          in: header
+          required: true
+          description: Shop's myshopify.com domain
+          schema:
+            type: string
+            example: cool-store.myshopify.com
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Webhook payload (varies by topic)
+      responses:
+        '200':
+          description: Webhook processed successfully
+        '401':
+          description: Invalid HMAC signature
+
+  /webhooks/shopify/subscriptions:
+    post:
+      operationId: handleSubscriptionUpdate
+      summary: Handle subscription update webhook
+      description: |
+        Receives real-time subscription status changes from Shopify.
+
+        **Triggers:**
+        - Subscription status changes (ACTIVE → CANCELLED, etc.)
+        - Billing cycle updates
+
+        **Actions:**
+        - Updates subscription status in database
+        - Recalculates risk state
+        - Records lifecycle event for audit trail
+      tags:
+        - Webhooks
+      security: []
+      parameters:
+        - name: X-Shopify-Hmac-Sha256
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Shopify-Shop-Domain
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionUpdatePayload'
+      responses:
+        '200':
+          description: Webhook processed
+
+  /webhooks/shopify/uninstalled:
+    post:
+      operationId: handleAppUninstalled
+      summary: Handle app uninstallation webhook
+      description: |
+        Receives notification when a merchant uninstalls your app.
+
+        **Actions:**
+        - Marks subscription as UNINSTALLED
+        - Sets risk state to CHURNED
+        - Soft-deletes the subscription (preserves audit trail)
+        - Records uninstall event
+      tags:
+        - Webhooks
+      security: []
+      parameters:
+        - name: X-Shopify-Hmac-Sha256
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Shopify-Shop-Domain
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppUninstalledPayload'
+      responses:
+        '200':
+          description: Webhook processed
+
+  /webhooks/shopify/billing-failure:
+    post:
+      operationId: handleBillingFailure
+      summary: Handle billing failure webhook
+      description: |
+        Receives notification when a billing attempt fails.
+
+        **Risk State Escalation:**
+        - SAFE → ONE_CYCLE_MISSED (first failure)
+        - ONE_CYCLE_MISSED → TWO_CYCLES_MISSED
+        - TWO_CYCLES_MISSED → CHURNED
+
+        This represents "involuntary churn" - payment failure rather than
+        deliberate cancellation.
+      tags:
+        - Webhooks
+      security: []
+      parameters:
+        - name: X-Shopify-Hmac-Sha256
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Shopify-Shop-Domain
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillingFailurePayload'
+      responses:
+        '200':
+          description: Webhook processed
+
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -437,6 +603,89 @@ components:
               type: string
               description: Human-readable error message
               example: API key required
+
+    # Webhook Payload Schemas
+    SubscriptionUpdatePayload:
+      type: object
+      description: Payload for app_subscriptions/update webhook
+      properties:
+        admin_graphql_api_id:
+          type: string
+          description: Shopify subscription GID
+          example: gid://shopify/AppSubscription/12345
+        name:
+          type: string
+          description: Subscription name
+          example: Pro Plan
+        status:
+          type: string
+          enum: [ACTIVE, CANCELLED, FROZEN, EXPIRED]
+          description: New subscription status
+        created_at:
+          type: string
+          format: date-time
+        billing_on:
+          type: string
+          format: date
+          nullable: true
+        trial_days:
+          type: integer
+        test:
+          type: boolean
+        capped_amount:
+          type: string
+        balance_used:
+          type: number
+        balance_remaining:
+          type: number
+        risk_level:
+          type: number
+
+    AppUninstalledPayload:
+      type: object
+      description: Payload for app/uninstalled webhook
+      properties:
+        id:
+          type: integer
+          description: Shopify shop ID
+        name:
+          type: string
+          description: Shop name
+        email:
+          type: string
+          format: email
+        domain:
+          type: string
+          description: Shop's custom domain
+        myshopify_domain:
+          type: string
+          description: Shop's myshopify.com domain
+          example: cool-store.myshopify.com
+
+    BillingFailurePayload:
+      type: object
+      description: Payload for subscription_billing_attempts/failure webhook
+      properties:
+        admin_graphql_api_id:
+          type: string
+          description: Billing attempt GID
+        subscription_contract_id:
+          type: string
+          description: Subscription GID
+        error_code:
+          type: string
+          description: Error code from payment processor
+          example: card_declined
+        error_message:
+          type: string
+          description: Human-readable error message
+          example: Your card was declined
+        ready:
+          type: boolean
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
 
   responses:
     BadRequest:

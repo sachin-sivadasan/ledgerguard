@@ -56,6 +56,17 @@ entity "transactions" as transactions {
   created_date : TIMESTAMPTZ
   available_date : TIMESTAMPTZ
   earnings_status : VARCHAR(20) <<DEFAULT: PENDING>>
+  --
+  ' Shop details (migration 000020)
+  shopify_shop_gid : VARCHAR(255)
+  shop_plan : VARCHAR(100)
+  --
+  ' Subscription reference (migration 000020)
+  subscription_gid : VARCHAR(255)
+  subscription_status : VARCHAR(50)
+  subscription_period_end : TIMESTAMPTZ
+  billing_interval : VARCHAR(20)
+  --
   created_at : TIMESTAMPTZ
 }
 
@@ -64,18 +75,34 @@ entity "subscriptions" as subscriptions {
   --
   *app_id : UUID <<FK>>
   *shopify_gid : VARCHAR(255) <<UNIQUE>>
+  shopify_shop_gid : VARCHAR(255)
   *myshopify_domain : VARCHAR(255)
   shop_name : VARCHAR(255)
   plan_name : VARCHAR(255)
   *base_price_cents : BIGINT
   currency : VARCHAR(3) <<DEFAULT: USD>>
   billing_interval : VARCHAR(20) <<CHECK: MONTHLY, ANNUAL>>
-  *status : VARCHAR(20) <<CHECK: ACTIVE, CANCELLED, FROZEN, PENDING>>
+  *status : VARCHAR(20) <<CHECK: ACTIVE, CANCELLED, FROZEN, PENDING, UNINSTALLED>>
   last_recurring_charge_date : TIMESTAMPTZ
   expected_next_charge_date : TIMESTAMPTZ
   *risk_state : VARCHAR(30) <<CHECK: SAFE, ONE_CYCLE_MISSED, TWO_CYCLES_MISSED, CHURNED>>
   created_at : TIMESTAMPTZ
   updated_at : TIMESTAMPTZ
+  deleted_at : TIMESTAMPTZ <<SOFT DELETE>>
+}
+
+entity "subscription_events" as subscription_events {
+  *id : UUID <<PK>>
+  --
+  *subscription_id : UUID <<FK>>
+  *from_status : VARCHAR(50)
+  *to_status : VARCHAR(50)
+  *from_risk_state : VARCHAR(50)
+  *to_risk_state : VARCHAR(50)
+  *event_type : VARCHAR(50) <<CHECK: webhook, sync, manual, billing_failure, app_uninstalled>>
+  reason : TEXT
+  *occurred_at : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
 }
 
 entity "daily_metrics_snapshot" as daily_metrics_snapshot {
@@ -130,6 +157,16 @@ entity "notification_preferences" as notification_preferences {
   updated_at : TIMESTAMPTZ
 }
 
+entity "user_preferences" as user_preferences {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK, UNIQUE>>
+  primary_kpis : TEXT[]
+  secondary_widgets : TEXT[]
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
 entity "api_keys" as api_keys {
   *id : UUID <<PK>>
   --
@@ -142,16 +179,67 @@ entity "api_keys" as api_keys {
   revoked_at : TIMESTAMPTZ
 }
 
-' Relationships
+entity "api_audit_log" as api_audit_log {
+  *id : UUID <<PK>>
+  --
+  *api_key_id : UUID <<FK>>
+  *endpoint : VARCHAR(255)
+  *method : VARCHAR(10)
+  request_params : JSONB
+  *response_status : INT
+  *response_time_ms : INT
+  ip_address : VARCHAR(45)
+  user_agent : TEXT
+  created_at : TIMESTAMPTZ
+}
+
+entity "api_subscription_status" as api_subscription_status {
+  *id : UUID <<PK>>
+  --
+  *shopify_gid : VARCHAR(255) <<UNIQUE>>
+  *app_id : UUID
+  *myshopify_domain : VARCHAR(255)
+  shop_name : VARCHAR(255)
+  plan_name : VARCHAR(255)
+  *risk_state : VARCHAR(30) <<CHECK: SAFE, ONE_CYCLE_MISSED, TWO_CYCLES_MISSED, CHURNED>>
+  *is_paid_current_cycle : BOOLEAN
+  months_overdue : INT <<DEFAULT: 0>>
+  last_successful_charge_date : TIMESTAMPTZ
+  expected_next_charge_date : TIMESTAMPTZ
+  *status : VARCHAR(20) <<CHECK: ACTIVE, CANCELLED, FROZEN, PENDING>>
+  last_synced_at : TIMESTAMPTZ
+}
+
+entity "api_usage_status" as api_usage_status {
+  *id : UUID <<PK>>
+  --
+  *shopify_gid : VARCHAR(255) <<UNIQUE>>
+  *subscription_shopify_gid : VARCHAR(255)
+  *subscription_id : UUID
+  billed : BOOLEAN <<DEFAULT: FALSE>>
+  billing_date : TIMESTAMPTZ
+  *amount_cents : INT
+  description : TEXT
+  last_synced_at : TIMESTAMPTZ
+}
+
+' Core Relationships
 users ||--o{ partner_accounts : "has"
 users ||--o{ device_tokens : "registers"
 users ||--o| notification_preferences : "configures"
+users ||--o| user_preferences : "customizes"
 users ||--o{ api_keys : "manages"
 partner_accounts ||--o{ apps : "tracks"
 apps ||--o{ transactions : "records"
 apps ||--o{ subscriptions : "has"
 apps ||--o{ daily_metrics_snapshot : "snapshots"
 apps ||--o{ daily_insight : "insights"
+subscriptions ||--o{ subscription_events : "logs"
+api_keys ||--o{ api_audit_log : "audits"
+
+' CQRS Read Model (denormalized, populated from subscriptions/transactions)
+apps ..> api_subscription_status : "populates"
+apps ..> api_usage_status : "populates"
 
 note right of users
   Migration: 000001_create_users_table
@@ -182,38 +270,52 @@ note right of apps
 end note
 
 note right of transactions
-  Migration: 000004_create_transactions_table
-  Migration: 000011_add_shop_name_and_gross_amount
-  Migration: 000017_add_revenue_share_tier
-  Migration: 000018_add_earnings_tracking
+  Migrations: 000004, 000011, 000017, 000018, 000020
   - Immutable ledger of transactions
   - Upsert by shopify_gid (idempotent)
   - shop_name: Store display name
   - gross_amount: Subscription price (pre-Shopify cut)
   - Fee breakdown: shopify_fee, processing_fee, tax
   - Earnings tracking: PENDING → AVAILABLE → PAID_OUT
+  - Subscription reference for AppSubscriptionSale
 
   Indexes:
   - idx_transactions_app_date
   - idx_transactions_domain
   - idx_transactions_type
   - idx_transactions_earnings
+  - idx_transactions_subscription_gid
+  - idx_transactions_subscription_status
 end note
 
 note right of subscriptions
-  Migration: 000005_create_subscriptions_table
-  Migration: 000010_add_shop_name
+  Migrations: 000005, 000010, 000016, 000021, 000022
   - Rebuilt from transactions (deterministic)
   - Tracks last_recurring_charge_date
   - Computes expected_next_charge_date
   - Risk classification
-  - shop_name: Store display name
+  - Soft delete support (deleted_at)
+  - Shop GID for webhook/event lookup
 
   Indexes:
   - idx_subscriptions_app_status
   - idx_subscriptions_app_risk
   - idx_subscriptions_domain
   - idx_subscriptions_expected_charge
+  - idx_subscriptions_shop_gid
+end note
+
+note right of subscription_events
+  Migration: 000023_create_subscription_events_table
+  - Lifecycle event audit trail
+  - Tracks status and risk state transitions
+  - Supports churn analysis (voluntary vs involuntary)
+  - Event types: webhook, sync, billing_failure, app_uninstalled
+
+  Indexes:
+  - idx_subscription_events_subscription_id
+  - idx_subscription_events_type_occurred
+  - idx_subscription_events_churn (partial)
 end note
 
 note right of daily_metrics_snapshot
@@ -243,26 +345,14 @@ note right of daily_insight
   - idx_daily_insight_app_date
 end note
 
-note right of device_tokens
-  Migration: 000008_create_device_tokens_table
-  - Push notification tokens (FCM/APNs)
-  - Supports iOS, Android, Web
-  - Transferred on user change
+note right of user_preferences
+  Migration: 000019_create_user_preferences_table
+  - Dashboard KPI configuration
+  - Widget visibility preferences
+  - Per-user customization
 
   Indexes:
-  - idx_device_tokens_user_id
-  - idx_device_tokens_token
-end note
-
-note right of notification_preferences
-  Migration: 000009_create_notification_preferences_table
-  - One per user (UNIQUE user_id)
-  - Critical alerts for risk state changes
-  - Daily summary with configurable time
-  - Slack webhook (Pro tier)
-
-  Indexes:
-  - idx_notification_preferences_user_id
+  - idx_user_preferences_user_id
 end note
 
 note right of api_keys
@@ -275,6 +365,32 @@ note right of api_keys
   Indexes:
   - idx_api_keys_user_id
   - idx_api_keys_key_hash
+end note
+
+note right of api_audit_log
+  Migration: 000015_create_api_audit_log_table
+  - Revenue API request logging
+  - Debugging and compliance
+  - Error tracking
+
+  Indexes:
+  - idx_api_audit_key_created
+  - idx_api_audit_created
+  - idx_api_audit_errors (partial)
+end note
+
+note bottom of api_subscription_status
+  Migration: 000013 (CQRS Read Model)
+  - Populated from subscriptions after sync
+  - Optimized for Revenue API queries
+  - Denormalized for fast lookups
+end note
+
+note bottom of api_usage_status
+  Migration: 000014 (CQRS Read Model)
+  - Populated from usage transactions
+  - Tracks billed/unbilled usage
+  - Links to parent subscription
 end note
 
 @enduml

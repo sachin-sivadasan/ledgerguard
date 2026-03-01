@@ -442,4 +442,259 @@ API --> App: 200 OK\n{\n  subscriptions: [{id, shop_name, plan_name, risk_state,
 
 App --> User: Display subscription list\nwith risk badges (SAFE=green,\nONE_CYCLE=yellow, TWO_CYCLES=orange,\nCHURNED=red)
 
+' ==========================================
+' 10. Webhook Processing Flow
+' ==========================================
+newpage Webhook Processing Flow
+
+participant "Shopify" as Shopify
+participant "API Server" as API
+participant "WebhookService" as Webhook
+database "PostgreSQL" as DB
+
+note over Shopify, DB
+  Real-time subscription updates via Shopify webhooks.
+  Endpoints: /webhooks/shopify/*
+  No auth (validated via HMAC signature)
+end note
+
+== Subscription Update Webhook ==
+
+Shopify -> API: POST /webhooks/shopify/subscriptions\n[X-Shopify-Topic: app_subscriptions/update]\n[X-Shopify-Hmac-Sha256: <signature>]\n{ status: "CANCELLED", ... }
+
+API -> API: Read request body
+API -> Webhook: ValidateHMAC(appID, body, signature)
+
+alt HMAC Valid
+    Webhook --> API: true
+else HMAC Invalid
+    Webhook --> API: false
+    API --> Shopify: 401 Unauthorized
+end
+
+API -> Webhook: ProcessSubscriptionUpdate(event)
+
+Webhook -> DB: SELECT * FROM subscriptions\nWHERE shopify_gid = ?
+DB --> Webhook: Subscription record
+
+Webhook -> Webhook: Store old status/risk_state
+
+Webhook -> Webhook: Update status from payload\n(ACTIVE → CANCELLED)
+
+Webhook -> Webhook: Update risk_state based on status\n(CANCELLED → CHURNED)
+
+Webhook -> DB: UPDATE subscriptions\nSET status = ?, risk_state = ?, updated_at = NOW()
+DB --> Webhook: Success
+
+Webhook -> DB: INSERT INTO subscription_events\n(subscription_id, from_status, to_status,\nfrom_risk_state, to_risk_state, event_type='webhook')
+DB --> Webhook: Event recorded
+
+Webhook --> API: nil (success)
+API --> Shopify: 200 OK
+
+note over Webhook
+  Always return 200 OK to prevent
+  Shopify from retrying.
+  Errors are logged internally.
+end note
+
+== App Uninstalled Webhook ==
+
+Shopify -> API: POST /webhooks/shopify/uninstalled\n[X-Shopify-Topic: app/uninstalled]\n{ myshopify_domain: "store.myshopify.com" }
+
+API -> Webhook: ProcessAppUninstalled(event)
+
+Webhook -> DB: SELECT * FROM apps\nWHERE partner_app_id = ?
+DB --> Webhook: App records
+
+loop For each matching app
+    Webhook -> DB: SELECT * FROM subscriptions\nWHERE app_id = ? AND myshopify_domain = ?
+    DB --> Webhook: Subscription
+
+    Webhook -> Webhook: Mark as UNINSTALLED + CHURNED
+    Webhook -> Webhook: Soft delete (set deleted_at)
+
+    Webhook -> DB: UPDATE subscriptions\nSET status='UNINSTALLED', risk_state='CHURNED',\ndeleted_at=NOW()
+    DB --> Webhook: Success
+
+    Webhook -> DB: INSERT INTO subscription_events\n(event_type='app_uninstalled', reason='Shop uninstalled the app')
+    DB --> Webhook: Event recorded
+end
+
+Webhook --> API: nil
+API --> Shopify: 200 OK
+
+== Billing Failure Webhook ==
+
+Shopify -> API: POST /webhooks/shopify/billing-failure\n[X-Shopify-Topic: subscription_billing_attempts/failure]\n{ error_code: "card_declined", ... }
+
+API -> Webhook: ProcessBillingFailure(event)
+
+Webhook -> DB: SELECT * FROM subscriptions\nWHERE shopify_gid = ?
+DB --> Webhook: Subscription
+
+Webhook -> Webhook: Escalate risk state:\nSAFE → ONE_CYCLE_MISSED\nONE_CYCLE_MISSED → TWO_CYCLES_MISSED\nTWO_CYCLES_MISSED → CHURNED
+
+Webhook -> DB: UPDATE subscriptions\nSET risk_state = ?, updated_at = NOW()
+DB --> Webhook: Success
+
+Webhook -> DB: INSERT INTO subscription_events\n(event_type='billing_failure',\nreason='Billing failure: card_declined')
+DB --> Webhook: Event recorded
+
+Webhook --> API: nil
+API --> Shopify: 200 OK
+
+note over Webhook
+  Risk State Escalation on Billing Failure:
+  - SAFE → ONE_CYCLE_MISSED (first failure)
+  - ONE_CYCLE_MISSED → TWO_CYCLES_MISSED
+  - TWO_CYCLES_MISSED → CHURNED
+
+  This is "involuntary churn" - distinguished
+  from voluntary churn (user cancellation).
+end note
+
+' ==========================================
+' 11. AI Daily Brief Generation Flow
+' ==========================================
+newpage AI Daily Brief Generation Flow
+
+participant "Scheduler" as Scheduler
+participant "InsightService" as Insight
+participant "AI Provider" as AI
+database "PostgreSQL" as DB
+
+note over Scheduler, DB
+  Generates 80-120 word executive summaries
+  from daily metrics snapshots.
+  Pro tier only.
+end note
+
+== Daily Brief Generation (Scheduled) ==
+
+Scheduler -> Scheduler: Cron job fires (e.g., 07:00 UTC)
+
+Scheduler -> DB: SELECT u.*, pa.id as partner_account_id\nFROM users u\nJOIN partner_accounts pa ON u.id = pa.user_id\nWHERE u.plan_tier = 'PRO'
+DB --> Scheduler: Pro users with partner accounts
+
+loop For each Pro user
+    Scheduler -> DB: SELECT a.id FROM apps a\nWHERE a.partner_account_id = ?
+    DB --> Scheduler: User's apps
+
+    loop For each app
+        Scheduler -> Insight: GenerateDailyBrief(appID, date)
+
+        Insight -> DB: SELECT * FROM daily_metrics_snapshot\nWHERE app_id = ? AND date = ?\nORDER BY date DESC LIMIT 1
+        DB --> Insight: Latest snapshot
+
+        Insight -> DB: SELECT * FROM daily_metrics_snapshot\nWHERE app_id = ? AND date < ?\nORDER BY date DESC LIMIT 1
+        DB --> Insight: Previous snapshot (for comparison)
+
+        alt Snapshots exist
+            Insight -> Insight: Build context:\n- MRR change\n- Risk distribution\n- Churn events\n- Notable changes
+
+            Insight -> AI: Generate insight\n(prompt + metrics context)
+            AI --> Insight: "Your MRR grew 5% this week...\n(80-120 words)"
+
+            Insight -> DB: INSERT INTO daily_insight\n(app_id, date, insight_text)\nON CONFLICT (app_id, date) DO UPDATE
+            DB --> Insight: Success
+
+            Insight --> Scheduler: Brief generated
+        else No data
+            Insight --> Scheduler: Skipped (no metrics)
+        end
+    end
+end
+
+Scheduler -> Scheduler: Log completion
+
+== Retrieve Daily Brief (On-Demand) ==
+
+actor User
+participant "Client App" as App
+participant "API Server" as API
+
+User -> App: View today's insight
+App -> API: GET /api/v1/apps/{appID}/insights/today\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware (verify user)
+API -> API: Check plan_tier = 'PRO'
+
+alt Pro tier
+    API -> DB: SELECT * FROM daily_insight\nWHERE app_id = ? AND date = CURRENT_DATE
+    DB --> API: Insight or null
+
+    alt Insight exists
+        API --> App: 200 OK\n{ "insight": "Your MRR grew 5%...", "date": "2024-02-01" }
+    else No insight yet
+        API --> App: 200 OK\n{ "insight": null, "message": "Insight not yet generated" }
+    end
+else Free tier
+    API --> App: 403 Forbidden\n{ "error": "Pro tier required for AI insights" }
+end
+
+App --> User: Display AI insight card\n(or upgrade prompt)
+
+' ==========================================
+' 12. Revenue API Flow (External Access)
+' ==========================================
+newpage Revenue API Flow (External Access)
+
+participant "External System" as External
+participant "API Server" as API
+participant "RateLimiter" as RateLimit
+database "PostgreSQL" as DB
+
+note over External, DB
+  External access to subscription status
+  and usage data via API keys.
+  Rate-limited per key.
+end note
+
+== API Key Authentication ==
+
+External -> API: GET /revenue-api/v1/subscriptions/{gid}\n[X-Api-Key: lg_xxx...]
+
+API -> API: Extract API key from header
+API -> API: Hash key with SHA-256
+
+API -> DB: SELECT * FROM api_keys\nWHERE key_hash = ? AND revoked_at IS NULL
+DB --> API: API key record (or null)
+
+alt Key valid
+    API -> API: Load associated user
+    API -> RateLimit: Check rate limit\n(key_id, limit=60/min)
+
+    alt Under rate limit
+        RateLimit --> API: Allowed
+
+        API -> DB: SELECT * FROM api_subscription_status\nWHERE shopify_gid = ?
+        DB --> API: Subscription status
+
+        API -> DB: INSERT INTO api_audit_log\n(api_key_id, endpoint, method, response_status)
+        DB --> API: Audit logged
+
+        API --> External: 200 OK\n{ subscription: { risk_state, is_paid, ... } }
+    else Rate exceeded
+        RateLimit --> API: Denied
+        API --> External: 429 Too Many Requests\n{ "error": "rate_limit_exceeded" }
+    end
+else Key invalid or revoked
+    API --> External: 401 Unauthorized\n{ "error": "invalid_api_key" }
+end
+
+== Batch Query (Multiple Subscriptions) ==
+
+External -> API: POST /revenue-api/v1/subscriptions/batch\n[X-Api-Key: lg_xxx...]\n{ "shopify_gids": ["gid://...", "gid://..."] }
+
+API -> API: Validate API key
+API -> RateLimit: Check rate limit
+
+API -> DB: SELECT * FROM api_subscription_status\nWHERE shopify_gid = ANY($1)
+DB --> API: Multiple subscription statuses
+
+API -> DB: Log audit entry
+
+API --> External: 200 OK\n{ "subscriptions": [{ ... }, { ... }] }
+
 @enduml

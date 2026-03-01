@@ -1046,3 +1046,30 @@
 - Build verified: `npm run build` successful
 
 ---
+
+## [2026-03-01] Comprehensive App Review
+
+**Original Prompt:**
+> from the answers from shopify's and all. review my app entirely and suggest things like must have and wrong implementations and prompt improvements, promt orderdering, puml corrections. improve this prompt before implementation and save it in prompts for implementation
+
+**Improved Prompt:**
+> Conduct a comprehensive review of LedgerGuard against Shopify Partner API documentation and best practices:
+> 1. Identify incorrect implementations (risk classification, MRR calculation, fee structure)
+> 2. Find missing must-have features (webhooks, soft deletes, audit logging)
+> 3. Review architecture gaps (CQRS read models, caching, error handling)
+> 4. Check PUML diagram accuracy (ER, Sequence, C4)
+> 5. Prioritize issues by severity (P0-Critical, P1-High, P2-Medium, P3-Low)
+> 6. Create phased implementation plan with prompt ordering
+> 7. Save comprehensive findings as implementation prompt document
+
+**Result:**
+- docs/prompts/comprehensive-review-fixes.md - Detailed implementation prompt with:
+  - 7 P0-Critical issues (risk classification, synthetic GIDs, MRR normalization, revenue share, rate limiting, test coverage, GraphQL fields)
+  - 6 P1-High issues (webhooks, soft deletes, ER diagrams, manual charges, lifecycle events, payment failures)
+  - 7 P2-Medium issues (mobile responsiveness, caching, API docs, sequence diagrams, audit logging, error boundaries, data export)
+  - 4 P3-Low issues (dark mode, localization, observability, CI/CD)
+  - Phased implementation plan (5 phases over 9+ weeks)
+  - PUML correction specifications
+  - Validation checklist
+
+---

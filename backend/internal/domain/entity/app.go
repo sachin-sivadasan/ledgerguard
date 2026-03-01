@@ -26,7 +26,7 @@ func NewApp(partnerAccountID uuid.UUID, partnerAppID, name string) *App {
 		PartnerAppID:     partnerAppID,
 		Name:             name,
 		TrackingEnabled:  true,
-		RevenueShareTier: valueobject.RevenueShareTierDefault, // Default to 20% tier
+		RevenueShareTier: valueobject.RevenueShareTierSmallDev0, // Default to 0% tier (most indie devs)
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}

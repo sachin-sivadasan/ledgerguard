@@ -209,8 +209,8 @@ func TestParseRevenueShareTier(t *testing.T) {
 		{"valid SMALL_DEV_0", "SMALL_DEV_0", RevenueShareTierSmallDev0},
 		{"valid SMALL_DEV_15", "SMALL_DEV_15", RevenueShareTierSmallDev15},
 		{"valid LARGE_DEV_15", "LARGE_DEV_15", RevenueShareTierLargeDev},
-		{"invalid returns DEFAULT", "INVALID", RevenueShareTierDefault},
-		{"empty returns DEFAULT", "", RevenueShareTierDefault},
+		{"invalid returns SMALL_DEV_0", "INVALID", RevenueShareTierSmallDev0},
+		{"empty returns SMALL_DEV_0", "", RevenueShareTierSmallDev0},
 	}
 
 	for _, tt := range tests {

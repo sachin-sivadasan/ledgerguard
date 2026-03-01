@@ -30,10 +30,10 @@ enum RevenueShareTier {
 
   /// Parse tier from API string
   static RevenueShareTier fromCode(String? code) {
-    if (code == null) return default20;
+    if (code == null) return smallDev0; // Default to 0% for most indie devs
     return RevenueShareTier.values.firstWhere(
       (t) => t.code == code,
-      orElse: () => default20,
+      orElse: () => smallDev0,
     );
   }
 

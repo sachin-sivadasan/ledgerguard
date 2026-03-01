@@ -141,5 +141,5 @@ func ParseRevenueShareTier(s string) RevenueShareTier {
 	if tier.IsValid() {
 		return tier
 	}
-	return RevenueShareTierDefault
+	return RevenueShareTierSmallDev0 // Default to 0% for most indie devs
 }

@@ -25,7 +25,7 @@ class FeeInsightsCard extends StatefulWidget {
   State<FeeInsightsCard> createState() => _FeeInsightsCardState();
 }
 
-class _FeeInsightsCardState extends State<FeeInsightsCard> {
+class _FeeInsightsCardState extends State<FeeInsightsCard> with WidgetsBindingObserver {
   final AppRepository _appRepository = GetIt.instance<AppRepository>();
 
   ShopifyApp? _selectedApp;
@@ -36,7 +36,46 @@ class _FeeInsightsCardState extends State<FeeInsightsCard> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Check and reload when app comes back to foreground
+    if (state == AppLifecycleState.resumed) {
+      _checkAndReloadIfNeeded();
+    }
+  }
+
+  /// Public method to refresh the card data
+  void refresh() {
+    _loadData();
+  }
+
+  @override
+  void didUpdateWidget(FeeInsightsCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload if totalGrossCents changed
+    if (oldWidget.totalGrossCents != widget.totalGrossCents) {
+      _loadData();
+    }
+  }
+
+  /// Check if tier changed and reload if needed
+  Future<void> _checkAndReloadIfNeeded() async {
+    final currentApp = await _appRepository.getSelectedApp();
+    if (currentApp != null &&
+        _selectedApp != null &&
+        currentApp.revenueShareTier != _selectedApp!.revenueShareTier) {
+      _loadData();
+    }
   }
 
   Future<void> _loadData() async {
@@ -72,6 +111,13 @@ class _FeeInsightsCardState extends State<FeeInsightsCard> {
 
   @override
   Widget build(BuildContext context) {
+    // Check for tier changes on every build (handles navigation back from settings)
+    if (!_isLoading && _selectedApp != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkAndReloadIfNeeded();
+      });
+    }
+
     if (_isLoading) {
       return _buildLoadingCard();
     }

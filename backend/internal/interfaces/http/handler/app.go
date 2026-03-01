@@ -219,6 +219,7 @@ type updateAppTierRequest struct {
 
 // UpdateAppTier updates the revenue share tier for an app
 // PATCH /api/v1/apps/{appID}/tier
+// appID can be internal UUID or Shopify GID (gid://partners/App/xxx or just the numeric part)
 func (h *AppHandler) UpdateAppTier(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
@@ -233,21 +234,40 @@ func (h *AppHandler) UpdateAppTier(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	appID, err := uuid.Parse(appIDStr)
-	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid app_id format")
-		return
-	}
-
 	var req updateAppTierRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	// Get app
-	app, err := h.appRepo.FindByID(r.Context(), appID)
-	if err != nil {
+	// Try to find app - first by UUID, then by partner app ID
+	var app *entity.App
+	var err error
+
+	appID, uuidErr := uuid.Parse(appIDStr)
+	if uuidErr == nil {
+		// Valid UUID - find by ID
+		app, err = h.appRepo.FindByID(r.Context(), appID)
+	} else {
+		// Not a UUID - try as partner app ID (GID or numeric)
+		// Get partner account for this user
+		partnerAccount, paErr := h.partnerRepo.FindByUserID(r.Context(), user.ID)
+		if paErr != nil {
+			writeJSONError(w, http.StatusNotFound, "partner account not found")
+			return
+		}
+
+		// Try with full GID format first
+		partnerAppID := appIDStr
+		if !strings.HasPrefix(partnerAppID, "gid://") {
+			// If just numeric, convert to GID format
+			partnerAppID = "gid://partners/App/" + appIDStr
+		}
+
+		app, err = h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, partnerAppID)
+	}
+
+	if err != nil || app == nil {
 		writeJSONError(w, http.StatusNotFound, "app not found")
 		return
 	}

@@ -161,8 +161,10 @@ class ApiAppRepository implements AppRepository {
 
   @override
   Future<ShopifyApp> updateAppTier(String appId, RevenueShareTier tier) async {
+    // Extract numeric ID to avoid URL routing issues with slashes in GID
+    final numericAppId = _extractNumericId(appId);
     final response = await _apiClient.patch(
-      '/api/v1/apps/$appId/tier',
+      '/api/v1/apps/$numericAppId/tier',
       data: {'revenue_share_tier': tier.code},
     );
 

@@ -10,6 +10,7 @@ import 'package:ledgerguard/domain/entities/shopify_app.dart';
 import 'package:ledgerguard/domain/entities/time_range.dart';
 import 'package:ledgerguard/domain/entities/user_profile.dart';
 import 'package:ledgerguard/domain/repositories/app_repository.dart';
+import 'package:ledgerguard/presentation/blocs/app_selection/app_selection.dart';
 import 'package:ledgerguard/presentation/blocs/dashboard/dashboard.dart';
 import 'package:ledgerguard/presentation/blocs/earnings/earnings.dart';
 import 'package:ledgerguard/presentation/blocs/insight/insight.dart';
@@ -18,6 +19,10 @@ import 'package:ledgerguard/presentation/blocs/role/role.dart';
 import 'package:ledgerguard/presentation/pages/dashboard_page.dart';
 
 class MockDashboardBloc extends Mock implements DashboardBloc {}
+
+class MockAppSelectionBloc extends Mock implements AppSelectionBloc {}
+
+class FakeAppSelectionEvent extends Fake implements AppSelectionEvent {}
 
 class MockAppRepository extends Mock implements AppRepository {}
 
@@ -44,6 +49,7 @@ void main() {
   late MockPreferencesBloc mockPreferencesBloc;
   late MockEarningsBloc mockEarningsBloc;
   late MockAppRepository mockAppRepository;
+  late MockAppSelectionBloc mockAppSelectionBloc;
 
   const proUserProfile = UserProfile(
     id: 'user-1',
@@ -78,6 +84,7 @@ void main() {
     registerFallbackValue(FakeInsightEvent());
     registerFallbackValue(FakePreferencesEvent());
     registerFallbackValue(FakeEarningsEvent());
+    registerFallbackValue(FakeAppSelectionEvent());
   });
 
   setUp(() {
@@ -87,6 +94,25 @@ void main() {
     mockPreferencesBloc = MockPreferencesBloc();
     mockEarningsBloc = MockEarningsBloc();
     mockAppRepository = MockAppRepository();
+    mockAppSelectionBloc = MockAppSelectionBloc();
+
+    // Setup AppSelectionBloc defaults
+    when(() => mockAppSelectionBloc.state).thenReturn(
+      AppSelectionLoaded(
+        apps: const [
+          ShopifyApp(id: 'test-app', name: 'Test App'),
+        ],
+        selectedApp: const ShopifyApp(id: 'test-app', name: 'Test App'),
+      ),
+    );
+    when(() => mockAppSelectionBloc.stream).thenAnswer(
+      (_) => Stream.value(
+        AppSelectionLoaded(
+          apps: const [ShopifyApp(id: 'test-app', name: 'Test App')],
+          selectedApp: const ShopifyApp(id: 'test-app', name: 'Test App'),
+        ),
+      ),
+    );
 
     // Setup AppRepository defaults for FeeInsightsCard
     when(() => mockAppRepository.getSelectedApp()).thenAnswer(
@@ -166,6 +192,7 @@ void main() {
           BlocProvider<RoleBloc>.value(value: mockRoleBloc),
           BlocProvider<InsightBloc>.value(value: mockInsightBloc),
           BlocProvider<PreferencesBloc>.value(value: mockPreferencesBloc),
+          BlocProvider<AppSelectionBloc>.value(value: mockAppSelectionBloc),
         ],
         child: const DashboardPage(),
       ),

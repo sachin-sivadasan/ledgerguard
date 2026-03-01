@@ -8,10 +8,12 @@ import '../../domain/entities/dashboard_metrics.dart';
 import '../../domain/entities/dashboard_preferences.dart';
 import '../../domain/entities/time_range.dart';
 import '../../domain/repositories/app_repository.dart';
+import '../blocs/app_selection/app_selection.dart';
 import '../blocs/dashboard/dashboard.dart';
 import '../blocs/earnings/earnings.dart';
 import '../blocs/preferences/preferences.dart';
 import '../widgets/ai_insight_card.dart';
+import '../widgets/app_selector.dart';
 import '../widgets/dashboard_config_dialog.dart';
 import '../widgets/earnings_timeline_chart.dart';
 import '../widgets/fee_insights_card.dart';
@@ -36,6 +38,13 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     // Load preferences when dashboard initializes
     context.read<PreferencesBloc>().add(const LoadPreferencesRequested());
+    // Load tracked apps for multi-app selector
+    context.read<AppSelectionBloc>().add(const FetchAppsRequested());
+  }
+
+  void _onAppChanged() {
+    // Refresh dashboard when app selection changes
+    context.read<DashboardBloc>().add(const LoadDashboardRequested());
   }
 
   @override
@@ -45,6 +54,9 @@ class _DashboardPageState extends State<DashboardPage> {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
+          // App Selector for multi-app support
+          AppSelector(onAppChanged: _onAppChanged),
+          const SizedBox(width: 8),
           // Time Range Selector - responsive
           BlocBuilder<DashboardBloc, DashboardState>(
             builder: (context, state) {

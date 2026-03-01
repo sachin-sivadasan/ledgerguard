@@ -252,14 +252,50 @@ func (h *MetricsHandler) toMetricsResponse(pm *entity.PeriodMetrics) metricsResp
 }
 
 // writeMockPeriodMetrics writes mock data when aggregator is not configured
+// Mock data varies based on the month to simulate realistic period-over-period changes
 func (h *MetricsHandler) writeMockPeriodMetrics(w http.ResponseWriter, dateRange valueobject.DateRange) {
-	// Calculate mock delta (5.93% increase)
-	activeMRRDelta := 5.93
-	revenueAtRiskDelta := -8.5
-	usageRevenueDelta := 12.3
-	totalRevenueDelta := 8.7
-	renewalSuccessDelta := 2.1
-	churnDelta := -15.0
+	// Use month to generate different mock values (simulates growth over time)
+	month := dateRange.Start.Month()
+	year := dateRange.Start.Year()
+
+	// Base values that grow by ~5% each month
+	baseMultiplier := 1.0 + (float64(month-1) * 0.05) + (float64(year-2025) * 0.60)
+
+	currentMRR := int64(float64(100000) * baseMultiplier)
+	currentAtRisk := int64(float64(12000) * baseMultiplier * 0.9) // At risk grows slower
+	currentUsage := int64(float64(28000) * baseMultiplier * 1.1)  // Usage grows faster
+	currentTotal := currentMRR + currentUsage
+	currentSafe := int(float64(40) * baseMultiplier)
+	currentOneCycle := int(float64(4) * baseMultiplier * 0.8)
+	currentTwoCycle := int(float64(2) * baseMultiplier * 0.7)
+	currentChurned := int(float64(3) * baseMultiplier * 0.6)
+	currentRenewalRate := 0.88 + (float64(month) * 0.005) // Slowly improving
+	if currentRenewalRate > 0.98 {
+		currentRenewalRate = 0.98
+	}
+
+	// Previous period (approximately 5% less)
+	prevMultiplier := baseMultiplier * 0.95
+	prevMRR := int64(float64(100000) * prevMultiplier)
+	prevAtRisk := int64(float64(12000) * prevMultiplier * 0.95)
+	prevUsage := int64(float64(28000) * prevMultiplier * 1.05)
+	prevTotal := prevMRR + prevUsage
+	prevSafe := int(float64(40) * prevMultiplier)
+	prevOneCycle := int(float64(4) * prevMultiplier * 0.85)
+	prevTwoCycle := int(float64(2) * prevMultiplier * 0.75)
+	prevChurned := int(float64(3) * prevMultiplier * 0.7)
+	prevRenewalRate := currentRenewalRate - 0.02
+
+	// Calculate deltas
+	activeMRRDelta := (float64(currentMRR-prevMRR) / float64(prevMRR)) * 100
+	revenueAtRiskDelta := (float64(currentAtRisk-prevAtRisk) / float64(prevAtRisk)) * 100
+	usageRevenueDelta := (float64(currentUsage-prevUsage) / float64(prevUsage)) * 100
+	totalRevenueDelta := (float64(currentTotal-prevTotal) / float64(prevTotal)) * 100
+	renewalSuccessDelta := (currentRenewalRate - prevRenewalRate) / prevRenewalRate * 100
+	churnDelta := 0.0
+	if prevChurned > 0 {
+		churnDelta = (float64(currentChurned-prevChurned) / float64(prevChurned)) * 100
+	}
 
 	resp := metricsResponse{
 		Period: periodResponse{
@@ -267,26 +303,26 @@ func (h *MetricsHandler) writeMockPeriodMetrics(w http.ResponseWriter, dateRange
 			End:   dateRange.End.Format("2006-01-02"),
 		},
 		Current: &metricsSummaryResponse{
-			ActiveMRRCents:       125000,
-			RevenueAtRiskCents:   15000,
-			UsageRevenueCents:    35000,
-			TotalRevenueCents:    175000,
-			RenewalSuccessRate:   0.92,
-			SafeCount:            45,
-			OneCycleMissedCount:  5,
-			TwoCyclesMissedCount: 2,
-			ChurnedCount:         3,
+			ActiveMRRCents:       currentMRR,
+			RevenueAtRiskCents:   currentAtRisk,
+			UsageRevenueCents:    currentUsage,
+			TotalRevenueCents:    currentTotal,
+			RenewalSuccessRate:   currentRenewalRate,
+			SafeCount:            currentSafe,
+			OneCycleMissedCount:  currentOneCycle,
+			TwoCyclesMissedCount: currentTwoCycle,
+			ChurnedCount:         currentChurned,
 		},
 		Previous: &metricsSummaryResponse{
-			ActiveMRRCents:       118000,
-			RevenueAtRiskCents:   16400,
-			UsageRevenueCents:    31200,
-			TotalRevenueCents:    161000,
-			RenewalSuccessRate:   0.90,
-			SafeCount:            44,
-			OneCycleMissedCount:  5,
-			TwoCyclesMissedCount: 2,
-			ChurnedCount:         4,
+			ActiveMRRCents:       prevMRR,
+			RevenueAtRiskCents:   prevAtRisk,
+			UsageRevenueCents:    prevUsage,
+			TotalRevenueCents:    prevTotal,
+			RenewalSuccessRate:   prevRenewalRate,
+			SafeCount:            prevSafe,
+			OneCycleMissedCount:  prevOneCycle,
+			TwoCyclesMissedCount: prevTwoCycle,
+			ChurnedCount:         prevChurned,
 		},
 		Delta: &metricsDeltaResponse{
 			ActiveMRRPercent:      &activeMRRDelta,

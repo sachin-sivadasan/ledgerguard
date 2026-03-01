@@ -46,9 +46,19 @@ class MockAppRepository implements AppRepository {
   });
 
   @override
-  Future<List<ShopifyApp>> fetchApps() async {
+  Future<List<ShopifyApp>> fetchAvailableApps() async {
     await Future.delayed(delay);
     return _mockApps;
+  }
+
+  @override
+  Future<List<ShopifyApp>> fetchTrackedApps() async {
+    await Future.delayed(delay);
+    // Return only the selected app if one is selected
+    if (_selectedApp != null) {
+      return [_selectedApp!];
+    }
+    return [];
   }
 
   @override

@@ -17,7 +17,26 @@ class ApiAppRepository implements AppRepository {
   ApiAppRepository({required ApiClient apiClient}) : _apiClient = apiClient;
 
   @override
-  Future<List<ShopifyApp>> fetchApps() async {
+  Future<List<ShopifyApp>> fetchAvailableApps() async {
+    try {
+      final response = await _apiClient.get('/api/v1/apps/available');
+
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        final apps = data['apps'] as List<dynamic>? ?? [];
+
+        return apps.map((app) => _parseAvailableApp(app as Map<String, dynamic>)).toList();
+      }
+
+      throw const AppException('Failed to fetch available apps');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw AppException('Failed to fetch available apps: $e');
+    }
+  }
+
+  @override
+  Future<List<ShopifyApp>> fetchTrackedApps() async {
     try {
       final response = await _apiClient.get('/api/v1/apps');
 
@@ -36,7 +55,15 @@ class ApiAppRepository implements AppRepository {
     }
   }
 
-  /// Parse app from API response
+  /// Parse app from /api/v1/apps/available response (Shopify Partner API)
+  ShopifyApp _parseAvailableApp(Map<String, dynamic> appMap) {
+    return ShopifyApp(
+      id: appMap['id'] as String,  // Full GID: gid://partners/App/4599915
+      name: appMap['name'] as String,
+    );
+  }
+
+  /// Parse app from /api/v1/apps response (tracked apps)
   ShopifyApp _parseApp(Map<String, dynamic> appMap) {
     return ShopifyApp(
       id: appMap['id'] as String,

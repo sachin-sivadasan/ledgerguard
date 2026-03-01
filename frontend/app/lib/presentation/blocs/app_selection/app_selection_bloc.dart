@@ -26,7 +26,7 @@ class AppSelectionBloc extends Bloc<AppSelectionEvent, AppSelectionState> {
     emit(const AppSelectionLoading());
 
     try {
-      final apps = await _appRepository.fetchApps();
+      final apps = await _appRepository.fetchAvailableApps();
 
       if (apps.isEmpty) {
         emit(const AppSelectionError('No apps found in your Partner account'));

@@ -38,7 +38,7 @@ void main() {
       blocTest<AppSelectionBloc, AppSelectionState>(
         'emits [Loading, Loaded] when apps are fetched successfully',
         build: () {
-          when(() => mockRepository.fetchApps())
+          when(() => mockRepository.fetchAvailableApps())
               .thenAnswer((_) async => testApps);
           when(() => mockRepository.getSelectedApp())
               .thenAnswer((_) async => null);
@@ -56,7 +56,7 @@ void main() {
       blocTest<AppSelectionBloc, AppSelectionState>(
         'emits [Loading, Loaded] with previously selected app',
         build: () {
-          when(() => mockRepository.fetchApps())
+          when(() => mockRepository.fetchAvailableApps())
               .thenAnswer((_) async => testApps);
           when(() => mockRepository.getSelectedApp())
               .thenAnswer((_) async => testApps[1]);
@@ -73,7 +73,7 @@ void main() {
       blocTest<AppSelectionBloc, AppSelectionState>(
         'emits [Loading, Error] when no apps found',
         build: () {
-          when(() => mockRepository.fetchApps()).thenAnswer((_) async => []);
+          when(() => mockRepository.fetchAvailableApps()).thenAnswer((_) async => []);
           return AppSelectionBloc(appRepository: mockRepository);
         },
         act: (bloc) => bloc.add(const FetchAppsRequested()),
@@ -87,7 +87,7 @@ void main() {
       blocTest<AppSelectionBloc, AppSelectionState>(
         'emits [Loading, Error] when fetch fails',
         build: () {
-          when(() => mockRepository.fetchApps())
+          when(() => mockRepository.fetchAvailableApps())
               .thenThrow(const FetchAppsException('Network error'));
           return AppSelectionBloc(appRepository: mockRepository);
         },

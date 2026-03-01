@@ -3,8 +3,11 @@ import '../entities/revenue_share_tier.dart';
 
 /// Repository interface for Shopify app operations
 abstract class AppRepository {
-  /// Fetch list of apps from the connected Partner account
-  Future<List<ShopifyApp>> fetchApps();
+  /// Fetch available apps from Shopify Partner API (for app selection)
+  Future<List<ShopifyApp>> fetchAvailableApps();
+
+  /// Fetch tracked apps from backend (already selected apps)
+  Future<List<ShopifyApp>> fetchTrackedApps();
 
   /// Get the currently selected app (from local storage)
   Future<ShopifyApp?> getSelectedApp();

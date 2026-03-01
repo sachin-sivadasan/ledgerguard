@@ -121,6 +121,39 @@ netAmount:                $36.88  (you receive)
 
 ## Billing Models
 
+### Understanding Usage Charges
+
+Usage charges are NOT limited to order processing. Apps can charge for ANY measurable action:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        USAGE CHARGE CATEGORIES                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  📦 TRANSACTION-BASED                    💬 COMMUNICATION                    │
+│  ────────────────────                    ───────────────                     │
+│  • Orders processed                      • SMS messages sent                 │
+│  • Checkouts completed                   • Email campaigns                   │
+│  • Fulfillments created                  • Push notifications               │
+│  • Returns handled                       • WhatsApp messages                │
+│                                                                              │
+│  🔗 API & INTEGRATIONS                   🤖 AI & AUTOMATION                 │
+│  ────────────────────                    ─────────────────                   │
+│  • External API calls                    • AI text generation               │
+│  • Webhook deliveries                    • Image processing                 │
+│  • Third-party syncs                     • Product recommendations          │
+│  • Data imports/exports                  • Chatbot interactions             │
+│                                                                              │
+│  💾 DATA & STORAGE                       📊 REPORTING                        │
+│  ─────────────────                       ──────────                          │
+│  • GB of storage used                    • Reports generated                │
+│  • Files uploaded                        • Analytics queries                │
+│  • Backup operations                     • CSV exports                      │
+│  • CDN bandwidth                         • PDF invoices created             │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
 ### Subscription-Only Model
 ```
 ┌──────────┐         ┌──────────┐         ┌──────────┐
@@ -136,25 +169,43 @@ netAmount:                $36.88  (you receive)
 ```
 ┌──────────┐               ┌──────────┐         ┌──────────┐
 │ Merchant │ ─$500──────── │ Shopify  │ ─$400*─ │   You    │
-│ (10K     │ usage fees    │ App Store│  ~80%   │(Developer)│
-│  orders) │ $0.05/order   │          │         │          │
+│ (usage   │ usage fees    │ App Store│  ~80%   │(Developer)│
+│  events) │               │          │         │          │
 └──────────┘               └──────────┘         └──────────┘
                                  │
                     keeps revenue share + 2.9% + tax
 ```
+
+**Usage Charge Examples (NOT limited to orders):**
+| Use Case | Pricing Example | Trigger |
+|----------|-----------------|---------|
+| Order fulfillment | $0.05/order | Each order processed |
+| SMS/Messaging | $0.02/message | Each SMS/notification sent |
+| API calls | $0.001/call | External API usage |
+| AI features | $0.10/generation | AI text/image generation |
+| Data exports | $0.50/export | CSV/report downloads |
+| Storage | $0.10/GB/month | Data storage overage |
+| Third-party integrations | $0.05/sync | External service calls |
 
 ### Hybrid Model (Subscription + Usage)
 ```
 ┌──────────┐               ┌──────────────┐         ┌──────────┐
 │ Merchant │               │   Shopify    │         │   You    │
 │          │ ─$29 sub───── │   App Store  │         │(Developer)│
-│ (10K     │               │              │ ─$423*─ │          │
-│  orders) │ ─$500 usage── │ keeps fees   │  ~80%   │          │
+│ (high    │               │              │ ─$423*─ │          │
+│  usage)  │ ─$500 usage── │ keeps fees   │  ~80%   │          │
 │          │               │              │         │          │
 └──────────┘               └──────────────┘         └──────────┘
                 Total: $529
                 *exact amount depends on tier + fees
 ```
+
+**Hybrid Model Examples:**
+| Base Plan | Usage Component | Total Example |
+|-----------|-----------------|---------------|
+| $29/mo Pro Plan | + $0.05/order over 1,000 | $29 + $500 usage = $529 |
+| $49/mo Business | + $0.02/SMS sent | $49 + $200 usage = $249 |
+| $99/mo Enterprise | + $0.10/AI generation | $99 + $1,000 usage = $1,099 |
 
 ---
 
@@ -338,25 +389,54 @@ netAmount:                $36.88  (you receive)
 
 ## Usage-Based Billing Details
 
+### What Are Usage Charges?
+
+Usage charges allow apps to bill merchants based on **actual consumption** rather than a flat fee. This aligns developer revenue with merchant value.
+
+**Common Usage Charge Types:**
+
+| Category | Examples | Typical Pricing |
+|----------|----------|-----------------|
+| **Transaction-based** | Orders processed, checkouts, fulfillments | $0.01 - $0.10 per event |
+| **Communication** | SMS sent, emails, push notifications | $0.01 - $0.05 per message |
+| **API/Integration** | External API calls, webhooks, syncs | $0.001 - $0.01 per call |
+| **AI/ML Features** | Text generation, image processing, recommendations | $0.05 - $0.50 per use |
+| **Data Operations** | Reports generated, exports, imports | $0.10 - $1.00 per operation |
+| **Storage** | GB of data stored, files uploaded | $0.05 - $0.20 per GB/month |
+| **Third-party costs** | External service pass-through (shipping rates, translations) | Variable |
+
 ### How Usage Charges Work
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                     USAGE CHARGE LIFECYCLE                           │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
-│  1. YOUR APP creates usage charge                                   │
+│  1. USAGE EVENT OCCURS                                              │
+│     └── Order processed, SMS sent, AI call made, etc.              │
+│                                                                      │
+│  2. YOUR APP creates usage charge                                   │
 │     POST /recurring_application_charges/{id}/usage_charges.json    │
 │     OR: appUsageRecordCreate (GraphQL)                              │
+│     Include: description, price, quantity (optional)               │
 │                                                                      │
-│  2. SHOPIFY adds to merchant's next invoice                         │
+│  3. SHOPIFY adds to merchant's next invoice                         │
 │     (Not billed immediately - batched with invoice)                 │
 │                                                                      │
-│  3. MERCHANT pays Shopify invoice                                   │
+│  4. MERCHANT pays Shopify invoice                                   │
 │                                                                      │
-│  4. APP_USAGE_SALE transaction appears in Partner API               │
+│  5. APP_USAGE_SALE transaction appears in Partner API               │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+### Usage Charge Best Practices
+
+| Practice | Description |
+|----------|-------------|
+| **Clear descriptions** | "50 SMS messages sent" not just "$2.50 charge" |
+| **Batch small charges** | Combine multiple $0.01 calls into periodic summaries |
+| **Transparent pricing** | Show usage dashboard in app UI |
+| **Usage alerts** | Notify merchants approaching their cap |
 
 ### Capped Amount (IMPORTANT)
 - **Required:** Must define `capped_amount` on parent subscription
@@ -375,9 +455,9 @@ HTTP/1.1 422 Unprocessable Entity
 - **Merchant can modify cap** from their admin
 - Listen for changes via `APP_SUBSCRIPTIONS_UPDATE` webhook
 
-### No Per-Order Maximum
+### No Per-Charge Maximum
 - Only constraint is the capped_amount per billing cycle
-- No documented per-order charge maximum
+- No documented per-charge limit (but be reasonable)
 
 ---
 
@@ -406,6 +486,12 @@ HTTP/1.1 422 Unprocessable Entity
 ### Interactive Elements
 - Toggle between billing models (Subscription/Usage/Hybrid)
 - Toggle between revenue share tiers (Default 20% / Reduced 0%+15% / Large 15%)
+- **Usage type selector** (when Usage or Hybrid selected):
+  - Per Order ($0.05/order)
+  - Per SMS ($0.02/message)
+  - Per API Call ($0.001/call)
+  - Per AI Generation ($0.10/use)
+  - Custom (user input)
 - Hover tooltips on each entity and fee
 - Play/Pause controls
 - "Show Both" / "Transaction Only" / "App Revenue Only" tabs
@@ -440,10 +526,11 @@ HTTP/1.1 422 Unprocessable Entity
    - 7 days for one-time charges
    - Only after merchant pays their invoice
 
-5. **"Usage Charges Have Caps"**
-   - capped_amount per 30-day cycle
-   - Must define cap on subscription
-   - Shopify enforces the limit
+5. **"Usage Charges Are Flexible"**
+   - Not just for orders - ANY measurable action
+   - SMS, API calls, AI features, storage, exports
+   - capped_amount per 30-day cycle (merchant-adjustable)
+   - Align your revenue with merchant value
 
 ---
 

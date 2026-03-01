@@ -73,6 +73,8 @@ func New(cfg Config) *chi.Mux {
 				r.Use(cfg.AuthMW)
 				r.Get("/dashboard", cfg.UserPreferencesHandler.GetDashboardPreferences)
 				r.Put("/dashboard", cfg.UserPreferencesHandler.SaveDashboardPreferences)
+				r.Get("/default-app", cfg.UserPreferencesHandler.GetDefaultApp)
+				r.Put("/default-app", cfg.UserPreferencesHandler.SetDefaultApp)
 			})
 		}
 
@@ -98,6 +100,11 @@ func New(cfg Config) *chi.Mux {
 				r.With(cfg.AuthMW, cfg.AdminMW).Delete("/token", cfg.ManualTokenHandler.RevokeToken)
 			}
 		})
+
+		// Aggregate metrics (across all apps)
+		if cfg.MetricsHandler != nil && cfg.AuthMW != nil {
+			r.With(cfg.AuthMW).Get("/metrics/aggregate", cfg.MetricsHandler.GetAggregateMetrics)
+		}
 
 		// App routes (requires auth)
 		if cfg.AppHandler != nil && cfg.AuthMW != nil {

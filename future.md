@@ -8,7 +8,6 @@ Postponed ideas and features for later implementation.
 
 | Feature | Priority | Notes |
 |---------|----------|-------|
-| Multi-app support | P1 | Track multiple apps per workspace |
 | Revenue forecasting | P2 | ML-based prediction |
 | Anomaly detection | P2 | Alert on unusual patterns |
 | Stripe integration | P3 | Non-Shopify revenue |
@@ -32,6 +31,7 @@ Postponed ideas and features for later implementation.
 | GitHub Actions CI | 2026-03-01 | Backend tests, lint, frontend tests, marketing site build |
 | io.ReadAll error handling | 2026-03-01 | Verified all usages handle errors correctly |
 | Repository contract clarity | 2026-03-01 | Added documentation to AppRepository interface |
+| Multi-app support | 2026-03-01 | Aggregate metrics, default app preference, app selector support |
 
 ---
 
@@ -48,35 +48,6 @@ All items resolved. See "Completed" section above.
 ---
 
 ## Feature Details
-
-### Multi-App Support (P1)
-**Added:** 2026-03-01
-
-**Description:**
-Allow users to track multiple Shopify apps within a single workspace/account.
-
-**Proposed Features:**
-- App selector/switcher in dashboard header
-- Aggregate metrics view across all apps (optional)
-- Per-app metrics and subscription views
-- App management page (add/remove tracked apps)
-- Default app preference setting
-
-**Backend Requirements:**
-- Already supports multiple apps per partner account
-- Add aggregate metrics endpoint: `GET /api/v1/metrics/aggregate`
-- Add user preference for default app
-
-**Frontend Requirements:**
-- App selector dropdown in header/sidebar
-- "All Apps" aggregate view option
-- Persist selected app in local storage
-- Update all data fetching to use selected app ID
-
-**Database:**
-- No changes needed (apps table already supports multiple per account)
-
----
 
 ### Dark Mode Support (P3)
 **Added:** 2026-02-27

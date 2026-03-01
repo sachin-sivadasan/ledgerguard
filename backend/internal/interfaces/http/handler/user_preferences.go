@@ -13,12 +13,13 @@ import (
 
 // UserPreferences represents dashboard preferences for a user
 type UserPreferences struct {
-	ID               uuid.UUID `json:"id"`
-	UserID           uuid.UUID `json:"user_id"`
-	PrimaryKpis      []string  `json:"primary_kpis"`
-	SecondaryWidgets []string  `json:"secondary_widgets"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	ID               uuid.UUID  `json:"id"`
+	UserID           uuid.UUID  `json:"user_id"`
+	PrimaryKpis      []string   `json:"primary_kpis"`
+	SecondaryWidgets []string   `json:"secondary_widgets"`
+	DefaultAppID     *uuid.UUID `json:"default_app_id,omitempty"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 // UserPreferencesHandler handles user preferences endpoints
@@ -114,7 +115,7 @@ func (h *UserPreferencesHandler) SaveDashboardPreferences(w http.ResponseWriter,
 // findByUserID retrieves preferences for a user
 func (h *UserPreferencesHandler) findByUserID(ctx context.Context, userID uuid.UUID) (*UserPreferences, error) {
 	query := `
-		SELECT id, user_id, primary_kpis, secondary_widgets, created_at, updated_at
+		SELECT id, user_id, primary_kpis, secondary_widgets, default_app_id, created_at, updated_at
 		FROM user_preferences
 		WHERE user_id = $1
 	`
@@ -125,6 +126,7 @@ func (h *UserPreferencesHandler) findByUserID(ctx context.Context, userID uuid.U
 		&prefs.UserID,
 		&prefs.PrimaryKpis,
 		&prefs.SecondaryWidgets,
+		&prefs.DefaultAppID,
 		&prefs.CreatedAt,
 		&prefs.UpdatedAt,
 	)
@@ -147,5 +149,94 @@ func (h *UserPreferencesHandler) upsert(ctx context.Context, userID uuid.UUID, p
 	`
 
 	_, err := h.db.Exec(ctx, query, userID, primaryKpis, secondaryWidgets)
+	return err
+}
+
+// GetDefaultApp returns the user's default app preference
+// GET /api/v1/user/preferences/default-app
+func (h *UserPreferencesHandler) GetDefaultApp(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	prefs, err := h.findByUserID(r.Context(), user.ID)
+	if err != nil || prefs.DefaultAppID == nil {
+		// No default app set
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"default_app_id": nil,
+			"message":        "no default app set",
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"default_app_id": prefs.DefaultAppID.String(),
+	})
+}
+
+// SetDefaultApp sets the user's default app preference
+// PUT /api/v1/user/preferences/default-app
+func (h *UserPreferencesHandler) SetDefaultApp(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	var req struct {
+		DefaultAppID *string `json:"default_app_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	var appID *uuid.UUID
+	if req.DefaultAppID != nil && *req.DefaultAppID != "" {
+		parsed, err := uuid.Parse(*req.DefaultAppID)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid app_id format")
+			return
+		}
+		appID = &parsed
+	}
+
+	err := h.setDefaultApp(r.Context(), user.ID, appID)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to save default app")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if appID != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message":        "default app updated",
+			"default_app_id": appID.String(),
+		})
+	} else {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message":        "default app cleared",
+			"default_app_id": nil,
+		})
+	}
+}
+
+// setDefaultApp updates the default app in the database
+func (h *UserPreferencesHandler) setDefaultApp(ctx context.Context, userID uuid.UUID, appID *uuid.UUID) error {
+	query := `
+		INSERT INTO user_preferences (user_id, primary_kpis, secondary_widgets, default_app_id, updated_at)
+		VALUES ($1, $2, $3, $4, NOW())
+		ON CONFLICT (user_id) DO UPDATE SET
+			default_app_id = EXCLUDED.default_app_id,
+			updated_at = NOW()
+	`
+
+	defaults := defaultPreferences()
+	_, err := h.db.Exec(ctx, query, userID, defaults.PrimaryKpis, defaults.SecondaryWidgets, appID)
 	return err
 }

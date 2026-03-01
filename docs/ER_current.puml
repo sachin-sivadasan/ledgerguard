@@ -31,7 +31,9 @@ entity "apps" as apps {
   *partner_app_id : VARCHAR(100)
   *name : VARCHAR(255)
   tracking_enabled : BOOLEAN <<DEFAULT: TRUE>>
+  revenue_share_tier : VARCHAR(20) <<DEFAULT: SMALL_DEV_0>>
   created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
   <<UNIQUE: partner_account_id, partner_app_id>>
 }
 
@@ -44,9 +46,16 @@ entity "transactions" as transactions {
   shop_name : VARCHAR(255)
   *charge_type : VARCHAR(20) <<CHECK: RECURRING, USAGE, ONE_TIME, REFUND>>
   gross_amount_cents : BIGINT
+  shopify_fee_cents : BIGINT
+  processing_fee_cents : BIGINT
+  tax_on_fees_cents : BIGINT
+  net_amount_cents : BIGINT
   *amount_cents : BIGINT
   currency : VARCHAR(3) <<DEFAULT: USD>>
   *transaction_date : TIMESTAMPTZ
+  created_date : TIMESTAMPTZ
+  available_date : TIMESTAMPTZ
+  earnings_status : VARCHAR(20) <<DEFAULT: PENDING>>
   created_at : TIMESTAMPTZ
 }
 
@@ -121,10 +130,23 @@ entity "notification_preferences" as notification_preferences {
   updated_at : TIMESTAMPTZ
 }
 
+entity "api_keys" as api_keys {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK>>
+  *name : VARCHAR(100)
+  *key_hash : VARCHAR(64) <<UNIQUE>>
+  rate_limit_per_minute : INT <<DEFAULT: 60>>
+  is_active : BOOLEAN <<DEFAULT: TRUE>>
+  created_at : TIMESTAMPTZ
+  revoked_at : TIMESTAMPTZ
+}
+
 ' Relationships
 users ||--o{ partner_accounts : "has"
 users ||--o{ device_tokens : "registers"
 users ||--o| notification_preferences : "configures"
+users ||--o{ api_keys : "manages"
 partner_accounts ||--o{ apps : "tracks"
 apps ||--o{ transactions : "records"
 apps ||--o{ subscriptions : "has"
@@ -149,8 +171,10 @@ end note
 
 note right of apps
   Migration: 000003_create_apps_table
+  Migration: 000017_add_revenue_share_tier
   - Shopify apps being tracked
   - One app selected per user
+  - Revenue share tier (0%, 15%, 20%)
 
   Indexes:
   - idx_apps_partner_account_id
@@ -160,16 +184,20 @@ end note
 note right of transactions
   Migration: 000004_create_transactions_table
   Migration: 000011_add_shop_name_and_gross_amount
+  Migration: 000017_add_revenue_share_tier
+  Migration: 000018_add_earnings_tracking
   - Immutable ledger of transactions
   - Upsert by shopify_gid (idempotent)
   - shop_name: Store display name
   - gross_amount: Subscription price (pre-Shopify cut)
-  - amount_cents: Net revenue (post-Shopify cut)
+  - Fee breakdown: shopify_fee, processing_fee, tax
+  - Earnings tracking: PENDING → AVAILABLE → PAID_OUT
 
   Indexes:
   - idx_transactions_app_date
   - idx_transactions_domain
   - idx_transactions_type
+  - idx_transactions_earnings
 end note
 
 note right of subscriptions
@@ -235,6 +263,18 @@ note right of notification_preferences
 
   Indexes:
   - idx_notification_preferences_user_id
+end note
+
+note right of api_keys
+  Migration: 000012_create_api_keys_table
+  - Revenue API access keys
+  - SHA-256 hashed (raw key never stored)
+  - Rate limiting per key
+  - Owner role only
+
+  Indexes:
+  - idx_api_keys_user_id
+  - idx_api_keys_key_hash
 end note
 
 @enduml

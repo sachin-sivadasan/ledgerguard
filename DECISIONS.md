@@ -155,3 +155,25 @@ Add ownership verification before sync:
 - Users can only sync their own apps
 - Additional database lookup per request (acceptable)
 - Tests added for forbidden case
+
+---
+
+### ADR-008: Default Revenue Share Tier Changed to 0%
+**Date:** 2026-03-01
+**Status:** Accepted
+
+**Context:**
+The default revenue share tier was set to 20% (DEFAULT_20), but the majority of Shopify app developers (especially indie developers) are on the reduced revenue share plan with 0% on their first $1M lifetime earnings.
+
+**Decision:**
+Change the default revenue share tier from DEFAULT_20 (20%) to SMALL_DEV_0 (0%):
+- Backend: `entity.NewApp()` defaults to `RevenueShareTierSmallDev0`
+- Backend: `ParseRevenueShareTier()` returns `SMALL_DEV_0` for invalid/empty input
+- Frontend: `RevenueShareTier.fromCode()` defaults to `smallDev0`
+- Users can change their tier in App Settings if they're on a different plan
+
+**Consequences:**
+- More accurate default for majority of indie developers
+- Reduces initial confusion about fee calculations
+- Users on 20% tier need to manually update their setting
+- Existing apps in database retain their current tier (no data migration needed)

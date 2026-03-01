@@ -259,7 +259,7 @@ function generateModelData(usageType: UsageType): Record<FlowModel, ModelData> {
         badge: 'YOUR REVENUE',
         badgeColor: '#3b82f6',
         entities: [
-          { id: 'merchantApp', label: 'Merchant', sublabel: '1 Active', icon: '🏪', description: 'Pays $49/mo subscription', color: '#a855f7' },
+          { id: 'merchantApp', label: 'Merchant', sublabel: 'App User', icon: '🏪', description: 'Pays $49/mo subscription', color: '#a855f7' },
           { id: 'shopifyApp', label: 'Shopify', sublabel: 'App Store', icon: '🛒', description: 'Takes 20% of subscription', color: '#8b5cf6' },
           { id: 'developer', label: 'You', sublabel: 'Developer', icon: '💻', description: 'Gets 80% = $39.20', color: '#3b82f6' },
         ],
@@ -312,7 +312,7 @@ function generateModelData(usageType: UsageType): Record<FlowModel, ModelData> {
         badge: 'YOUR REVENUE',
         badgeColor: '#3b82f6',
         entities: [
-          { id: 'merchantApp', label: 'Merchant', sublabel: 'High Volume', icon: '🏪', description: `Pays ${priceDisplay}/${usage.unitName}`, color: usage.color },
+          { id: 'merchantApp', label: 'Merchant', sublabel: 'App User', icon: '🏪', description: `Pays ${priceDisplay}/${usage.unitName}`, color: usage.color },
           { id: 'shopifyApp', label: 'Shopify', sublabel: 'App Store', icon: '🛒', description: 'Takes 20% of usage fees', color: '#8b5cf6' },
           { id: 'developer', label: 'You', sublabel: 'Developer', icon: '💻', description: 'Gets 80% - scales with volume', color: '#3b82f6' },
         ],
@@ -372,7 +372,7 @@ function generateModelData(usageType: UsageType): Record<FlowModel, ModelData> {
         badge: 'YOUR REVENUE',
         badgeColor: '#3b82f6',
         entities: [
-          { id: 'merchantApp', label: 'Merchant', sublabel: 'Pro Plan', icon: '🏪', description: `Pays $${hybridSub} base + ${priceDisplay}/${usage.unitName}`, color: '#a855f7' },
+          { id: 'merchantApp', label: 'Merchant', sublabel: 'App User', icon: '🏪', description: `Pays $${hybridSub} base + ${priceDisplay}/${usage.unitName}`, color: '#a855f7' },
           { id: 'shopifyApp', label: 'Shopify', sublabel: 'App Store', icon: '🛒', description: 'Takes 20% of BOTH fees', color: '#8b5cf6' },
           { id: 'developer', label: 'You', sublabel: 'Developer', icon: '💻', description: 'Gets 80% of EVERYTHING', color: '#3b82f6' },
         ],

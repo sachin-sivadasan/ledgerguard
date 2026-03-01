@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -143,12 +144,14 @@ func (h *AppHandler) SelectApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract numeric ID for use with other endpoints
+	appID := extractNumericAppID(app.PartnerAppID)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message":            "App added successfully",
-		"id":                 app.ID.String(),
-		"partner_app_id":     app.PartnerAppID,
+		"id":                 appID,
 		"name":               app.Name,
 		"revenue_share_tier": app.RevenueShareTier.String(),
 	})
@@ -180,9 +183,12 @@ func (h *AppHandler) ListApps(w http.ResponseWriter, r *http.Request) {
 	// Convert to response format
 	appResponses := make([]map[string]interface{}, len(apps))
 	for i, app := range apps {
+		// Extract numeric ID from GID (e.g., "gid://partners/App/4599915" -> "4599915")
+		// This ID can be used directly with other endpoints like /apps/{id}/subscriptions
+		appID := extractNumericAppID(app.PartnerAppID)
+
 		appResponses[i] = map[string]interface{}{
-			"id":                 app.ID.String(),
-			"partner_app_id":     app.PartnerAppID,
+			"id":                 appID,
 			"name":               app.Name,
 			"tracking_enabled":   app.TrackingEnabled,
 			"revenue_share_tier": app.RevenueShareTier.String(),
@@ -195,6 +201,16 @@ func (h *AppHandler) ListApps(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"apps": appResponses,
 	})
+}
+
+// extractNumericAppID extracts the numeric ID from a Shopify GID
+// e.g., "gid://partners/App/4599915" -> "4599915"
+func extractNumericAppID(gid string) string {
+	parts := strings.Split(gid, "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return gid
 }
 
 type updateAppTierRequest struct {

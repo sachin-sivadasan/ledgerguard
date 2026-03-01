@@ -63,9 +63,11 @@ class ApiKeyCreationResult {
   });
 
   factory ApiKeyCreationResult.fromJson(Map<String, dynamic> json) {
+    // Backend sends: { "api_key": {...}, "full_key": "..." }
+    final apiKeyData = json['api_key'] as Map<String, dynamic>? ?? json;
     return ApiKeyCreationResult(
-      apiKey: ApiKey.fromJson(json),
-      fullKey: json['key'] as String,
+      apiKey: ApiKey.fromJson(apiKeyData),
+      fullKey: json['full_key'] as String,
     );
   }
 }

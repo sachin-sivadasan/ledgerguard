@@ -421,6 +421,11 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000013_create_api_subscription_status_table | Create api_subscription_status (CQRS read model) | ✓ Implemented |
 | 000014_create_api_usage_status_table | Create api_usage_status (CQRS read model) | ✓ Implemented |
 | 000015_create_api_audit_log_table | Create api_audit_log for request logging | ✓ Implemented |
+| 000016_add_subscription_filter_indexes | Add indexes for subscription filtering | ✓ Implemented |
+| 000017_add_revenue_share_tier | Add revenue share tier tracking to apps | ✓ Implemented |
+| 000018_add_earnings_tracking | Add earnings availability tracking to transactions | ✓ Implemented |
+| 000019_create_user_preferences_table | Create user_preferences for dashboard configuration | ✓ Implemented |
+| 000020_add_transaction_subscription_details | Add shop/subscription details to transactions | ✓ Implemented |
 
 ---
 

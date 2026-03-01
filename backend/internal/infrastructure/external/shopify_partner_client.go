@@ -199,6 +199,7 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 	cursor string,
 ) ([]*entity.Transaction, string, bool, error) {
 	// Build the GraphQL query with pagination and date filtering
+	// Includes all required fields per Shopify Partner API documentation
 	query := `
 		query($first: Int!, $after: String, $createdAtMin: DateTime!, $createdAtMax: DateTime!) {
 			transactions(first: $first, after: $after, createdAtMin: $createdAtMin, createdAtMax: $createdAtMax) {
@@ -211,21 +212,56 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 						... on AppSubscriptionSale {
 							chargeId
 							app { id name }
-							shop { myshopifyDomain name }
+							shop {
+								id
+								myshopifyDomain
+								name
+								plan { displayName }
+							}
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
+							appSubscription {
+								id
+								name
+								status
+								currentPeriodEnd
+								lineItems {
+									plan {
+										pricingDetails {
+											... on AppRecurringPricingDetails {
+												interval
+												price { amount currencyCode }
+											}
+										}
+									}
+								}
+							}
 						}
 						... on AppUsageSale {
 							chargeId
 							app { id name }
-							shop { myshopifyDomain name }
+							shop {
+								id
+								myshopifyDomain
+								name
+								plan { displayName }
+							}
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
+							appUsageRecord {
+								id
+								description
+							}
 						}
 						... on AppOneTimeSale {
 							chargeId
 							app { id name }
-							shop { myshopifyDomain name }
+							shop {
+								id
+								myshopifyDomain
+								name
+								plan { displayName }
+							}
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
 						}
@@ -331,8 +367,12 @@ type transactionNode struct {
 		Name string `json:"name"`
 	} `json:"app,omitempty"`
 	Shop *struct {
+		ID              string `json:"id"`
 		MyshopifyDomain string `json:"myshopifyDomain"`
 		Name            string `json:"name"`
+		Plan            *struct {
+			DisplayName string `json:"displayName"`
+		} `json:"plan,omitempty"`
 	} `json:"shop,omitempty"`
 	GrossAmount *struct {
 		Amount       string `json:"amount"`
@@ -342,6 +382,29 @@ type transactionNode struct {
 		Amount       string `json:"amount"`
 		CurrencyCode string `json:"currencyCode"`
 	} `json:"netAmount,omitempty"`
+	// AppSubscriptionSale specific fields
+	AppSubscription *struct {
+		ID               string `json:"id"`
+		Name             string `json:"name"`
+		Status           string `json:"status"`
+		CurrentPeriodEnd string `json:"currentPeriodEnd"`
+		LineItems        []struct {
+			Plan struct {
+				PricingDetails *struct {
+					Interval string `json:"interval,omitempty"`
+					Price    *struct {
+						Amount       string `json:"amount"`
+						CurrencyCode string `json:"currencyCode"`
+					} `json:"price,omitempty"`
+				} `json:"pricingDetails,omitempty"`
+			} `json:"plan"`
+		} `json:"lineItems,omitempty"`
+	} `json:"appSubscription,omitempty"`
+	// AppUsageSale specific fields
+	AppUsageRecord *struct {
+		ID          string `json:"id"`
+		Description string `json:"description"`
+	} `json:"appUsageRecord,omitempty"`
 }
 
 // parseTransaction converts a Partner API transaction to a domain entity
@@ -352,9 +415,15 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 	// Shop can be nil for ReferralTransaction
 	shopDomain := ""
 	shopName := ""
+	shopGID := ""
+	shopPlan := ""
 	if node.Shop != nil {
 		shopDomain = node.Shop.MyshopifyDomain
 		shopName = node.Shop.Name
+		shopGID = node.Shop.ID
+		if node.Shop.Plan != nil {
+			shopPlan = node.Shop.Plan.DisplayName
+		}
 	}
 
 	// Determine charge type based on transaction type (inferred from fields present)
@@ -370,7 +439,7 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 		transactionDate = time.Now()
 	}
 
-	return entity.NewTransaction(
+	tx := entity.NewTransaction(
 		appID,
 		node.ID,
 		shopDomain,
@@ -381,6 +450,33 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 		currency,
 		transactionDate,
 	)
+
+	// Add shop details
+	tx.ShopifyShopGID = shopGID
+	tx.ShopPlan = shopPlan
+
+	// Add subscription details for AppSubscriptionSale
+	if node.AppSubscription != nil {
+		tx.SubscriptionGID = node.AppSubscription.ID
+		tx.SubscriptionStatus = node.AppSubscription.Status
+
+		// Parse current period end
+		if node.AppSubscription.CurrentPeriodEnd != "" {
+			if periodEnd, err := time.Parse(time.RFC3339, node.AppSubscription.CurrentPeriodEnd); err == nil {
+				tx.SubscriptionPeriodEnd = &periodEnd
+			}
+		}
+
+		// Extract billing interval from line items
+		if len(node.AppSubscription.LineItems) > 0 {
+			li := node.AppSubscription.LineItems[0]
+			if li.Plan.PricingDetails != nil {
+				tx.BillingInterval = li.Plan.PricingDetails.Interval
+			}
+		}
+	}
+
+	return tx
 }
 
 // inferChargeType determines the charge type based on GraphQL __typename

@@ -15,15 +15,33 @@ func NewRiskEngine() *RiskEngine {
 	return &RiskEngine{}
 }
 
-// ClassifyRisk determines the risk state based on payment history
+// ClassifyRisk determines the risk state based on subscription status and payment history
 // Risk States:
-//   - SAFE: Active subscription or ≤30 days past due (grace period)
-//   - ONE_CYCLE_MISSED: 31-60 days past due
+//   - SAFE: Active subscription with current payment or ≤30 days past due (grace period)
+//   - ONE_CYCLE_MISSED: 31-60 days past due, or FROZEN status
 //   - TWO_CYCLES_MISSED: 61-90 days past due
-//   - CHURNED: >90 days past due
+//   - CHURNED: >90 days past due, or CANCELLED/EXPIRED status
 func (r *RiskEngine) ClassifyRisk(subscription *entity.Subscription, now time.Time) valueobject.RiskState {
-	// Active status with future or current charge date is always safe
-	if subscription.Status == "ACTIVE" && subscription.ExpectedNextChargeDate != nil {
+	status := valueobject.ParseSubscriptionStatus(subscription.Status)
+
+	// Terminal statuses (CANCELLED, EXPIRED) are always churned
+	if status.IsTerminal() {
+		return valueobject.RiskStateChurned
+	}
+
+	// Frozen status indicates payment failure - treat as at risk
+	if status.IsFrozen() {
+		return valueobject.RiskStateOneCycleMissed
+	}
+
+	// Pending status - not yet active, treat as safe for now
+	if status.IsPending() {
+		return valueobject.RiskStateSafe
+	}
+
+	// For ACTIVE status, check payment timing
+	// If expected charge date is in the future or today, subscription is safe
+	if status.IsActive() && subscription.ExpectedNextChargeDate != nil {
 		if now.Before(*subscription.ExpectedNextChargeDate) || now.Equal(*subscription.ExpectedNextChargeDate) {
 			return valueobject.RiskStateSafe
 		}

@@ -1200,3 +1200,59 @@ CREATE INDEX idx_transactions_earnings ON transactions(app_id, earnings_status, 
 **Tests:** All backend tests pass
 
 ---
+
+
+---
+
+## [2026-03-01] Phase 1: Data Integrity Fixes
+
+**Commit:** Phase 1 comprehensive review fixes
+
+**Summary:**
+Implemented Phase 1 fixes from comprehensive app review, focusing on data integrity issues.
+
+**Changes:**
+
+### 1. Risk Classification Logic (P0-1)
+- Added SubscriptionStatus value object with ACTIVE, CANCELLED, FROZEN, EXPIRED, PENDING states
+- Updated RiskEngine to check subscription status before days-based classification:
+  - CANCELLED/EXPIRED → CHURNED (terminal states)
+  - FROZEN → ONE_CYCLE_MISSED (payment failure)
+  - PENDING → SAFE (not yet active)
+  - ACTIVE → Check days past due
+- Added 10+ new boundary tests (exactly 30/31/60/61/90/91 days)
+- Added status-specific tests (CANCELLED ignores timing, FROZEN overrides days)
+
+**Files:**
+- `internal/domain/valueobject/subscription_status.go` (new)
+- `internal/domain/service/risk_engine.go` (updated)
+- `internal/domain/service/risk_engine_test.go` (updated)
+
+### 2. MRR Annual Normalization (P0-3)
+- Verified already implemented in `Subscription.MRRCents()` method
+- Annual subscriptions correctly divide by 12
+
+### 3. GraphQL Query Fields (P0-7)
+- Added shop.id, shop.plan.displayName to transaction query
+- Added appSubscription fields: id, name, status, currentPeriodEnd, lineItems.plan.pricingDetails
+- Added appUsageRecord fields: id, description
+- Updated transactionNode struct with new fields
+- Updated Transaction entity with new fields:
+  - ShopifyShopGID, ShopPlan (shop details)
+  - SubscriptionGID, SubscriptionStatus, SubscriptionPeriodEnd, BillingInterval (subscription reference)
+- Updated transaction repository (Upsert, UpsertBatch, FindByAppID, FindByShopifyGID, FindByDomain)
+
+**Files:**
+- `internal/infrastructure/external/shopify_partner_client.go` (updated)
+- `internal/domain/entity/transaction.go` (updated)
+- `internal/infrastructure/persistence/transaction_repository.go` (updated)
+- `migrations/000020_add_transaction_subscription_details.up.sql` (new)
+- `migrations/000020_add_transaction_subscription_details.down.sql` (new)
+
+### 4. Critical Domain Service Tests (P0-6)
+- Added boundary tests for risk classification thresholds
+- Added status-override tests
+- Verified existing test coverage for metrics engine and ledger service
+
+**Test Count:** 55+ domain service tests passing
+

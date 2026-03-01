@@ -22,6 +22,8 @@ type Transaction struct {
 	ShopifyGID      string // Unique Shopify transaction GID
 	MyshopifyDomain string
 	ShopName        string // Human-readable shop name from Shopify
+	ShopifyShopGID  string // Shopify shop GID (gid://shopify/Shop/xxx)
+	ShopPlan        string // Shop's Shopify plan (Basic, Shopify, Advanced, Plus)
 	ChargeType      valueobject.ChargeType
 	GrossAmountCents   int64 // What the merchant paid (from Shopify Partner API)
 	ShopifyFeeCents    int64 // Revenue share deducted (0%, 15%, or 20%)
@@ -31,6 +33,11 @@ type Transaction struct {
 	Currency           string
 	TransactionDate    time.Time
 	CreatedAt          time.Time
+	// Subscription reference (for AppSubscriptionSale)
+	SubscriptionGID       string // Shopify subscription GID
+	SubscriptionStatus    string // Subscription status (ACTIVE, CANCELLED, FROZEN, etc.)
+	SubscriptionPeriodEnd *time.Time // Current period end date from subscription
+	BillingInterval       string // MONTHLY, ANNUAL
 	// Earnings tracking
 	CreatedDate     time.Time      // When the charge was created in Shopify
 	AvailableDate   time.Time      // When earnings become available for payout

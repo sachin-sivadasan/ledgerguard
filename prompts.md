@@ -1073,3 +1073,31 @@
   - Validation checklist
 
 ---
+
+## [2026-03-01] Phase 1: Data Integrity Fixes
+
+**Original Prompt:**
+> start with phase 1
+
+**Improved Prompt:**
+> Implement Phase 1 (Data Integrity) from comprehensive-review-fixes.md:
+> 1. P0-1: Fix Risk Classification Logic - Add SubscriptionStatus value object, update RiskEngine to handle CANCELLED/FROZEN/EXPIRED/PENDING statuses
+> 2. P0-3: Verify MRR Annual Normalization - Check Subscription.MRRCents() divides annual by 12
+> 3. P0-7: Update GraphQL Query Fields - Add shop.id, shop.plan, appSubscription details, appUsageRecord details
+> 4. P0-6: Add Critical Domain Service Tests - Boundary tests (30/60/90 days), status-based tests
+> 5. Create migration for new transaction columns
+> 6. Update transaction repository with new fields
+
+**Result:**
+- Created SubscriptionStatus value object (ACTIVE, CANCELLED, FROZEN, EXPIRED, PENDING)
+- Updated RiskEngine with status-first classification logic
+- Added 10+ boundary tests for risk classification
+- Added 3 status-override tests
+- Updated GraphQL query with shop.id, shop.plan, appSubscription, appUsageRecord fields
+- Updated Transaction entity with ShopifyShopGID, ShopPlan, SubscriptionGID, SubscriptionStatus, SubscriptionPeriodEnd, BillingInterval
+- Created migration 000020_add_transaction_subscription_details
+- Updated transaction repository (Upsert, UpsertBatch, Find methods)
+- Verified MRR annual normalization already implemented
+- All 55+ domain service tests passing
+
+---

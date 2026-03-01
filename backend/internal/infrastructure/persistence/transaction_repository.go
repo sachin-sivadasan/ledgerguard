@@ -29,9 +29,11 @@ func (r *PostgresTransactionRepository) Upsert(ctx context.Context, tx *entity.T
 			id, app_id, shopify_gid, myshopify_domain, shop_name, charge_type,
 			gross_amount_cents, shopify_fee_cents, processing_fee_cents, tax_on_fees_cents,
 			net_amount_cents, amount_cents, currency, transaction_date, created_at,
-			created_date, available_date, earnings_status
+			created_date, available_date, earnings_status,
+			shopify_shop_gid, shop_plan, subscription_gid, subscription_status,
+			subscription_period_end, billing_interval
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
 		ON CONFLICT (shopify_gid) DO UPDATE SET
 			shop_name = EXCLUDED.shop_name,
 			charge_type = EXCLUDED.charge_type,
@@ -44,7 +46,13 @@ func (r *PostgresTransactionRepository) Upsert(ctx context.Context, tx *entity.T
 			currency = EXCLUDED.currency,
 			created_date = EXCLUDED.created_date,
 			available_date = EXCLUDED.available_date,
-			earnings_status = EXCLUDED.earnings_status
+			earnings_status = EXCLUDED.earnings_status,
+			shopify_shop_gid = EXCLUDED.shopify_shop_gid,
+			shop_plan = EXCLUDED.shop_plan,
+			subscription_gid = EXCLUDED.subscription_gid,
+			subscription_status = EXCLUDED.subscription_status,
+			subscription_period_end = EXCLUDED.subscription_period_end,
+			billing_interval = EXCLUDED.billing_interval
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -66,6 +74,12 @@ func (r *PostgresTransactionRepository) Upsert(ctx context.Context, tx *entity.T
 		tx.CreatedDate,
 		tx.AvailableDate,
 		string(tx.EarningsStatus),
+		tx.ShopifyShopGID,
+		tx.ShopPlan,
+		tx.SubscriptionGID,
+		tx.SubscriptionStatus,
+		tx.SubscriptionPeriodEnd,
+		tx.BillingInterval,
 	)
 
 	return err
@@ -82,9 +96,11 @@ func (r *PostgresTransactionRepository) UpsertBatch(ctx context.Context, txs []*
 			id, app_id, shopify_gid, myshopify_domain, shop_name, charge_type,
 			gross_amount_cents, shopify_fee_cents, processing_fee_cents, tax_on_fees_cents,
 			net_amount_cents, amount_cents, currency, transaction_date, created_at,
-			created_date, available_date, earnings_status
+			created_date, available_date, earnings_status,
+			shopify_shop_gid, shop_plan, subscription_gid, subscription_status,
+			subscription_period_end, billing_interval
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
 		ON CONFLICT (shopify_gid) DO UPDATE SET
 			shop_name = EXCLUDED.shop_name,
 			charge_type = EXCLUDED.charge_type,
@@ -97,7 +113,13 @@ func (r *PostgresTransactionRepository) UpsertBatch(ctx context.Context, txs []*
 			currency = EXCLUDED.currency,
 			created_date = EXCLUDED.created_date,
 			available_date = EXCLUDED.available_date,
-			earnings_status = EXCLUDED.earnings_status
+			earnings_status = EXCLUDED.earnings_status,
+			shopify_shop_gid = EXCLUDED.shopify_shop_gid,
+			shop_plan = EXCLUDED.shop_plan,
+			subscription_gid = EXCLUDED.subscription_gid,
+			subscription_status = EXCLUDED.subscription_status,
+			subscription_period_end = EXCLUDED.subscription_period_end,
+			billing_interval = EXCLUDED.billing_interval
 	`
 
 	for _, tx := range txs {
@@ -120,6 +142,12 @@ func (r *PostgresTransactionRepository) UpsertBatch(ctx context.Context, txs []*
 			tx.CreatedDate,
 			tx.AvailableDate,
 			string(tx.EarningsStatus),
+			tx.ShopifyShopGID,
+			tx.ShopPlan,
+			tx.SubscriptionGID,
+			tx.SubscriptionStatus,
+			tx.SubscriptionPeriodEnd,
+			tx.BillingInterval,
 		)
 	}
 
@@ -141,7 +169,9 @@ func (r *PostgresTransactionRepository) FindByAppID(ctx context.Context, appID u
 		       COALESCE(gross_amount_cents, 0), COALESCE(shopify_fee_cents, 0),
 		       COALESCE(processing_fee_cents, 0), COALESCE(tax_on_fees_cents, 0),
 		       COALESCE(net_amount_cents, amount_cents), currency, transaction_date, created_at,
-		       created_date, available_date, earnings_status
+		       created_date, available_date, earnings_status,
+		       shopify_shop_gid, shop_plan, subscription_gid, subscription_status,
+		       subscription_period_end, billing_interval
 		FROM transactions
 		WHERE app_id = $1 AND transaction_date >= $2 AND transaction_date <= $3
 		ORDER BY transaction_date DESC
@@ -155,43 +185,76 @@ func (r *PostgresTransactionRepository) FindByAppID(ctx context.Context, appID u
 
 	var transactions []*entity.Transaction
 	for rows.Next() {
-		var tx entity.Transaction
-		var chargeType string
-		var shopName *string
-		var earningsStatus string
-
-		err := rows.Scan(
-			&tx.ID,
-			&tx.AppID,
-			&tx.ShopifyGID,
-			&tx.MyshopifyDomain,
-			&shopName,
-			&chargeType,
-			&tx.GrossAmountCents,
-			&tx.ShopifyFeeCents,
-			&tx.ProcessingFeeCents,
-			&tx.TaxOnFeesCents,
-			&tx.NetAmountCents,
-			&tx.Currency,
-			&tx.TransactionDate,
-			&tx.CreatedAt,
-			&tx.CreatedDate,
-			&tx.AvailableDate,
-			&earningsStatus,
-		)
+		tx, err := r.scanTransaction(rows)
 		if err != nil {
 			return nil, err
 		}
-
-		tx.ChargeType = valueobject.ChargeType(chargeType)
-		tx.EarningsStatus = entity.EarningsStatus(earningsStatus)
-		if shopName != nil {
-			tx.ShopName = *shopName
-		}
-		transactions = append(transactions, &tx)
+		transactions = append(transactions, tx)
 	}
 
 	return transactions, rows.Err()
+}
+
+// scanTransaction scans a row into a Transaction entity
+func (r *PostgresTransactionRepository) scanTransaction(rows pgx.Rows) (*entity.Transaction, error) {
+	var tx entity.Transaction
+	var chargeType string
+	var shopName, shopifyShopGID, shopPlan, subscriptionGID, subscriptionStatus, billingInterval *string
+	var earningsStatus string
+	var subscriptionPeriodEnd *time.Time
+
+	err := rows.Scan(
+		&tx.ID,
+		&tx.AppID,
+		&tx.ShopifyGID,
+		&tx.MyshopifyDomain,
+		&shopName,
+		&chargeType,
+		&tx.GrossAmountCents,
+		&tx.ShopifyFeeCents,
+		&tx.ProcessingFeeCents,
+		&tx.TaxOnFeesCents,
+		&tx.NetAmountCents,
+		&tx.Currency,
+		&tx.TransactionDate,
+		&tx.CreatedAt,
+		&tx.CreatedDate,
+		&tx.AvailableDate,
+		&earningsStatus,
+		&shopifyShopGID,
+		&shopPlan,
+		&subscriptionGID,
+		&subscriptionStatus,
+		&subscriptionPeriodEnd,
+		&billingInterval,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	tx.ChargeType = valueobject.ChargeType(chargeType)
+	tx.EarningsStatus = entity.EarningsStatus(earningsStatus)
+	if shopName != nil {
+		tx.ShopName = *shopName
+	}
+	if shopifyShopGID != nil {
+		tx.ShopifyShopGID = *shopifyShopGID
+	}
+	if shopPlan != nil {
+		tx.ShopPlan = *shopPlan
+	}
+	if subscriptionGID != nil {
+		tx.SubscriptionGID = *subscriptionGID
+	}
+	if subscriptionStatus != nil {
+		tx.SubscriptionStatus = *subscriptionStatus
+	}
+	tx.SubscriptionPeriodEnd = subscriptionPeriodEnd
+	if billingInterval != nil {
+		tx.BillingInterval = *billingInterval
+	}
+
+	return &tx, nil
 }
 
 func (r *PostgresTransactionRepository) FindByShopifyGID(ctx context.Context, shopifyGID string) (*entity.Transaction, error) {
@@ -200,15 +263,18 @@ func (r *PostgresTransactionRepository) FindByShopifyGID(ctx context.Context, sh
 		       COALESCE(gross_amount_cents, 0), COALESCE(shopify_fee_cents, 0),
 		       COALESCE(processing_fee_cents, 0), COALESCE(tax_on_fees_cents, 0),
 		       COALESCE(net_amount_cents, amount_cents), currency, transaction_date, created_at,
-		       created_date, available_date, earnings_status
+		       created_date, available_date, earnings_status,
+		       shopify_shop_gid, shop_plan, subscription_gid, subscription_status,
+		       subscription_period_end, billing_interval
 		FROM transactions
 		WHERE shopify_gid = $1
 	`
 
 	var tx entity.Transaction
 	var chargeType string
-	var shopName *string
+	var shopName, shopifyShopGID, shopPlan, subscriptionGID, subscriptionStatus, billingInterval *string
 	var earningsStatus string
+	var subscriptionPeriodEnd *time.Time
 
 	err := r.pool.QueryRow(ctx, query, shopifyGID).Scan(
 		&tx.ID,
@@ -228,6 +294,12 @@ func (r *PostgresTransactionRepository) FindByShopifyGID(ctx context.Context, sh
 		&tx.CreatedDate,
 		&tx.AvailableDate,
 		&earningsStatus,
+		&shopifyShopGID,
+		&shopPlan,
+		&subscriptionGID,
+		&subscriptionStatus,
+		&subscriptionPeriodEnd,
+		&billingInterval,
 	)
 
 	if err != nil {
@@ -241,6 +313,22 @@ func (r *PostgresTransactionRepository) FindByShopifyGID(ctx context.Context, sh
 	tx.EarningsStatus = entity.EarningsStatus(earningsStatus)
 	if shopName != nil {
 		tx.ShopName = *shopName
+	}
+	if shopifyShopGID != nil {
+		tx.ShopifyShopGID = *shopifyShopGID
+	}
+	if shopPlan != nil {
+		tx.ShopPlan = *shopPlan
+	}
+	if subscriptionGID != nil {
+		tx.SubscriptionGID = *subscriptionGID
+	}
+	if subscriptionStatus != nil {
+		tx.SubscriptionStatus = *subscriptionStatus
+	}
+	tx.SubscriptionPeriodEnd = subscriptionPeriodEnd
+	if billingInterval != nil {
+		tx.BillingInterval = *billingInterval
 	}
 	return &tx, nil
 }
@@ -338,7 +426,9 @@ func (r *PostgresTransactionRepository) FindByDomain(ctx context.Context, appID 
 		       COALESCE(gross_amount_cents, 0), COALESCE(shopify_fee_cents, 0),
 		       COALESCE(processing_fee_cents, 0), COALESCE(tax_on_fees_cents, 0),
 		       COALESCE(net_amount_cents, amount_cents), currency, transaction_date, created_at,
-		       created_date, available_date, earnings_status
+		       created_date, available_date, earnings_status,
+		       shopify_shop_gid, shop_plan, subscription_gid, subscription_status,
+		       subscription_period_end, billing_interval
 		FROM transactions
 		WHERE app_id = $1 AND myshopify_domain = $2 AND transaction_date >= $3 AND transaction_date <= $4
 		ORDER BY transaction_date DESC
@@ -352,40 +442,11 @@ func (r *PostgresTransactionRepository) FindByDomain(ctx context.Context, appID 
 
 	var transactions []*entity.Transaction
 	for rows.Next() {
-		var tx entity.Transaction
-		var chargeType string
-		var shopName *string
-		var earningsStatus string
-
-		err := rows.Scan(
-			&tx.ID,
-			&tx.AppID,
-			&tx.ShopifyGID,
-			&tx.MyshopifyDomain,
-			&shopName,
-			&chargeType,
-			&tx.GrossAmountCents,
-			&tx.ShopifyFeeCents,
-			&tx.ProcessingFeeCents,
-			&tx.TaxOnFeesCents,
-			&tx.NetAmountCents,
-			&tx.Currency,
-			&tx.TransactionDate,
-			&tx.CreatedAt,
-			&tx.CreatedDate,
-			&tx.AvailableDate,
-			&earningsStatus,
-		)
+		tx, err := r.scanTransaction(rows)
 		if err != nil {
 			return nil, err
 		}
-
-		tx.ChargeType = valueobject.ChargeType(chargeType)
-		tx.EarningsStatus = entity.EarningsStatus(earningsStatus)
-		if shopName != nil {
-			tx.ShopName = *shopName
-		}
-		transactions = append(transactions, &tx)
+		transactions = append(transactions, tx)
 	}
 
 	return transactions, rows.Err()

@@ -28,12 +28,13 @@ func NewPostgresSubscriptionRepository(pool *pgxpool.Pool) *PostgresSubscription
 func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscription *entity.Subscription) error {
 	query := `
 		INSERT INTO subscriptions (
-			id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
+			id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at, deleted_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 		ON CONFLICT (shopify_gid) DO UPDATE SET
+			shopify_shop_gid = EXCLUDED.shopify_shop_gid,
 			shop_name = EXCLUDED.shop_name,
 			plan_name = EXCLUDED.plan_name,
 			base_price_cents = EXCLUDED.base_price_cents,
@@ -51,6 +52,7 @@ func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscriptio
 		subscription.ID,
 		subscription.AppID,
 		subscription.ShopifyGID,
+		subscription.ShopifyShopGID,
 		subscription.MyshopifyDomain,
 		subscription.ShopName,
 		subscription.PlanName,
@@ -71,7 +73,7 @@ func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscriptio
 
 func (r *PostgresSubscriptionRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.Subscription, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
+		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at, deleted_at
@@ -84,7 +86,7 @@ func (r *PostgresSubscriptionRepository) FindByID(ctx context.Context, id uuid.U
 
 func (r *PostgresSubscriptionRepository) FindByAppID(ctx context.Context, appID uuid.UUID) ([]*entity.Subscription, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
+		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at, deleted_at
@@ -104,7 +106,7 @@ func (r *PostgresSubscriptionRepository) FindByAppID(ctx context.Context, appID 
 
 func (r *PostgresSubscriptionRepository) FindByShopifyGID(ctx context.Context, shopifyGID string) (*entity.Subscription, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
+		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at, deleted_at
@@ -117,7 +119,7 @@ func (r *PostgresSubscriptionRepository) FindByShopifyGID(ctx context.Context, s
 
 func (r *PostgresSubscriptionRepository) FindByAppIDAndDomain(ctx context.Context, appID uuid.UUID, myshopifyDomain string) (*entity.Subscription, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
+		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at, deleted_at
@@ -130,7 +132,7 @@ func (r *PostgresSubscriptionRepository) FindByAppIDAndDomain(ctx context.Contex
 
 func (r *PostgresSubscriptionRepository) FindByRiskState(ctx context.Context, appID uuid.UUID, riskState valueobject.RiskState) ([]*entity.Subscription, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
+		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at, deleted_at
@@ -159,11 +161,13 @@ func (r *PostgresSubscriptionRepository) scanSubscription(row pgx.Row) (*entity.
 	var billingInterval string
 	var riskState string
 	var shopName *string
+	var shopGID *string
 
 	err := row.Scan(
 		&sub.ID,
 		&sub.AppID,
 		&sub.ShopifyGID,
+		&shopGID,
 		&sub.MyshopifyDomain,
 		&shopName,
 		&sub.PlanName,
@@ -186,6 +190,9 @@ func (r *PostgresSubscriptionRepository) scanSubscription(row pgx.Row) (*entity.
 		return nil, err
 	}
 
+	if shopGID != nil {
+		sub.ShopifyShopGID = *shopGID
+	}
 	if shopName != nil {
 		sub.ShopName = *shopName
 	}
@@ -203,11 +210,13 @@ func (r *PostgresSubscriptionRepository) scanSubscriptions(rows pgx.Rows) ([]*en
 		var billingInterval string
 		var riskState string
 		var shopName *string
+		var shopGID *string
 
 		err := rows.Scan(
 			&sub.ID,
 			&sub.AppID,
 			&sub.ShopifyGID,
+			&shopGID,
 			&sub.MyshopifyDomain,
 			&shopName,
 			&sub.PlanName,
@@ -226,6 +235,9 @@ func (r *PostgresSubscriptionRepository) scanSubscriptions(rows pgx.Rows) ([]*en
 			return nil, err
 		}
 
+		if shopGID != nil {
+			sub.ShopifyShopGID = *shopGID
+		}
 		if shopName != nil {
 			sub.ShopName = *shopName
 		}
@@ -331,7 +343,7 @@ func (r *PostgresSubscriptionRepository) FindWithFilters(ctx context.Context, ap
 
 	// Get paginated results
 	query := fmt.Sprintf(`
-		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
+		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at, deleted_at
@@ -456,7 +468,7 @@ func (r *PostgresSubscriptionRepository) SoftDeleteByAppID(ctx context.Context, 
 // Useful for win-back campaigns and historical analysis
 func (r *PostgresSubscriptionRepository) FindDeletedByAppID(ctx context.Context, appID uuid.UUID) ([]*entity.Subscription, error) {
 	query := `
-		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
+		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			created_at, updated_at, deleted_at

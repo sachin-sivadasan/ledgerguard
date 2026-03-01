@@ -224,6 +224,9 @@ func (s *LedgerService) buildSubscriptionFromTransactions(appID uuid.UUID, domai
 		billingInterval,
 	)
 
+	// Set shop GID for events lookup
+	sub.ShopifyShopGID = lastRecurring.ShopifyShopGID
+
 	// Set subscription status from transaction data
 	sub.Status = status
 

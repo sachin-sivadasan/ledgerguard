@@ -11,13 +11,14 @@ type Subscription struct {
 	ID                      uuid.UUID
 	AppID                   uuid.UUID
 	ShopifyGID              string // Shopify subscription GID
+	ShopifyShopGID          string // Shopify shop GID for events lookup
 	MyshopifyDomain         string
 	ShopName                string // Human-readable shop name
 	PlanName                string
 	BasePriceCents          int64
 	Currency                string
 	BillingInterval         valueobject.BillingInterval
-	Status                  string // ACTIVE, CANCELLED, FROZEN, PENDING
+	Status                  string // ACTIVE, CANCELLED, FROZEN, PENDING, UNINSTALLED
 	LastRecurringChargeDate *time.Time
 	ExpectedNextChargeDate  *time.Time
 	RiskState               valueobject.RiskState

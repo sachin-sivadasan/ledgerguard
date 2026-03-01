@@ -93,6 +93,7 @@ Current state of each subscription.
 | id | UUID | PK | Subscription ID |
 | app_id | UUID | FK → apps.id, NOT NULL | Parent app |
 | shopify_gid | VARCHAR(255) | UNIQUE, NOT NULL | Shopify subscription GID |
+| shopify_shop_gid | VARCHAR(255) | NULL | Shopify shop GID for events lookup |
 | myshopify_domain | VARCHAR(255) | NOT NULL | Store domain |
 | shop_name | VARCHAR(255) | | Store display name |
 | plan_name | VARCHAR(255) | | Plan name |

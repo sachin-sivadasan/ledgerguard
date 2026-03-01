@@ -9,12 +9,18 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
 )
 
 // TransactionFetcher interface for fetching transactions from external API
 type TransactionFetcher interface {
 	FetchTransactions(ctx context.Context, accessToken string, appID uuid.UUID, from, to time.Time) ([]*entity.Transaction, error)
+}
+
+// EventFetcher interface for fetching app lifecycle events
+type EventFetcher interface {
+	FetchAppEvents(ctx context.Context, organizationID, accessToken string, appGID string, shopGID string) ([]external.AppEvent, error)
 }
 
 // Decryptor interface for decrypting tokens
@@ -42,12 +48,14 @@ type SyncResult struct {
 
 // SyncService handles synchronization of transactions from Partner API
 type SyncService struct {
-	fetcher     TransactionFetcher
-	txRepo      repository.TransactionRepository
-	appRepo     repository.AppRepository
-	partnerRepo repository.PartnerAccountRepository
-	decryptor   Decryptor
-	ledger      LedgerRebuilder
+	fetcher      TransactionFetcher
+	eventFetcher EventFetcher
+	txRepo       repository.TransactionRepository
+	subRepo      repository.SubscriptionRepository
+	appRepo      repository.AppRepository
+	partnerRepo  repository.PartnerAccountRepository
+	decryptor    Decryptor
+	ledger       LedgerRebuilder
 }
 
 func NewSyncService(
@@ -66,6 +74,18 @@ func NewSyncService(
 		decryptor:   decryptor,
 		ledger:      ledger,
 	}
+}
+
+// WithEventFetcher adds an event fetcher for subscription status enrichment
+func (s *SyncService) WithEventFetcher(fetcher EventFetcher) *SyncService {
+	s.eventFetcher = fetcher
+	return s
+}
+
+// WithSubscriptionRepo adds a subscription repository for status updates
+func (s *SyncService) WithSubscriptionRepo(repo repository.SubscriptionRepository) *SyncService {
+	s.subRepo = repo
+	return s
 }
 
 // SyncApp synchronizes transactions for a single app
@@ -143,6 +163,12 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 			_, _ = s.ledger.BackfillHistoricalSnapshots(ctx, appID, allTransactions)
 			// Ignore backfill errors - not critical for sync success
 		}
+
+		// Enrich subscription status from app events (if configured)
+		if s.eventFetcher != nil && s.subRepo != nil {
+			_ = s.enrichSubscriptionStatus(fetchCtx, app, partnerAccount, string(accessToken))
+			// Ignore enrichment errors - status defaults to ACTIVE
+		}
 	}
 
 	return &SyncResult{
@@ -193,4 +219,51 @@ func (s *SyncService) SyncAllApps(ctx context.Context, partnerAccountID uuid.UUI
 
 func (s *SyncService) getPartnerAccountForApp(ctx context.Context, partnerAccountID uuid.UUID) (*entity.PartnerAccount, error) {
 	return s.partnerRepo.FindByID(ctx, partnerAccountID)
+}
+
+// enrichSubscriptionStatus updates subscription status based on app lifecycle events
+// This provides accurate status (ACTIVE, CANCELLED, UNINSTALLED) instead of defaulting to ACTIVE
+func (s *SyncService) enrichSubscriptionStatus(ctx context.Context, app *entity.App, partnerAccount *entity.PartnerAccount, accessToken string) error {
+	// Get all subscriptions for this app
+	subscriptions, err := s.subRepo.FindByAppID(ctx, app.ID)
+	if err != nil {
+		return fmt.Errorf("failed to find subscriptions: %w", err)
+	}
+
+	if len(subscriptions) == 0 {
+		return nil
+	}
+
+	// For each subscription with a shop GID, fetch events and update status
+	for _, sub := range subscriptions {
+		if sub.ShopifyShopGID == "" {
+			continue // Can't fetch events without shop GID
+		}
+
+		// Fetch events for this shop
+		events, err := s.eventFetcher.FetchAppEvents(ctx, partnerAccount.PartnerID, accessToken, app.PartnerAppID, sub.ShopifyShopGID)
+		if err != nil {
+			// Log but continue - don't fail the whole sync for event fetch errors
+			continue
+		}
+
+		// Determine status from events
+		newStatus := external.GetLatestSubscriptionStatus(events)
+		if newStatus != "" && newStatus != sub.Status {
+			sub.Status = newStatus
+			sub.UpdatedAt = time.Now().UTC()
+
+			// If uninstalled or cancelled, classify as churned
+			if newStatus == "UNINSTALLED" || newStatus == "CANCELLED" {
+				sub.RiskState = valueobject.RiskStateChurned
+			}
+
+			// Upsert the updated subscription
+			if err := s.subRepo.Upsert(ctx, sub); err != nil {
+				continue // Log but don't fail
+			}
+		}
+	}
+
+	return nil
 }

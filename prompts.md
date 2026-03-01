@@ -1014,3 +1014,35 @@
 - All sections: Hero, Problem, Solution Preview, How It Works, Features, Comparison, Social Proof, Pricing, Final CTA
 
 ---
+
+## [2026-03-01] Internal Architecture Flow Visualization
+
+**Original Prompt:**
+> but need another money-flow like page for internal purpoese with these details from shopify and my app. animated like visual
+
+**Improved Prompt:**
+> Create an animated internal architecture visualization page showing LedgerGuard's data flow:
+> 1. Data Ingestion: Shopify Partner Account → Partner API → Sync Engine
+> 2. Data Processing: Transaction Repository → Ledger Rebuild → Subscription Builder
+> 3. Risk Classification: Days overdue → Risk state (Safe/1-Cycle/2-Cycles/Churned)
+> 4. Metrics Computation: Renewal Rate, Active MRR, At Risk, Usage Revenue
+> 5. Output Layer: Dashboard UI, Push Alerts, AI Daily Brief, Revenue API
+> 6. Interactive controls: View modes (Full/Ingestion/Processing/Risk/Output)
+> 7. Animation controls: Play/Pause, Speed (0.5x/1x/2x), Show details toggle
+> 8. Code snippets: GraphQL query, Go risk engine, metrics computation, SQL snapshot
+> 9. Phase-by-phase animation with auto-advance
+> 10. Route at /architecture (noindex for internal use)
+
+**Result:**
+- docs/prompts/internal-architecture-flow.md - Implementation spec
+- marketing/site/components/ArchitectureFlow.tsx (~850 lines)
+- marketing/site/app/architecture/page.tsx - Page route with noindex
+- Features:
+  - 5 pipeline stages with animated entity boxes
+  - Risk timeline visualization with moving day marker
+  - Animated number counters for metrics
+  - Code snippets for GraphQL, Go, SQL
+  - View mode switching and playback controls
+- Build verified: `npm run build` successful
+
+---

@@ -244,7 +244,7 @@ function generateModelData(usageType: UsageType): Record<FlowModel, ModelData> {
         entities: [
           { id: 'customer', label: 'Customer', sublabel: 'Buyer', icon: '👤', description: 'End customer buying products', color: '#14b8a6' },
           { id: 'shopifyPay', label: 'Shopify', sublabel: 'Payments', icon: '💳', description: 'Processes payment, takes 2.9% + $0.30', color: '#22c55e' },
-          { id: 'merchant', label: 'Merchant', sublabel: 'Seller', icon: '🏪', description: 'Receives payout every 1-3 days', color: '#10b981' },
+          { id: 'merchant', label: 'Merchant', sublabel: 'Store', icon: '🏪', description: 'Receives payout every 1-3 days', color: '#10b981' },
         ],
         flows: [
           { id: 't1', from: 'customer', to: 'shopifyPay', label: '$100.00', description: 'Customer pays for product at checkout', color: '#14b8a6' },
@@ -259,7 +259,7 @@ function generateModelData(usageType: UsageType): Record<FlowModel, ModelData> {
         badge: 'YOUR REVENUE',
         badgeColor: '#3b82f6',
         entities: [
-          { id: 'merchantApp', label: 'Merchant', sublabel: 'App User', icon: '🏪', description: 'Pays $49/mo subscription', color: '#a855f7' },
+          { id: 'merchantApp', label: 'Merchant', sublabel: 'Store', icon: '🏪', description: 'Pays $49/mo subscription', color: '#a855f7' },
           { id: 'shopifyApp', label: 'Shopify', sublabel: 'App Store', icon: '🛒', description: 'Takes 20% of subscription', color: '#8b5cf6' },
           { id: 'developer', label: 'You', sublabel: 'Developer', icon: '💻', description: 'Gets 80% = $39.20', color: '#3b82f6' },
         ],
@@ -297,7 +297,7 @@ function generateModelData(usageType: UsageType): Record<FlowModel, ModelData> {
         entities: [
           { id: 'customer', label: 'Customer', sublabel: 'Buyer', icon: '👤', description: usage.triggerDescription, color: '#14b8a6' },
           { id: 'shopifyPay', label: 'Shopify', sublabel: 'Payments', icon: '💳', description: 'Processes payment', color: '#22c55e' },
-          { id: 'merchant', label: 'Merchant', sublabel: 'Seller', icon: '🏪', description: `Pays ${priceDisplay}/${usage.unitName}`, color: '#10b981' },
+          { id: 'merchant', label: 'Merchant', sublabel: 'Store', icon: '🏪', description: `Pays ${priceDisplay}/${usage.unitName}`, color: '#10b981' },
         ],
         flows: [
           { id: 't1', from: 'customer', to: 'shopifyPay', label: '$100.00', description: `Customer pays - ${usage.triggerDescription.toLowerCase()}`, color: '#14b8a6' },
@@ -312,7 +312,7 @@ function generateModelData(usageType: UsageType): Record<FlowModel, ModelData> {
         badge: 'YOUR REVENUE',
         badgeColor: '#3b82f6',
         entities: [
-          { id: 'merchantApp', label: 'Merchant', sublabel: 'App User', icon: '🏪', description: `Pays ${priceDisplay}/${usage.unitName}`, color: usage.color },
+          { id: 'merchantApp', label: 'Merchant', sublabel: 'Store', icon: '🏪', description: `Pays ${priceDisplay}/${usage.unitName}`, color: usage.color },
           { id: 'shopifyApp', label: 'Shopify', sublabel: 'App Store', icon: '🛒', description: 'Takes 20% of usage fees', color: '#8b5cf6' },
           { id: 'developer', label: 'You', sublabel: 'Developer', icon: '💻', description: 'Gets 80% - scales with volume', color: '#3b82f6' },
         ],
@@ -357,7 +357,7 @@ function generateModelData(usageType: UsageType): Record<FlowModel, ModelData> {
         entities: [
           { id: 'customer', label: 'Customer', sublabel: 'Buyer', icon: '👤', description: usage.triggerDescription, color: '#14b8a6' },
           { id: 'shopifyPay', label: 'Shopify', sublabel: 'Payments', icon: '💳', description: 'Processes payment', color: '#22c55e' },
-          { id: 'merchant', label: 'Merchant', sublabel: 'Seller', icon: '🏪', description: 'Receives product revenue', color: '#10b981' },
+          { id: 'merchant', label: 'Merchant', sublabel: 'Store', icon: '🏪', description: 'Receives product revenue', color: '#10b981' },
         ],
         flows: [
           { id: 't1', from: 'customer', to: 'shopifyPay', label: '$100.00', description: `Customer payment - ${usage.triggerDescription.toLowerCase()}`, color: '#14b8a6' },
@@ -372,7 +372,7 @@ function generateModelData(usageType: UsageType): Record<FlowModel, ModelData> {
         badge: 'YOUR REVENUE',
         badgeColor: '#3b82f6',
         entities: [
-          { id: 'merchantApp', label: 'Merchant', sublabel: 'App User', icon: '🏪', description: `Pays $${hybridSub} base + ${priceDisplay}/${usage.unitName}`, color: '#a855f7' },
+          { id: 'merchantApp', label: 'Merchant', sublabel: 'Store', icon: '🏪', description: `Pays $${hybridSub} base + ${priceDisplay}/${usage.unitName}`, color: '#a855f7' },
           { id: 'shopifyApp', label: 'Shopify', sublabel: 'App Store', icon: '🛒', description: 'Takes 20% of BOTH fees', color: '#8b5cf6' },
           { id: 'developer', label: 'You', sublabel: 'Developer', icon: '💻', description: 'Gets 80% of EVERYTHING', color: '#3b82f6' },
         ],

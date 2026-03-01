@@ -791,3 +791,35 @@ The Preferences option in the Profile page was showing "Coming Soon" instead of 
 **Tests:** All 397 tests pass
 
 ---
+
+## [2026-03-01] Dashboard Preferences Backend Endpoint
+
+**Original Prompt:**
+> curl 'http://localhost:8080/api/v1/user/preferences/dashboard' [showed 404]
+
+**Issue Found:**
+The frontend was calling `/api/v1/user/preferences/dashboard` but this endpoint didn't exist in the backend. The frontend's `ApiDashboardPreferencesRepository` was already implemented to call this endpoint.
+
+**Improved Prompt:**
+> Create backend endpoint for dashboard preferences:
+> 1. Create migration for user_preferences table
+> 2. Create UserPreferencesHandler with GET and PUT endpoints
+> 3. Add routes to router
+> 4. Wire up in main.go
+
+**Backend Files Created:**
+- `migrations/000019_create_user_preferences_table.up.sql`
+- `migrations/000019_create_user_preferences_table.down.sql`
+- `internal/interfaces/http/handler/user_preferences.go`
+
+**Backend Files Modified:**
+- `internal/interfaces/http/router/router.go` - Added UserPreferencesHandler and routes
+- `cmd/server/main.go` - Wired up handler
+
+**API Endpoints:**
+- `GET /api/v1/user/preferences/dashboard` - Get user's dashboard preferences
+- `PUT /api/v1/user/preferences/dashboard` - Save user's dashboard preferences
+
+**Tests:** All backend tests pass
+
+---

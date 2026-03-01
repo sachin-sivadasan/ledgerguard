@@ -23,6 +23,7 @@ type Config struct {
 	SubscriptionHandler      *handler.SubscriptionHandler
 	StoreHealthHandler       *handler.StoreHealthHandler
 	FeeHandler               *handler.FeeHandler
+	UserPreferencesHandler   *handler.UserPreferencesHandler
 	APIKeyHandler            *apikeyhandler.APIKeyHandler
 	AuthMW                   func(next http.Handler) http.Handler
 	AdminMW                  func(next http.Handler) http.Handler // RequireRoles(ADMIN)
@@ -53,6 +54,15 @@ func New(cfg Config) *chi.Mux {
 		// Me endpoint (current user profile)
 		if cfg.MeHandler != nil && cfg.AuthMW != nil {
 			r.With(cfg.AuthMW).Get("/me", cfg.MeHandler.GetMe)
+		}
+
+		// User preferences routes
+		if cfg.UserPreferencesHandler != nil && cfg.AuthMW != nil {
+			r.Route("/user/preferences", func(r chi.Router) {
+				r.Use(cfg.AuthMW)
+				r.Get("/dashboard", cfg.UserPreferencesHandler.GetDashboardPreferences)
+				r.Put("/dashboard", cfg.UserPreferencesHandler.SaveDashboardPreferences)
+			})
 		}
 
 		// Shopify integration routes

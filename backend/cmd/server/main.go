@@ -256,6 +256,13 @@ func run() error {
 		log.Println("API key handler initialized")
 	}
 
+	// Initialize user preferences handler
+	var userPreferencesHandler *handler.UserPreferencesHandler
+	if db != nil {
+		userPreferencesHandler = handler.NewUserPreferencesHandler(db.Pool)
+		log.Println("User preferences handler initialized")
+	}
+
 	// Initialize auth middleware
 	var authMW func(http.Handler) http.Handler
 	if firebaseAuth != nil && userRepo != nil {
@@ -281,6 +288,7 @@ func run() error {
 		SyncHandler:              syncHandler,
 		SubscriptionHandler:      subscriptionHandler,
 		StoreHealthHandler:       storeHealthHandler,
+		UserPreferencesHandler:   userPreferencesHandler,
 		APIKeyHandler:            apiKeyHandler,
 		AuthMW:                   authMW,
 		AdminMW:                  adminMW,

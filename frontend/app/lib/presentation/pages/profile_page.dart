@@ -171,7 +171,7 @@ class ProfilePage extends StatelessWidget {
                     iconColor: Colors.blueGrey,
                     title: 'Preferences',
                     subtitle: 'Dashboard and display settings',
-                    onTap: () => _showComingSoon(context, 'Preferences'),
+                    onTap: () => context.push('/settings/preferences'),
                   ),
                 ],
               ),

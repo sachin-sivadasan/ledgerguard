@@ -16,6 +16,7 @@ import '../pages/dashboard_page.dart';
 import '../pages/login_page.dart';
 import '../pages/notification_settings_page.dart';
 import '../pages/partner_integration_page.dart';
+import '../pages/preferences_page.dart';
 import '../pages/profile_page.dart';
 import '../pages/risk_breakdown_page.dart';
 import '../pages/signup_page.dart';
@@ -119,6 +120,11 @@ class AppRouter {
         path: '/settings/app',
         name: 'app-settings',
         builder: (context, state) => const AppSettingsPage(),
+      ),
+      GoRoute(
+        path: '/settings/preferences',
+        name: 'preferences',
+        builder: (context, state) => const PreferencesPage(),
       ),
       GoRoute(
         path: '/apps/:appId/subscriptions',

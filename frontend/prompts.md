@@ -764,3 +764,30 @@ Backend Phase 1 (Revenue Share Tier Tracking) was completed. User requested fron
 **Fixed:** All 21 profile page tests now pass
 
 ---
+
+## [2026-03-01] Preferences Page Implementation
+
+**Original Prompt:**
+> settings->preferences is not loading
+
+**Issue Found:**
+The Preferences option in the Profile page was showing "Coming Soon" instead of navigating to an actual page. The PreferencesBloc and DashboardConfigDialog already existed but there was no dedicated preferences page.
+
+**Improved Prompt:**
+> Create a PreferencesPage that allows users to configure dashboard settings (primary KPIs and secondary widgets). Wire it up to the router and update the profile page to navigate to it instead of showing "Coming Soon".
+
+**Files Created:**
+- `lib/presentation/pages/preferences_page.dart` - Full-page preferences UI with:
+  - Primary KPIs section (drag to reorder, add/remove)
+  - Secondary Widgets section (toggle visibility)
+  - Unsaved changes indicator
+  - Reset to defaults option
+  - Save button in app bar
+
+**Files Modified:**
+- `lib/presentation/router/app_router.dart` - Added `/settings/preferences` route
+- `lib/presentation/pages/profile_page.dart` - Changed Preferences onTap to navigate instead of showing Coming Soon
+
+**Tests:** All 397 tests pass
+
+---

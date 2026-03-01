@@ -14,6 +14,7 @@ type App struct {
 	Name             string
 	TrackingEnabled  bool
 	RevenueShareTier valueobject.RevenueShareTier // Shopify revenue share tier
+	InstallCount     int                          // Number of shops with app installed
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }

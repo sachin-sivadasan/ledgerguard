@@ -1366,3 +1366,71 @@ Extended `docs/api/openapi.yaml`:
 - `docs/SEQUENCE_current.puml` - Added 3 new sequence diagrams
 - `docs/api/openapi.yaml` - Added webhook endpoint documentation
 
+
+---
+
+## [2026-03-01] App Install Count Feature
+
+**Commit:** feat: add app install count via Partner API events
+
+**Summary:**
+Implemented app install count tracking by querying Shopify Partner API events with RELATIONSHIP_INSTALLED and RELATIONSHIP_UNINSTALLED types. This enables showing actual install counts in the frontend app profile instead of 0.
+
+**Implemented:**
+
+### 1. Backend Changes
+
+**Entity Updates:**
+- Added `InstallCount` field to `App` entity
+
+**Database Migration:**
+- `migrations/000027_add_install_count_to_apps.up.sql` - Adds `install_count` column
+- `migrations/000027_add_install_count_to_apps.down.sql` - Rollback migration
+
+**Repository Updates:**
+- Updated all `PostgresAppRepository` queries to include `install_count` field
+- Updated Create, FindByID, FindByPartnerAccountID, FindByPartnerAppID, Update, FindAllByPartnerAppID
+
+**Shopify Partner Client:**
+- Added `FetchInstallCount(ctx, organizationID, accessToken, partnerAppID)` method
+- Uses GraphQL query with `RELATIONSHIP_INSTALLED` and `RELATIONSHIP_UNINSTALLED` event types
+- Handles pagination to count all events
+- Returns net installs (installed - uninstalled)
+
+**New API Endpoints:**
+- `GET /api/v1/apps/{appID}/install-count` - Returns current install count
+- `POST /api/v1/apps/{appID}/refresh-install-count` - Refreshes install count from Partner API
+
+**Handler Updates:**
+- Updated `ListApps` to include `install_count` in response
+- Added `GetInstallCount` handler
+- Added `RefreshInstallCount` handler
+
+### 2. Internal Key Authentication
+
+**New Middleware:**
+- Added `InternalKeyMiddleware` in `auth.go` for service-to-service authentication
+- Validates `X-Internal-Key` header against configured key
+
+**Configuration:**
+- Added `InternalKey` to `ServerConfig`
+- Environment variable: `INTERNAL_KEY`
+
+**Internal Routes:**
+- `POST /api/v1/internal/sync/transactions` - Trigger transaction sync (internal only)
+- `POST /api/v1/internal/sync/transactions/{appID}` - Sync specific app (internal only)
+
+**Files Created:**
+- `migrations/000027_add_install_count_to_apps.up.sql`
+- `migrations/000027_add_install_count_to_apps.down.sql`
+
+**Files Updated:**
+- `internal/domain/entity/app.go` - Added InstallCount field
+- `internal/infrastructure/persistence/app_repository.go` - All queries updated
+- `internal/infrastructure/external/shopify_partner_client.go` - Added FetchInstallCount
+- `internal/interfaces/http/handler/app.go` - Added handlers, updated PartnerClient interface
+- `internal/interfaces/http/handler/app_test.go` - Updated mock for new interface
+- `internal/interfaces/http/middleware/auth.go` - Added InternalKeyMiddleware
+- `internal/interfaces/http/router/router.go` - Added routes
+- `internal/infrastructure/config/config.go` - Added InternalKey config
+- `cmd/server/main.go` - Initialize internal key middleware

@@ -16,7 +16,8 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port string `yaml:"port"`
+	Port        string `yaml:"port"`
+	InternalKey string `yaml:"internal_key"` // Key for internal service authentication
 }
 
 type DatabaseConfig struct {
@@ -92,6 +93,9 @@ func applyEnvOverrides(cfg *Config) {
 	// Server
 	if v := os.Getenv("SERVER_PORT"); v != "" {
 		cfg.Server.Port = v
+	}
+	if v := os.Getenv("INTERNAL_KEY"); v != "" {
+		cfg.Server.InternalKey = v
 	}
 
 	// Database

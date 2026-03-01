@@ -23,8 +23,8 @@ func NewPostgresAppRepository(pool *pgxpool.Pool) *PostgresAppRepository {
 
 func (r *PostgresAppRepository) Create(ctx context.Context, app *entity.App) error {
 	query := `
-		INSERT INTO apps (id, partner_account_id, partner_app_id, name, tracking_enabled, revenue_share_tier, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO apps (id, partner_account_id, partner_app_id, name, tracking_enabled, revenue_share_tier, install_count, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -34,6 +34,7 @@ func (r *PostgresAppRepository) Create(ctx context.Context, app *entity.App) err
 		app.Name,
 		app.TrackingEnabled,
 		string(app.RevenueShareTier),
+		app.InstallCount,
 		app.CreatedAt,
 		app.UpdatedAt,
 	)
@@ -44,7 +45,8 @@ func (r *PostgresAppRepository) Create(ctx context.Context, app *entity.App) err
 func (r *PostgresAppRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.App, error) {
 	query := `
 		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled,
-		       COALESCE(revenue_share_tier, 'DEFAULT_20'), created_at, COALESCE(updated_at, created_at)
+		       COALESCE(revenue_share_tier, 'DEFAULT_20'), COALESCE(install_count, 0),
+		       created_at, COALESCE(updated_at, created_at)
 		FROM apps
 		WHERE id = $1
 	`
@@ -58,6 +60,7 @@ func (r *PostgresAppRepository) FindByID(ctx context.Context, id uuid.UUID) (*en
 		&app.Name,
 		&app.TrackingEnabled,
 		&tierStr,
+		&app.InstallCount,
 		&app.CreatedAt,
 		&app.UpdatedAt,
 	)
@@ -76,7 +79,8 @@ func (r *PostgresAppRepository) FindByID(ctx context.Context, id uuid.UUID) (*en
 func (r *PostgresAppRepository) FindByPartnerAccountID(ctx context.Context, partnerAccountID uuid.UUID) ([]*entity.App, error) {
 	query := `
 		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled,
-		       COALESCE(revenue_share_tier, 'DEFAULT_20'), created_at, COALESCE(updated_at, created_at)
+		       COALESCE(revenue_share_tier, 'DEFAULT_20'), COALESCE(install_count, 0),
+		       created_at, COALESCE(updated_at, created_at)
 		FROM apps
 		WHERE partner_account_id = $1
 		ORDER BY name
@@ -99,6 +103,7 @@ func (r *PostgresAppRepository) FindByPartnerAccountID(ctx context.Context, part
 			&app.Name,
 			&app.TrackingEnabled,
 			&tierStr,
+			&app.InstallCount,
 			&app.CreatedAt,
 			&app.UpdatedAt,
 		)
@@ -115,7 +120,8 @@ func (r *PostgresAppRepository) FindByPartnerAccountID(ctx context.Context, part
 func (r *PostgresAppRepository) FindByPartnerAppID(ctx context.Context, partnerAccountID uuid.UUID, partnerAppID string) (*entity.App, error) {
 	query := `
 		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled,
-		       COALESCE(revenue_share_tier, 'DEFAULT_20'), created_at, COALESCE(updated_at, created_at)
+		       COALESCE(revenue_share_tier, 'DEFAULT_20'), COALESCE(install_count, 0),
+		       created_at, COALESCE(updated_at, created_at)
 		FROM apps
 		WHERE partner_account_id = $1 AND partner_app_id = $2
 	`
@@ -129,6 +135,7 @@ func (r *PostgresAppRepository) FindByPartnerAppID(ctx context.Context, partnerA
 		&app.Name,
 		&app.TrackingEnabled,
 		&tierStr,
+		&app.InstallCount,
 		&app.CreatedAt,
 		&app.UpdatedAt,
 	)
@@ -147,7 +154,7 @@ func (r *PostgresAppRepository) FindByPartnerAppID(ctx context.Context, partnerA
 func (r *PostgresAppRepository) Update(ctx context.Context, app *entity.App) error {
 	query := `
 		UPDATE apps
-		SET name = $2, tracking_enabled = $3, revenue_share_tier = $4, updated_at = $5
+		SET name = $2, tracking_enabled = $3, revenue_share_tier = $4, install_count = $5, updated_at = $6
 		WHERE id = $1
 	`
 
@@ -156,6 +163,7 @@ func (r *PostgresAppRepository) Update(ctx context.Context, app *entity.App) err
 		app.Name,
 		app.TrackingEnabled,
 		string(app.RevenueShareTier),
+		app.InstallCount,
 		app.UpdatedAt,
 	)
 	if err != nil {
@@ -189,7 +197,8 @@ func (r *PostgresAppRepository) Delete(ctx context.Context, id uuid.UUID) error 
 func (r *PostgresAppRepository) FindAllByPartnerAppID(ctx context.Context, partnerAppID string) ([]*entity.App, error) {
 	query := `
 		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled,
-		       COALESCE(revenue_share_tier, 'DEFAULT_20'), created_at, COALESCE(updated_at, created_at)
+		       COALESCE(revenue_share_tier, 'DEFAULT_20'), COALESCE(install_count, 0),
+		       created_at, COALESCE(updated_at, created_at)
 		FROM apps
 		WHERE partner_app_id = $1
 		ORDER BY name
@@ -212,6 +221,7 @@ func (r *PostgresAppRepository) FindAllByPartnerAppID(ctx context.Context, partn
 			&app.Name,
 			&app.TrackingEnabled,
 			&tierStr,
+			&app.InstallCount,
 			&app.CreatedAt,
 			&app.UpdatedAt,
 		)

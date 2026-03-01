@@ -18,6 +18,7 @@ import (
 // PartnerClient interface for fetching apps from Shopify Partner API
 type PartnerClient interface {
 	FetchApps(ctx context.Context, organizationID, accessToken string) ([]external.PartnerApp, error)
+	FetchInstallCount(ctx context.Context, organizationID, accessToken, partnerAppID string) (int, error)
 }
 
 type AppHandler struct {
@@ -192,6 +193,7 @@ func (h *AppHandler) ListApps(w http.ResponseWriter, r *http.Request) {
 			"name":               app.Name,
 			"tracking_enabled":   app.TrackingEnabled,
 			"revenue_share_tier": app.RevenueShareTier.String(),
+			"install_count":      app.InstallCount,
 			"created_at":         app.CreatedAt,
 			"updated_at":         app.UpdatedAt,
 		}
@@ -293,5 +295,136 @@ func (h *AppHandler) UpdateAppTier(w http.ResponseWriter, r *http.Request) {
 		"display_name":       app.RevenueShareTier.DisplayName(),
 		"description":        app.RevenueShareTier.Description(),
 		"revenue_share_pct":  app.RevenueShareTier.RevenueSharePercent(),
+	})
+}
+
+// RefreshInstallCount refreshes the install count for an app from the Partner API
+// POST /api/v1/apps/{appID}/refresh-install-count
+func (h *AppHandler) RefreshInstallCount(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	// Check if partner client is configured
+	if h.partnerClient == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "Shopify Partner API not configured")
+		return
+	}
+
+	// Get app ID from URL
+	appIDStr := chi.URLParam(r, "appID")
+	if appIDStr == "" {
+		writeJSONError(w, http.StatusBadRequest, "app_id is required")
+		return
+	}
+
+	// Get partner account
+	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "partner account not found")
+		return
+	}
+
+	// Find app
+	var app *entity.App
+	appID, uuidErr := uuid.Parse(appIDStr)
+	if uuidErr == nil {
+		app, err = h.appRepo.FindByID(r.Context(), appID)
+	} else {
+		// Try as partner app ID
+		partnerAppID := appIDStr
+		if !strings.HasPrefix(partnerAppID, "gid://") {
+			partnerAppID = "gid://partners/App/" + appIDStr
+		}
+		app, err = h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, partnerAppID)
+	}
+
+	if err != nil || app == nil {
+		writeJSONError(w, http.StatusNotFound, "app not found")
+		return
+	}
+
+	// Decrypt access token
+	decryptedToken, err := h.decryptor.Decrypt(partnerAccount.EncryptedAccessToken)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to decrypt token")
+		return
+	}
+
+	// Fetch install count from Partner API
+	installCount, err := h.partnerClient.FetchInstallCount(
+		r.Context(),
+		partnerAccount.PartnerID,
+		string(decryptedToken),
+		app.PartnerAppID,
+	)
+	if err != nil {
+		writeJSONError(w, http.StatusBadGateway, "failed to fetch install count from Partner API: "+err.Error())
+		return
+	}
+
+	// Update app with new install count
+	app.InstallCount = installCount
+	if err := h.appRepo.Update(r.Context(), app); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to update app")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message":       "Install count refreshed successfully",
+		"install_count": installCount,
+	})
+}
+
+// GetInstallCount returns the current install count for an app
+// GET /api/v1/apps/{appID}/install-count
+func (h *AppHandler) GetInstallCount(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	// Get app ID from URL
+	appIDStr := chi.URLParam(r, "appID")
+	if appIDStr == "" {
+		writeJSONError(w, http.StatusBadRequest, "app_id is required")
+		return
+	}
+
+	// Get partner account
+	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "partner account not found")
+		return
+	}
+
+	// Find app
+	var app *entity.App
+	appID, uuidErr := uuid.Parse(appIDStr)
+	if uuidErr == nil {
+		app, err = h.appRepo.FindByID(r.Context(), appID)
+	} else {
+		// Try as partner app ID
+		partnerAppID := appIDStr
+		if !strings.HasPrefix(partnerAppID, "gid://") {
+			partnerAppID = "gid://partners/App/" + appIDStr
+		}
+		app, err = h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, partnerAppID)
+	}
+
+	if err != nil || app == nil {
+		writeJSONError(w, http.StatusNotFound, "app not found")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"app_id":        extractNumericAppID(app.PartnerAppID),
+		"name":          app.Name,
+		"install_count": app.InstallCount,
 	})
 }

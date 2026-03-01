@@ -28,6 +28,7 @@ type Config struct {
 	APIKeyHandler            *apikeyhandler.APIKeyHandler
 	AuthMW                   func(next http.Handler) http.Handler
 	AdminMW                  func(next http.Handler) http.Handler // RequireRoles(ADMIN)
+	InternalMW               func(next http.Handler) http.Handler // Internal key authentication
 }
 
 func New(cfg Config) *chi.Mux {
@@ -147,6 +148,10 @@ func New(cfg Config) *chi.Mux {
 				if cfg.StoreHealthHandler != nil {
 					r.Get("/{appID}/stores/{domain}/health", cfg.StoreHealthHandler.GetStoreHealth)
 				}
+
+				// Install count routes
+				r.Get("/{appID}/install-count", cfg.AppHandler.GetInstallCount)
+				r.Post("/{appID}/refresh-install-count", cfg.AppHandler.RefreshInstallCount)
 			})
 		}
 
@@ -171,6 +176,20 @@ func New(cfg Config) *chi.Mux {
 				r.Get("/", cfg.APIKeyHandler.List)
 				r.Post("/", cfg.APIKeyHandler.Create)
 				r.Delete("/{id}", cfg.APIKeyHandler.Revoke)
+			})
+		}
+
+		// Internal routes (authenticated via X-Internal-Key header)
+		// Used for service-to-service calls and internal testing
+		if cfg.InternalMW != nil {
+			r.Route("/internal", func(r chi.Router) {
+				r.Use(cfg.InternalMW)
+
+				// Refresh install count for all apps or a specific app
+				if cfg.SyncHandler != nil {
+					r.Post("/sync/transactions", cfg.SyncHandler.SyncAllApps)
+					r.Post("/sync/transactions/{appID}", cfg.SyncHandler.SyncApp)
+				}
 			})
 		}
 	})

@@ -836,3 +836,172 @@ func GetLatestSubscriptionStatus(events []AppEvent) string {
 
 	return ""
 }
+
+// FetchInstallCount retrieves the number of shops that have installed the app
+// by counting RELATIONSHIP_INSTALLED events with pagination
+func (c *ShopifyPartnerClient) FetchInstallCount(
+	ctx context.Context,
+	organizationID, accessToken, partnerAppID string,
+) (int, error) {
+	// Use a set to track unique shop IDs
+	installedShops := make(map[string]bool)
+	uninstalledShops := make(map[string]bool)
+	var cursor string
+	hasNextPage := true
+
+	for hasNextPage {
+		count, installs, uninstalls, nextCursor, more, err := c.fetchInstallEventPage(
+			ctx, organizationID, accessToken, partnerAppID, cursor,
+		)
+		if err != nil {
+			return 0, err
+		}
+
+		// Track installed shops
+		for _, shopID := range installs {
+			installedShops[shopID] = true
+		}
+
+		// Track uninstalled shops
+		for _, shopID := range uninstalls {
+			uninstalledShops[shopID] = true
+		}
+
+		cursor = nextCursor
+		hasNextPage = more
+
+		log.Printf("Fetched %d install events (total installs: %d, uninstalls: %d, hasMore: %v)",
+			count, len(installedShops), len(uninstalledShops), hasNextPage)
+	}
+
+	// Calculate current installs = installed - uninstalled
+	currentInstalls := 0
+	for shopID := range installedShops {
+		if !uninstalledShops[shopID] {
+			currentInstalls++
+		}
+	}
+
+	log.Printf("Total current installs: %d (installed: %d, uninstalled: %d)",
+		currentInstalls, len(installedShops), len(uninstalledShops))
+
+	return currentInstalls, nil
+}
+
+// fetchInstallEventPage fetches a single page of install/uninstall events
+func (c *ShopifyPartnerClient) fetchInstallEventPage(
+	ctx context.Context,
+	organizationID, accessToken, partnerAppID, cursor string,
+) (int, []string, []string, string, bool, error) {
+	// Query for both RELATIONSHIP_INSTALLED and RELATIONSHIP_UNINSTALLED events
+	query := `
+		query($appId: ID!, $first: Int!, $after: String) {
+			app(id: $appId) {
+				events(
+					first: $first
+					after: $after
+					types: [RELATIONSHIP_INSTALLED, RELATIONSHIP_UNINSTALLED]
+				) {
+					edges {
+						cursor
+						node {
+							type
+							shop {
+								id
+							}
+						}
+					}
+					pageInfo {
+						hasNextPage
+					}
+				}
+			}
+		}
+	`
+
+	variables := map[string]interface{}{
+		"appId": partnerAppID,
+		"first": 100,
+	}
+	if cursor != "" {
+		variables["after"] = cursor
+	}
+
+	url := fmt.Sprintf("%s/%s/api/2025-07/graphql.json", c.baseURL, organizationID)
+
+	reqBody, err := json.Marshal(map[string]interface{}{
+		"query":     query,
+		"variables": variables,
+	})
+	if err != nil {
+		return 0, nil, nil, "", false, fmt.Errorf("failed to marshal query: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(reqBody))
+	if err != nil {
+		return 0, nil, nil, "", false, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Shopify-Access-Token", accessToken)
+
+	resp, body, err := c.executeWithRetry(ctx, req)
+	if err != nil {
+		return 0, nil, nil, "", false, fmt.Errorf("failed to execute request: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return 0, nil, nil, "", false, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result struct {
+		Data struct {
+			App struct {
+				Events struct {
+					Edges []struct {
+						Cursor string `json:"cursor"`
+						Node   struct {
+							Type string `json:"type"`
+							Shop *struct {
+								ID string `json:"id"`
+							} `json:"shop"`
+						} `json:"node"`
+					} `json:"edges"`
+					PageInfo struct {
+						HasNextPage bool `json:"hasNextPage"`
+					} `json:"pageInfo"`
+				} `json:"events"`
+			} `json:"app"`
+		} `json:"data"`
+		Errors []struct {
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+
+	if err := json.Unmarshal(body, &result); err != nil {
+		return 0, nil, nil, "", false, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if len(result.Errors) > 0 {
+		return 0, nil, nil, "", false, fmt.Errorf("graphql error: %s", result.Errors[0].Message)
+	}
+
+	var installs, uninstalls []string
+	var lastCursor string
+
+	for _, edge := range result.Data.App.Events.Edges {
+		lastCursor = edge.Cursor
+		if edge.Node.Shop == nil {
+			continue
+		}
+
+		switch edge.Node.Type {
+		case "RELATIONSHIP_INSTALLED":
+			installs = append(installs, edge.Node.Shop.ID)
+		case "RELATIONSHIP_UNINSTALLED":
+			uninstalls = append(uninstalls, edge.Node.Shop.ID)
+		}
+	}
+
+	return len(result.Data.App.Events.Edges), installs, uninstalls, lastCursor, result.Data.App.Events.PageInfo.HasNextPage, nil
+}

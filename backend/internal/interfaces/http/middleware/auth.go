@@ -97,3 +97,38 @@ func writeError(w http.ResponseWriter, status int, message string) {
 		},
 	})
 }
+
+// InternalKeyMiddleware validates internal API key for service-to-service calls
+type InternalKeyMiddleware struct {
+	internalKey string
+}
+
+// NewInternalKeyMiddleware creates a middleware that validates X-Internal-Key header
+func NewInternalKeyMiddleware(internalKey string) *InternalKeyMiddleware {
+	return &InternalKeyMiddleware{
+		internalKey: internalKey,
+	}
+}
+
+// Authenticate validates the internal key from X-Internal-Key header
+func (m *InternalKeyMiddleware) Authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if m.internalKey == "" {
+			writeError(w, http.StatusServiceUnavailable, "internal key not configured")
+			return
+		}
+
+		key := r.Header.Get("X-Internal-Key")
+		if key == "" {
+			writeError(w, http.StatusUnauthorized, "missing X-Internal-Key header")
+			return
+		}
+
+		if key != m.internalKey {
+			writeError(w, http.StatusUnauthorized, "invalid internal key")
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}

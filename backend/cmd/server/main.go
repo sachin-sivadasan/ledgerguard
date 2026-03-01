@@ -274,6 +274,14 @@ func run() error {
 	// Initialize admin middleware (requires ADMIN or OWNER role)
 	adminMW := middleware.RequireRoles(valueobject.RoleAdmin, valueobject.RoleOwner)
 
+	// Initialize internal key middleware for service-to-service calls
+	var internalMW func(http.Handler) http.Handler
+	if cfg.Server.InternalKey != "" {
+		internalKeyMiddleware := middleware.NewInternalKeyMiddleware(cfg.Server.InternalKey)
+		internalMW = internalKeyMiddleware.Authenticate
+		log.Println("Internal key middleware initialized")
+	}
+
 	// Build router config
 	routerCfg := router.Config{
 		HealthHandler:            healthHandler,
@@ -292,6 +300,7 @@ func run() error {
 		APIKeyHandler:            apiKeyHandler,
 		AuthMW:                   authMW,
 		AdminMW:                  adminMW,
+		InternalMW:               internalMW,
 	}
 
 	r := router.New(routerCfg)

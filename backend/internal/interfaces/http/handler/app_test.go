@@ -18,12 +18,18 @@ import (
 
 // Mock implementations
 type mockPartnerClient struct {
-	apps []external.PartnerApp
-	err  error
+	apps         []external.PartnerApp
+	err          error
+	installCount int
+	installErr   error
 }
 
 func (m *mockPartnerClient) FetchApps(ctx context.Context, organizationID, accessToken string) ([]external.PartnerApp, error) {
 	return m.apps, m.err
+}
+
+func (m *mockPartnerClient) FetchInstallCount(ctx context.Context, organizationID, accessToken, partnerAppID string) (int, error) {
+	return m.installCount, m.installErr
 }
 
 type mockAppRepo struct {

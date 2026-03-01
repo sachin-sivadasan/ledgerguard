@@ -8,12 +8,24 @@ import (
 )
 
 type User struct {
-	ID          uuid.UUID
-	FirebaseUID string
-	Email       string
-	Role        valueobject.Role
-	PlanTier    valueobject.PlanTier
-	CreatedAt   time.Time
+	ID                    uuid.UUID
+	FirebaseUID           string
+	Email                 string
+	Role                  valueobject.Role
+	PlanTier              valueobject.PlanTier
+	CreatedAt             time.Time
+	OnboardingCompletedAt *time.Time
+}
+
+// IsOnboardingComplete returns true if user has completed onboarding
+func (u *User) IsOnboardingComplete() bool {
+	return u.OnboardingCompletedAt != nil
+}
+
+// CompleteOnboarding marks the user's onboarding as complete
+func (u *User) CompleteOnboarding() {
+	now := time.Now().UTC()
+	u.OnboardingCompletedAt = &now
 }
 
 func NewUser(firebaseUID, email string) *User {

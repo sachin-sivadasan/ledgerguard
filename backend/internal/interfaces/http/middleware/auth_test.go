@@ -42,6 +42,10 @@ func (m *mockUserRepository) Create(ctx context.Context, user *entity.User) erro
 	return m.createErr
 }
 
+func (m *mockUserRepository) Update(ctx context.Context, user *entity.User) error {
+	return nil
+}
+
 func TestAuthMiddleware_MissingAuthorizationHeader(t *testing.T) {
 	verifier := &mockTokenVerifier{}
 	userRepo := &mockUserRepository{}

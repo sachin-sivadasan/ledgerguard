@@ -22,7 +22,7 @@ func NewPostgresUserRepository(pool *pgxpool.Pool) *PostgresUserRepository {
 
 func (r *PostgresUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	query := `
-		SELECT id, firebase_uid, email, role, plan_tier, created_at
+		SELECT id, firebase_uid, email, role, plan_tier, created_at, onboarding_completed_at
 		FROM users
 		WHERE id = $1
 	`
@@ -38,6 +38,7 @@ func (r *PostgresUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*e
 		&role,
 		&planTier,
 		&user.CreatedAt,
+		&user.OnboardingCompletedAt,
 	)
 
 	if err != nil {
@@ -55,7 +56,7 @@ func (r *PostgresUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*e
 
 func (r *PostgresUserRepository) FindByFirebaseUID(ctx context.Context, firebaseUID string) (*entity.User, error) {
 	query := `
-		SELECT id, firebase_uid, email, role, plan_tier, created_at
+		SELECT id, firebase_uid, email, role, plan_tier, created_at, onboarding_completed_at
 		FROM users
 		WHERE firebase_uid = $1
 	`
@@ -71,6 +72,7 @@ func (r *PostgresUserRepository) FindByFirebaseUID(ctx context.Context, firebase
 		&role,
 		&planTier,
 		&user.CreatedAt,
+		&user.OnboardingCompletedAt,
 	)
 
 	if err != nil {
@@ -88,8 +90,8 @@ func (r *PostgresUserRepository) FindByFirebaseUID(ctx context.Context, firebase
 
 func (r *PostgresUserRepository) Create(ctx context.Context, user *entity.User) error {
 	query := `
-		INSERT INTO users (id, firebase_uid, email, role, plan_tier, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (id, firebase_uid, email, role, plan_tier, created_at, onboarding_completed_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -99,6 +101,28 @@ func (r *PostgresUserRepository) Create(ctx context.Context, user *entity.User) 
 		user.Role.String(),
 		user.PlanTier.String(),
 		user.CreatedAt,
+		user.OnboardingCompletedAt,
+	)
+
+	return err
+}
+
+func (r *PostgresUserRepository) Update(ctx context.Context, user *entity.User) error {
+	query := `
+		UPDATE users
+		SET email = $2,
+			role = $3,
+			plan_tier = $4,
+			onboarding_completed_at = $5
+		WHERE id = $1
+	`
+
+	_, err := r.pool.Exec(ctx, query,
+		user.ID,
+		user.Email,
+		user.Role.String(),
+		user.PlanTier.String(),
+		user.OnboardingCompletedAt,
 	)
 
 	return err

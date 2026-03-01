@@ -102,6 +102,10 @@ func (m *mockUserRepo) Create(ctx context.Context, user *entity.User) error {
 	return nil
 }
 
+func (m *mockUserRepo) Update(ctx context.Context, user *entity.User) error {
+	return nil
+}
+
 type mockStateStore struct {
 	storedState  string
 	storedUserID uuid.UUID

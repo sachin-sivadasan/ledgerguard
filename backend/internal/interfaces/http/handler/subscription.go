@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
@@ -21,6 +22,7 @@ type SubscriptionHandler struct {
 	subscriptionRepo repository.SubscriptionRepository
 	partnerRepo      repository.PartnerAccountRepository
 	appRepo          repository.AppRepository
+	detailService    *service.SubscriptionDetailService
 }
 
 func NewSubscriptionHandler(
@@ -33,6 +35,11 @@ func NewSubscriptionHandler(
 		partnerRepo:      partnerRepo,
 		appRepo:          appRepo,
 	}
+}
+
+// SetDetailService sets the subscription detail service (optional dependency)
+func (h *SubscriptionHandler) SetDetailService(detailService *service.SubscriptionDetailService) {
+	h.detailService = detailService
 }
 
 // List returns subscriptions for an app with optional filtering
@@ -342,4 +349,120 @@ func subscriptionToJSON(sub *entity.Subscription) map[string]interface{} {
 	}
 
 	return resp
+}
+
+// GetDetail returns detailed subscription information
+// GET /api/v1/subscriptions/{id}
+func (h *SubscriptionHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	// Parse subscription ID
+	idStr := chi.URLParam(r, "id")
+	subscriptionID, err := uuid.Parse(idStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid subscription ID")
+		return
+	}
+
+	if h.detailService == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "detail service not configured")
+		return
+	}
+
+	// Get subscription detail
+	detail, err := h.detailService.GetSubscriptionDetail(r.Context(), subscriptionID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "subscription not found")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(detail)
+}
+
+// GetPaymentHistory returns payment history for a subscription
+// GET /api/v1/subscriptions/{id}/history
+// Query params: limit (optional, default 50)
+func (h *SubscriptionHandler) GetPaymentHistory(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	// Parse subscription ID
+	idStr := chi.URLParam(r, "id")
+	subscriptionID, err := uuid.Parse(idStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid subscription ID")
+		return
+	}
+
+	if h.detailService == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "detail service not configured")
+		return
+	}
+
+	// Parse limit
+	limit := 50
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	// Get payment history
+	history, err := h.detailService.GetPaymentHistory(r.Context(), subscriptionID, limit)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "subscription not found")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"subscription_id": subscriptionID,
+		"payments":        history,
+		"count":           len(history),
+	})
+}
+
+// GetRiskTimeline returns risk state change history for a subscription
+// GET /api/v1/subscriptions/{id}/risk-timeline
+func (h *SubscriptionHandler) GetRiskTimeline(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	// Parse subscription ID
+	idStr := chi.URLParam(r, "id")
+	subscriptionID, err := uuid.Parse(idStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid subscription ID")
+		return
+	}
+
+	if h.detailService == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "detail service not configured")
+		return
+	}
+
+	// Get risk timeline
+	timeline, err := h.detailService.GetRiskTimeline(r.Context(), subscriptionID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "subscription not found")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"subscription_id": subscriptionID,
+		"events":          timeline,
+		"count":           len(timeline),
+	})
 }

@@ -1,6 +1,22 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  calculateActiveMRR,
+  calculateRevenueAtRisk,
+  calculateChurnedRevenue,
+  calculateUsageRevenue,
+  calculateTotalRevenue,
+  calculateRenewalSuccessRate,
+  calculateRiskSummary,
+  calculateDelta as calcDelta,
+  isDeltaGood,
+  formatCurrency,
+  formatPercent,
+  type Subscription,
+  type Transaction,
+  type RiskSummary,
+} from '../lib/kpi-calculations';
 
 // =============================================================================
 // TYPES
@@ -8,25 +24,14 @@ import React, { useState, useEffect, useRef } from 'react';
 
 type KPIType = 'activeMRR' | 'revenueAtRisk' | 'renewalRate' | 'usageRevenue' | 'totalRevenue' | 'churnedRevenue';
 type ViewMode = 'overview' | 'detail' | 'comparison';
-type AnimationPhase = 'intro' | 'filter' | 'calculate' | 'result' | 'delta';
 
-interface RiskState {
+interface RiskStateDisplay {
   id: string;
   label: string;
   icon: string;
   color: string;
   daysRange: string;
   description: string;
-}
-
-interface Subscription {
-  id: string;
-  storeName: string;
-  plan: string;
-  priceCents: number;
-  interval: 'MONTHLY' | 'ANNUAL';
-  riskState: 'SAFE' | 'ONE_CYCLE_MISSED' | 'TWO_CYCLES_MISSED' | 'CHURNED';
-  daysPastDue: number;
 }
 
 interface KPIConfig {
@@ -42,24 +47,11 @@ interface KPIConfig {
   category: 'revenue' | 'health';
 }
 
-interface PeriodData {
-  activeMRRCents: number;
-  revenueAtRiskCents: number;
-  usageRevenueCents: number;
-  totalRevenueCents: number;
-  churnedRevenueCents: number;
-  renewalSuccessRate: number;
-  safeCount: number;
-  oneCycleMissedCount: number;
-  twoCyclesMissedCount: number;
-  churnedCount: number;
-}
-
 // =============================================================================
 // CONSTANTS
 // =============================================================================
 
-const RISK_STATES: RiskState[] = [
+const RISK_STATES: RiskStateDisplay[] = [
   { id: 'SAFE', label: 'Safe', icon: '✅', color: '#22c55e', daysRange: '0-30 days', description: 'Payment on track' },
   { id: 'ONE_CYCLE_MISSED', label: 'At Risk', icon: '⚠️', color: '#f59e0b', daysRange: '31-60 days', description: 'Missed one cycle' },
   { id: 'TWO_CYCLES_MISSED', label: 'Critical', icon: '🔴', color: '#ef4444', daysRange: '61-90 days', description: 'Two cycles missed' },
@@ -141,71 +133,117 @@ const KPI_CONFIG: Record<KPIType, KPIConfig> = {
   },
 };
 
-// Mock subscription data
-const MOCK_SUBSCRIPTIONS: Subscription[] = [
-  { id: '1', storeName: 'cool-store.myshopify.com', plan: 'Pro', priceCents: 4900, interval: 'MONTHLY', riskState: 'SAFE', daysPastDue: 0 },
-  { id: '2', storeName: 'mega-shop.myshopify.com', plan: 'Business', priceCents: 58800, interval: 'ANNUAL', riskState: 'SAFE', daysPastDue: 5 },
-  { id: '3', storeName: 'tiny-biz.myshopify.com', plan: 'Starter', priceCents: 1900, interval: 'MONTHLY', riskState: 'ONE_CYCLE_MISSED', daysPastDue: 45 },
-  { id: '4', storeName: 'big-corp.myshopify.com', plan: 'Enterprise', priceCents: 9900, interval: 'MONTHLY', riskState: 'SAFE', daysPastDue: 2 },
-  { id: '5', storeName: 'slow-payer.myshopify.com', plan: 'Pro', priceCents: 2900, interval: 'MONTHLY', riskState: 'ONE_CYCLE_MISSED', daysPastDue: 38 },
-  { id: '6', storeName: 'trouble-co.myshopify.com', plan: 'Business', priceCents: 4900, interval: 'MONTHLY', riskState: 'TWO_CYCLES_MISSED', daysPastDue: 72 },
-  { id: '7', storeName: 'late-again.myshopify.com', plan: 'Starter', priceCents: 1900, interval: 'MONTHLY', riskState: 'ONE_CYCLE_MISSED', daysPastDue: 55 },
-  { id: '8', storeName: 'ghost-shop.myshopify.com', plan: 'Pro', priceCents: 4900, interval: 'MONTHLY', riskState: 'CHURNED', daysPastDue: 120 },
-];
+// Generate realistic subscription data
+function generateSubscriptions(
+  safeCount: number,
+  oneCycleCount: number,
+  twoCyclesCount: number,
+  churnedCount: number,
+  avgPriceCents: number = 4900
+): Subscription[] {
+  const subscriptions: Subscription[] = [];
+  const plans = ['Starter', 'Pro', 'Business', 'Enterprise'];
+  const storeNames = [
+    'cool-store', 'mega-shop', 'tiny-biz', 'big-corp', 'fast-fashion',
+    'tech-gear', 'home-decor', 'beauty-box', 'pet-supplies', 'fitness-hub',
+  ];
 
-// Period comparison data
-const PERIOD_DATA: { current: PeriodData; previous: PeriodData } = {
-  current: {
-    activeMRRCents: 1245000,
-    revenueAtRiskCents: 185000,
-    usageRevenueCents: 350000,
-    totalRevenueCents: 1750000,
-    churnedRevenueCents: 98000,
-    renewalSuccessRate: 91.5,
-    safeCount: 612,
-    oneCycleMissedCount: 85,
-    twoCyclesMissedCount: 42,
-    churnedCount: 108,
-  },
-  previous: {
-    activeMRRCents: 1183500,
-    revenueAtRiskCents: 211000,
-    usageRevenueCents: 318000,
-    totalRevenueCents: 1508000,
-    churnedRevenueCents: 85000,
-    renewalSuccessRate: 89.2,
-    safeCount: 578,
-    oneCycleMissedCount: 92,
-    twoCyclesMissedCount: 48,
-    churnedCount: 95,
-  },
-};
+  let id = 0;
+
+  // Generate SAFE subscriptions
+  for (let i = 0; i < safeCount; i++) {
+    subscriptions.push({
+      id: String(++id),
+      storeName: `${storeNames[i % storeNames.length]}-${Math.floor(i / 10)}.myshopify.com`,
+      plan: plans[i % plans.length],
+      priceCents: avgPriceCents + (i % 5) * 1000 - 2000,
+      interval: i % 8 === 0 ? 'ANNUAL' : 'MONTHLY',
+      riskState: 'SAFE',
+      daysPastDue: i % 30,
+    });
+  }
+
+  // Generate ONE_CYCLE_MISSED subscriptions
+  for (let i = 0; i < oneCycleCount; i++) {
+    subscriptions.push({
+      id: String(++id),
+      storeName: `late-${storeNames[i % storeNames.length]}-${i}.myshopify.com`,
+      plan: plans[i % plans.length],
+      priceCents: avgPriceCents,
+      interval: 'MONTHLY',
+      riskState: 'ONE_CYCLE_MISSED',
+      daysPastDue: 31 + (i % 29),
+    });
+  }
+
+  // Generate TWO_CYCLES_MISSED subscriptions
+  for (let i = 0; i < twoCyclesCount; i++) {
+    subscriptions.push({
+      id: String(++id),
+      storeName: `trouble-${storeNames[i % storeNames.length]}-${i}.myshopify.com`,
+      plan: plans[i % plans.length],
+      priceCents: avgPriceCents,
+      interval: 'MONTHLY',
+      riskState: 'TWO_CYCLES_MISSED',
+      daysPastDue: 61 + (i % 29),
+    });
+  }
+
+  // Generate CHURNED subscriptions
+  for (let i = 0; i < churnedCount; i++) {
+    subscriptions.push({
+      id: String(++id),
+      storeName: `gone-${storeNames[i % storeNames.length]}-${i}.myshopify.com`,
+      plan: plans[i % plans.length],
+      priceCents: avgPriceCents,
+      interval: 'MONTHLY',
+      riskState: 'CHURNED',
+      daysPastDue: 91 + (i % 60),
+    });
+  }
+
+  return subscriptions;
+}
+
+// Generate mock transactions for usage/total revenue
+function generateTransactions(
+  recurringCents: number,
+  usageCents: number,
+  oneTimeCents: number,
+  refundCents: number
+): Transaction[] {
+  return [
+    { id: '1', chargeType: 'RECURRING', amountCents: recurringCents },
+    { id: '2', chargeType: 'USAGE', amountCents: usageCents },
+    { id: '3', chargeType: 'ONE_TIME', amountCents: oneTimeCents },
+    { id: '4', chargeType: 'REFUND', amountCents: refundCents },
+  ];
+}
+
+// Current period: 847 subscriptions
+const CURRENT_SUBSCRIPTIONS = generateSubscriptions(612, 85, 42, 108, 4900);
+const CURRENT_TRANSACTIONS = generateTransactions(1400000, 350000, 50000, 50000);
+
+// Previous period: 813 subscriptions (slightly fewer)
+const PREVIOUS_SUBSCRIPTIONS = generateSubscriptions(578, 92, 48, 95, 4900);
+const PREVIOUS_TRANSACTIONS = generateTransactions(1190000, 318000, 45000, 45000);
+
+// Sample subscriptions for display (first 8 from current)
+const DISPLAY_SUBSCRIPTIONS = [
+  ...CURRENT_SUBSCRIPTIONS.filter(s => s.riskState === 'SAFE').slice(0, 3),
+  ...CURRENT_SUBSCRIPTIONS.filter(s => s.riskState === 'ONE_CYCLE_MISSED').slice(0, 2),
+  ...CURRENT_SUBSCRIPTIONS.filter(s => s.riskState === 'TWO_CYCLES_MISSED').slice(0, 2),
+  ...CURRENT_SUBSCRIPTIONS.filter(s => s.riskState === 'CHURNED').slice(0, 1),
+];
 
 const ANIMATION_DURATION = 2500;
 
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
+// Helper wrapper for component-local delta calculation
+const calculateDelta = (current: number, previous: number) => calcDelta(current, previous);
 
-const formatCurrency = (cents: number): string => {
-  const dollars = cents / 100;
-  if (dollars >= 1000000) return '$' + (dollars / 1000000).toFixed(1) + 'M';
-  if (dollars >= 1000) return '$' + (dollars / 1000).toFixed(1) + 'K';
-  return '$' + dollars.toFixed(0);
-};
-
-const formatPercent = (value: number): string => {
-  return value.toFixed(1) + '%';
-};
-
-const calculateDelta = (current: number, previous: number): { percent: number; isPositive: boolean } => {
-  if (previous === 0) return { percent: current > 0 ? 100 : 0, isPositive: current > 0 };
-  const percent = ((current - previous) / previous) * 100;
-  return { percent, isPositive: percent > 0 };
-};
-
+// Calculate MRR for display
 const getMRR = (sub: Subscription): number => {
-  return sub.interval === 'ANNUAL' ? sub.priceCents / 12 : sub.priceCents;
+  return sub.interval === 'ANNUAL' ? Math.round(sub.priceCents / 12) : sub.priceCents;
 };
 
 // =============================================================================
@@ -835,17 +873,17 @@ const DataFlow: React.FC<DataFlowProps> = ({ selectedKPI, animationProgress }) =
 };
 
 interface RiskDistributionProps {
-  data: PeriodData;
+  riskSummary: RiskSummary;
   animationProgress: number;
 }
 
-const RiskDistribution: React.FC<RiskDistributionProps> = ({ data, animationProgress }) => {
-  const total = data.safeCount + data.oneCycleMissedCount + data.twoCyclesMissedCount + data.churnedCount;
+const RiskDistribution: React.FC<RiskDistributionProps> = ({ riskSummary, animationProgress }) => {
+  const total = riskSummary.total;
   const distribution = [
-    { label: 'Safe', count: data.safeCount, color: '#22c55e', icon: '✅' },
-    { label: 'At Risk', count: data.oneCycleMissedCount, color: '#f59e0b', icon: '⚠️' },
-    { label: 'Critical', count: data.twoCyclesMissedCount, color: '#ef4444', icon: '🔴' },
-    { label: 'Churned', count: data.churnedCount, color: '#6b7280', icon: '💀' },
+    { label: 'Safe', count: riskSummary.safeCount, color: '#22c55e', icon: '✅' },
+    { label: 'At Risk', count: riskSummary.oneCycleMissedCount, color: '#f59e0b', icon: '⚠️' },
+    { label: 'Critical', count: riskSummary.twoCyclesMissedCount, color: '#ef4444', icon: '🔴' },
+    { label: 'Churned', count: riskSummary.churnedCount, color: '#6b7280', icon: '💀' },
   ];
 
   return (
@@ -922,6 +960,27 @@ const KPIMetricsGuide: React.FC = () => {
 
   const kpi = KPI_CONFIG[selectedKPI];
 
+  // Compute metrics from subscriptions and transactions using the tested calculation functions
+  const currentMetrics = useMemo(() => ({
+    activeMRRCents: calculateActiveMRR(CURRENT_SUBSCRIPTIONS),
+    revenueAtRiskCents: calculateRevenueAtRisk(CURRENT_SUBSCRIPTIONS),
+    churnedRevenueCents: calculateChurnedRevenue(CURRENT_SUBSCRIPTIONS),
+    usageRevenueCents: calculateUsageRevenue(CURRENT_TRANSACTIONS),
+    totalRevenueCents: calculateTotalRevenue(CURRENT_TRANSACTIONS),
+    renewalSuccessRate: calculateRenewalSuccessRate(CURRENT_SUBSCRIPTIONS),
+    riskSummary: calculateRiskSummary(CURRENT_SUBSCRIPTIONS),
+  }), []);
+
+  const previousMetrics = useMemo(() => ({
+    activeMRRCents: calculateActiveMRR(PREVIOUS_SUBSCRIPTIONS),
+    revenueAtRiskCents: calculateRevenueAtRisk(PREVIOUS_SUBSCRIPTIONS),
+    churnedRevenueCents: calculateChurnedRevenue(PREVIOUS_SUBSCRIPTIONS),
+    usageRevenueCents: calculateUsageRevenue(PREVIOUS_TRANSACTIONS),
+    totalRevenueCents: calculateTotalRevenue(PREVIOUS_TRANSACTIONS),
+    renewalSuccessRate: calculateRenewalSuccessRate(PREVIOUS_SUBSCRIPTIONS),
+    riskSummary: calculateRiskSummary(PREVIOUS_SUBSCRIPTIONS),
+  }), []);
+
   // Animation loop
   useEffect(() => {
     if (!isPlaying) return;
@@ -958,14 +1017,14 @@ const KPIMetricsGuide: React.FC = () => {
   };
 
   const getKPIValue = (kpiType: KPIType, period: 'current' | 'previous'): number => {
-    const data = PERIOD_DATA[period];
+    const metrics = period === 'current' ? currentMetrics : previousMetrics;
     switch (kpiType) {
-      case 'activeMRR': return data.activeMRRCents;
-      case 'revenueAtRisk': return data.revenueAtRiskCents;
-      case 'usageRevenue': return data.usageRevenueCents;
-      case 'totalRevenue': return data.totalRevenueCents;
-      case 'churnedRevenue': return data.churnedRevenueCents;
-      case 'renewalRate': return data.renewalSuccessRate;
+      case 'activeMRR': return metrics.activeMRRCents;
+      case 'revenueAtRisk': return metrics.revenueAtRiskCents;
+      case 'usageRevenue': return metrics.usageRevenueCents;
+      case 'totalRevenue': return metrics.totalRevenueCents;
+      case 'churnedRevenue': return metrics.churnedRevenueCents;
+      case 'renewalRate': return metrics.renewalSuccessRate;
       default: return 0;
     }
   };
@@ -1074,7 +1133,7 @@ const KPIMetricsGuide: React.FC = () => {
                 highlightedState={highlightedRiskState}
               />
               <RiskDistribution
-                data={PERIOD_DATA.current}
+                riskSummary={currentMetrics.riskSummary}
                 animationProgress={animationProgress}
               />
             </div>
@@ -1098,7 +1157,7 @@ const KPIMetricsGuide: React.FC = () => {
                 result={getResultString()}
               />
               <SubscriptionList
-                subscriptions={MOCK_SUBSCRIPTIONS}
+                subscriptions={DISPLAY_SUBSCRIPTIONS}
                 highlightRiskState={highlightedRiskState}
                 showMRR={selectedKPI === 'activeMRR' || selectedKPI === 'revenueAtRisk' || selectedKPI === 'churnedRevenue'}
                 animationProgress={animationProgress}

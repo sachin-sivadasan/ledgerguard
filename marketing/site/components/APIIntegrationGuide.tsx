@@ -1058,7 +1058,7 @@ const APIIntegrationGuide: React.FC = () => {
       }}>
         {[
           { icon: '⚡', title: '<50ms Response', desc: 'Pre-calculated risk state' },
-          { icon: '🔄', title: 'Always Fresh', desc: 'Synced every 12 hours' },
+          { icon: '🪝', title: 'Real-Time Webhooks', desc: 'Instant status updates' },
           { icon: '📦', title: 'Batch Support', desc: 'Up to 100 per request' },
           { icon: '🔐', title: 'API Key Auth', desc: 'Simple Bearer token' },
         ].map((benefit, idx) => (
@@ -1079,6 +1079,79 @@ const APIIntegrationGuide: React.FC = () => {
             <div style={{ color: '#6b7280', fontSize: '10px' }}>{benefit.desc}</div>
           </div>
         ))}
+      </div>
+
+      {/* Webhook Support Section */}
+      <div style={{
+        padding: '20px',
+        borderRadius: '12px',
+        background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)',
+        border: '1px solid rgba(34, 197, 94, 0.3)',
+        marginBottom: '20px',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          marginBottom: '16px',
+        }}>
+          <span style={{ fontSize: '24px' }}>🪝</span>
+          <div>
+            <div style={{ color: 'white', fontSize: '15px', fontWeight: 'bold' }}>
+              Real-Time Webhooks
+            </div>
+            <div style={{ color: '#9ca3af', fontSize: '11px' }}>
+              Instant updates when subscription status changes
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '12px',
+          marginBottom: '16px',
+        }}>
+          {[
+            { event: 'Subscription Update', topic: 'app_subscriptions/update', desc: 'Status changes (ACTIVE → FROZEN)' },
+            { event: 'Billing Failure', topic: 'billing_attempts/failure', desc: 'Failed payment attempts' },
+            { event: 'App Uninstalled', topic: 'app/uninstalled', desc: 'Merchant uninstalls your app' },
+          ].map((webhook, idx) => (
+            <div
+              key={idx}
+              style={{
+                padding: '12px',
+                borderRadius: '8px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(34, 197, 94, 0.2)',
+              }}
+            >
+              <div style={{ color: '#22c55e', fontSize: '11px', fontWeight: 'bold', marginBottom: '4px' }}>
+                {webhook.event}
+              </div>
+              <div style={{ color: '#6b7280', fontSize: '9px', fontFamily: 'monospace', marginBottom: '4px' }}>
+                {webhook.topic}
+              </div>
+              <div style={{ color: '#9ca3af', fontSize: '10px' }}>
+                {webhook.desc}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{
+          padding: '12px',
+          borderRadius: '8px',
+          background: 'rgba(0, 0, 0, 0.4)',
+          fontFamily: 'monospace',
+          fontSize: '10px',
+        }}>
+          <div style={{ color: '#6b7280', marginBottom: '6px' }}>// Webhook payload example</div>
+          <div style={{ color: '#9ca3af' }}>{'POST /webhooks/shopify'}</div>
+          <div style={{ color: '#9ca3af' }}>{'X-Shopify-Topic: app_subscriptions/update'}</div>
+          <div style={{ color: '#9ca3af' }}>{'X-Shopify-Hmac-Sha256: <signature>'}</div>
+          <div style={{ color: '#22c55e', marginTop: '6px' }}>{'→ Risk state updated instantly'}</div>
+        </div>
       </div>
 
       {/* Risk States Reference */}

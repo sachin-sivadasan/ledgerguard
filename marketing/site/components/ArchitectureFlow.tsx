@@ -680,6 +680,23 @@ function OutputSection({ isActive, showDetails }: { isActive: boolean; showDetai
             </ul>
           )}
         </EntityBox>
+
+        <EntityBox
+          title="Shopify Webhooks"
+          subtitle="Real-time"
+          icon={<span className="text-xs">🪝</span>}
+          color="green"
+          isActive={isActive}
+          className="!p-2"
+        >
+          {showDetails && (
+            <ul className="mt-1 text-[10px] text-slate-500 space-y-0.5">
+              <li>• Sub updates</li>
+              <li>• Billing fail</li>
+              <li>• Uninstalls</li>
+            </ul>
+          )}
+        </EntityBox>
       </div>
     </div>
   );

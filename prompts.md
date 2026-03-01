@@ -906,6 +906,35 @@
 
 ---
 
+## [2026-03-01] Dashboard Preferences Not Applied
+
+**Original Prompt:**
+> dashboard not considering the preferences
+
+**Improved Prompt:**
+> Fix dashboard preferences not being applied to the dashboard display:
+> 1. Dashboard page hardcodes KPIs and secondary widgets instead of reading user preferences
+> 2. PreferencesBloc saves/loads correctly but DashboardPage ignores the state
+> 3. Fix DashboardPage to:
+>    - Load preferences on init
+>    - Use BlocBuilder<PreferencesBloc, PreferencesState> to get current preferences
+>    - Filter/order primary KPIs based on preferences.primaryKpis
+>    - Filter secondary widgets based on preferences.enabledSecondaryWidgets
+> 4. Fix go.mod invalid version (1.25.4 → 1.23)
+
+**Result:**
+- frontend/app/lib/presentation/pages/dashboard_page.dart - Major refactor:
+  - Converted to StatefulWidget to load preferences on init
+  - Added BlocBuilder<PreferencesBloc> wrapping dashboard body
+  - New `_buildKpiCard()` method maps KpiType to KpiCard widget
+  - `_buildPrimaryKpis()` now iterates preferences.primaryKpis
+  - `_buildSecondarySection()` now checks preferences.isSecondaryWidgetEnabled()
+  - `_hasSecondaryWidgets()` helper to conditionally show section
+- backend/go.mod - Fixed invalid Go version 1.25.4 → 1.23
+- Flutter analyze: Only pre-existing deprecation warning (not from this change)
+
+---
+
 ## [2026-03-01] Revenue Share Tier Tracking Implementation
 
 **Original Prompt:**

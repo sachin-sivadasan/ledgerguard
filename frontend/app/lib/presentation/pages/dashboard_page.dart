@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/dashboard_metrics.dart';
+import '../../domain/entities/dashboard_preferences.dart';
 import '../../domain/entities/time_range.dart';
 import '../../domain/repositories/app_repository.dart';
 import '../blocs/dashboard/dashboard.dart';
@@ -22,8 +23,20 @@ import '../widgets/shared.dart';
 import '../widgets/time_range_selector.dart';
 
 /// Executive Dashboard page displaying key metrics
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Load preferences when dashboard initializes
+    context.read<PreferencesBloc>().add(const LoadPreferencesRequested());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -140,31 +153,45 @@ class DashboardPage extends StatelessWidget {
           ),
         ],
       ),
-      body: BlocBuilder<DashboardBloc, DashboardState>(
-        builder: (context, state) {
-          if (state is DashboardInitial) {
-            // Trigger load on first build
-            context.read<DashboardBloc>().add(const LoadDashboardRequested());
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: BlocBuilder<PreferencesBloc, PreferencesState>(
+        builder: (context, prefsState) {
+          // Get preferences (use defaults if not loaded yet)
+          final preferences = prefsState is PreferencesLoaded
+              ? prefsState.preferences
+              : DashboardPreferences.defaults();
 
-          if (state is DashboardLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          return BlocBuilder<DashboardBloc, DashboardState>(
+            builder: (context, state) {
+              if (state is DashboardInitial) {
+                // Trigger load on first build
+                context.read<DashboardBloc>().add(const LoadDashboardRequested());
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          if (state is DashboardEmpty) {
-            return _buildEmptyState(context, state.message);
-          }
+              if (state is DashboardLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          if (state is DashboardError) {
-            return _buildErrorState(context, state.message);
-          }
+              if (state is DashboardEmpty) {
+                return _buildEmptyState(context, state.message);
+              }
 
-          if (state is DashboardLoaded) {
-            return _buildDashboard(context, state.metrics, state.timeRange);
-          }
+              if (state is DashboardError) {
+                return _buildErrorState(context, state.message);
+              }
 
-          return const SizedBox.shrink();
+              if (state is DashboardLoaded) {
+                return _buildDashboard(
+                  context,
+                  state.metrics,
+                  state.timeRange,
+                  preferences,
+                );
+              }
+
+              return const SizedBox.shrink();
+            },
+          );
         },
       ),
     );
@@ -330,6 +357,7 @@ class DashboardPage extends StatelessWidget {
     BuildContext context,
     DashboardMetrics metrics,
     TimeRange timeRange,
+    DashboardPreferences preferences,
   ) {
     return RefreshIndicator(
       onRefresh: () async {
@@ -348,33 +376,49 @@ class DashboardPage extends StatelessWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.all(padding),
             child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const ProGuard(child: AiInsightCard()),
-            _buildSectionHeader(context, 'Primary KPIs'),
-            const SizedBox(height: 16),
-            _buildPrimaryKpis(context, metrics, timeRange),
-            const SizedBox(height: 32),
-            _buildSectionHeader(context, 'Revenue & Risk'),
-            const SizedBox(height: 16),
-            _buildSecondarySection(context, metrics),
-            const SizedBox(height: 32),
-            _buildSectionHeader(context, 'Fee Insights'),
-            const SizedBox(height: 16),
-            FeeInsightsCard(totalGrossCents: metrics.totalRevenue),
-            const SizedBox(height: 32),
-            _buildSectionHeader(context, 'Earnings Timeline'),
-            const SizedBox(height: 16),
-            BlocProvider(
-              create: (_) => GetIt.instance<EarningsBloc>(),
-              child: EarningsTimelineChart(timeRange: timeRange),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const ProGuard(child: AiInsightCard()),
+                if (preferences.primaryKpis.isNotEmpty) ...[
+                  _buildSectionHeader(context, 'Primary KPIs'),
+                  const SizedBox(height: 16),
+                  _buildPrimaryKpis(context, metrics, timeRange, preferences),
+                  const SizedBox(height: 32),
+                ],
+                if (_hasSecondaryWidgets(preferences)) ...[
+                  _buildSectionHeader(context, 'Revenue & Risk'),
+                  const SizedBox(height: 16),
+                  _buildSecondarySection(context, metrics, preferences),
+                  const SizedBox(height: 32),
+                ],
+                _buildSectionHeader(context, 'Fee Insights'),
+                const SizedBox(height: 16),
+                FeeInsightsCard(totalGrossCents: metrics.totalRevenue),
+                if (preferences.isSecondaryWidgetEnabled(
+                    SecondaryWidget.earningsTimeline)) ...[
+                  const SizedBox(height: 32),
+                  _buildSectionHeader(context, 'Earnings Timeline'),
+                  const SizedBox(height: 16),
+                  BlocProvider(
+                    create: (_) => GetIt.instance<EarningsBloc>(),
+                    child: EarningsTimelineChart(timeRange: timeRange),
+                  ),
+                ],
+              ],
             ),
-          ],
-        ),
           );
         },
       ),
     );
+  }
+
+  bool _hasSecondaryWidgets(DashboardPreferences preferences) {
+    return preferences
+            .isSecondaryWidgetEnabled(SecondaryWidget.usageRevenue) ||
+        preferences.isSecondaryWidgetEnabled(SecondaryWidget.totalRevenue) ||
+        preferences.isSecondaryWidgetEnabled(SecondaryWidget.revenueMixChart) ||
+        preferences
+            .isSecondaryWidgetEnabled(SecondaryWidget.riskDistributionChart);
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
@@ -390,245 +434,262 @@ class DashboardPage extends StatelessWidget {
     BuildContext context,
     DashboardMetrics metrics,
     TimeRange timeRange,
+    DashboardPreferences preferences,
   ) {
-    final periodSubtitle = timeRange.preset.displayName;
-    final delta = metrics.delta;
+    final kpis = preferences.primaryKpis;
+    if (kpis.isEmpty) return const SizedBox.shrink();
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth > 800;
         final isMedium = constraints.maxWidth > 500;
 
+        final kpiWidgets = kpis.map((kpi) {
+          return _buildKpiCard(
+            context,
+            kpi,
+            metrics,
+            timeRange,
+            isLarge: isWide,
+          );
+        }).toList();
+
         if (isWide) {
           return Row(
-            children: [
-              Expanded(
-                child: KpiCard(
-                  title: 'Renewal Success Rate',
-                  value: '${metrics.renewalSuccessRate.toStringAsFixed(1)}%',
-                  subtitle: periodSubtitle,
-                  icon: Icons.trending_up,
-                  color: AppTheme.success,
-                  isLarge: true,
-                  delta: delta?.renewalSuccessIndicator,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: KpiCard(
-                  title: 'Active MRR',
-                  value: metrics.formattedMrr,
-                  subtitle: 'Monthly recurring revenue',
-                  icon: Icons.attach_money,
-                  color: AppTheme.primary,
-                  isLarge: true,
-                  delta: delta?.activeMrrIndicator,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: KpiCard(
-                  title: 'Revenue at Risk',
-                  value: metrics.formattedRevenueAtRisk,
-                  subtitle: 'Needs attention',
-                  icon: Icons.warning_amber,
-                  color: AppTheme.warning,
-                  isLarge: true,
-                  delta: delta?.revenueAtRiskIndicator,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: KpiCard(
-                  title: 'Churned',
-                  value: metrics.formattedChurnedRevenue,
-                  subtitle: '${metrics.churnedCount} subscriptions',
-                  icon: Icons.trending_down,
-                  color: AppTheme.danger,
-                  isLarge: true,
-                  delta: delta?.churnCountIndicator,
-                ),
-              ),
-            ],
+            children: kpiWidgets
+                .expand((widget) => [Expanded(child: widget), const SizedBox(width: 16)])
+                .toList()
+              ..removeLast(),
           );
         } else if (isMedium) {
-          return Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: KpiCard(
-                      title: 'Renewal Success Rate',
-                      value:
-                          '${metrics.renewalSuccessRate.toStringAsFixed(1)}%',
-                      subtitle: periodSubtitle,
-                      icon: Icons.trending_up,
-                      color: AppTheme.success,
-                      delta: delta?.renewalSuccessIndicator,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: KpiCard(
-                      title: 'Active MRR',
-                      value: metrics.formattedMrr,
-                      subtitle: 'Monthly recurring revenue',
-                      icon: Icons.attach_money,
-                      color: AppTheme.primary,
-                      delta: delta?.activeMrrIndicator,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: KpiCard(
-                      title: 'Revenue at Risk',
-                      value: metrics.formattedRevenueAtRisk,
-                      subtitle: 'Needs attention',
-                      icon: Icons.warning_amber,
-                      color: AppTheme.warning,
-                      delta: delta?.revenueAtRiskIndicator,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: KpiCard(
-                      title: 'Churned',
-                      value: metrics.formattedChurnedRevenue,
-                      subtitle: '${metrics.churnedCount} subscriptions',
-                      icon: Icons.trending_down,
-                      color: AppTheme.danger,
-                      delta: delta?.churnCountIndicator,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          );
+          // Grid layout for medium screens
+          final rows = <Widget>[];
+          for (var i = 0; i < kpiWidgets.length; i += 2) {
+            final rowWidgets = <Widget>[Expanded(child: kpiWidgets[i])];
+            if (i + 1 < kpiWidgets.length) {
+              rowWidgets.add(const SizedBox(width: 16));
+              rowWidgets.add(Expanded(child: kpiWidgets[i + 1]));
+            }
+            rows.add(Row(children: rowWidgets));
+            if (i + 2 < kpiWidgets.length) {
+              rows.add(const SizedBox(height: 16));
+            }
+          }
+          return Column(children: rows);
         } else {
+          // Stacked layout for small screens
           return Column(
-            children: [
-              KpiCard(
-                title: 'Renewal Success Rate',
-                value: '${metrics.renewalSuccessRate.toStringAsFixed(1)}%',
-                subtitle: periodSubtitle,
-                icon: Icons.trending_up,
-                color: AppTheme.success,
-                delta: delta?.renewalSuccessIndicator,
-              ),
-              const SizedBox(height: 16),
-              KpiCard(
-                title: 'Active MRR',
-                value: metrics.formattedMrr,
-                subtitle: 'Monthly recurring revenue',
-                icon: Icons.attach_money,
-                color: AppTheme.primary,
-                delta: delta?.activeMrrIndicator,
-              ),
-              const SizedBox(height: 16),
-              KpiCard(
-                title: 'Revenue at Risk',
-                value: metrics.formattedRevenueAtRisk,
-                subtitle: 'Needs attention',
-                icon: Icons.warning_amber,
-                color: AppTheme.warning,
-                delta: delta?.revenueAtRiskIndicator,
-              ),
-              const SizedBox(height: 16),
-              KpiCard(
-                title: 'Churned',
-                value: metrics.formattedChurnedRevenue,
-                subtitle: '${metrics.churnedCount} subscriptions',
-                icon: Icons.trending_down,
-                color: AppTheme.danger,
-                delta: delta?.churnCountIndicator,
-              ),
-            ],
+            children: kpiWidgets
+                .expand((widget) => [widget, const SizedBox(height: 16)])
+                .toList()
+              ..removeLast(),
           );
         }
       },
     );
   }
 
-  Widget _buildSecondarySection(
-      BuildContext context, DashboardMetrics metrics) {
+  Widget _buildKpiCard(
+    BuildContext context,
+    KpiType kpiType,
+    DashboardMetrics metrics,
+    TimeRange timeRange, {
+    bool isLarge = false,
+  }) {
+    final periodSubtitle = timeRange.preset.displayName;
     final delta = metrics.delta;
+
+    switch (kpiType) {
+      case KpiType.renewalSuccessRate:
+        return KpiCard(
+          title: 'Renewal Success Rate',
+          value: '${metrics.renewalSuccessRate.toStringAsFixed(1)}%',
+          subtitle: periodSubtitle,
+          icon: Icons.trending_up,
+          color: AppTheme.success,
+          isLarge: isLarge,
+          delta: delta?.renewalSuccessIndicator,
+        );
+      case KpiType.activeMrr:
+        return KpiCard(
+          title: 'Active MRR',
+          value: metrics.formattedMrr,
+          subtitle: 'Monthly recurring revenue',
+          icon: Icons.attach_money,
+          color: AppTheme.primary,
+          isLarge: isLarge,
+          delta: delta?.activeMrrIndicator,
+        );
+      case KpiType.revenueAtRisk:
+        return KpiCard(
+          title: 'Revenue at Risk',
+          value: metrics.formattedRevenueAtRisk,
+          subtitle: 'Needs attention',
+          icon: Icons.warning_amber,
+          color: AppTheme.warning,
+          isLarge: isLarge,
+          delta: delta?.revenueAtRiskIndicator,
+        );
+      case KpiType.churned:
+        return KpiCard(
+          title: 'Churned',
+          value: metrics.formattedChurnedRevenue,
+          subtitle: '${metrics.churnedCount} subscriptions',
+          icon: Icons.trending_down,
+          color: AppTheme.danger,
+          isLarge: isLarge,
+          delta: delta?.churnCountIndicator,
+        );
+      case KpiType.usageRevenue:
+        return KpiCard(
+          title: 'Usage Revenue',
+          value: metrics.formattedUsageRevenue,
+          subtitle: periodSubtitle,
+          icon: Icons.data_usage,
+          color: AppTheme.secondary,
+          isLarge: isLarge,
+          delta: delta?.usageRevenueIndicator,
+        );
+      case KpiType.totalRevenue:
+        return KpiCard(
+          title: 'Total Revenue',
+          value: metrics.formattedTotalRevenue,
+          subtitle: periodSubtitle,
+          icon: Icons.account_balance_wallet,
+          color: AppTheme.primary,
+          isLarge: isLarge,
+          delta: delta?.totalRevenueIndicator,
+        );
+    }
+  }
+
+  Widget _buildSecondarySection(
+    BuildContext context,
+    DashboardMetrics metrics,
+    DashboardPreferences preferences,
+  ) {
+    final delta = metrics.delta;
+
+    final showUsageRevenue =
+        preferences.isSecondaryWidgetEnabled(SecondaryWidget.usageRevenue);
+    final showTotalRevenue =
+        preferences.isSecondaryWidgetEnabled(SecondaryWidget.totalRevenue);
+    final showRevenueMix =
+        preferences.isSecondaryWidgetEnabled(SecondaryWidget.revenueMixChart);
+    final showRiskDistribution = preferences
+        .isSecondaryWidgetEnabled(SecondaryWidget.riskDistributionChart);
+
+    // If nothing to show, return empty
+    if (!showUsageRevenue &&
+        !showTotalRevenue &&
+        !showRevenueMix &&
+        !showRiskDistribution) {
+      return const SizedBox.shrink();
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth > 700;
 
-        if (isWide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: KpiCardCompact(
-                            title: 'Usage Revenue',
-                            value: metrics.formattedUsageRevenue,
-                            icon: Icons.data_usage,
-                            color: AppTheme.secondary,
-                            delta: delta?.usageRevenueIndicator,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: KpiCardCompact(
-                            title: 'Total Revenue',
-                            value: metrics.formattedTotalRevenue,
-                            icon: Icons.account_balance_wallet,
-                            color: AppTheme.primary,
-                            delta: delta?.totalRevenueIndicator,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    RevenueMixChart(revenueMix: metrics.revenueMix),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: RiskDistributionChart(
-                    riskDistribution: metrics.riskDistribution),
-              ),
-            ],
-          );
-        } else {
-          return Column(
-            children: [
-              KpiCardCompact(
-                title: 'Usage Revenue',
-                value: metrics.formattedUsageRevenue,
-                icon: Icons.data_usage,
-                color: AppTheme.secondary,
-                delta: delta?.usageRevenueIndicator,
-              ),
-              const SizedBox(height: 12),
-              KpiCardCompact(
-                title: 'Total Revenue',
-                value: metrics.formattedTotalRevenue,
-                icon: Icons.account_balance_wallet,
-                color: AppTheme.primary,
-                delta: delta?.totalRevenueIndicator,
-              ),
-              const SizedBox(height: 16),
-              RevenueMixChart(revenueMix: metrics.revenueMix),
-              const SizedBox(height: 16),
-              RiskDistributionChart(
-                  riskDistribution: metrics.riskDistribution),
-            ],
+        final widgets = <Widget>[];
+
+        // Build KPI cards
+        final kpiCards = <Widget>[];
+        if (showUsageRevenue) {
+          kpiCards.add(
+            KpiCardCompact(
+              title: 'Usage Revenue',
+              value: metrics.formattedUsageRevenue,
+              icon: Icons.data_usage,
+              color: AppTheme.secondary,
+              delta: delta?.usageRevenueIndicator,
+            ),
           );
         }
+        if (showTotalRevenue) {
+          kpiCards.add(
+            KpiCardCompact(
+              title: 'Total Revenue',
+              value: metrics.formattedTotalRevenue,
+              icon: Icons.account_balance_wallet,
+              color: AppTheme.primary,
+              delta: delta?.totalRevenueIndicator,
+            ),
+          );
+        }
+
+        if (isWide) {
+          // Wide layout: side-by-side columns
+          final leftColumn = <Widget>[];
+          if (kpiCards.isNotEmpty) {
+            if (kpiCards.length == 2) {
+              leftColumn.add(
+                Row(
+                  children: [
+                    Expanded(child: kpiCards[0]),
+                    const SizedBox(width: 12),
+                    Expanded(child: kpiCards[1]),
+                  ],
+                ),
+              );
+            } else if (kpiCards.length == 1) {
+              leftColumn.add(kpiCards[0]);
+            }
+          }
+          if (showRevenueMix) {
+            if (leftColumn.isNotEmpty) {
+              leftColumn.add(const SizedBox(height: 16));
+            }
+            leftColumn.add(RevenueMixChart(revenueMix: metrics.revenueMix));
+          }
+
+          if (leftColumn.isNotEmpty && showRiskDistribution) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: Column(children: leftColumn)),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: RiskDistributionChart(
+                    riskDistribution: metrics.riskDistribution,
+                  ),
+                ),
+              ],
+            );
+          } else if (leftColumn.isNotEmpty) {
+            return Column(children: leftColumn);
+          } else if (showRiskDistribution) {
+            return RiskDistributionChart(
+              riskDistribution: metrics.riskDistribution,
+            );
+          }
+        } else {
+          // Narrow layout: stacked
+          for (final card in kpiCards) {
+            widgets.add(card);
+            widgets.add(const SizedBox(height: 12));
+          }
+          if (showRevenueMix) {
+            widgets.add(RevenueMixChart(revenueMix: metrics.revenueMix));
+            widgets.add(const SizedBox(height: 16));
+          }
+          if (showRiskDistribution) {
+            widgets.add(
+              RiskDistributionChart(
+                riskDistribution: metrics.riskDistribution,
+              ),
+            );
+          }
+
+          // Remove trailing spacer if present
+          if (widgets.isNotEmpty && widgets.last is SizedBox) {
+            widgets.removeLast();
+          }
+
+          return Column(children: widgets);
+        }
+
+        return const SizedBox.shrink();
       },
     );
   }

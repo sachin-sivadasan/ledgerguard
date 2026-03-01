@@ -1,6 +1,6 @@
 module github.com/sachin-sivadasan/ledgerguard
 
-go 1.25.4
+go 1.24.0
 
 require (
 	firebase.google.com/go/v4 v4.19.0

@@ -524,7 +524,7 @@ class _KpiTile extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
         trailing: IconButton(
-          icon: const Icon(Icons.remove_circle_outline),
+          icon: const Icon(Icons.delete_outline),
           color: Colors.grey[400],
           onPressed: onRemove,
         ),

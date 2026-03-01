@@ -431,10 +431,6 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 							}
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
-							appUsageRecord {
-								id
-								description
-							}
 						}
 						... on AppOneTimeSale {
 							chargeId
@@ -559,11 +555,6 @@ type transactionNode struct {
 		Amount       string `json:"amount"`
 		CurrencyCode string `json:"currencyCode"`
 	} `json:"netAmount,omitempty"`
-	// AppUsageSale specific fields
-	AppUsageRecord *struct {
-		ID          string `json:"id"`
-		Description string `json:"description"`
-	} `json:"appUsageRecord,omitempty"`
 }
 
 // parseTransaction converts a Partner API transaction to a domain entity

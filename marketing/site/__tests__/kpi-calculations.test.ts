@@ -14,8 +14,13 @@ import {
   computeAllMetrics,
   formatCurrency,
   formatPercent,
+  getContributingRiskStates,
+  isRiskStateContributor,
+  getKPILabel,
+  isHigherBetter,
   type Subscription,
   type Transaction,
+  type KPIType,
 } from '../lib/kpi-calculations';
 
 // =============================================================================
@@ -457,5 +462,205 @@ describe('Real-world scenario: 847 subscriptions', () => {
     // Renewal Success Rate = 612 / 847 = 72.3%
     const renewalRate = calculateRenewalSuccessRate(subscriptions);
     expect(renewalRate).toBeCloseTo(72.3, 1);
+  });
+});
+
+// =============================================================================
+// KPI TO RISK STATE MAPPING TESTS
+// =============================================================================
+
+describe('getContributingRiskStates', () => {
+  it('should return SAFE for activeMRR', () => {
+    expect(getContributingRiskStates('activeMRR')).toEqual(['SAFE']);
+  });
+
+  it('should return ONE_CYCLE_MISSED and TWO_CYCLES_MISSED for revenueAtRisk', () => {
+    expect(getContributingRiskStates('revenueAtRisk')).toEqual([
+      'ONE_CYCLE_MISSED',
+      'TWO_CYCLES_MISSED',
+    ]);
+  });
+
+  it('should return CHURNED for churnedRevenue', () => {
+    expect(getContributingRiskStates('churnedRevenue')).toEqual(['CHURNED']);
+  });
+
+  it('should return SAFE for renewalRate', () => {
+    expect(getContributingRiskStates('renewalRate')).toEqual(['SAFE']);
+  });
+
+  it('should return empty array for usageRevenue (transaction-based)', () => {
+    expect(getContributingRiskStates('usageRevenue')).toEqual([]);
+  });
+
+  it('should return empty array for totalRevenue (transaction-based)', () => {
+    expect(getContributingRiskStates('totalRevenue')).toEqual([]);
+  });
+});
+
+describe('isRiskStateContributor', () => {
+  describe('activeMRR', () => {
+    it('should return true for SAFE', () => {
+      expect(isRiskStateContributor('activeMRR', 'SAFE')).toBe(true);
+    });
+
+    it('should return false for ONE_CYCLE_MISSED', () => {
+      expect(isRiskStateContributor('activeMRR', 'ONE_CYCLE_MISSED')).toBe(false);
+    });
+
+    it('should return false for TWO_CYCLES_MISSED', () => {
+      expect(isRiskStateContributor('activeMRR', 'TWO_CYCLES_MISSED')).toBe(false);
+    });
+
+    it('should return false for CHURNED', () => {
+      expect(isRiskStateContributor('activeMRR', 'CHURNED')).toBe(false);
+    });
+  });
+
+  describe('revenueAtRisk', () => {
+    it('should return false for SAFE', () => {
+      expect(isRiskStateContributor('revenueAtRisk', 'SAFE')).toBe(false);
+    });
+
+    it('should return true for ONE_CYCLE_MISSED', () => {
+      expect(isRiskStateContributor('revenueAtRisk', 'ONE_CYCLE_MISSED')).toBe(true);
+    });
+
+    it('should return true for TWO_CYCLES_MISSED', () => {
+      expect(isRiskStateContributor('revenueAtRisk', 'TWO_CYCLES_MISSED')).toBe(true);
+    });
+
+    it('should return false for CHURNED', () => {
+      expect(isRiskStateContributor('revenueAtRisk', 'CHURNED')).toBe(false);
+    });
+  });
+
+  describe('churnedRevenue', () => {
+    it('should return false for SAFE', () => {
+      expect(isRiskStateContributor('churnedRevenue', 'SAFE')).toBe(false);
+    });
+
+    it('should return false for ONE_CYCLE_MISSED', () => {
+      expect(isRiskStateContributor('churnedRevenue', 'ONE_CYCLE_MISSED')).toBe(false);
+    });
+
+    it('should return false for TWO_CYCLES_MISSED', () => {
+      expect(isRiskStateContributor('churnedRevenue', 'TWO_CYCLES_MISSED')).toBe(false);
+    });
+
+    it('should return true for CHURNED', () => {
+      expect(isRiskStateContributor('churnedRevenue', 'CHURNED')).toBe(true);
+    });
+  });
+});
+
+describe('getKPILabel', () => {
+  it('should return "Active MRR" for activeMRR', () => {
+    expect(getKPILabel('activeMRR')).toBe('Active MRR');
+  });
+
+  it('should return "At Risk" for revenueAtRisk', () => {
+    expect(getKPILabel('revenueAtRisk')).toBe('At Risk');
+  });
+
+  it('should return "Churned" for churnedRevenue', () => {
+    expect(getKPILabel('churnedRevenue')).toBe('Churned');
+  });
+
+  it('should return "Renewal %" for renewalRate', () => {
+    expect(getKPILabel('renewalRate')).toBe('Renewal %');
+  });
+
+  it('should return "Usage" for usageRevenue', () => {
+    expect(getKPILabel('usageRevenue')).toBe('Usage');
+  });
+
+  it('should return "Total" for totalRevenue', () => {
+    expect(getKPILabel('totalRevenue')).toBe('Total');
+  });
+});
+
+describe('isHigherBetter', () => {
+  describe('KPIs where higher is better', () => {
+    it('should return true for activeMRR', () => {
+      expect(isHigherBetter('activeMRR')).toBe(true);
+    });
+
+    it('should return true for renewalRate', () => {
+      expect(isHigherBetter('renewalRate')).toBe(true);
+    });
+
+    it('should return true for usageRevenue', () => {
+      expect(isHigherBetter('usageRevenue')).toBe(true);
+    });
+
+    it('should return true for totalRevenue', () => {
+      expect(isHigherBetter('totalRevenue')).toBe(true);
+    });
+  });
+
+  describe('KPIs where lower is better', () => {
+    it('should return false for revenueAtRisk', () => {
+      expect(isHigherBetter('revenueAtRisk')).toBe(false);
+    });
+
+    it('should return false for churnedRevenue', () => {
+      expect(isHigherBetter('churnedRevenue')).toBe(false);
+    });
+  });
+});
+
+// =============================================================================
+// INTEGRATION: KPI HIGHLIGHTING WITH CALCULATIONS
+// =============================================================================
+
+describe('KPI highlighting integration', () => {
+  const subscriptions: Subscription[] = [
+    createSubscription({ id: '1', priceCents: 4900, riskState: 'SAFE' }),
+    createSubscription({ id: '2', priceCents: 9900, riskState: 'SAFE' }),
+    createSubscription({ id: '3', priceCents: 2900, riskState: 'ONE_CYCLE_MISSED' }),
+    createSubscription({ id: '4', priceCents: 4900, riskState: 'TWO_CYCLES_MISSED' }),
+    createSubscription({ id: '5', priceCents: 1900, riskState: 'CHURNED' }),
+  ];
+
+  it('Active MRR should only include SAFE subscriptions', () => {
+    const contributingStates = getContributingRiskStates('activeMRR');
+    const activeMRR = subscriptions
+      .filter(sub => contributingStates.includes(sub.riskState))
+      .reduce((sum, sub) => sum + sub.priceCents, 0);
+
+    expect(activeMRR).toBe(4900 + 9900); // Only SAFE
+    expect(calculateActiveMRR(subscriptions)).toBe(activeMRR);
+  });
+
+  it('Revenue at Risk should only include ONE_CYCLE and TWO_CYCLES', () => {
+    const contributingStates = getContributingRiskStates('revenueAtRisk');
+    const atRisk = subscriptions
+      .filter(sub => contributingStates.includes(sub.riskState))
+      .reduce((sum, sub) => sum + sub.priceCents, 0);
+
+    expect(atRisk).toBe(2900 + 4900); // ONE_CYCLE + TWO_CYCLES
+    expect(calculateRevenueAtRisk(subscriptions)).toBe(atRisk);
+  });
+
+  it('Churned Revenue should only include CHURNED subscriptions', () => {
+    const contributingStates = getContributingRiskStates('churnedRevenue');
+    const churned = subscriptions
+      .filter(sub => contributingStates.includes(sub.riskState))
+      .reduce((sum, sub) => sum + sub.priceCents, 0);
+
+    expect(churned).toBe(1900); // Only CHURNED
+    expect(calculateChurnedRevenue(subscriptions)).toBe(churned);
+  });
+
+  it('should correctly identify which states to highlight for each KPI', () => {
+    const kpis: KPIType[] = ['activeMRR', 'revenueAtRisk', 'churnedRevenue'];
+
+    for (const kpi of kpis) {
+      const states = getContributingRiskStates(kpi);
+      for (const state of states) {
+        expect(isRiskStateContributor(kpi, state)).toBe(true);
+      }
+    }
   });
 });

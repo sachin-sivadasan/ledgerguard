@@ -250,3 +250,78 @@ export function formatCurrency(cents: number): string {
 export function formatPercent(value: number): string {
   return value.toFixed(1) + '%';
 }
+
+// =============================================================================
+// KPI TO RISK STATE MAPPING
+// =============================================================================
+
+export type KPIType = 'activeMRR' | 'revenueAtRisk' | 'renewalRate' | 'usageRevenue' | 'totalRevenue' | 'churnedRevenue';
+
+/**
+ * Get the risk states that contribute to a given KPI.
+ * This defines which subscription risk states are used in each KPI calculation.
+ */
+export function getContributingRiskStates(kpiType: KPIType): RiskState[] {
+  switch (kpiType) {
+    case 'activeMRR':
+      // Active MRR only counts SAFE subscriptions
+      return ['SAFE'];
+    case 'revenueAtRisk':
+      // Revenue at Risk includes ONE_CYCLE_MISSED and TWO_CYCLES_MISSED
+      return ['ONE_CYCLE_MISSED', 'TWO_CYCLES_MISSED'];
+    case 'churnedRevenue':
+      // Churned Revenue only counts CHURNED subscriptions
+      return ['CHURNED'];
+    case 'renewalRate':
+      // Renewal rate compares SAFE to all, but highlights SAFE as the "good" state
+      return ['SAFE'];
+    case 'usageRevenue':
+    case 'totalRevenue':
+      // These are transaction-based, not subscription-based
+      return [];
+    default:
+      return [];
+  }
+}
+
+/**
+ * Check if a risk state contributes to a given KPI.
+ */
+export function isRiskStateContributor(kpiType: KPIType, riskState: RiskState): boolean {
+  const contributors = getContributingRiskStates(kpiType);
+  return contributors.includes(riskState);
+}
+
+/**
+ * Get the KPI label for display in the Risk Distribution.
+ */
+export function getKPILabel(kpiType: KPIType): string {
+  switch (kpiType) {
+    case 'activeMRR': return 'Active MRR';
+    case 'revenueAtRisk': return 'At Risk';
+    case 'churnedRevenue': return 'Churned';
+    case 'renewalRate': return 'Renewal %';
+    case 'usageRevenue': return 'Usage';
+    case 'totalRevenue': return 'Total';
+    default: return '';
+  }
+}
+
+/**
+ * Determine if higher values are better for a given KPI.
+ * Used for delta coloring (green vs red).
+ */
+export function isHigherBetter(kpiType: KPIType): boolean {
+  switch (kpiType) {
+    case 'activeMRR':
+    case 'renewalRate':
+    case 'usageRevenue':
+    case 'totalRevenue':
+      return true;
+    case 'revenueAtRisk':
+    case 'churnedRevenue':
+      return false;
+    default:
+      return true;
+  }
+}

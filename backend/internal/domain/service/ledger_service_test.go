@@ -49,6 +49,14 @@ func (m *mockTxRepoForLedger) GetUpcomingAvailability(ctx context.Context, appID
 	return nil, nil
 }
 
+func (m *mockTxRepoForLedger) FindByDomain(ctx context.Context, appID uuid.UUID, domain string, from, to time.Time) ([]*entity.Transaction, error) {
+	return nil, m.err
+}
+
+func (m *mockTxRepoForLedger) GetEarningsSummaryByDomain(ctx context.Context, appID uuid.UUID, domain string) (*repository.EarningsSummary, error) {
+	return &repository.EarningsSummary{}, nil
+}
+
 type mockSubRepoForLedger struct {
 	subscriptions []*entity.Subscription
 	upsertCalls   int

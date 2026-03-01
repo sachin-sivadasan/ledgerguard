@@ -129,14 +129,15 @@ void main() {
       expect(find.text('Manual Token Entry'), findsOneWidget);
     });
 
-    testWidgets('hides Manual Token section when role not loaded',
+    testWidgets('shows Manual Token section even when role not loaded',
         (tester) async {
+      // Manual Token Entry is now shown to all users for development convenience
       await tester.pumpWidget(buildTestWidget(
         integrationState: const PartnerIntegrationNotConnected(),
         roleState: const RoleInitial(),
       ));
 
-      expect(find.text('Manual Token Entry'), findsNothing);
+      expect(find.text('Manual Token Entry'), findsOneWidget);
     });
 
     testWidgets('dispatches SaveManualTokenRequested on Save Token tap',

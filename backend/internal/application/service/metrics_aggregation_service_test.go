@@ -97,6 +97,14 @@ func (m *mockTxRepo) GetUpcomingAvailability(ctx context.Context, appID uuid.UUI
 	return nil, nil
 }
 
+func (m *mockTxRepo) FindByDomain(ctx context.Context, appID uuid.UUID, domain string, from, to time.Time) ([]*entity.Transaction, error) {
+	return nil, m.err
+}
+
+func (m *mockTxRepo) GetEarningsSummaryByDomain(ctx context.Context, appID uuid.UUID, domain string) (*repository.EarningsSummary, error) {
+	return &repository.EarningsSummary{}, nil
+}
+
 // Helper to create a snapshot with all fields
 func createSnapshot(appID uuid.UUID, date time.Time, activeMRR, revenueAtRisk, usageRevenue, totalRevenue int64, renewalRate float64, safe, oneCycle, twoCycle, churned int) *entity.DailyMetricsSnapshot {
 	s := entity.NewDailyMetricsSnapshot(appID, date)

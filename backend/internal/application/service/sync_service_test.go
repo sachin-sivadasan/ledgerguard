@@ -63,6 +63,14 @@ func (m *mockTransactionRepo) GetUpcomingAvailability(ctx context.Context, appID
 	return nil, nil
 }
 
+func (m *mockTransactionRepo) FindByDomain(ctx context.Context, appID uuid.UUID, domain string, from, to time.Time) ([]*entity.Transaction, error) {
+	return nil, nil
+}
+
+func (m *mockTransactionRepo) GetEarningsSummaryByDomain(ctx context.Context, appID uuid.UUID, domain string) (*repository.EarningsSummary, error) {
+	return &repository.EarningsSummary{}, nil
+}
+
 type mockAppRepoForSync struct {
 	app *entity.App
 	err error
@@ -158,6 +166,10 @@ func (m *mockLedgerRebuilder) RebuildFromTransactions(ctx context.Context, appID
 		RiskSummary:          domainservice.RiskSummary{},
 		RebuildAt:            now,
 	}, m.err
+}
+
+func (m *mockLedgerRebuilder) BackfillHistoricalSnapshots(ctx context.Context, appID uuid.UUID, transactions []*entity.Transaction) (int, error) {
+	return 0, m.err
 }
 
 func TestSyncService_SyncApp_Success(t *testing.T) {

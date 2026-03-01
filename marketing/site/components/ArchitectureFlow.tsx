@@ -122,32 +122,32 @@ function EntityBox({ title, subtitle, icon, color, isActive, children, className
   return (
     <div
       className={`
-        relative rounded-xl border-2 p-4 transition-all duration-500
-        ${isActive ? `border-${color}-500 shadow-lg shadow-${color}-500/20` : 'border-slate-200'}
-        ${isActive ? 'scale-105' : 'scale-100'}
+        relative rounded-lg border p-2 transition-all duration-500
+        ${isActive ? `border-${color}-500 shadow-md shadow-${color}-500/20` : 'border-slate-200'}
+        ${isActive ? 'scale-[1.02]' : 'scale-100'}
         bg-white ${className}
       `}
       style={{
         borderColor: isActive ? `var(--${color}-500, #3b82f6)` : undefined,
-        boxShadow: isActive ? `0 10px 40px -10px var(--${color}-500, rgba(59, 130, 246, 0.3))` : undefined,
+        boxShadow: isActive ? `0 4px 20px -4px var(--${color}-500, rgba(59, 130, 246, 0.3))` : undefined,
       }}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2">
         <div
           className={`
-            w-10 h-10 rounded-lg flex items-center justify-center text-white
-            transition-all duration-300
+            w-6 h-6 rounded flex items-center justify-center text-white text-xs
+            transition-all duration-300 flex-shrink-0
           `}
           style={{ backgroundColor: isActive ? `var(--${color}-500, #3b82f6)` : '#94a3b8' }}
         >
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-slate-900 text-sm">{title}</h4>
-          {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+          <h4 className="font-semibold text-slate-900 text-xs leading-tight">{title}</h4>
+          {subtitle && <p className="text-[10px] text-slate-500 leading-tight">{subtitle}</p>}
         </div>
       </div>
-      {children && <div className="mt-3">{children}</div>}
+      {children && <div className="mt-1.5">{children}</div>}
     </div>
   );
 }
@@ -167,21 +167,21 @@ function ConnectionLine({
 }) {
   if (direction === 'split') {
     return (
-      <div className="flex items-center justify-center py-2">
-        <div className="flex items-center gap-4">
-          <div className={`w-16 h-0.5 transition-colors duration-300 ${isActive ? 'bg-blue-500' : 'bg-slate-200'}`} />
-          <div className={`w-2 h-2 rounded-full transition-colors duration-300 ${isActive ? 'bg-blue-500' : 'bg-slate-300'}`} />
-          <div className={`w-16 h-0.5 transition-colors duration-300 ${isActive ? 'bg-blue-500' : 'bg-slate-200'}`} />
+      <div className="flex items-center justify-center py-1">
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-px transition-colors duration-300 ${isActive ? 'bg-blue-500' : 'bg-slate-200'}`} />
+          <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${isActive ? 'bg-blue-500' : 'bg-slate-300'}`} />
+          <div className={`w-8 h-px transition-colors duration-300 ${isActive ? 'bg-blue-500' : 'bg-slate-200'}`} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`flex ${direction === 'right' ? 'flex-row items-center' : 'flex-col items-center'} gap-1`}>
+    <div className={`flex ${direction === 'right' ? 'flex-row items-center' : 'flex-col items-center'} gap-0.5`}>
       <div
         className={`
-          ${direction === 'right' ? 'w-8 h-0.5' : 'w-0.5 h-8'}
+          ${direction === 'right' ? 'w-4 h-px' : 'w-px h-4'}
           transition-colors duration-300 relative
           ${isActive ? 'bg-blue-500' : 'bg-slate-200'}
         `}
@@ -203,12 +203,12 @@ function ConnectionLine({
         )}
       </div>
       {label && (
-        <span className={`text-xs transition-colors duration-300 ${isActive ? 'text-blue-600' : 'text-slate-400'}`}>
+        <span className={`text-[10px] transition-colors duration-300 ${isActive ? 'text-blue-600' : 'text-slate-400'}`}>
           {label}
         </span>
       )}
       <svg
-        className={`w-3 h-3 transition-colors duration-300 ${isActive ? 'text-blue-500' : 'text-slate-300'}`}
+        className={`w-2 h-2 transition-colors duration-300 ${isActive ? 'text-blue-500' : 'text-slate-300'}`}
         fill="currentColor"
         viewBox="0 0 24 24"
       >
@@ -228,18 +228,18 @@ function ConnectionLine({
 
 function IngestionSection({ isActive, showDetails }: { isActive: boolean; showDetails: boolean }) {
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-        <span className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm font-bold">1</span>
+    <div className="space-y-2">
+      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1">
+        <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-[10px] font-bold">1</span>
         Data Ingestion
       </h3>
 
-      <div className="grid gap-4">
+      <div className="grid gap-2">
         {/* Shopify Partner Account */}
         <EntityBox
           title="Shopify Partner Account"
           subtitle="Your connected partner account"
-          icon={<span className="text-lg">🏪</span>}
+          icon={<span className="text-xs">🏪</span>}
           color="green"
           isActive={isActive}
         >
@@ -257,7 +257,7 @@ function IngestionSection({ isActive, showDetails }: { isActive: boolean; showDe
         <EntityBox
           title="Partner API"
           subtitle="GraphQL endpoint"
-          icon={<span className="text-lg">🔌</span>}
+          icon={<span className="text-xs">🔌</span>}
           color="green"
           isActive={isActive}
         >
@@ -285,7 +285,7 @@ function IngestionSection({ isActive, showDetails }: { isActive: boolean; showDe
         <EntityBox
           title="LedgerGuard Sync Engine"
           subtitle="Automated data sync"
-          icon={<span className="text-lg">🔄</span>}
+          icon={<span className="text-xs">🔄</span>}
           color="blue"
           isActive={isActive}
         >
@@ -320,18 +320,18 @@ function ProcessingSection({ isActive, showDetails }: { isActive: boolean; showD
   }, [isActive]);
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-        <span className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-sm font-bold">2</span>
+    <div className="space-y-2">
+      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1">
+        <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-[10px] font-bold">2</span>
         Data Processing
       </h3>
 
-      <div className="grid gap-4">
+      <div className="grid gap-2">
         {/* Transaction Repository */}
         <EntityBox
           title="Transaction Repository"
           subtitle="Raw transaction storage"
-          icon={<span className="text-lg">🗄️</span>}
+          icon={<span className="text-xs">🗄️</span>}
           color="blue"
           isActive={isActive}
         >
@@ -360,7 +360,7 @@ function ProcessingSection({ isActive, showDetails }: { isActive: boolean; showD
         <EntityBox
           title="Ledger Rebuild Service"
           subtitle="Deterministic reconstruction"
-          icon={<span className="text-lg">📒</span>}
+          icon={<span className="text-xs">📒</span>}
           color="purple"
           isActive={isActive}
         >
@@ -392,7 +392,7 @@ function ProcessingSection({ isActive, showDetails }: { isActive: boolean; showD
         <EntityBox
           title="Subscription Builder"
           subtitle="Group transactions by shop"
-          icon={<span className="text-lg">🏗️</span>}
+          icon={<span className="text-xs">🏗️</span>}
           color="purple"
           isActive={isActive}
         >
@@ -438,22 +438,22 @@ function RiskSection({ isActive, showDetails }: { isActive: boolean; showDetails
   const risk = getRiskForDay(currentDay);
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-        <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-sm font-bold">3</span>
+    <div className="space-y-2">
+      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1">
+        <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[10px] font-bold">3</span>
         Risk Classification
       </h3>
 
       <EntityBox
         title="Risk Engine"
-        subtitle="Days overdue → Risk state"
-        icon={<span className="text-lg">⚠️</span>}
+        subtitle="Days overdue → Risk"
+        icon={<span className="text-xs">⚠️</span>}
         color="amber"
         isActive={isActive}
       >
         {/* Timeline visualization */}
-        <div className="mt-4">
-          <div className="relative h-8 bg-slate-100 rounded-full overflow-hidden">
+        <div className="mt-2">
+          <div className="relative h-5 bg-slate-100 rounded-full overflow-hidden">
             <div className="absolute inset-y-0 left-0 w-[30%] bg-green-400" />
             <div className="absolute inset-y-0 left-[30%] w-[30%] bg-amber-400" />
             <div className="absolute inset-y-0 left-[60%] w-[30%] bg-orange-400" />
@@ -461,25 +461,25 @@ function RiskSection({ isActive, showDetails }: { isActive: boolean; showDetails
 
             {/* Current position marker */}
             <div
-              className="absolute top-0 bottom-0 w-1 bg-slate-900 transition-all duration-200"
+              className="absolute top-0 bottom-0 w-0.5 bg-slate-900 transition-all duration-200"
               style={{ left: `${Math.min(currentDay, 100)}%` }}
             >
-              <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-2 py-0.5 rounded whitespace-nowrap">
-                {currentDay} days
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] px-1 py-0.5 rounded whitespace-nowrap">
+                {currentDay}d
               </div>
             </div>
 
             {/* Labels */}
-            <div className="absolute inset-0 flex items-center text-xs font-medium text-white">
+            <div className="absolute inset-0 flex items-center text-[9px] font-medium text-white">
               <span className="flex-1 text-center">Safe</span>
-              <span className="flex-1 text-center">1 Cycle</span>
-              <span className="flex-1 text-center">2 Cycles</span>
-              <span className="w-[10%] text-center text-[10px]">X</span>
+              <span className="flex-1 text-center">1C</span>
+              <span className="flex-1 text-center">2C</span>
+              <span className="w-[10%] text-center">X</span>
             </div>
           </div>
 
           {/* Day markers */}
-          <div className="flex justify-between text-xs text-slate-500 mt-1 px-1">
+          <div className="flex justify-between text-[9px] text-slate-500 mt-0.5 px-0.5">
             <span>0</span>
             <span>30</span>
             <span>60</span>
@@ -488,13 +488,12 @@ function RiskSection({ isActive, showDetails }: { isActive: boolean; showDetails
         </div>
 
         {/* Current state display */}
-        <div className={`mt-4 p-3 rounded-lg text-center transition-colors duration-300 bg-${risk.color}-100`}>
-          <p className={`text-sm font-bold text-${risk.color}-700`}>{risk.state}</p>
-          <p className="text-xs text-slate-500 mt-1">Current classification</p>
+        <div className={`mt-2 p-1.5 rounded text-center transition-colors duration-300 bg-${risk.color}-100`}>
+          <p className={`text-[10px] font-bold text-${risk.color}-700`}>{risk.state}</p>
         </div>
 
         {showDetails && (
-          <div className="mt-4 bg-slate-800 rounded-lg p-3 font-mono text-xs text-green-400 overflow-x-auto">
+          <div className="mt-2 bg-slate-800 rounded p-1.5 font-mono text-[9px] text-green-400 overflow-x-auto">
             <pre>{`func ClassifyRisk(daysLate int) RiskState {
   switch {
   case daysLate <= 30:  return SAFE
@@ -512,7 +511,7 @@ function RiskSection({ isActive, showDetails }: { isActive: boolean; showDetails
         <EntityBox
           title="Classified Subscriptions"
           subtitle="Risk state per merchant"
-          icon={<span className="text-lg">📋</span>}
+          icon={<span className="text-xs">📋</span>}
           color="slate"
           isActive={isActive}
         >
@@ -539,47 +538,43 @@ function RiskSection({ isActive, showDetails }: { isActive: boolean; showDetails
 
 function MetricsSection({ isActive, showDetails }: { isActive: boolean; showDetails: boolean }) {
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-        <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">4</span>
-        Metrics Computation
+    <div className="space-y-2">
+      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1">
+        <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold">4</span>
+        Metrics
       </h3>
 
       <EntityBox
         title="Metrics Engine"
-        subtitle="Aggregate KPIs"
-        icon={<span className="text-lg">📊</span>}
+        subtitle="KPIs"
+        icon={<span className="text-xs">📊</span>}
         color="blue"
         isActive={isActive}
       >
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3">
-            <p className="text-xs text-green-600 font-medium">Renewal Rate</p>
-            <p className="text-2xl font-bold text-green-900">
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded p-1.5">
+            <p className="text-[9px] text-green-600 font-medium">Renewal</p>
+            <p className="text-sm font-bold text-green-900">
               {isActive ? <AnimatedNumber value={SAMPLE_METRICS.renewalRate} suffix="%" /> : '—'}
             </p>
-            <p className="text-xs text-green-600 mt-1">SAFE / Total</p>
           </div>
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
-            <p className="text-xs text-blue-600 font-medium">Active MRR</p>
-            <p className="text-2xl font-bold text-blue-900">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded p-1.5">
+            <p className="text-[9px] text-blue-600 font-medium">MRR</p>
+            <p className="text-sm font-bold text-blue-900">
               {isActive ? <AnimatedNumber value={SAMPLE_METRICS.activeMRR} prefix="$" /> : '—'}
             </p>
-            <p className="text-xs text-blue-600 mt-1">SAFE subs only</p>
           </div>
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-3">
-            <p className="text-xs text-amber-600 font-medium">At Risk</p>
-            <p className="text-2xl font-bold text-amber-900">
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded p-1.5">
+            <p className="text-[9px] text-amber-600 font-medium">At Risk</p>
+            <p className="text-sm font-bold text-amber-900">
               {isActive ? <AnimatedNumber value={SAMPLE_METRICS.revenueAtRisk} prefix="$" /> : '—'}
             </p>
-            <p className="text-xs text-amber-600 mt-1">Needs attention</p>
           </div>
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3">
-            <p className="text-xs text-purple-600 font-medium">Usage Revenue</p>
-            <p className="text-2xl font-bold text-purple-900">
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded p-1.5">
+            <p className="text-[9px] text-purple-600 font-medium">Usage</p>
+            <p className="text-sm font-bold text-purple-900">
               {isActive ? <AnimatedNumber value={SAMPLE_METRICS.usageRevenue} prefix="$" /> : '—'}
             </p>
-            <p className="text-xs text-purple-600 mt-1">This period</p>
           </div>
         </div>
       </EntityBox>
@@ -587,17 +582,17 @@ function MetricsSection({ isActive, showDetails }: { isActive: boolean; showDeta
       <ConnectionLine isActive={isActive} label="Store" />
 
       <EntityBox
-        title="Daily Metrics Snapshot"
-        subtitle="Historical record per app per day"
-        icon={<span className="text-lg">📸</span>}
+        title="Daily Snapshot"
+        subtitle="Per app/day"
+        icon={<span className="text-xs">📸</span>}
         color="slate"
         isActive={isActive}
       >
         {showDetails && (
-          <div className="mt-2 text-xs text-slate-500 space-y-1">
-            <p>• Immutable audit trail</p>
-            <p>• Trend analysis over time</p>
-            <p>• Period-over-period deltas</p>
+          <div className="mt-1 text-[10px] text-slate-500 space-y-0.5">
+            <p>• Audit trail</p>
+            <p>• Trends</p>
+            <p>• Deltas</p>
           </div>
         )}
       </EntityBox>
@@ -610,64 +605,81 @@ function MetricsSection({ isActive, showDetails }: { isActive: boolean; showDeta
 // =============================================================================
 
 function OutputSection({ isActive, showDetails }: { isActive: boolean; showDetails: boolean }) {
-  const outputs = [
-    {
-      title: "Dashboard",
-      icon: "📱",
-      color: "cyan",
-      details: ["KPIs", "Charts", "Lists"],
-    },
-    {
-      title: "Alerts",
-      icon: "🔔",
-      color: "amber",
-      details: ["Slack", "Email", "Push"],
-    },
-    {
-      title: "AI Brief",
-      icon: "🤖",
-      color: "purple",
-      details: ["Daily", "Executive", "Pro"],
-    },
-    {
-      title: "API",
-      icon: "🔗",
-      color: "slate",
-      details: ["REST", "GraphQL", "Webhooks"],
-    },
-  ];
-
   return (
-    <div className="space-y-3">
-      <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-        <span className="w-6 h-6 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center text-xs font-bold">5</span>
-        Output
+    <div className="space-y-2">
+      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1">
+        <span className="w-5 h-5 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center text-[10px] font-bold">5</span>
+        Output Layer
       </h3>
 
-      <div className="space-y-2">
-        {outputs.map((out) => (
-          <div
-            key={out.title}
-            className={`
-              rounded-lg border p-2 transition-all duration-300 bg-white
-              ${isActive ? 'border-cyan-300 shadow-sm' : 'border-slate-200'}
-            `}
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-sm">{out.icon}</span>
-              <span className="text-xs font-semibold text-slate-900">{out.title}</span>
-            </div>
-            {showDetails && (
-              <div className="flex gap-1 mt-1 flex-wrap">
-                {out.details.map((d) => (
-                  <span key={d} className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
-                    {d}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-2">
+        <EntityBox
+          title="Dashboard UI"
+          subtitle="Real-time"
+          icon={<span className="text-xs">📱</span>}
+          color="cyan"
+          isActive={isActive}
+          className="!p-2"
+        >
+          {showDetails && (
+            <ul className="mt-1 text-[10px] text-slate-500 space-y-0.5">
+              <li>• KPI cards</li>
+              <li>• Risk chart</li>
+              <li>• Cohorts</li>
+            </ul>
+          )}
+        </EntityBox>
+
+        <EntityBox
+          title="Push Alerts"
+          subtitle="Slack/Email"
+          icon={<span className="text-xs">🔔</span>}
+          color="amber"
+          isActive={isActive}
+          className="!p-2"
+        >
+          {showDetails && (
+            <ul className="mt-1 text-[10px] text-slate-500 space-y-0.5">
+              <li>• Risk alerts</li>
+              <li>• Daily digest</li>
+              <li>• Churn notif</li>
+            </ul>
+          )}
+        </EntityBox>
+
+        <EntityBox
+          title="AI Brief"
+          subtitle="Claude AI"
+          icon={<span className="text-xs">🤖</span>}
+          color="purple"
+          isActive={isActive}
+          className="!p-2"
+        >
+          {showDetails && (
+            <ul className="mt-1 text-[10px] text-slate-500 space-y-0.5">
+              <li>• 100 words</li>
+              <li>• Executive</li>
+              <li>• Pro tier</li>
+            </ul>
+          )}
+        </EntityBox>
+
+        <EntityBox
+          title="Revenue API"
+          subtitle="REST/GQL"
+          icon={<span className="text-xs">🔗</span>}
+          color="slate"
+          isActive={isActive}
+          className="!p-2"
+        >
+          {showDetails && (
+            <ul className="mt-1 text-[10px] text-slate-500 space-y-0.5">
+              <li>• Shop GID</li>
+              <li>• Batch</li>
+              <li>• Webhooks</li>
+            </ul>
+          )}
+        </EntityBox>
       </div>
     </div>
   );

@@ -316,13 +316,26 @@ interface RiskTimelineProps {
   highlightedState?: string;
 }
 
-const RiskTimeline: React.FC<RiskTimelineProps> = ({ animationProgress, highlightedState }) => {
-  const thresholds = [
-    { day: 0, label: 'Charge', state: 'SAFE' },
-    { day: 30, label: 'Grace ends', state: 'SAFE' },
-    { day: 60, label: '1 cycle', state: 'ONE_CYCLE_MISSED' },
-    { day: 90, label: '2 cycles', state: 'TWO_CYCLES_MISSED' },
-    { day: 120, label: 'Lost', state: 'CHURNED' },
+const RiskTimeline: React.FC<RiskTimelineProps> = ({ animationProgress }) => {
+  // Map animation progress (0-100) to days (0-120)
+  const currentDay = Math.round((animationProgress / 100) * 120);
+
+  // Determine current risk state based on days
+  const getCurrentRisk = (days: number) => {
+    if (days <= 30) return RISK_STATES[0]; // SAFE
+    if (days <= 60) return RISK_STATES[1]; // ONE_CYCLE_MISSED
+    if (days <= 90) return RISK_STATES[2]; // TWO_CYCLES_MISSED
+    return RISK_STATES[3]; // CHURNED
+  };
+
+  const currentRisk = getCurrentRisk(currentDay);
+
+  // Timeline segments with their day ranges
+  const segments = [
+    { state: RISK_STATES[0], start: 0, end: 30 },
+    { state: RISK_STATES[1], start: 30, end: 60 },
+    { state: RISK_STATES[2], start: 60, end: 90 },
+    { state: RISK_STATES[3], start: 90, end: 120 },
   ];
 
   return (
@@ -332,44 +345,93 @@ const RiskTimeline: React.FC<RiskTimelineProps> = ({ animationProgress, highligh
       background: 'rgba(0, 0, 0, 0.3)',
       border: '1px solid rgba(99, 102, 241, 0.2)',
     }}>
+      {/* Title */}
       <div style={{
         color: 'white',
         fontSize: '14px',
         fontWeight: 'bold',
-        marginBottom: '16px',
+        marginBottom: '12px',
         textAlign: 'center',
       }}>
         Risk Classification Timeline
       </div>
 
-      {/* Timeline bar */}
-      <div style={{ position: 'relative', height: '60px', marginBottom: '20px' }}>
-        {/* Background track */}
+      {/* Current Status Display */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '12px',
+        marginBottom: '20px',
+        padding: '12px 16px',
+        background: `${currentRisk.color}15`,
+        border: `2px solid ${currentRisk.color}`,
+        borderRadius: '10px',
+      }}>
+        <span style={{ fontSize: '24px' }}>{currentRisk.icon}</span>
+        <div>
+          <div style={{ color: currentRisk.color, fontSize: '16px', fontWeight: 'bold' }}>
+            Day {currentDay} → {currentRisk.label}
+          </div>
+          <div style={{ color: '#9ca3af', fontSize: '11px' }}>
+            {currentRisk.description}
+          </div>
+        </div>
+      </div>
+
+      {/* Timeline Track */}
+      <div style={{ position: 'relative', height: '50px', margin: '0 10px 16px' }}>
+        {/* Day markers */}
+        {[0, 30, 60, 90, 120].map((day, idx) => (
+          <div
+            key={day}
+            style={{
+              position: 'absolute',
+              left: `${(day / 120) * 100}%`,
+              top: 0,
+              transform: 'translateX(-50%)',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{
+              color: currentDay >= day ? '#e5e7eb' : '#6b7280',
+              fontSize: '10px',
+              fontWeight: currentDay >= day ? 'bold' : 'normal',
+            }}>
+              {day}
+            </div>
+          </div>
+        ))}
+
+        {/* Track background */}
         <div style={{
           position: 'absolute',
-          top: '28px',
-          left: '0',
-          right: '0',
-          height: '4px',
-          background: '#374151',
-          borderRadius: '2px',
+          top: '24px',
+          left: 0,
+          right: 0,
+          height: '8px',
+          background: '#1f2937',
+          borderRadius: '4px',
         }} />
 
         {/* Colored segments */}
-        {RISK_STATES.map((state, idx) => {
-          const startPercent = idx * 25;
-          const isHighlighted = highlightedState === state.id;
+        {segments.map((seg) => {
+          const segStart = (seg.start / 120) * 100;
+          const segWidth = ((seg.end - seg.start) / 120) * 100;
+          const isActive = currentDay >= seg.start;
+          const isCurrent = currentDay >= seg.start && currentDay < seg.end;
+
           return (
             <div
-              key={state.id}
+              key={seg.state.id}
               style={{
                 position: 'absolute',
-                top: '28px',
-                left: `${startPercent}%`,
-                width: '25%',
-                height: '4px',
-                background: state.color,
-                opacity: isHighlighted ? 1 : 0.4,
+                top: '24px',
+                left: `${segStart}%`,
+                width: `${segWidth}%`,
+                height: '8px',
+                background: seg.state.color,
+                opacity: isActive ? 1 : 0.2,
                 transition: 'opacity 0.3s',
               }}
             />
@@ -380,71 +442,68 @@ const RiskTimeline: React.FC<RiskTimelineProps> = ({ animationProgress, highligh
         <div
           style={{
             position: 'absolute',
-            top: '20px',
-            left: `${Math.min(animationProgress, 100)}%`,
+            top: '18px',
+            left: `${(currentDay / 120) * 100}%`,
             transform: 'translateX(-50%)',
             transition: 'left 0.1s linear',
+            zIndex: 10,
           }}
         >
           <div style={{
             width: '20px',
             height: '20px',
             borderRadius: '50%',
-            background: '#3b82f6',
+            background: currentRisk.color,
             border: '3px solid white',
-            boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)',
+            boxShadow: `0 0 12px ${currentRisk.color}`,
           }} />
         </div>
-
-        {/* Threshold markers */}
-        {thresholds.map((t, idx) => (
-          <div
-            key={t.day}
-            style={{
-              position: 'absolute',
-              top: '0',
-              left: `${(idx / (thresholds.length - 1)) * 100}%`,
-              transform: 'translateX(-50%)',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ color: '#9ca3af', fontSize: '10px' }}>Day {t.day}</div>
-            <div style={{
-              width: '2px',
-              height: '12px',
-              background: '#4b5563',
-              margin: '4px auto',
-            }} />
-          </div>
-        ))}
       </div>
 
-      {/* Risk state boxes */}
+      {/* Risk State Labels below timeline */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '8px',
+        gap: '4px',
+        marginBottom: '12px',
       }}>
         {RISK_STATES.map((state) => {
-          const isHighlighted = highlightedState === state.id;
+          const isCurrent = currentRisk.id === state.id;
           return (
             <div
               key={state.id}
               style={{
-                padding: '12px 8px',
-                borderRadius: '8px',
-                background: isHighlighted ? `${state.color}20` : 'rgba(55, 65, 81, 0.3)',
-                border: isHighlighted ? `2px solid ${state.color}` : '1px solid #374151',
                 textAlign: 'center',
+                padding: '8px 4px',
+                borderRadius: '6px',
+                background: isCurrent ? `${state.color}20` : 'transparent',
+                border: isCurrent ? `1px solid ${state.color}` : '1px solid transparent',
                 transition: 'all 0.3s',
               }}
             >
-              <div style={{ fontSize: '18px', marginBottom: '4px' }}>{state.icon}</div>
-              <div style={{ color: state.color, fontSize: '11px', fontWeight: 'bold' }}>{state.label}</div>
-              <div style={{ color: '#6b7280', fontSize: '9px' }}>{state.daysRange}</div>
+              <div style={{ fontSize: '14px' }}>{state.icon}</div>
+              <div style={{
+                color: isCurrent ? state.color : '#6b7280',
+                fontSize: '10px',
+                fontWeight: isCurrent ? 'bold' : 'normal',
+              }}>
+                {state.label}
+              </div>
             </div>
           );
         })}
+      </div>
+
+      {/* Explanation */}
+      <div style={{
+        padding: '10px 12px',
+        borderRadius: '6px',
+        background: 'rgba(99, 102, 241, 0.1)',
+        border: '1px solid rgba(99, 102, 241, 0.2)',
+      }}>
+        <div style={{ color: '#a5b4fc', fontSize: '10px', textAlign: 'center' }}>
+          Days past due determines risk: <strong>0-30</strong> Safe → <strong>31-60</strong> At Risk → <strong>61-90</strong> Critical → <strong>90+</strong> Churned
+        </div>
       </div>
     </div>
   );

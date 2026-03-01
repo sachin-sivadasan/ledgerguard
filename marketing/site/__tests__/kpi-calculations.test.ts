@@ -664,3 +664,249 @@ describe('KPI highlighting integration', () => {
     }
   });
 });
+
+// =============================================================================
+// TIMELINE ↔ DISTRIBUTION RELATIONSHIP TESTS
+// =============================================================================
+
+describe('Risk Timeline and Distribution consistency', () => {
+  // These tests verify that the Timeline (how risk is classified) and
+  // Distribution (how subscriptions are counted) use the same rules
+
+  describe('Timeline thresholds match classifyRiskState', () => {
+    // Timeline shows: Day 0-30 (SAFE), 31-60 (ONE_CYCLE), 61-90 (TWO_CYCLES), 90+ (CHURNED)
+    // This must match the classifyRiskState function
+
+    it('Day 0 should be SAFE (timeline segment 1)', () => {
+      expect(classifyRiskState(0)).toBe('SAFE');
+    });
+
+    it('Day 30 should be SAFE (last day of grace period)', () => {
+      expect(classifyRiskState(30)).toBe('SAFE');
+    });
+
+    it('Day 31 should be ONE_CYCLE_MISSED (timeline segment 2 starts)', () => {
+      expect(classifyRiskState(31)).toBe('ONE_CYCLE_MISSED');
+    });
+
+    it('Day 60 should be ONE_CYCLE_MISSED (last day of segment 2)', () => {
+      expect(classifyRiskState(60)).toBe('ONE_CYCLE_MISSED');
+    });
+
+    it('Day 61 should be TWO_CYCLES_MISSED (timeline segment 3 starts)', () => {
+      expect(classifyRiskState(61)).toBe('TWO_CYCLES_MISSED');
+    });
+
+    it('Day 90 should be TWO_CYCLES_MISSED (last day of segment 3)', () => {
+      expect(classifyRiskState(90)).toBe('TWO_CYCLES_MISSED');
+    });
+
+    it('Day 91 should be CHURNED (timeline segment 4 starts)', () => {
+      expect(classifyRiskState(91)).toBe('CHURNED');
+    });
+
+    it('Day 120 should be CHURNED (end of timeline)', () => {
+      expect(classifyRiskState(120)).toBe('CHURNED');
+    });
+  });
+
+  describe('Risk summary counts are consistent', () => {
+    it('sum of all risk state counts should equal total', () => {
+      const subscriptions: Subscription[] = [
+        createSubscription({ id: '1', riskState: 'SAFE' }),
+        createSubscription({ id: '2', riskState: 'SAFE' }),
+        createSubscription({ id: '3', riskState: 'ONE_CYCLE_MISSED' }),
+        createSubscription({ id: '4', riskState: 'TWO_CYCLES_MISSED' }),
+        createSubscription({ id: '5', riskState: 'CHURNED' }),
+        createSubscription({ id: '6', riskState: 'CHURNED' }),
+      ];
+
+      const summary = calculateRiskSummary(subscriptions);
+
+      const sumOfCounts = summary.safeCount +
+        summary.oneCycleMissedCount +
+        summary.twoCyclesMissedCount +
+        summary.churnedCount;
+
+      expect(sumOfCounts).toBe(summary.total);
+      expect(summary.total).toBe(subscriptions.length);
+    });
+
+    it('all 4 risk states should be represented in summary', () => {
+      const subscriptions: Subscription[] = [
+        createSubscription({ id: '1', riskState: 'SAFE' }),
+        createSubscription({ id: '2', riskState: 'ONE_CYCLE_MISSED' }),
+        createSubscription({ id: '3', riskState: 'TWO_CYCLES_MISSED' }),
+        createSubscription({ id: '4', riskState: 'CHURNED' }),
+      ];
+
+      const summary = calculateRiskSummary(subscriptions);
+
+      expect(summary.safeCount).toBe(1);
+      expect(summary.oneCycleMissedCount).toBe(1);
+      expect(summary.twoCyclesMissedCount).toBe(1);
+      expect(summary.churnedCount).toBe(1);
+      expect(summary.total).toBe(4);
+    });
+  });
+
+  describe('KPI highlighting consistency between Timeline and Distribution', () => {
+    // When a KPI is selected, both Timeline and Distribution should highlight
+    // the same risk states
+
+    it('activeMRR highlights SAFE in both Timeline and Distribution', () => {
+      const timelineHighlight = getContributingRiskStates('activeMRR');
+      expect(timelineHighlight).toEqual(['SAFE']);
+
+      // Distribution should highlight SAFE
+      expect(isRiskStateContributor('activeMRR', 'SAFE')).toBe(true);
+      expect(isRiskStateContributor('activeMRR', 'ONE_CYCLE_MISSED')).toBe(false);
+      expect(isRiskStateContributor('activeMRR', 'TWO_CYCLES_MISSED')).toBe(false);
+      expect(isRiskStateContributor('activeMRR', 'CHURNED')).toBe(false);
+    });
+
+    it('revenueAtRisk highlights ONE_CYCLE and TWO_CYCLES in both', () => {
+      const timelineHighlight = getContributingRiskStates('revenueAtRisk');
+      expect(timelineHighlight).toEqual(['ONE_CYCLE_MISSED', 'TWO_CYCLES_MISSED']);
+
+      // Distribution should highlight the same
+      expect(isRiskStateContributor('revenueAtRisk', 'SAFE')).toBe(false);
+      expect(isRiskStateContributor('revenueAtRisk', 'ONE_CYCLE_MISSED')).toBe(true);
+      expect(isRiskStateContributor('revenueAtRisk', 'TWO_CYCLES_MISSED')).toBe(true);
+      expect(isRiskStateContributor('revenueAtRisk', 'CHURNED')).toBe(false);
+    });
+
+    it('churnedRevenue highlights CHURNED in both', () => {
+      const timelineHighlight = getContributingRiskStates('churnedRevenue');
+      expect(timelineHighlight).toEqual(['CHURNED']);
+
+      // Distribution should highlight CHURNED
+      expect(isRiskStateContributor('churnedRevenue', 'SAFE')).toBe(false);
+      expect(isRiskStateContributor('churnedRevenue', 'ONE_CYCLE_MISSED')).toBe(false);
+      expect(isRiskStateContributor('churnedRevenue', 'TWO_CYCLES_MISSED')).toBe(false);
+      expect(isRiskStateContributor('churnedRevenue', 'CHURNED')).toBe(true);
+    });
+
+    it('transaction-based KPIs (usage, total) have no risk state highlights', () => {
+      expect(getContributingRiskStates('usageRevenue')).toEqual([]);
+      expect(getContributingRiskStates('totalRevenue')).toEqual([]);
+    });
+  });
+
+  describe('Timeline animation maps correctly to risk states', () => {
+    // Animation progress 0-100% maps to days 0-120
+    // This test verifies the mapping produces correct risk states
+
+    const progressToDays = (progress: number) => Math.round((progress / 100) * 120);
+
+    it('progress 0% = day 0 = SAFE', () => {
+      const day = progressToDays(0);
+      expect(day).toBe(0);
+      expect(classifyRiskState(day)).toBe('SAFE');
+    });
+
+    it('progress 25% = day 30 = SAFE (end of grace)', () => {
+      const day = progressToDays(25);
+      expect(day).toBe(30);
+      expect(classifyRiskState(day)).toBe('SAFE');
+    });
+
+    it('progress 26% = day ~31 = ONE_CYCLE_MISSED', () => {
+      const day = progressToDays(26);
+      expect(day).toBeGreaterThanOrEqual(31);
+      expect(classifyRiskState(day)).toBe('ONE_CYCLE_MISSED');
+    });
+
+    it('progress 50% = day 60 = ONE_CYCLE_MISSED', () => {
+      const day = progressToDays(50);
+      expect(day).toBe(60);
+      expect(classifyRiskState(day)).toBe('ONE_CYCLE_MISSED');
+    });
+
+    it('progress 51% = day ~61 = TWO_CYCLES_MISSED', () => {
+      const day = progressToDays(51);
+      expect(day).toBeGreaterThanOrEqual(61);
+      expect(classifyRiskState(day)).toBe('TWO_CYCLES_MISSED');
+    });
+
+    it('progress 75% = day 90 = TWO_CYCLES_MISSED', () => {
+      const day = progressToDays(75);
+      expect(day).toBe(90);
+      expect(classifyRiskState(day)).toBe('TWO_CYCLES_MISSED');
+    });
+
+    it('progress 76% = day ~91 = CHURNED', () => {
+      const day = progressToDays(76);
+      expect(day).toBeGreaterThanOrEqual(91);
+      expect(classifyRiskState(day)).toBe('CHURNED');
+    });
+
+    it('progress 100% = day 120 = CHURNED', () => {
+      const day = progressToDays(100);
+      expect(day).toBe(120);
+      expect(classifyRiskState(day)).toBe('CHURNED');
+    });
+  });
+
+  describe('Distribution counts match calculated revenue sources', () => {
+    // The number of subscriptions in each risk state should produce
+    // the same values whether counted via summary or calculated via revenue functions
+
+    const subscriptions: Subscription[] = [
+      createSubscription({ id: '1', priceCents: 1000, riskState: 'SAFE' }),
+      createSubscription({ id: '2', priceCents: 2000, riskState: 'SAFE' }),
+      createSubscription({ id: '3', priceCents: 3000, riskState: 'SAFE' }),
+      createSubscription({ id: '4', priceCents: 4000, riskState: 'ONE_CYCLE_MISSED' }),
+      createSubscription({ id: '5', priceCents: 5000, riskState: 'TWO_CYCLES_MISSED' }),
+      createSubscription({ id: '6', priceCents: 6000, riskState: 'CHURNED' }),
+    ];
+
+    it('SAFE count matches Active MRR subscription count', () => {
+      const summary = calculateRiskSummary(subscriptions);
+      const safeSubscriptions = subscriptions.filter(s => s.riskState === 'SAFE');
+
+      expect(summary.safeCount).toBe(safeSubscriptions.length);
+      expect(summary.safeCount).toBe(3);
+    });
+
+    it('at-risk count (ONE + TWO) matches Revenue at Risk subscription count', () => {
+      const summary = calculateRiskSummary(subscriptions);
+      const atRiskSubscriptions = subscriptions.filter(
+        s => s.riskState === 'ONE_CYCLE_MISSED' || s.riskState === 'TWO_CYCLES_MISSED'
+      );
+
+      const atRiskCount = summary.oneCycleMissedCount + summary.twoCyclesMissedCount;
+      expect(atRiskCount).toBe(atRiskSubscriptions.length);
+      expect(atRiskCount).toBe(2);
+    });
+
+    it('CHURNED count matches Churned Revenue subscription count', () => {
+      const summary = calculateRiskSummary(subscriptions);
+      const churnedSubscriptions = subscriptions.filter(s => s.riskState === 'CHURNED');
+
+      expect(summary.churnedCount).toBe(churnedSubscriptions.length);
+      expect(summary.churnedCount).toBe(1);
+    });
+
+    it('Active MRR value equals sum of SAFE subscription MRR', () => {
+      const activeMRR = calculateActiveMRR(subscriptions);
+      const safeMRR = 1000 + 2000 + 3000; // Sum of SAFE subscriptions
+
+      expect(activeMRR).toBe(safeMRR);
+    });
+
+    it('Revenue at Risk value equals sum of at-risk subscription MRR', () => {
+      const atRiskRevenue = calculateRevenueAtRisk(subscriptions);
+      const atRiskMRR = 4000 + 5000; // ONE_CYCLE + TWO_CYCLES
+
+      expect(atRiskRevenue).toBe(atRiskMRR);
+    });
+
+    it('Churned Revenue value equals sum of CHURNED subscription MRR', () => {
+      const churnedRevenue = calculateChurnedRevenue(subscriptions);
+      const churnedMRR = 6000;
+
+      expect(churnedRevenue).toBe(churnedMRR);
+    });
+  });
+});

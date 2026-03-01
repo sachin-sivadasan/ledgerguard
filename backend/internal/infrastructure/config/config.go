@@ -148,3 +148,76 @@ func (d *DatabaseConfig) DSN() string {
 		d.User, d.Password, d.Host, d.Port, d.DBName, d.SSLMode,
 	)
 }
+
+// ValidationWarning represents a configuration validation warning
+type ValidationWarning struct {
+	Field   string
+	Message string
+}
+
+// Validate checks the configuration and returns warnings for missing critical values.
+// This does not return an error - warnings are informational.
+func (c *Config) Validate() []ValidationWarning {
+	var warnings []ValidationWarning
+
+	// Database password is critical for production
+	if c.Database.Password == "" {
+		warnings = append(warnings, ValidationWarning{
+			Field:   "database.password",
+			Message: "Database password is empty. Set DB_PASSWORD environment variable.",
+		})
+	}
+
+	// Firebase credentials are required for authentication
+	if c.Firebase.CredentialsFile == "" {
+		warnings = append(warnings, ValidationWarning{
+			Field:   "firebase.credentials_file",
+			Message: "Firebase credentials file not set. Set FIREBASE_CREDENTIALS_FILE environment variable.",
+		})
+	}
+
+	// Shopify OAuth credentials are required for partner integration
+	if c.Shopify.ClientID == "" {
+		warnings = append(warnings, ValidationWarning{
+			Field:   "shopify.client_id",
+			Message: "Shopify client ID not set. Set SHOPIFY_CLIENT_ID environment variable.",
+		})
+	}
+	if c.Shopify.ClientSecret == "" {
+		warnings = append(warnings, ValidationWarning{
+			Field:   "shopify.client_secret",
+			Message: "Shopify client secret not set. Set SHOPIFY_CLIENT_SECRET environment variable.",
+		})
+	}
+
+	// Encryption key is critical for token security
+	if c.Encryption.MasterKey == "" {
+		warnings = append(warnings, ValidationWarning{
+			Field:   "encryption.master_key",
+			Message: "Encryption master key not set. Set ENCRYPTION_MASTER_KEY environment variable.",
+		})
+	} else if len(c.Encryption.MasterKey) < 32 {
+		warnings = append(warnings, ValidationWarning{
+			Field:   "encryption.master_key",
+			Message: "Encryption master key should be at least 32 characters for AES-256.",
+		})
+	}
+
+	return warnings
+}
+
+// HasCriticalWarnings returns true if any validation warning is for a critical field
+func (c *Config) HasCriticalWarnings() bool {
+	criticalFields := map[string]bool{
+		"database.password":         true,
+		"firebase.credentials_file": true,
+		"encryption.master_key":     true,
+	}
+
+	for _, w := range c.Validate() {
+		if criticalFields[w.Field] {
+			return true
+		}
+	}
+	return false
+}

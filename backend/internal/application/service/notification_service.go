@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -97,12 +98,28 @@ func (s *NotificationService) RegisterDevice(ctx context.Context, userID uuid.UU
 		// Create default preferences if not found
 		prefs := entity.NewNotificationPreferences(userID)
 		if err := s.prefsRepo.Create(ctx, prefs); err != nil {
-			// Ignore if preferences already exist (race condition)
-			return nil
+			// Only ignore duplicate key errors (race condition with concurrent registration)
+			// PostgreSQL unique violation error code is 23505
+			if isDuplicateKeyError(err) {
+				return nil
+			}
+			return fmt.Errorf("failed to create notification preferences: %w", err)
 		}
 	}
 
 	return nil
+}
+
+// isDuplicateKeyError checks if an error is a PostgreSQL unique violation error
+func isDuplicateKeyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Check for PostgreSQL unique_violation error (code 23505)
+	errStr := err.Error()
+	return strings.Contains(errStr, "23505") ||
+		strings.Contains(errStr, "duplicate key") ||
+		strings.Contains(errStr, "unique constraint")
 }
 
 // UnregisterDevice removes a device token

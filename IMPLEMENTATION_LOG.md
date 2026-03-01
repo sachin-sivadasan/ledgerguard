@@ -1083,6 +1083,55 @@ ALTER TABLE transactions ADD COLUMN net_amount_cents BIGINT;
 
 ---
 
+## [2026-03-01] KPI Metrics Visualization Component
+
+**Commit:** feat(marketing): add KPI metrics visualization component
+
+**Summary:**
+Created interactive KPI metrics guide component for the marketing site, showing how LedgerGuard calculates and presents revenue KPIs for Shopify app developers.
+
+**Implemented:**
+
+1. **KPI Cards (6 metrics):**
+   - Active MRR - MRR from SAFE subscriptions only
+   - Revenue at Risk - MRR from ONE_CYCLE_MISSED + TWO_CYCLES_MISSED subscriptions
+   - Renewal Success Rate - (Safe Count / Total) × 100
+   - Usage Revenue - SUM where ChargeType = USAGE
+   - Total Revenue - RECURRING + USAGE + ONE_TIME - REFUNDS
+   - Churned Revenue - MRR from CHURNED subscriptions
+
+2. **View Modes:**
+   - **Overview** - Formula display + risk timeline + risk distribution
+   - **Detail** - Data flow animation + subscription list with MRR highlighting
+   - **Comparison** - Period-over-period delta with semantic coloring
+
+3. **Visualizations:**
+   - Risk Classification Timeline (30/60/90 day thresholds with animated cursor)
+   - Risk Distribution Bar Chart (Safe, At Risk, Critical, Churned)
+   - Data Flow Animation (Partner API → Ledger Rebuild → Metrics Engine → Dashboard)
+   - Subscription List with risk state filtering and MRR display
+   - Period Comparison with delta calculation and good/bad semantics
+
+4. **Delta Semantics:**
+   - Higher is good: Active MRR, Renewal Rate, Usage Revenue, Total Revenue (green ↑)
+   - Lower is good: Revenue at Risk, Churned Revenue (green ↓)
+
+5. **Animation Features:**
+   - Continuous animation loop with progress tracking
+   - Risk state highlighting based on selected KPI
+   - Formula reveal animations
+   - Data flow step highlighting
+
+**Files Created:**
+- `marketing/site/components/KPIMetricsGuide.tsx` - Main component (1264 lines)
+- `marketing/site/app/kpi-guide/page.tsx` - Page route
+
+**Page URL:** http://localhost:3000/kpi-guide
+
+**Related Prompt Document:** `docs/prompts/kpi-metrics-visualization.md`
+
+---
+
 ## [2026-03-01] Earnings Timeline Tracking (Phase 2)
 
 **Commit:** feat: add earnings timeline with pending/available status tracking

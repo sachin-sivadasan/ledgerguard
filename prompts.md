@@ -931,3 +931,29 @@
 5. "fix the failing profile page tests" - Fixed 10 failing tests
 
 ---
+
+## [2026-03-01] KPI Metrics Visualization Component
+
+**Original Prompt:**
+> implement the kpi visualization component
+
+**Improved Prompt:**
+> Implement the KPIMetricsGuide React component for the marketing site based on the prompt document at docs/prompts/kpi-metrics-visualization.md. The component should:
+> 1. Display 6 KPI cards with current values, previous values, and period-over-period deltas
+> 2. Three view modes: Overview (formula + timeline), Detail (data flow + subscription list), Comparison (period vs period)
+> 3. Animated risk classification timeline (30/60/90 day thresholds)
+> 4. Risk distribution bar chart visualization
+> 5. Data flow animation showing Partner API → Ledger Rebuild → Metrics Engine → Dashboard
+> 6. Semantic delta coloring (higher is good vs lower is good)
+> 7. Interactive KPI selection and animation controls (play/pause/restart)
+> 8. Page route at /kpi-guide
+> 9. Commit and push changes
+
+**Result:**
+- marketing/site/components/KPIMetricsGuide.tsx (1264 lines)
+- marketing/site/app/kpi-guide/page.tsx
+- Build verified: `npm run build` successful
+- Commit: f91d064 feat(marketing): add KPI metrics visualization component
+- Pushed to origin/main
+
+---

@@ -136,6 +136,7 @@ class ApiAppRepository implements AppRepository {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_selectedAppKey, app.id);
     await prefs.setString(_selectedAppNameKey, app.name);
+    await prefs.setString(_selectedAppTierKey, app.revenueShareTier.code);
 
     // Also notify backend
     try {

@@ -14,22 +14,30 @@ Postponed ideas and features for later implementation.
 | Stripe integration | P3 | Non-Shopify revenue |
 | Native mobile app | P3 | iOS/Android standalone |
 | Custom report builder | P3 | User-defined reports |
-| Subscription detail view | P2 | View individual subscription details, history, risk timeline |
-| Subscription list page | P2 | List all subscriptions with filters (risk state, plan, search) |
-| Onboarding flow | P1 | Guide new users through setup (connect partner, select app, first sync) |
 | Dark mode support | P3 | System/manual theme toggle with dark color palette |
 | Affiliate program | P4 | Referral system |
 
 ---
 
+## Completed
+
+| Feature | Completed | Notes |
+|---------|-----------|-------|
+| Subscription detail view | 2026-03-01 | GET /api/v1/subscriptions/{id}, /history, /risk-timeline |
+| Subscription list page | 2026-02-28 | GET /api/v1/apps/{appID}/subscriptions with filters, pagination, sorting |
+| Onboarding flow (backend) | 2026-03-01 | GET /api/v1/users/onboarding-status, POST /api/v1/users/onboarding-complete |
+| Config validation | 2026-03-01 | Added Validate() and HasCriticalWarnings() to config.go |
+| RegisterDevice error handling | 2026-03-01 | Fixed to only ignore duplicate key errors |
+| Webhook integration | 2026-03-01 | Real-time subscription updates, billing failures, app uninstalls |
+| GitHub Actions CI | 2026-03-01 | Backend tests, lint, frontend tests, marketing site build |
+| io.ReadAll error handling | 2026-03-01 | Verified all usages handle errors correctly |
+| Repository contract clarity | 2026-03-01 | Added documentation to AppRepository interface |
+
+---
+
 ## Technical Debt / Code Quality
 
-| Issue | Priority | Location | Notes |
-|-------|----------|----------|-------|
-| io.ReadAll error handling | P2 | shopify_partner_client.go:70 | Error ignored in response body read |
-| Config validation | P2 | config/config.go | Warn if critical env vars missing |
-| RegisterDevice error swallowing | P2 | notification_service.go:99-101 | Only ignore "already exists", not all errors |
-| Repository contract clarity | P3 | AppRepository.FindByPartnerAppID | Clarify: should "not found" return error or nil? |
+All items resolved. See "Completed" section above.
 
 ---
 
@@ -40,89 +48,6 @@ Postponed ideas and features for later implementation.
 ---
 
 ## Feature Details
-
-### Subscription Detail View (P2)
-**Added:** 2026-02-27
-
-**Description:**
-View individual subscription details with full history and risk analysis.
-
-**Proposed Features:**
-- Subscription overview (shop name, plan, MRR, status)
-- Risk state with timeline visualization
-- Payment history with charge types (RECURRING, USAGE, ONE_TIME, REFUND)
-- Expected next charge date
-- Days since last payment
-- Risk state change history
-- Actions: Mark as churned, Add note, Export history
-
-**Navigation:**
-- From Risk Breakdown page → tap subscription row
-- From Dashboard → search or list view
-
-**Endpoints needed:**
-- `GET /api/v1/subscriptions/{id}` - Subscription details
-- `GET /api/v1/subscriptions/{id}/history` - Payment history
-- `GET /api/v1/subscriptions/{id}/risk-timeline` - Risk state changes
-
-### Subscription List Page (P2)
-**Added:** 2026-02-27
-
-**Description:**
-List all subscriptions with filtering, sorting, and search capabilities.
-
-**Proposed Features:**
-- Paginated list of all subscriptions
-- Filter by risk state (SAFE, ONE_CYCLE_MISSED, TWO_CYCLES_MISSED, CHURNED)
-- Filter by plan tier
-- Search by shop name or email
-- Sort by MRR, risk state, last payment date
-- Quick stats summary (total count, at-risk count, churned count)
-- Tap row to navigate to Subscription Detail View
-
-**UI Components:**
-- Filter chips or dropdown for risk state
-- Search input field
-- Sortable column headers
-- Subscription row with shop name, MRR, risk badge, last payment
-- Pagination controls or infinite scroll
-
-**Endpoints needed:**
-- `GET /api/v1/subscriptions?risk_state=&plan=&search=&sort=&page=&limit=`
-
-### Onboarding Flow (P1)
-**Added:** 2026-02-27
-
-**Description:**
-Guide new users through the initial setup process after signup.
-
-**Proposed Steps:**
-1. **Welcome Screen** - Brief intro to LedgerGuard value proposition
-2. **Connect Partner Account** - OAuth or manual token entry for Shopify Partner API
-3. **Select App** - Choose which app to track from available apps
-4. **Initial Sync** - Trigger first data sync with progress indicator
-5. **Setup Complete** - Success screen with link to dashboard
-
-**UI Components:**
-- Step indicator (1/5, 2/5, etc.)
-- Progress bar across steps
-- Skip option (where appropriate)
-- Back navigation
-- Loading states during API calls
-
-**State Management:**
-- OnboardingBloc with steps: welcome, connectPartner, selectApp, syncing, complete
-- Persist onboarding progress (resume if interrupted)
-- Track completion status in user profile
-
-**Navigation:**
-- Auto-redirect new users to onboarding after signup
-- Redirect to dashboard after completion
-- Allow re-entry from settings if setup incomplete
-
-**Endpoints needed:**
-- `GET /api/v1/users/onboarding-status` - Check if onboarding complete
-- `POST /api/v1/users/onboarding-complete` - Mark onboarding as done
 
 ### Dark Mode Support (P3)
 **Added:** 2026-02-27

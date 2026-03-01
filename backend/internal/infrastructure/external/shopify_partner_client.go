@@ -421,22 +421,6 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 							}
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
-							appSubscription {
-								id
-								name
-								status
-								currentPeriodEnd
-								lineItems {
-									plan {
-										pricingDetails {
-											... on AppRecurringPricingDetails {
-												interval
-												price { amount currencyCode }
-											}
-										}
-									}
-								}
-							}
 						}
 						... on AppUsageSale {
 							chargeId
@@ -581,24 +565,6 @@ type transactionNode struct {
 		Amount       string `json:"amount"`
 		CurrencyCode string `json:"currencyCode"`
 	} `json:"netAmount,omitempty"`
-	// AppSubscriptionSale specific fields
-	AppSubscription *struct {
-		ID               string `json:"id"`
-		Name             string `json:"name"`
-		Status           string `json:"status"`
-		CurrentPeriodEnd string `json:"currentPeriodEnd"`
-		LineItems        []struct {
-			Plan struct {
-				PricingDetails *struct {
-					Interval string `json:"interval,omitempty"`
-					Price    *struct {
-						Amount       string `json:"amount"`
-						CurrencyCode string `json:"currencyCode"`
-					} `json:"price,omitempty"`
-				} `json:"pricingDetails,omitempty"`
-			} `json:"plan"`
-		} `json:"lineItems,omitempty"`
-	} `json:"appSubscription,omitempty"`
 	// AppUsageSale specific fields
 	AppUsageRecord *struct {
 		ID          string `json:"id"`
@@ -654,26 +620,9 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 	tx.ShopifyShopGID = shopGID
 	tx.ShopPlan = shopPlan
 
-	// Add subscription details for AppSubscriptionSale
-	if node.AppSubscription != nil {
-		tx.SubscriptionGID = node.AppSubscription.ID
-		tx.SubscriptionStatus = node.AppSubscription.Status
-
-		// Parse current period end
-		if node.AppSubscription.CurrentPeriodEnd != "" {
-			if periodEnd, err := time.Parse(time.RFC3339, node.AppSubscription.CurrentPeriodEnd); err == nil {
-				tx.SubscriptionPeriodEnd = &periodEnd
-			}
-		}
-
-		// Extract billing interval from line items
-		if len(node.AppSubscription.LineItems) > 0 {
-			li := node.AppSubscription.LineItems[0]
-			if li.Plan.PricingDetails != nil {
-				tx.BillingInterval = li.Plan.PricingDetails.Interval
-			}
-		}
-	}
+	// Note: Subscription status/details are not available from transactions query.
+	// Use FetchAppEvents to get subscription lifecycle events (SUBSCRIPTION_CHARGE_ACCEPTED,
+	// SUBSCRIPTION_CHARGE_CANCELED, RELATIONSHIP_INSTALLED, RELATIONSHIP_UNINSTALLED)
 
 	return tx
 }
@@ -736,4 +685,154 @@ const organizationIDKey contextKey = "organizationID"
 // WithOrganizationID returns a new context with the organization ID set
 func WithOrganizationID(ctx context.Context, orgID string) context.Context {
 	return context.WithValue(ctx, organizationIDKey, orgID)
+}
+
+// AppEvent represents an app lifecycle event from the Partner API
+type AppEvent struct {
+	Type      string // RELATIONSHIP_INSTALLED, SUBSCRIPTION_CHARGE_ACCEPTED, SUBSCRIPTION_CHARGE_CANCELED, RELATIONSHIP_UNINSTALLED
+	ShopID    string
+	ShopName  string
+	OccurredAt time.Time
+}
+
+// FetchAppEvents retrieves lifecycle events for an app, optionally filtered by shop
+// Events include: RELATIONSHIP_INSTALLED, SUBSCRIPTION_CHARGE_ACCEPTED,
+// SUBSCRIPTION_CHARGE_CANCELED, RELATIONSHIP_UNINSTALLED
+func (c *ShopifyPartnerClient) FetchAppEvents(
+	ctx context.Context,
+	organizationID, accessToken string,
+	appGID string,
+	shopGID string, // Optional: filter by shop
+) ([]AppEvent, error) {
+	// Build query with optional shop filter
+	query := `
+		query($appId: ID!, $shopId: ID) {
+			app(id: $appId) {
+				events(shopId: $shopId, first: 50) {
+					edges {
+						node {
+							type
+							occurredAt
+							shop {
+								id
+								name
+							}
+						}
+					}
+				}
+			}
+		}
+	`
+
+	variables := map[string]interface{}{
+		"appId": appGID,
+	}
+	if shopGID != "" {
+		variables["shopId"] = shopGID
+	}
+
+	url := fmt.Sprintf("%s/%s/api/2025-07/graphql.json", c.baseURL, organizationID)
+
+	reqBody, err := json.Marshal(map[string]interface{}{
+		"query":     query,
+		"variables": variables,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(reqBody))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Shopify-Access-Token", accessToken)
+
+	resp, body, err := c.executeWithRetry(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute request: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result struct {
+		Data struct {
+			App struct {
+				Events struct {
+					Edges []struct {
+						Node struct {
+							Type       string `json:"type"`
+							OccurredAt string `json:"occurredAt"`
+							Shop       *struct {
+								ID   string `json:"id"`
+								Name string `json:"name"`
+							} `json:"shop"`
+						} `json:"node"`
+					} `json:"edges"`
+				} `json:"events"`
+			} `json:"app"`
+		} `json:"data"`
+		Errors []struct {
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if len(result.Errors) > 0 {
+		return nil, fmt.Errorf("graphql error: %s", result.Errors[0].Message)
+	}
+
+	var events []AppEvent
+	for _, edge := range result.Data.App.Events.Edges {
+		event := AppEvent{
+			Type: edge.Node.Type,
+		}
+
+		if edge.Node.OccurredAt != "" {
+			if t, err := time.Parse(time.RFC3339, edge.Node.OccurredAt); err == nil {
+				event.OccurredAt = t
+			}
+		}
+
+		if edge.Node.Shop != nil {
+			event.ShopID = edge.Node.Shop.ID
+			event.ShopName = edge.Node.Shop.Name
+		}
+
+		events = append(events, event)
+	}
+
+	return events, nil
+}
+
+// GetLatestSubscriptionStatus determines subscription status from events
+// Returns: "ACTIVE", "CANCELLED", "UNINSTALLED", or empty if unknown
+func GetLatestSubscriptionStatus(events []AppEvent) string {
+	if len(events) == 0 {
+		return ""
+	}
+
+	// Events are typically returned newest-first
+	// Look at the most recent relevant event
+	for _, event := range events {
+		switch event.Type {
+		case "RELATIONSHIP_UNINSTALLED":
+			return "UNINSTALLED"
+		case "SUBSCRIPTION_CHARGE_CANCELED":
+			return "CANCELLED"
+		case "SUBSCRIPTION_CHARGE_ACCEPTED":
+			return "ACTIVE"
+		case "RELATIONSHIP_INSTALLED":
+			// Installed but no subscription event yet - could be trial or pending
+			return "PENDING"
+		}
+	}
+
+	return ""
 }

@@ -417,7 +417,6 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 								id
 								myshopifyDomain
 								name
-								plan { displayName }
 							}
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
@@ -429,7 +428,6 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 								id
 								myshopifyDomain
 								name
-								plan { displayName }
 							}
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
@@ -445,7 +443,6 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 								id
 								myshopifyDomain
 								name
-								plan { displayName }
 							}
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
@@ -553,9 +550,6 @@ type transactionNode struct {
 		ID              string `json:"id"`
 		MyshopifyDomain string `json:"myshopifyDomain"`
 		Name            string `json:"name"`
-		Plan            *struct {
-			DisplayName string `json:"displayName"`
-		} `json:"plan,omitempty"`
 	} `json:"shop,omitempty"`
 	GrossAmount *struct {
 		Amount       string `json:"amount"`
@@ -581,14 +575,10 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 	shopDomain := ""
 	shopName := ""
 	shopGID := ""
-	shopPlan := ""
 	if node.Shop != nil {
 		shopDomain = node.Shop.MyshopifyDomain
 		shopName = node.Shop.Name
 		shopGID = node.Shop.ID
-		if node.Shop.Plan != nil {
-			shopPlan = node.Shop.Plan.DisplayName
-		}
 	}
 
 	// Determine charge type based on transaction type (inferred from fields present)
@@ -618,7 +608,7 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 
 	// Add shop details
 	tx.ShopifyShopGID = shopGID
-	tx.ShopPlan = shopPlan
+	// Note: ShopPlan is no longer available from Partner API transactions query
 
 	// Note: Subscription status/details are not available from transactions query.
 	// Use FetchAppEvents to get subscription lifecycle events (SUBSCRIPTION_CHARGE_ACCEPTED,

@@ -455,6 +455,9 @@ interface SubscriptionListProps {
   highlightRiskState?: string;
   showMRR: boolean;
   animationProgress: number;
+  showTotal?: boolean;
+  totalLabel?: string;
+  totalValue?: string;
 }
 
 const SubscriptionList: React.FC<SubscriptionListProps> = ({
@@ -462,6 +465,9 @@ const SubscriptionList: React.FC<SubscriptionListProps> = ({
   highlightRiskState,
   showMRR,
   animationProgress,
+  showTotal = false,
+  totalLabel = 'Total',
+  totalValue = '',
 }) => {
   return (
     <div style={{
@@ -535,6 +541,29 @@ const SubscriptionList: React.FC<SubscriptionListProps> = ({
           </div>
         );
       })}
+
+      {/* Total Row */}
+      {showTotal && showMRR && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px 8px',
+          marginTop: '8px',
+          borderTop: '1px solid rgba(99, 102, 241, 0.3)',
+          opacity: animationProgress > 80 ? 1 : 0,
+          transition: 'opacity 0.3s',
+        }}>
+          <div style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold' }}>
+            {totalLabel} ({subscriptions.filter(s =>
+              !highlightRiskState || s.riskState === highlightRiskState
+            ).length} stores)
+          </div>
+          <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: 'bold' }}>
+            {totalValue}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -543,9 +572,10 @@ interface FormulaDisplayProps {
   kpi: KPIConfig;
   animationProgress: number;
   result: string;
+  subtitle?: string;
 }
 
-const FormulaDisplay: React.FC<FormulaDisplayProps> = ({ kpi, animationProgress, result }) => {
+const FormulaDisplay: React.FC<FormulaDisplayProps> = ({ kpi, animationProgress, result, subtitle }) => {
   const showFormula = animationProgress > 20;
   const showResult = animationProgress > 70;
 
@@ -596,6 +626,9 @@ const FormulaDisplay: React.FC<FormulaDisplayProps> = ({ kpi, animationProgress,
       }}>
         <div style={{ color: '#9ca3af', fontSize: '10px', marginBottom: '4px' }}>RESULT:</div>
         <div style={{ color: kpi.color, fontSize: '28px', fontWeight: 'bold' }}>{result}</div>
+        {subtitle && (
+          <div style={{ color: '#6b7280', fontSize: '10px', marginTop: '4px' }}>{subtitle}</div>
+        )}
       </div>
 
       {/* Why it matters */}
@@ -981,6 +1014,15 @@ const KPIMetricsGuide: React.FC = () => {
     riskSummary: calculateRiskSummary(PREVIOUS_SUBSCRIPTIONS),
   }), []);
 
+  // Metrics for displayed subscriptions (detail view) - so numbers match the list
+  const displayMetrics = useMemo(() => ({
+    activeMRRCents: calculateActiveMRR(DISPLAY_SUBSCRIPTIONS),
+    revenueAtRiskCents: calculateRevenueAtRisk(DISPLAY_SUBSCRIPTIONS),
+    churnedRevenueCents: calculateChurnedRevenue(DISPLAY_SUBSCRIPTIONS),
+    renewalSuccessRate: calculateRenewalSuccessRate(DISPLAY_SUBSCRIPTIONS),
+    riskSummary: calculateRiskSummary(DISPLAY_SUBSCRIPTIONS),
+  }), []);
+
   // Animation loop
   useEffect(() => {
     if (!isPlaying) return;
@@ -1032,6 +1074,20 @@ const KPIMetricsGuide: React.FC = () => {
   const getResultString = (): string => {
     const current = getKPIValue(selectedKPI, 'current');
     return selectedKPI === 'renewalRate' ? formatPercent(current) : formatCurrency(current);
+  };
+
+  // Get result from displayed subscriptions (for detail view where we show individual stores)
+  const getDetailResultString = (): string => {
+    let value: number;
+    switch (selectedKPI) {
+      case 'activeMRR': value = displayMetrics.activeMRRCents; break;
+      case 'revenueAtRisk': value = displayMetrics.revenueAtRiskCents; break;
+      case 'churnedRevenue': value = displayMetrics.churnedRevenueCents; break;
+      case 'renewalRate': return formatPercent(displayMetrics.renewalSuccessRate);
+      // Usage and total revenue don't apply to subscription list
+      default: value = 0;
+    }
+    return formatCurrency(value);
   };
 
   return (
@@ -1154,13 +1210,19 @@ const KPIMetricsGuide: React.FC = () => {
               <FormulaDisplay
                 kpi={kpi}
                 animationProgress={animationProgress}
-                result={getResultString()}
+                result={getDetailResultString()}
+                subtitle={`Calculated from ${DISPLAY_SUBSCRIPTIONS.length} sample stores`}
               />
               <SubscriptionList
                 subscriptions={DISPLAY_SUBSCRIPTIONS}
                 highlightRiskState={highlightedRiskState}
                 showMRR={selectedKPI === 'activeMRR' || selectedKPI === 'revenueAtRisk' || selectedKPI === 'churnedRevenue'}
                 animationProgress={animationProgress}
+                showTotal={true}
+                totalLabel={selectedKPI === 'activeMRR' ? 'Active MRR' :
+                           selectedKPI === 'revenueAtRisk' ? 'At Risk' :
+                           selectedKPI === 'churnedRevenue' ? 'Churned' : 'Total'}
+                totalValue={getDetailResultString()}
               />
             </div>
           </>

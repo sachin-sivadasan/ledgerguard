@@ -105,6 +105,7 @@ Current state of each subscription.
 | risk_state | VARCHAR(30) | NOT NULL | SAFE, ONE_CYCLE_MISSED, TWO_CYCLE_MISSED, CHURNED |
 | created_at | TIMESTAMPTZ | DEFAULT NOW() | First seen |
 | updated_at | TIMESTAMPTZ | DEFAULT NOW() | Last updated |
+| deleted_at | TIMESTAMPTZ | NULL | Soft delete timestamp (NULL = active) |
 
 ### daily_metrics_snapshot
 Immutable daily KPI snapshots.
@@ -433,6 +434,6 @@ CREATE TRIGGER notification_preferences_updated_at
 
 1. **Immutability:** `transactions` and `daily_metrics_snapshot` are append-only
 2. **Encryption:** `encrypted_access_token` uses AES-256-GCM with app-level master key
-3. **Soft Delete:** Not implemented; use `tracking_enabled` for apps
+3. **Soft Delete:** Implemented for subscriptions via `deleted_at` column; use `tracking_enabled` for apps
 4. **Retention:** Transactions kept for 12 months; snapshots kept permanently
 5. **Timezone:** All timestamps in UTC (TIMESTAMPTZ)

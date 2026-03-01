@@ -31,8 +31,8 @@ func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscriptio
 			id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+			created_at, updated_at, deleted_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		ON CONFLICT (shopify_gid) DO UPDATE SET
 			shop_name = EXCLUDED.shop_name,
 			plan_name = EXCLUDED.plan_name,
@@ -43,7 +43,8 @@ func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscriptio
 			last_recurring_charge_date = EXCLUDED.last_recurring_charge_date,
 			expected_next_charge_date = EXCLUDED.expected_next_charge_date,
 			risk_state = EXCLUDED.risk_state,
-			updated_at = EXCLUDED.updated_at
+			updated_at = EXCLUDED.updated_at,
+			deleted_at = EXCLUDED.deleted_at
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -62,6 +63,7 @@ func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscriptio
 		subscription.RiskState.String(),
 		subscription.CreatedAt,
 		subscription.UpdatedAt,
+		subscription.DeletedAt,
 	)
 
 	return err
@@ -72,9 +74,9 @@ func (r *PostgresSubscriptionRepository) FindByID(ctx context.Context, id uuid.U
 		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at
+			created_at, updated_at, deleted_at
 		FROM subscriptions
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 	`
 
 	return r.scanSubscription(r.pool.QueryRow(ctx, query, id))
@@ -85,9 +87,9 @@ func (r *PostgresSubscriptionRepository) FindByAppID(ctx context.Context, appID 
 		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at
+			created_at, updated_at, deleted_at
 		FROM subscriptions
-		WHERE app_id = $1
+		WHERE app_id = $1 AND deleted_at IS NULL
 		ORDER BY COALESCE(shop_name, myshopify_domain)
 	`
 
@@ -105,9 +107,9 @@ func (r *PostgresSubscriptionRepository) FindByShopifyGID(ctx context.Context, s
 		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at
+			created_at, updated_at, deleted_at
 		FROM subscriptions
-		WHERE shopify_gid = $1
+		WHERE shopify_gid = $1 AND deleted_at IS NULL
 	`
 
 	return r.scanSubscription(r.pool.QueryRow(ctx, query, shopifyGID))
@@ -118,9 +120,9 @@ func (r *PostgresSubscriptionRepository) FindByAppIDAndDomain(ctx context.Contex
 		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at
+			created_at, updated_at, deleted_at
 		FROM subscriptions
-		WHERE app_id = $1 AND myshopify_domain = $2
+		WHERE app_id = $1 AND myshopify_domain = $2 AND deleted_at IS NULL
 	`
 
 	return r.scanSubscription(r.pool.QueryRow(ctx, query, appID, myshopifyDomain))
@@ -131,9 +133,9 @@ func (r *PostgresSubscriptionRepository) FindByRiskState(ctx context.Context, ap
 		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at
+			created_at, updated_at, deleted_at
 		FROM subscriptions
-		WHERE app_id = $1 AND risk_state = $2
+		WHERE app_id = $1 AND risk_state = $2 AND deleted_at IS NULL
 		ORDER BY COALESCE(shop_name, myshopify_domain)
 	`
 
@@ -174,6 +176,7 @@ func (r *PostgresSubscriptionRepository) scanSubscription(row pgx.Row) (*entity.
 		&riskState,
 		&sub.CreatedAt,
 		&sub.UpdatedAt,
+		&sub.DeletedAt,
 	)
 
 	if err != nil {
@@ -217,6 +220,7 @@ func (r *PostgresSubscriptionRepository) scanSubscriptions(rows pgx.Rows) ([]*en
 			&riskState,
 			&sub.CreatedAt,
 			&sub.UpdatedAt,
+			&sub.DeletedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -242,6 +246,9 @@ func (r *PostgresSubscriptionRepository) FindWithFilters(ctx context.Context, ap
 	conditions = append(conditions, fmt.Sprintf("app_id = $%d", argNum))
 	args = append(args, appID)
 	argNum++
+
+	// Exclude soft-deleted records
+	conditions = append(conditions, "deleted_at IS NULL")
 
 	// Risk states filter (multi-select)
 	if len(filters.RiskStates) > 0 {
@@ -327,7 +334,7 @@ func (r *PostgresSubscriptionRepository) FindWithFilters(ctx context.Context, ap
 		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at
+			created_at, updated_at, deleted_at
 		FROM subscriptions
 		WHERE %s
 		ORDER BY %s %s
@@ -366,7 +373,7 @@ func (r *PostgresSubscriptionRepository) GetSummary(ctx context.Context, appID u
 			COALESCE(AVG(base_price_cents), 0)::bigint as avg_price_cents,
 			COUNT(*) as total_count
 		FROM subscriptions
-		WHERE app_id = $1
+		WHERE app_id = $1 AND deleted_at IS NULL
 	`
 
 	var summary repository.SubscriptionSummary
@@ -392,7 +399,7 @@ func (r *PostgresSubscriptionRepository) GetPriceStats(ctx context.Context, appI
 			COALESCE(MAX(base_price_cents), 0),
 			COALESCE(AVG(base_price_cents)::bigint, 0)
 		FROM subscriptions
-		WHERE app_id = $1 AND base_price_cents > 0
+		WHERE app_id = $1 AND base_price_cents > 0 AND deleted_at IS NULL
 	`
 
 	var stats repository.PriceStats
@@ -405,7 +412,7 @@ func (r *PostgresSubscriptionRepository) GetPriceStats(ctx context.Context, appI
 	pricesQuery := `
 		SELECT base_price_cents, COUNT(*) as count
 		FROM subscriptions
-		WHERE app_id = $1 AND base_price_cents > 0
+		WHERE app_id = $1 AND base_price_cents > 0 AND deleted_at IS NULL
 		GROUP BY base_price_cents
 		ORDER BY base_price_cents ASC
 	`
@@ -431,4 +438,56 @@ func (r *PostgresSubscriptionRepository) GetPriceStats(ctx context.Context, appI
 
 	stats.Prices = prices
 	return &stats, nil
+}
+
+// SoftDeleteByAppID marks all subscriptions for an app as deleted without removing them
+// This preserves historical data for analytics and potential reactivation tracking
+func (r *PostgresSubscriptionRepository) SoftDeleteByAppID(ctx context.Context, appID uuid.UUID) error {
+	query := `
+		UPDATE subscriptions
+		SET deleted_at = NOW(), updated_at = NOW()
+		WHERE app_id = $1 AND deleted_at IS NULL
+	`
+	_, err := r.pool.Exec(ctx, query, appID)
+	return err
+}
+
+// FindDeletedByAppID returns all soft-deleted subscriptions for an app
+// Useful for win-back campaigns and historical analysis
+func (r *PostgresSubscriptionRepository) FindDeletedByAppID(ctx context.Context, appID uuid.UUID) ([]*entity.Subscription, error) {
+	query := `
+		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, plan_name,
+			base_price_cents, currency, billing_interval, status,
+			last_recurring_charge_date, expected_next_charge_date, risk_state,
+			created_at, updated_at, deleted_at
+		FROM subscriptions
+		WHERE app_id = $1 AND deleted_at IS NOT NULL
+		ORDER BY deleted_at DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query, appID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return r.scanSubscriptions(rows)
+}
+
+// RestoreByID removes the soft-delete marker from a subscription
+// Useful when a previously churned customer reactivates
+func (r *PostgresSubscriptionRepository) RestoreByID(ctx context.Context, id uuid.UUID) error {
+	query := `
+		UPDATE subscriptions
+		SET deleted_at = NULL, updated_at = NOW()
+		WHERE id = $1
+	`
+	result, err := r.pool.Exec(ctx, query, id)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return ErrSubscriptionNotFound
+	}
+	return nil
 }

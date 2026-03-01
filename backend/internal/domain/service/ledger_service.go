@@ -179,8 +179,16 @@ func (s *LedgerService) buildSubscriptionFromTransactions(appID uuid.UUID, domai
 	// Get the most recent recurring transaction
 	lastRecurring := recurringTxs[len(recurringTxs)-1]
 
-	// Detect billing interval from transaction pattern
+	// Detect billing interval - use from transaction if available, otherwise detect from pattern
 	billingInterval := s.detectBillingInterval(recurringTxs)
+	if lastRecurring.BillingInterval != "" {
+		switch lastRecurring.BillingInterval {
+		case "ANNUAL":
+			billingInterval = valueobject.BillingIntervalAnnual
+		case "MONTHLY", "EVERY_30_DAYS":
+			billingInterval = valueobject.BillingIntervalMonthly
+		}
+	}
 
 	// Create subscription
 	// Use GrossAmountCents for subscription price (what customer pays)
@@ -190,21 +198,44 @@ func (s *LedgerService) buildSubscriptionFromTransactions(appID uuid.UUID, domai
 		basePriceCents = lastRecurring.NetAmountCents
 	}
 
+	// Determine subscription GID:
+	// 1. Use real Shopify subscription GID if available from transaction
+	// 2. Otherwise generate internal synthetic ID with lg_ prefix
+	subscriptionGID := lastRecurring.SubscriptionGID
+	if subscriptionGID == "" {
+		// Generate synthetic ID - use lg_sub_ prefix to clearly distinguish from Shopify GIDs
+		subscriptionGID = "lg_sub_" + uuid.NewSHA1(uuid.NameSpaceDNS, []byte(domain)).String()
+	}
+
+	// Determine subscription status from transaction or default to ACTIVE
+	status := lastRecurring.SubscriptionStatus
+	if status == "" {
+		status = "ACTIVE"
+	}
+
 	sub := entity.NewSubscription(
 		appID,
-		"gid://shopify/AppSubscription/"+domain, // Generate a synthetic GID
+		subscriptionGID,
 		domain,
-		lastRecurring.ShopName,    // Shop name from transaction
-		"",                        // Plan name not available from transactions
+		lastRecurring.ShopName, // Shop name from transaction
+		"",                     // Plan name not available from transactions
 		basePriceCents,
 		lastRecurring.Currency,
 		billingInterval,
 	)
 
+	// Set subscription status from transaction data
+	sub.Status = status
+
 	// Update from the most recent charge
 	sub.UpdateFromRecurringCharge(lastRecurring.TransactionDate, basePriceCents)
 
-	// Classify risk based on current date
+	// Use subscription period end from transaction if available
+	if lastRecurring.SubscriptionPeriodEnd != nil {
+		sub.ExpectedNextChargeDate = lastRecurring.SubscriptionPeriodEnd
+	}
+
+	// Classify risk based on current date and status
 	sub.ClassifyRisk(now)
 
 	return sub

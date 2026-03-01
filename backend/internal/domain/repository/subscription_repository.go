@@ -62,6 +62,11 @@ type SubscriptionRepository interface {
 	FindByRiskState(ctx context.Context, appID uuid.UUID, riskState valueobject.RiskState) ([]*entity.Subscription, error)
 	DeleteByAppID(ctx context.Context, appID uuid.UUID) error
 
+	// Soft delete operations (preserves historical data)
+	SoftDeleteByAppID(ctx context.Context, appID uuid.UUID) error
+	FindDeletedByAppID(ctx context.Context, appID uuid.UUID) ([]*entity.Subscription, error)
+	RestoreByID(ctx context.Context, id uuid.UUID) error
+
 	// Advanced querying
 	FindWithFilters(ctx context.Context, appID uuid.UUID, filters SubscriptionFilters) (*SubscriptionPage, error)
 	GetSummary(ctx context.Context, appID uuid.UUID) (*SubscriptionSummary, error)

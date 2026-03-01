@@ -4,15 +4,25 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+)
+
+// Rate limiting errors
+var (
+	ErrRateLimited       = errors.New("rate limited by Shopify Partner API")
+	ErrMaxRetriesExceed = errors.New("max retries exceeded for Shopify Partner API request")
 )
 
 // PartnerApp represents a Shopify app from the Partner API
@@ -21,17 +31,213 @@ type PartnerApp struct {
 	Name string `json:"name"` // App name
 }
 
-// ShopifyPartnerClient handles communication with Shopify Partner API
-type ShopifyPartnerClient struct {
-	httpClient *http.Client
-	baseURL    string
+// RateLimiterConfig configures rate limiting behavior
+type RateLimiterConfig struct {
+	RequestsPerSecond float64       // Target requests per second (default: 4)
+	BurstSize         int           // Burst capacity (default: 4)
+	MaxRetries        int           // Max retry attempts (default: 3)
+	BaseBackoff       time.Duration // Base backoff duration (default: 1s)
+	MaxBackoff        time.Duration // Max backoff duration (default: 30s)
 }
 
-func NewShopifyPartnerClient() *ShopifyPartnerClient {
-	return &ShopifyPartnerClient{
-		httpClient: &http.Client{},
-		baseURL:    "https://partners.shopify.com",
+// DefaultRateLimiterConfig returns sensible defaults for Shopify Partner API
+func DefaultRateLimiterConfig() RateLimiterConfig {
+	return RateLimiterConfig{
+		RequestsPerSecond: 4,              // Shopify's documented rate
+		BurstSize:         4,              // Allow small bursts
+		MaxRetries:        3,              // Retry up to 3 times
+		BaseBackoff:       time.Second,    // Start with 1s backoff
+		MaxBackoff:        30 * time.Second, // Max 30s backoff
 	}
+}
+
+// tokenBucket implements a simple token bucket rate limiter
+type tokenBucket struct {
+	mu           sync.Mutex
+	tokens       float64
+	maxTokens    float64
+	refillRate   float64 // tokens per second
+	lastRefill   time.Time
+}
+
+func newTokenBucket(tokensPerSecond float64, burst int) *tokenBucket {
+	return &tokenBucket{
+		tokens:     float64(burst),
+		maxTokens:  float64(burst),
+		refillRate: tokensPerSecond,
+		lastRefill: time.Now(),
+	}
+}
+
+// wait blocks until a token is available or context is cancelled
+func (tb *tokenBucket) wait(ctx context.Context) error {
+	for {
+		tb.mu.Lock()
+		tb.refill()
+
+		if tb.tokens >= 1 {
+			tb.tokens--
+			tb.mu.Unlock()
+			return nil
+		}
+
+		// Calculate wait time until next token
+		waitTime := time.Duration(float64(time.Second) / tb.refillRate)
+		tb.mu.Unlock()
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(waitTime):
+			// Continue to try again
+		}
+	}
+}
+
+func (tb *tokenBucket) refill() {
+	now := time.Now()
+	elapsed := now.Sub(tb.lastRefill).Seconds()
+	tb.tokens = math.Min(tb.maxTokens, tb.tokens+elapsed*tb.refillRate)
+	tb.lastRefill = now
+}
+
+// ShopifyPartnerClient handles communication with Shopify Partner API
+type ShopifyPartnerClient struct {
+	httpClient  *http.Client
+	baseURL     string
+	rateLimiter *tokenBucket
+	config      RateLimiterConfig
+}
+
+// ShopifyPartnerClientOption is a functional option for configuring the client
+type ShopifyPartnerClientOption func(*ShopifyPartnerClient)
+
+// WithRateLimiterConfig sets custom rate limiter configuration
+func WithRateLimiterConfig(config RateLimiterConfig) ShopifyPartnerClientOption {
+	return func(c *ShopifyPartnerClient) {
+		c.config = config
+		c.rateLimiter = newTokenBucket(config.RequestsPerSecond, config.BurstSize)
+	}
+}
+
+// NewShopifyPartnerClient creates a new client with rate limiting
+func NewShopifyPartnerClient(opts ...ShopifyPartnerClientOption) *ShopifyPartnerClient {
+	config := DefaultRateLimiterConfig()
+	c := &ShopifyPartnerClient{
+		httpClient:  &http.Client{Timeout: 30 * time.Second},
+		baseURL:     "https://partners.shopify.com",
+		rateLimiter: newTokenBucket(config.RequestsPerSecond, config.BurstSize),
+		config:      config,
+	}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
+}
+
+// executeWithRetry executes an HTTP request with rate limiting and exponential backoff
+func (c *ShopifyPartnerClient) executeWithRetry(ctx context.Context, req *http.Request) (*http.Response, []byte, error) {
+	var lastErr error
+
+	// Use default config if not initialized (for backward compatibility in tests)
+	maxRetries := c.config.MaxRetries
+	if c.rateLimiter == nil && maxRetries == 0 {
+		maxRetries = 0 // No retries when rate limiter not initialized
+	}
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		// Wait for rate limiter (skip if not initialized)
+		if c.rateLimiter != nil {
+			if err := c.rateLimiter.wait(ctx); err != nil {
+				return nil, nil, err
+			}
+		}
+
+		// Execute request
+		resp, err := c.httpClient.Do(req.Clone(ctx))
+		if err != nil {
+			lastErr = err
+			log.Printf("Shopify API request failed (attempt %d/%d): %v", attempt+1, c.config.MaxRetries+1, err)
+			if attempt < c.config.MaxRetries {
+				c.backoff(ctx, attempt)
+				continue
+			}
+			break
+		}
+
+		// Read body
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		// Check for rate limiting (429) or server errors (5xx)
+		if resp.StatusCode == http.StatusTooManyRequests {
+			log.Printf("Shopify API rate limited (attempt %d/%d), backing off", attempt+1, c.config.MaxRetries+1)
+			lastErr = ErrRateLimited
+			if attempt < c.config.MaxRetries {
+				// Check for Retry-After header
+				if retryAfter := resp.Header.Get("Retry-After"); retryAfter != "" {
+					if seconds, err := time.ParseDuration(retryAfter + "s"); err == nil {
+						time.Sleep(seconds)
+						continue
+					}
+				}
+				c.backoff(ctx, attempt)
+				continue
+			}
+			break
+		}
+
+		if resp.StatusCode >= 500 {
+			log.Printf("Shopify API server error %d (attempt %d/%d)", resp.StatusCode, attempt+1, c.config.MaxRetries+1)
+			lastErr = fmt.Errorf("server error: %d", resp.StatusCode)
+			if attempt < c.config.MaxRetries {
+				c.backoff(ctx, attempt)
+				continue
+			}
+			break
+		}
+
+		// Success or client error (don't retry 4xx except 429)
+		return resp, body, nil
+	}
+
+	if lastErr != nil {
+		return nil, nil, fmt.Errorf("%w: %v", ErrMaxRetriesExceed, lastErr)
+	}
+	return nil, nil, ErrMaxRetriesExceed
+}
+
+// backoff performs exponential backoff with jitter
+func (c *ShopifyPartnerClient) backoff(ctx context.Context, attempt int) {
+	// Exponential backoff: base * 2^attempt
+	backoff := c.config.BaseBackoff * time.Duration(1<<uint(attempt))
+	if backoff > c.config.MaxBackoff {
+		backoff = c.config.MaxBackoff
+	}
+
+	// Add jitter (±25%)
+	jitter := time.Duration(float64(backoff) * 0.25 * (0.5 - float64(time.Now().UnixNano()%100)/100))
+	backoff += jitter
+
+	log.Printf("Backing off for %v before retry", backoff)
+
+	select {
+	case <-ctx.Done():
+	case <-time.After(backoff):
+	}
+}
+
+// isRateLimitError checks if an error indicates rate limiting
+func isRateLimitError(err error) bool {
+	return errors.Is(err, ErrRateLimited) ||
+		strings.Contains(err.Error(), "429") ||
+		strings.Contains(err.Error(), "rate limit")
 }
 
 // FetchApps retrieves all apps for the given partner organization
@@ -86,23 +292,18 @@ func (c *ShopifyPartnerClient) FetchApps(ctx context.Context, organizationID, ac
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Shopify-Access-Token", accessToken)
 
-	resp, err := c.httpClient.Do(req)
+	// Use rate-limited execution with retry
+	resp, body, err := c.executeWithRetry(ctx, req)
 	if err != nil {
 		log.Printf("Partner API request failed: %v", err)
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
 
-	// Read body for logging
-	body, _ := io.ReadAll(resp.Body)
-	log.Printf("Partner API response - Status: %d, Body: %s", resp.StatusCode, string(body))
+	log.Printf("Partner API response - Status: %d, Body length: %d", resp.StatusCode, len(body))
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))
 	}
-
-	// Re-create reader for JSON decoding
-	resp.Body = io.NopCloser(bytes.NewReader(body))
 
 	var result struct {
 		Data struct {
@@ -123,7 +324,7 @@ func (c *ShopifyPartnerClient) FetchApps(ctx context.Context, organizationID, ac
 		} `json:"errors"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := json.Unmarshal(body, &result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
@@ -301,13 +502,11 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Shopify-Access-Token", accessToken)
 
-	resp, err := c.httpClient.Do(req)
+	// Use rate-limited execution with retry
+	resp, body, err := c.executeWithRetry(ctx, req)
 	if err != nil {
 		return nil, "", false, fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, "", false, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))

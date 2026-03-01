@@ -114,6 +114,18 @@ func (m *mockSubRepoForLedger) GetPriceStats(ctx context.Context, appID uuid.UUI
 	return &repository.PriceStats{}, nil
 }
 
+func (m *mockSubRepoForLedger) SoftDeleteByAppID(ctx context.Context, appID uuid.UUID) error {
+	return nil
+}
+
+func (m *mockSubRepoForLedger) FindDeletedByAppID(ctx context.Context, appID uuid.UUID) ([]*entity.Subscription, error) {
+	return nil, nil
+}
+
+func (m *mockSubRepoForLedger) RestoreByID(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
 func TestLedgerService_RebuildFromTransactions_Success(t *testing.T) {
 	appID := uuid.New()
 	now := time.Date(2026, 2, 26, 12, 0, 0, 0, time.UTC)

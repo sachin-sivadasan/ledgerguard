@@ -23,6 +23,7 @@ type Subscription struct {
 	RiskState               valueobject.RiskState
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
+	DeletedAt               *time.Time // Soft delete timestamp (nil = not deleted)
 }
 
 func NewSubscription(
@@ -113,4 +114,22 @@ func (s *Subscription) MRRCents() int64 {
 		return s.BasePriceCents / 12
 	}
 	return s.BasePriceCents
+}
+
+// SoftDelete marks the subscription as deleted without removing the record
+func (s *Subscription) SoftDelete() {
+	now := time.Now().UTC()
+	s.DeletedAt = &now
+	s.UpdatedAt = now
+}
+
+// IsDeleted returns true if the subscription has been soft-deleted
+func (s *Subscription) IsDeleted() bool {
+	return s.DeletedAt != nil
+}
+
+// Restore removes the soft-delete marker, making the subscription active again
+func (s *Subscription) Restore() {
+	s.DeletedAt = nil
+	s.UpdatedAt = time.Now().UTC()
 }

@@ -230,6 +230,18 @@ func (m *mockSubscriptionRepo) GetPriceStats(ctx context.Context, appID uuid.UUI
 	}, nil
 }
 
+func (m *mockSubscriptionRepo) SoftDeleteByAppID(ctx context.Context, appID uuid.UUID) error {
+	return nil
+}
+
+func (m *mockSubscriptionRepo) FindDeletedByAppID(ctx context.Context, appID uuid.UUID) ([]*entity.Subscription, error) {
+	return nil, nil
+}
+
+func (m *mockSubscriptionRepo) RestoreByID(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
 // Mock partner repo for subscription tests
 type mockPartnerRepoForSub struct {
 	account *entity.PartnerAccount

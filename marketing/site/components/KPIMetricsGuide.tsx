@@ -908,15 +908,22 @@ const DataFlow: React.FC<DataFlowProps> = ({ selectedKPI, animationProgress }) =
 interface RiskDistributionProps {
   riskSummary: RiskSummary;
   animationProgress: number;
+  highlightedStates?: string[];
+  selectedKPI?: string;
 }
 
-const RiskDistribution: React.FC<RiskDistributionProps> = ({ riskSummary, animationProgress }) => {
+const RiskDistribution: React.FC<RiskDistributionProps> = ({
+  riskSummary,
+  animationProgress,
+  highlightedStates = [],
+  selectedKPI,
+}) => {
   const total = riskSummary.total;
   const distribution = [
-    { label: 'Safe', count: riskSummary.safeCount, color: '#22c55e', icon: '✅' },
-    { label: 'At Risk', count: riskSummary.oneCycleMissedCount, color: '#f59e0b', icon: '⚠️' },
-    { label: 'Critical', count: riskSummary.twoCyclesMissedCount, color: '#ef4444', icon: '🔴' },
-    { label: 'Churned', count: riskSummary.churnedCount, color: '#6b7280', icon: '💀' },
+    { label: 'Safe', id: 'SAFE', count: riskSummary.safeCount, color: '#22c55e', icon: '✅' },
+    { label: 'At Risk', id: 'ONE_CYCLE_MISSED', count: riskSummary.oneCycleMissedCount, color: '#f59e0b', icon: '⚠️' },
+    { label: 'Critical', id: 'TWO_CYCLES_MISSED', count: riskSummary.twoCyclesMissedCount, color: '#ef4444', icon: '🔴' },
+    { label: 'Churned', id: 'CHURNED', count: riskSummary.churnedCount, color: '#6b7280', icon: '💀' },
   ];
 
   return (
@@ -940,9 +947,22 @@ const RiskDistribution: React.FC<RiskDistributionProps> = ({ riskSummary, animat
         const percent = (item.count / total) * 100;
         const showBar = animationProgress > (idx / distribution.length) * 50;
         const barWidth = showBar ? percent : 0;
+        const isHighlighted = highlightedStates.length === 0 || highlightedStates.includes(item.id);
+        const isContributor = highlightedStates.includes(item.id);
 
         return (
-          <div key={item.label} style={{ marginBottom: '12px' }}>
+          <div
+            key={item.label}
+            style={{
+              marginBottom: '12px',
+              padding: '8px',
+              borderRadius: '8px',
+              background: isContributor ? `${item.color}15` : 'transparent',
+              border: isContributor ? `1px solid ${item.color}40` : '1px solid transparent',
+              opacity: isHighlighted ? 1 : 0.4,
+              transition: 'all 0.3s',
+            }}
+          >
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -954,8 +974,21 @@ const RiskDistribution: React.FC<RiskDistributionProps> = ({ riskSummary, animat
                 <span style={{ color: item.color, fontSize: '12px', fontWeight: 'bold' }}>
                   {item.label}
                 </span>
+                {isContributor && selectedKPI && (
+                  <span style={{
+                    fontSize: '9px',
+                    color: item.color,
+                    background: `${item.color}20`,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                  }}>
+                    → {selectedKPI === 'activeMRR' ? 'Active MRR' :
+                       selectedKPI === 'revenueAtRisk' ? 'At Risk' :
+                       selectedKPI === 'churnedRevenue' ? 'Churned' : ''}
+                  </span>
+                )}
               </div>
-              <span style={{ color: '#9ca3af', fontSize: '11px' }}>
+              <span style={{ color: isHighlighted ? '#e5e7eb' : '#6b7280', fontSize: '11px' }}>
                 {item.count} ({percent.toFixed(0)}%)
               </span>
             </div>
@@ -968,9 +1001,9 @@ const RiskDistribution: React.FC<RiskDistributionProps> = ({ riskSummary, animat
               <div style={{
                 width: `${barWidth}%`,
                 height: '100%',
-                background: item.color,
+                background: isHighlighted ? item.color : '#4b5563',
                 borderRadius: '4px',
-                transition: 'width 0.5s ease-out',
+                transition: 'all 0.5s ease-out',
               }} />
             </div>
           </div>
@@ -1191,6 +1224,13 @@ const KPIMetricsGuide: React.FC = () => {
               <RiskDistribution
                 riskSummary={currentMetrics.riskSummary}
                 animationProgress={animationProgress}
+                highlightedStates={
+                  selectedKPI === 'activeMRR' ? ['SAFE'] :
+                  selectedKPI === 'revenueAtRisk' ? ['ONE_CYCLE_MISSED', 'TWO_CYCLES_MISSED'] :
+                  selectedKPI === 'churnedRevenue' ? ['CHURNED'] :
+                  []
+                }
+                selectedKPI={selectedKPI}
               />
             </div>
           </>

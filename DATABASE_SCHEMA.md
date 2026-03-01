@@ -29,6 +29,8 @@ users
 
 api_subscription_status (CQRS read model - populated from subscriptions)
 api_usage_status (CQRS read model - populated from transactions)
+
+audit_log (General audit trail for user actions)
 ```
 
 ---
@@ -256,6 +258,27 @@ Audit log for Revenue API requests.
 | user_agent | TEXT | | Client user agent |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | Request time |
 
+### audit_log
+General audit trail for user actions (compliance, debugging, activity monitoring).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK | Log entry ID |
+| user_id | UUID | FK → users.id ON DELETE SET NULL | User who performed action (NULL for system actions) |
+| action | VARCHAR(50) | NOT NULL | Action type (LOGIN, LOGOUT, APP_SELECT, SYNC_START, etc.) |
+| resource_type | VARCHAR(50) | NOT NULL | Type of resource (USER, APP, SUBSCRIPTION, PARTNER, etc.) |
+| resource_id | UUID | | ID of affected resource |
+| details | JSONB | | Additional context (sanitized, no sensitive data) |
+| ip_address | VARCHAR(45) | | Client IP (v4 or v6) |
+| user_agent | TEXT | | Client user agent |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | Action time |
+
+**Indexes:**
+- `idx_audit_log_user_created` - Find actions by user and time
+- `idx_audit_log_created` - Time-based queries
+- `idx_audit_log_action` - Action-based queries
+- `idx_audit_log_resource` - Resource-based lookups (WHERE resource_id IS NOT NULL)
+
 ---
 
 ## SQL DDL
@@ -451,6 +474,10 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000018_add_earnings_tracking | Add earnings availability tracking to transactions | ✓ Implemented |
 | 000019_create_user_preferences_table | Create user_preferences for dashboard configuration | ✓ Implemented |
 | 000020_add_transaction_subscription_details | Add shop/subscription details to transactions | ✓ Implemented |
+| 000021_add_subscriptions_shopify_shop_gid | Add shopify_shop_gid to subscriptions for webhook events | ✓ Implemented |
+| 000022_add_subscriptions_deleted_at | Add deleted_at for soft deletes on subscriptions | ✓ Implemented |
+| 000023_create_subscription_events_table | Create subscription_events for lifecycle tracking | ✓ Implemented |
+| 000024_create_audit_log_table | Create audit_log for general action logging | ✓ Implemented |
 
 ---
 

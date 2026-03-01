@@ -986,3 +986,31 @@
 - Pushed to origin/main
 
 ---
+
+## [2026-03-01] Customer Pitch UI
+
+**Original Prompt:**
+> o. now based on visualization prompt. i want a customer pitch ui. like before keep separate promt. ask me questions to ask shopify.
+
+**Improved Prompt:**
+> Create an interactive, scroll-based customer pitch page for LedgerGuard targeting Shopify app developers ($10K-$100K MRR). Include:
+> 1. Hero section with animated dashboard preview (MRR counter, risk alerts)
+> 2. Problem section highlighting: Blind to Churn, Spreadsheet Hell, Wrong Tools
+> 3. Interactive solution preview with tabbed dashboard (MRR Health, Risk Radar, Cohort Retention)
+> 4. How It Works flow diagram (Connect → Sync → Analyze → Act)
+> 5. Features grid (6 features: Renewal Rate, Revenue at Risk, Churn Prediction, Usage Revenue, AI Brief, Revenue API)
+> 6. Before/After comparison table
+> 7. Social proof section with stats and testimonial placeholder
+> 8. Pricing preview (Free vs Pro $49/mo)
+> 9. Final CTA with trust badges
+> 10. Create prompt document at docs/prompts/customer-pitch-ui.md
+> 11. Route at /pitch
+
+**Result:**
+- docs/prompts/customer-pitch-ui.md - Detailed implementation spec
+- marketing/site/components/CustomerPitch.tsx (~700 lines) - Full pitch page component with 9 sections
+- marketing/site/app/pitch/page.tsx - Page route with SEO metadata
+- Build verified: `npm run build` successful
+- All sections: Hero, Problem, Solution Preview, How It Works, Features, Comparison, Social Proof, Pricing, Final CTA
+
+---

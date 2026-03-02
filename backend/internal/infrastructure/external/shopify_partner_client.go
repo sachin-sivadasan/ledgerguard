@@ -103,10 +103,12 @@ func (tb *tokenBucket) refill() {
 
 // ShopifyPartnerClient handles communication with Shopify Partner API
 type ShopifyPartnerClient struct {
-	httpClient  *http.Client
-	baseURL     string
-	rateLimiter *tokenBucket
-	config      RateLimiterConfig
+	httpClient   *http.Client
+	baseURL      string
+	rateLimiter  *tokenBucket           // Deprecated: single limiter for backward compat
+	limiters     map[string]*tokenBucket // Per-partner rate limiters keyed by org ID
+	limiterMu    sync.RWMutex           // Protects limiters map
+	config       RateLimiterConfig
 }
 
 // ShopifyPartnerClientOption is a functional option for configuring the client
@@ -120,6 +122,23 @@ func WithRateLimiterConfig(config RateLimiterConfig) ShopifyPartnerClientOption 
 	}
 }
 
+// WithRequestsPerSecond sets the rate limit for Partner API calls.
+// This is used for per-partner rate limiting (each partner gets their own limiter).
+func WithRequestsPerSecond(rps float64) ShopifyPartnerClientOption {
+	return func(c *ShopifyPartnerClient) {
+		if rps > 0 {
+			c.config.RequestsPerSecond = rps
+			c.config.BurstSize = int(rps) // Burst size equals RPS
+			if c.config.BurstSize < 1 {
+				c.config.BurstSize = 1
+			}
+			// Update global limiter for backward compatibility
+			c.rateLimiter = newTokenBucket(rps, c.config.BurstSize)
+			log.Printf("Shopify Partner API rate limit configured: %.1f RPS", rps)
+		}
+	}
+}
+
 // NewShopifyPartnerClient creates a new client with rate limiting
 func NewShopifyPartnerClient(opts ...ShopifyPartnerClientOption) *ShopifyPartnerClient {
 	config := DefaultRateLimiterConfig()
@@ -127,6 +146,7 @@ func NewShopifyPartnerClient(opts ...ShopifyPartnerClientOption) *ShopifyPartner
 		httpClient:  &http.Client{Timeout: 30 * time.Second},
 		baseURL:     "https://partners.shopify.com",
 		rateLimiter: newTokenBucket(config.RequestsPerSecond, config.BurstSize),
+		limiters:    make(map[string]*tokenBucket),
 		config:      config,
 	}
 
@@ -135,6 +155,33 @@ func NewShopifyPartnerClient(opts ...ShopifyPartnerClientOption) *ShopifyPartner
 	}
 
 	return c
+}
+
+// getLimiterForPartner returns the rate limiter for a specific partner (org ID).
+// Creates a new limiter if one doesn't exist for this partner.
+func (c *ShopifyPartnerClient) getLimiterForPartner(orgID string) *tokenBucket {
+	// Fast path: read lock
+	c.limiterMu.RLock()
+	if limiter, ok := c.limiters[orgID]; ok {
+		c.limiterMu.RUnlock()
+		return limiter
+	}
+	c.limiterMu.RUnlock()
+
+	// Slow path: write lock to create new limiter
+	c.limiterMu.Lock()
+	defer c.limiterMu.Unlock()
+
+	// Double-check after acquiring write lock
+	if limiter, ok := c.limiters[orgID]; ok {
+		return limiter
+	}
+
+	// Create new limiter for this partner
+	limiter := newTokenBucket(c.config.RequestsPerSecond, c.config.BurstSize)
+	c.limiters[orgID] = limiter
+	log.Printf("Created rate limiter for partner %s: %.1f RPS, burst %d", orgID, c.config.RequestsPerSecond, c.config.BurstSize)
+	return limiter
 }
 
 // executeWithRetry executes an HTTP request with rate limiting and exponential backoff
@@ -147,10 +194,19 @@ func (c *ShopifyPartnerClient) executeWithRetry(ctx context.Context, req *http.R
 		maxRetries = 0 // No retries when rate limiter not initialized
 	}
 
+	// Get per-partner rate limiter if org ID is in context
+	var limiter *tokenBucket
+	if orgID := c.getOrganizationID(ctx); orgID != "" && c.limiters != nil {
+		limiter = c.getLimiterForPartner(orgID)
+	} else {
+		// Fallback to global limiter for backward compatibility
+		limiter = c.rateLimiter
+	}
+
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		// Wait for rate limiter (skip if not initialized)
-		if c.rateLimiter != nil {
-			if err := c.rateLimiter.wait(ctx); err != nil {
+		if limiter != nil {
+			if err := limiter.wait(ctx); err != nil {
 				return nil, nil, err
 			}
 		}

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -35,10 +36,11 @@ type FirebaseConfig struct {
 }
 
 type ShopifyConfig struct {
-	ClientID     string `yaml:"client_id"`
-	ClientSecret string `yaml:"client_secret"`
-	RedirectURI  string `yaml:"redirect_uri"`
-	Scopes       string `yaml:"scopes"`
+	ClientID     string  `yaml:"client_id"`
+	ClientSecret string  `yaml:"client_secret"`
+	RedirectURI  string  `yaml:"redirect_uri"`
+	Scopes       string  `yaml:"scopes"`
+	RateLimitRPS float64 `yaml:"rate_limit_rps"` // Requests per second for Partner API (default: 3)
 }
 
 type EncryptionConfig struct {
@@ -60,6 +62,9 @@ func Load(configPath string) (*Config, error) {
 			DBName:         "ledgerguard",
 			SSLMode:        "disable",
 			MigrationsPath: "migrations",
+		},
+		Shopify: ShopifyConfig{
+			RateLimitRPS: 3.0, // Default 3 requests per second for Partner API
 		},
 	}
 
@@ -138,6 +143,11 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("SHOPIFY_SCOPES"); v != "" {
 		cfg.Shopify.Scopes = v
+	}
+	if v := os.Getenv("SHOPIFY_RATE_LIMIT_RPS"); v != "" {
+		if rps, err := strconv.ParseFloat(v, 64); err == nil && rps > 0 {
+			cfg.Shopify.RateLimitRPS = rps
+		}
 	}
 
 	// Encryption

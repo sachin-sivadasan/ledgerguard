@@ -175,8 +175,10 @@ func run() error {
 		log.Println("Integration status handler initialized")
 	}
 
-	// Initialize Shopify Partner client for fetching apps
-	partnerClient := external.NewShopifyPartnerClient()
+	// Initialize Shopify Partner client for fetching apps with rate limiting
+	partnerClient := external.NewShopifyPartnerClient(
+		external.WithRequestsPerSecond(cfg.Shopify.RateLimitRPS),
+	)
 
 	var appHandler *handler.AppHandler
 	if partnerRepo != nil && appRepo != nil && encryptor != nil {

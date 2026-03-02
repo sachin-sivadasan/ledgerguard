@@ -1523,3 +1523,39 @@ Push + Slack Notifications
 ```
 
 **Tests:** All tests passing
+
+
+---
+
+## [2026-03-02] Per-Partner Shopify API Rate Limiting
+
+**Summary:**
+Implemented per-partner rate limiting for outgoing Shopify Partner API calls. Each partner now has their own rate limiter keyed by organization ID, preventing one partner's sync from affecting another's rate limit quota.
+
+**Key Changes:**
+
+### 1. Configuration
+- Added `RateLimitRPS` to `ShopifyConfig` (default: 3 requests/second)
+- Environment variable: `SHOPIFY_RATE_LIMIT_RPS`
+- Configurable per deployment without code changes
+
+### 2. Per-Partner Rate Limiter
+- `ShopifyPartnerClient` now maintains a map of rate limiters keyed by organization ID
+- Each partner gets their own token bucket limiter
+- Limiters are created lazily on first request for a partner
+- Thread-safe with RWMutex for concurrent access
+
+### 3. Request Flow
+- Organization ID extracted from request context
+- Per-partner limiter used if org ID present
+- Falls back to global limiter for backward compatibility
+
+**Files Updated:**
+- `internal/infrastructure/config/config.go` - Added RateLimitRPS config field with env override
+- `internal/infrastructure/external/shopify_partner_client.go` - Added per-partner rate limiter map and WithRequestsPerSecond option
+- `cmd/server/main.go` - Wired rate limit config to partner client
+
+**Why Per-Partner:**
+Shopify rate limits are per access token (partner level), not per app. If one partner has 5 apps and we used a single global 3 RPS limit, they'd share it unfairly with other partners. Each partner should get their full rate limit quota.
+
+**Tests:** All tests passing

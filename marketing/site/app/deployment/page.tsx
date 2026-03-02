@@ -158,22 +158,22 @@ export default function DeploymentPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <CostCard
-                title="Managed Database Setup"
-                total="~$25/month"
+                title="Self-Hosted DB Setup"
+                total="~$15/month"
                 items={[
-                  { name: 'VPS CX21', spec: '2 vCPU, 4GB RAM', cost: '$5.50' },
-                  { name: 'Managed PostgreSQL', spec: '2 vCPU, 4GB RAM', cost: '$16' },
+                  { name: 'VPS CX31', spec: '4 vCPU, 8GB RAM', cost: '$10.50' },
+                  { name: 'PostgreSQL', spec: 'Self-managed', cost: 'Included' },
                   { name: 'Storage Box', spec: '100GB', cost: '$4' },
                   { name: 'DNS', spec: 'Included', cost: 'Free' },
                 ]}
                 recommended={true}
               />
               <CostCard
-                title="Self-Hosted DB Setup"
-                total="~$15/month"
+                title="Managed Database Setup"
+                total="~$25/month"
                 items={[
-                  { name: 'VPS CX31', spec: '4 vCPU, 8GB RAM', cost: '$10.50' },
-                  { name: 'PostgreSQL', spec: 'Self-managed', cost: 'Included' },
+                  { name: 'VPS CX21', spec: '2 vCPU, 4GB RAM', cost: '$5.50' },
+                  { name: 'Managed PostgreSQL', spec: '2 vCPU, 4GB RAM', cost: '$16' },
                   { name: 'Storage Box', spec: '100GB', cost: '$4' },
                   { name: 'DNS', spec: 'Included', cost: 'Free' },
                 ]}

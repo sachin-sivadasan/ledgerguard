@@ -4,13 +4,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:ledgerguard/domain/entities/user_profile.dart';
+import 'package:ledgerguard/presentation/blocs/partner_integration/partner_integration.dart';
 import 'package:ledgerguard/presentation/blocs/role/role.dart';
 import 'package:ledgerguard/presentation/pages/admin/manual_integration_page.dart';
 
 class MockRoleBloc extends Mock implements RoleBloc {}
 
+class MockPartnerIntegrationBloc extends Mock
+    implements PartnerIntegrationBloc {}
+
 void main() {
   late MockRoleBloc mockRoleBloc;
+  late MockPartnerIntegrationBloc mockPartnerIntegrationBloc;
 
   const ownerProfile = UserProfile(
     id: 'user-1',
@@ -28,12 +33,23 @@ void main() {
 
   setUp(() {
     mockRoleBloc = MockRoleBloc();
+    mockPartnerIntegrationBloc = MockPartnerIntegrationBloc();
+
+    // Default partner integration state
+    when(() => mockPartnerIntegrationBloc.state)
+        .thenReturn(const PartnerIntegrationInitial());
+    when(() => mockPartnerIntegrationBloc.stream)
+        .thenAnswer((_) => const Stream.empty());
   });
 
   Widget buildTestWidget() {
     return MaterialApp(
-      home: BlocProvider<RoleBloc>.value(
-        value: mockRoleBloc,
+      home: MultiBlocProvider(
+        providers: [
+          BlocProvider<RoleBloc>.value(value: mockRoleBloc),
+          BlocProvider<PartnerIntegrationBloc>.value(
+              value: mockPartnerIntegrationBloc),
+        ],
         child: const ManualIntegrationPage(),
       ),
     );
@@ -81,6 +97,32 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
 
       // Initial state shows loading
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('validates empty partner ID', (tester) async {
+      when(() => mockRoleBloc.state).thenReturn(const RoleLoaded(adminProfile));
+      when(() => mockRoleBloc.stream).thenAnswer((_) => const Stream.empty());
+
+      await tester.pumpWidget(buildTestWidget());
+
+      // Tap save without entering data
+      await tester.tap(find.text('Save Token'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Partner ID is required'), findsOneWidget);
+      expect(find.text('API Token is required'), findsOneWidget);
+    });
+
+    testWidgets('shows loading indicator when saving', (tester) async {
+      when(() => mockRoleBloc.state).thenReturn(const RoleLoaded(adminProfile));
+      when(() => mockRoleBloc.stream).thenAnswer((_) => const Stream.empty());
+      when(() => mockPartnerIntegrationBloc.state)
+          .thenReturn(const PartnerIntegrationLoading(message: 'Saving...'));
+
+      await tester.pumpWidget(buildTestWidget());
+
+      // Find the loading indicator in the button
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
   });

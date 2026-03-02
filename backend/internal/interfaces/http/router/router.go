@@ -11,24 +11,26 @@ import (
 )
 
 type Config struct {
-	HealthHandler            *handler.HealthHandler
-	MeHandler                *handler.MeHandler
-	OAuthHandler             *handler.OAuthHandler
-	ManualTokenHandler       *handler.ManualTokenHandler
-	IntegrationStatusHandler *handler.IntegrationStatusHandler
-	AppHandler               *handler.AppHandler
-	MetricsHandler           *handler.MetricsHandler
-	RevenueHandler           *handler.RevenueHandler
-	SyncHandler              *handler.SyncHandler
-	SubscriptionHandler      *handler.SubscriptionHandler
-	StoreHealthHandler       *handler.StoreHealthHandler
-	FeeHandler               *handler.FeeHandler
-	UserPreferencesHandler   *handler.UserPreferencesHandler
-	WebhookHandler           *handler.WebhookHandler
-	APIKeyHandler            *apikeyhandler.APIKeyHandler
-	AuthMW                   func(next http.Handler) http.Handler
-	AdminMW                  func(next http.Handler) http.Handler // RequireRoles(ADMIN)
-	InternalMW               func(next http.Handler) http.Handler // Internal key authentication
+	HealthHandler                   *handler.HealthHandler
+	MeHandler                       *handler.MeHandler
+	OAuthHandler                    *handler.OAuthHandler
+	ManualTokenHandler              *handler.ManualTokenHandler
+	IntegrationStatusHandler        *handler.IntegrationStatusHandler
+	AppHandler                      *handler.AppHandler
+	MetricsHandler                  *handler.MetricsHandler
+	RevenueHandler                  *handler.RevenueHandler
+	SyncHandler                     *handler.SyncHandler
+	SubscriptionHandler             *handler.SubscriptionHandler
+	StoreHealthHandler              *handler.StoreHealthHandler
+	FeeHandler                      *handler.FeeHandler
+	UserPreferencesHandler          *handler.UserPreferencesHandler
+	NotificationPreferencesHandler  *handler.NotificationPreferencesHandler
+	InsightHandler                  *handler.InsightHandler
+	WebhookHandler                  *handler.WebhookHandler
+	APIKeyHandler                   *apikeyhandler.APIKeyHandler
+	AuthMW                          func(next http.Handler) http.Handler
+	AdminMW                         func(next http.Handler) http.Handler // RequireRoles(ADMIN)
+	InternalMW                      func(next http.Handler) http.Handler // Internal key authentication
 }
 
 func New(cfg Config) *chi.Mux {
@@ -77,6 +79,12 @@ func New(cfg Config) *chi.Mux {
 				r.Get("/default-app", cfg.UserPreferencesHandler.GetDefaultApp)
 				r.Put("/default-app", cfg.UserPreferencesHandler.SetDefaultApp)
 			})
+		}
+
+		// Notification preferences routes (plural "users" to match frontend)
+		if cfg.NotificationPreferencesHandler != nil && cfg.AuthMW != nil {
+			r.With(cfg.AuthMW).Get("/users/notification-preferences", cfg.NotificationPreferencesHandler.GetNotificationPreferences)
+			r.With(cfg.AuthMW).Put("/users/notification-preferences", cfg.NotificationPreferencesHandler.SaveNotificationPreferences)
 		}
 
 		// Shopify integration routes
@@ -147,6 +155,11 @@ func New(cfg Config) *chi.Mux {
 				// Store health routes
 				if cfg.StoreHealthHandler != nil {
 					r.Get("/{appID}/stores/{domain}/health", cfg.StoreHealthHandler.GetStoreHealth)
+				}
+
+				// Insights routes
+				if cfg.InsightHandler != nil {
+					r.Get("/{appID}/insights/daily", cfg.InsightHandler.GetDailyInsight)
 				}
 
 				// Install count routes

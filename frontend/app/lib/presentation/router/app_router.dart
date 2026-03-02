@@ -21,7 +21,9 @@ import '../pages/profile_page.dart';
 import '../pages/risk_breakdown_page.dart';
 import '../pages/signup_page.dart';
 import '../pages/store_health_page.dart';
+import '../pages/onboarding_page.dart';
 import '../pages/placeholder_page.dart';
+import '../pages/settings_page.dart';
 import '../pages/subscription_detail_page.dart';
 import '../pages/subscription_list_page.dart';
 
@@ -71,12 +73,12 @@ class AppRouter {
       GoRoute(
         path: '/onboarding',
         name: 'onboarding',
-        builder: (context, state) => const PlaceholderPage(title: 'Onboarding'),
+        builder: (context, state) => const OnboardingPage(),
       ),
       GoRoute(
         path: '/settings',
         name: 'settings',
-        builder: (context, state) => const PlaceholderPage(title: 'Settings'),
+        builder: (context, state) => const SettingsPage(),
       ),
       GoRoute(
         path: '/partner-integration',

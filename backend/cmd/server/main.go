@@ -263,6 +263,22 @@ func run() error {
 		log.Println("User preferences handler initialized")
 	}
 
+	// Initialize notification preferences handler
+	var notificationPreferencesHandler *handler.NotificationPreferencesHandler
+	if db != nil {
+		notificationPrefsRepo := persistence.NewPostgresNotificationPreferencesRepository(db.Pool)
+		notificationPreferencesHandler = handler.NewNotificationPreferencesHandler(notificationPrefsRepo)
+		log.Println("Notification preferences handler initialized")
+	}
+
+	// Initialize insight handler
+	var insightHandler *handler.InsightHandler
+	if db != nil && appRepo != nil && partnerRepo != nil {
+		dailyInsightRepo := persistence.NewPostgresDailyInsightRepository(db.Pool)
+		insightHandler = handler.NewInsightHandler(dailyInsightRepo, appRepo, partnerRepo)
+		log.Println("Insight handler initialized")
+	}
+
 	// Initialize auth middleware
 	var authMW func(http.Handler) http.Handler
 	if firebaseAuth != nil && userRepo != nil {
@@ -284,23 +300,25 @@ func run() error {
 
 	// Build router config
 	routerCfg := router.Config{
-		HealthHandler:            healthHandler,
-		MeHandler:                meHandler,
-		OAuthHandler:             oauthHandler,
-		ManualTokenHandler:       manualTokenHandler,
-		IntegrationStatusHandler: integrationStatusHandler,
-		AppHandler:               appHandler,
-		MetricsHandler:           metricsHandler,
-		RevenueHandler:           revenueHandler,
-		FeeHandler:               feeHandler,
-		SyncHandler:              syncHandler,
-		SubscriptionHandler:      subscriptionHandler,
-		StoreHealthHandler:       storeHealthHandler,
-		UserPreferencesHandler:   userPreferencesHandler,
-		APIKeyHandler:            apiKeyHandler,
-		AuthMW:                   authMW,
-		AdminMW:                  adminMW,
-		InternalMW:               internalMW,
+		HealthHandler:                   healthHandler,
+		MeHandler:                       meHandler,
+		OAuthHandler:                    oauthHandler,
+		ManualTokenHandler:              manualTokenHandler,
+		IntegrationStatusHandler:        integrationStatusHandler,
+		AppHandler:                      appHandler,
+		MetricsHandler:                  metricsHandler,
+		RevenueHandler:                  revenueHandler,
+		FeeHandler:                      feeHandler,
+		SyncHandler:                     syncHandler,
+		SubscriptionHandler:             subscriptionHandler,
+		StoreHealthHandler:              storeHealthHandler,
+		UserPreferencesHandler:          userPreferencesHandler,
+		NotificationPreferencesHandler:  notificationPreferencesHandler,
+		InsightHandler:                  insightHandler,
+		APIKeyHandler:                   apiKeyHandler,
+		AuthMW:                          authMW,
+		AdminMW:                         adminMW,
+		InternalMW:                      internalMW,
 	}
 
 	r := router.New(routerCfg)

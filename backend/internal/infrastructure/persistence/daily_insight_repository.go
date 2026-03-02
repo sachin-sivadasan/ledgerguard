@@ -2,12 +2,17 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 )
+
+// ErrDailyInsightNotFound is returned when a daily insight is not found
+var ErrDailyInsightNotFound = errors.New("daily insight not found")
 
 type PostgresDailyInsightRepository struct {
 	pool *pgxpool.Pool
@@ -114,6 +119,9 @@ func (r *PostgresDailyInsightRepository) FindLatestByAppID(ctx context.Context, 
 	)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrDailyInsightNotFound
+		}
 		return nil, err
 	}
 

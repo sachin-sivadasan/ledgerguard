@@ -327,8 +327,10 @@ class ProfilePage extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Badges Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
                       _buildHeaderBadge(
                         context,
@@ -336,7 +338,6 @@ class ProfilePage extends StatelessWidget {
                         label: profile.role.displayName,
                         color: Colors.white.withOpacity(0.2),
                       ),
-                      const SizedBox(width: 12),
                       _buildHeaderBadge(
                         context,
                         icon: profile.planTier.isPro ? Icons.star : Icons.star_border,
@@ -585,12 +586,12 @@ class ProfilePage extends StatelessWidget {
             ),
             if (!isPro) ...[
               const SizedBox(height: 20),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   _buildFeatureChip('AI Insights', false),
-                  const SizedBox(width: 8),
                   _buildFeatureChip('Priority Support', false),
-                  const SizedBox(width: 8),
                   _buildFeatureChip('Advanced Analytics', false),
                 ],
               ),
@@ -812,7 +813,9 @@ class ProfilePage extends StatelessWidget {
           children: [
             const Icon(Icons.info_outline, color: Colors.white),
             const SizedBox(width: 8),
-            Text('$feature coming soon!'),
+            Expanded(
+              child: Text('$feature coming soon!'),
+            ),
           ],
         ),
         behavior: SnackBarBehavior.floating,

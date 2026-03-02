@@ -42,30 +42,75 @@ class PaginationControls extends StatelessWidget {
           top: BorderSide(color: Colors.grey[200]!),
         ),
       ),
-      child: Row(
-        children: [
-          // Range text
-          Text(
-            _rangeText,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Use vertical layout on small screens (< 500px)
+          final isSmallScreen = constraints.maxWidth < 500;
+
+          if (isSmallScreen) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top row: range text and page size
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _rangeText,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    _PageSizeSelector(
+                      pageSize: pageSize,
+                      options: pageSizeOptions,
+                      onChanged: isLoading ? null : onPageSizeChanged,
+                    ),
+                  ],
                 ),
-          ),
-          const Spacer(),
-          // Page size selector
-          _PageSizeSelector(
-            pageSize: pageSize,
-            options: pageSizeOptions,
-            onChanged: isLoading ? null : onPageSizeChanged,
-          ),
-          const SizedBox(width: 16),
-          // Page navigation
-          _PageNavigation(
-            page: page,
-            totalPages: totalPages,
-            onPageChanged: isLoading ? null : onPageChanged,
-          ),
-        ],
+                const SizedBox(height: 8),
+                // Bottom row: page navigation centered
+                Center(
+                  child: _PageNavigation(
+                    page: page,
+                    totalPages: totalPages,
+                    onPageChanged: isLoading ? null : onPageChanged,
+                  ),
+                ),
+              ],
+            );
+          }
+
+          // Wide layout for larger screens
+          return Row(
+            children: [
+              // Range text
+              Text(
+                _rangeText,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+              ),
+              const Spacer(),
+              // Page size selector
+              _PageSizeSelector(
+                pageSize: pageSize,
+                options: pageSizeOptions,
+                onChanged: isLoading ? null : onPageSizeChanged,
+              ),
+              const SizedBox(width: 16),
+              // Page navigation
+              _PageNavigation(
+                page: page,
+                totalPages: totalPages,
+                onPageChanged: isLoading ? null : onPageChanged,
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -1233,3 +1233,28 @@
 - Commit: 2abf64c feat: implement per-partner rate limiting for Shopify Partner API
 
 ---
+
+## [2026-03-02] Voice AI Assistant Visualization Page
+
+**Original Prompt:**
+> in future i want an option in app to ask voice like want details of store xxxx. so ai with handle this and navigate to the subscription details/health page. or ask list of subscription with risk. so it naviages to list with rist tab is cliced. so prepare o visualizaton page. so it will update daily until implementation starts
+
+**Improved Prompt:**
+> Create an interactive visualization page for the Voice AI Assistant feature (future implementation):
+> 1. Voice Commands Flow: Show how voice input is processed (Capture → Transcript → Intent → Navigate)
+> 2. Supported Intents: STORE_DETAILS, STORE_HEALTH, LIST_FILTER, METRIC_QUERY, ALERT_QUERY, NAVIGATE
+> 3. Demo flow with selectable example commands
+> 4. Architecture overview: Flutter speech_to_text → Claude API → Entity resolver → GoRouter
+> 5. Fallback behavior: Show suggestions if intent unclear (confidence < 0.7)
+> 6. Route at `/voice-assistant` with noindex (future feature spec)
+
+**Prompt File:** `docs/prompts/voice-assistant-flow.md`
+
+**Result:**
+- Created `docs/prompts/voice-assistant-flow.md` - Full specification with Flutter code examples
+- Created `marketing/site/components/VoiceAssistantVisualization.tsx` - Interactive demo with stage progression
+- Created `marketing/site/app/voice-assistant/page.tsx` - Page with use cases, roadmap, tech stack
+- Features: Voice waveform animation, typing effect transcript, intent/entity cards, fallback suggestions
+- Fallback: Text response with suggested commands when intent unclear
+
+---

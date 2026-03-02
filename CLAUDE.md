@@ -125,7 +125,7 @@ marketing/
 
 **Visualization Pages:**
 - Use `docs/prompts/PROMPT-interactive-visualization-chat.md` as template for new visualizations
-- Available pages: `/kpi-guide`, `/money-flow`, `/architecture`, `/api-guide`, `/affiliate-program`, `/notifications`, `/pitch`
+- Available pages: `/kpi-guide`, `/money-flow`, `/architecture`, `/api-guide`, `/affiliate-program`, `/notifications`, `/pitch`, `/voice-assistant`
 - Each visualization has: animated flow diagrams, step-by-step progression, reference cards
 
 **Visualization Prompt Requirements:**
@@ -143,6 +143,7 @@ marketing/
 | `/affiliate-program` | `docs/prompts/affiliate-program-flow.md` |
 | `/notifications` | `docs/prompts/notification-engine-flow.md` |
 | `/pitch` | `docs/prompts/customer-pitch-ui.md` |
+| `/voice-assistant` | `docs/prompts/voice-assistant-flow.md` |
 
 ### 11. Frontend App (Flutter + Bloc)
 ```

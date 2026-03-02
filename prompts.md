@@ -1209,3 +1209,27 @@
 - Commit: 5716527 feat: add affiliate program flow visualization page
 
 ---
+
+## [2026-03-02] Per-Partner Shopify API Rate Limiting
+
+**Original Prompt:**
+> implement rate limit for api call using partner token. keep it configurable and default is 3/sec. so it should be app level because partner may have different app
+
+**Improved Prompt:**
+> Implement per-partner rate limiting for outgoing Shopify Partner API calls:
+> 1. Scope: Per-partner-account level (keyed by organization ID), since Shopify rate limits are per access token
+> 2. Default: 3 requests/second, configurable via `SHOPIFY_RATE_LIMIT_RPS` environment variable
+> 3. Implementation: Use token bucket rate limiter with per-partner limiter map
+> 4. Storage: Map of limiters keyed by organization ID in ShopifyPartnerClient
+> 5. Behavior: Wait/block when limit reached, log when throttling occurs
+> 6. Thread-safe: RWMutex for concurrent access to limiter map
+> 7. Apply to: All Partner API GraphQL calls (FetchTransactions, FetchApps, FetchAppEvents)
+
+**Result:**
+- Updated `internal/infrastructure/config/config.go` - Added RateLimitRPS field with env override
+- Updated `internal/infrastructure/external/shopify_partner_client.go` - Per-partner rate limiter map, WithRequestsPerSecond option
+- Updated `cmd/server/main.go` - Wired rate limit config to partner client
+- Each partner gets their own token bucket limiter (prevents one partner's sync from affecting another)
+- Commit: 2abf64c feat: implement per-partner rate limiting for Shopify Partner API
+
+---

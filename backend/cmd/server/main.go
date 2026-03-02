@@ -92,6 +92,18 @@ func run() error {
 		log.Println("Firebase Auth initialized")
 	}
 
+	// Initialize Firebase Messaging for push notifications (optional)
+	var firebaseMessaging *external.FirebaseMessagingService
+	if cfg.Firebase.CredentialsFile != "" {
+		firebaseMessaging, err = external.NewFirebaseMessagingService(ctx, cfg.Firebase.CredentialsFile)
+		if err != nil {
+			log.Printf("WARNING: Firebase Messaging not configured: %v", err)
+			log.Printf("Push notifications will not work")
+		} else {
+			log.Println("Firebase Messaging initialized")
+		}
+	}
+
 	// Initialize encryption
 	var encryptor *crypto.AESEncryptor
 	if cfg.Encryption.MasterKey != "" {
@@ -189,6 +201,7 @@ func run() error {
 	var syncService *appservice.SyncService
 	var syncHandler *handler.SyncHandler
 	var syncScheduler *scheduler.SyncScheduler
+	var notificationScheduler *scheduler.NotificationScheduler
 
 	if txRepo != nil && appRepo != nil && partnerRepo != nil && encryptor != nil && subscriptionRepo != nil {
 		// Initialize ledger service for rebuilding after sync
@@ -265,10 +278,50 @@ func run() error {
 
 	// Initialize notification preferences handler
 	var notificationPreferencesHandler *handler.NotificationPreferencesHandler
+	var notificationPrefsRepo *persistence.PostgresNotificationPreferencesRepository
 	if db != nil {
-		notificationPrefsRepo := persistence.NewPostgresNotificationPreferencesRepository(db.Pool)
+		notificationPrefsRepo = persistence.NewPostgresNotificationPreferencesRepository(db.Pool)
 		notificationPreferencesHandler = handler.NewNotificationPreferencesHandler(notificationPrefsRepo)
 		log.Println("Notification preferences handler initialized")
+	}
+
+	// Initialize notification service and device handler
+	var notificationService *appservice.NotificationService
+	var deviceHandler *handler.DeviceHandler
+	if db != nil && notificationPrefsRepo != nil {
+		deviceTokenRepo := persistence.NewPostgresDeviceTokenRepository(db.Pool)
+
+		// Create notification service with optional Firebase push provider
+		var pushProvider appservice.PushNotificationProvider
+		if firebaseMessaging != nil {
+			pushProvider = firebaseMessaging
+		}
+
+		notificationService = appservice.NewNotificationService(
+			deviceTokenRepo,
+			notificationPrefsRepo,
+			pushProvider,
+		)
+
+		// Add Slack notification support
+		slackProvider := external.NewSlackNotificationProvider()
+		notificationService = notificationService.WithSlackNotifier(slackProvider)
+
+		deviceHandler = handler.NewDeviceHandler(notificationService)
+		log.Println("Notification service and device handler initialized")
+
+		// Initialize notification scheduler for daily summaries
+		if snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
+			notificationScheduler = scheduler.NewNotificationScheduler(
+				notificationService,
+				notificationPrefsRepo,
+				snapshotRepo,
+				appRepo,
+				partnerRepo,
+			)
+			notificationScheduler.Start(ctx)
+			log.Println("Notification scheduler started (15-minute check interval)")
+		}
 	}
 
 	// Initialize insight handler
@@ -314,6 +367,7 @@ func run() error {
 		StoreHealthHandler:              storeHealthHandler,
 		UserPreferencesHandler:          userPreferencesHandler,
 		NotificationPreferencesHandler:  notificationPreferencesHandler,
+		DeviceHandler:                   deviceHandler,
 		InsightHandler:                  insightHandler,
 		APIKeyHandler:                   apiKeyHandler,
 		AuthMW:                          authMW,
@@ -344,10 +398,15 @@ func run() error {
 
 	log.Println("Shutting down server...")
 
-	// Stop scheduler gracefully
+	// Stop schedulers gracefully
 	if syncScheduler != nil {
 		syncScheduler.Stop()
 		log.Println("Sync scheduler stopped")
+	}
+
+	if notificationScheduler != nil {
+		notificationScheduler.Stop()
+		log.Println("Notification scheduler stopped")
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)

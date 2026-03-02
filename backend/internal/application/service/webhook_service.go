@@ -57,10 +57,12 @@ type AppUninstalledPayload struct {
 
 // WebhookService handles webhook event processing
 type WebhookService struct {
-	subRepo         repository.SubscriptionRepository
-	subEventRepo    repository.SubscriptionEventRepository
-	appRepo         repository.AppRepository
-	webhookSecrets  map[string]string // app_id -> webhook secret
+	subRepo            repository.SubscriptionRepository
+	subEventRepo       repository.SubscriptionEventRepository
+	appRepo            repository.AppRepository
+	partnerAccountRepo repository.PartnerAccountRepository
+	notificationSvc    *NotificationService
+	webhookSecrets     map[string]string // app_id -> webhook secret
 }
 
 // NewWebhookService creates a new webhook service
@@ -78,6 +80,16 @@ func NewWebhookService(
 // WithSubscriptionEventRepo adds subscription event repository for lifecycle tracking
 func (s *WebhookService) WithSubscriptionEventRepo(repo repository.SubscriptionEventRepository) *WebhookService {
 	s.subEventRepo = repo
+	return s
+}
+
+// WithNotificationService adds notification support for risk state changes
+func (s *WebhookService) WithNotificationService(
+	partnerRepo repository.PartnerAccountRepository,
+	notifSvc *NotificationService,
+) *WebhookService {
+	s.partnerAccountRepo = partnerRepo
+	s.notificationSvc = notifSvc
 	return s
 }
 
@@ -157,6 +169,14 @@ func (s *WebhookService) ProcessSubscriptionUpdate(ctx context.Context, event We
 		}
 	}
 
+	// Send notification if risk state changed
+	if oldRiskState != sub.RiskState {
+		app, err := s.appRepo.FindByID(ctx, sub.AppID)
+		if err == nil && app != nil {
+			s.sendRiskChangeNotification(ctx, sub, app, oldRiskState, sub.RiskState)
+		}
+	}
+
 	log.Printf("Subscription %s updated: %s -> %s", payload.ID, oldStatus, payload.Status)
 	return nil
 }
@@ -214,6 +234,11 @@ func (s *WebhookService) ProcessAppUninstalled(ctx context.Context, event Webhoo
 			if err := s.subEventRepo.Create(ctx, subEvent); err != nil {
 				log.Printf("Failed to record subscription event: %v", err)
 			}
+		}
+
+		// Send notification for app uninstall (risk changed to churned)
+		if oldRiskState != valueobject.RiskStateChurned {
+			s.sendRiskChangeNotification(ctx, sub, app, oldRiskState, valueobject.RiskStateChurned)
 		}
 
 		log.Printf("Subscription soft-deleted for shop %s", payload.MyshopifyDomain)
@@ -283,6 +308,14 @@ func (s *WebhookService) ProcessBillingFailure(ctx context.Context, event Webhoo
 		}
 	}
 
+	// Send notification for billing failure risk escalation
+	if oldRiskState != sub.RiskState {
+		app, err := s.appRepo.FindByID(ctx, sub.AppID)
+		if err == nil && app != nil {
+			s.sendRiskChangeNotification(ctx, sub, app, oldRiskState, sub.RiskState)
+		}
+	}
+
 	log.Printf("Subscription %s risk escalated: %s -> %s due to billing failure",
 		payload.SubscriptionID, oldRiskState, sub.RiskState)
 	return nil
@@ -310,4 +343,42 @@ func (s *WebhookService) getAppByPartnerID(ctx context.Context, partnerAppID str
 		return nil, fmt.Errorf("app not found for partner ID %s", partnerAppID)
 	}
 	return apps[0], nil
+}
+
+// sendRiskChangeNotification sends a critical alert when risk state changes
+func (s *WebhookService) sendRiskChangeNotification(
+	ctx context.Context,
+	sub *entity.Subscription,
+	app *entity.App,
+	oldRiskState valueobject.RiskState,
+	newRiskState valueobject.RiskState,
+) {
+	// Skip if notification service not configured
+	if s.notificationSvc == nil || s.partnerAccountRepo == nil {
+		return
+	}
+
+	// Only notify on actual risk state changes
+	if oldRiskState == newRiskState {
+		return
+	}
+
+	// Resolve user ID: Subscription -> App -> PartnerAccount -> UserID
+	partnerAccount, err := s.partnerAccountRepo.FindByID(ctx, app.PartnerAccountID)
+	if err != nil {
+		log.Printf("Failed to find partner account for notification: %v", err)
+		return
+	}
+
+	// Send critical alert
+	if err := s.notificationSvc.SendCriticalAlert(
+		ctx,
+		partnerAccount.UserID,
+		app.Name,
+		sub.MyshopifyDomain,
+		oldRiskState,
+		newRiskState,
+	); err != nil {
+		log.Printf("Failed to send risk change notification: %v", err)
+	}
 }

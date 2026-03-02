@@ -25,6 +25,7 @@ type Config struct {
 	FeeHandler                      *handler.FeeHandler
 	UserPreferencesHandler          *handler.UserPreferencesHandler
 	NotificationPreferencesHandler  *handler.NotificationPreferencesHandler
+	DeviceHandler                   *handler.DeviceHandler
 	InsightHandler                  *handler.InsightHandler
 	WebhookHandler                  *handler.WebhookHandler
 	APIKeyHandler                   *apikeyhandler.APIKeyHandler
@@ -85,6 +86,15 @@ func New(cfg Config) *chi.Mux {
 		if cfg.NotificationPreferencesHandler != nil && cfg.AuthMW != nil {
 			r.With(cfg.AuthMW).Get("/users/notification-preferences", cfg.NotificationPreferencesHandler.GetNotificationPreferences)
 			r.With(cfg.AuthMW).Put("/users/notification-preferences", cfg.NotificationPreferencesHandler.SaveNotificationPreferences)
+		}
+
+		// Device registration routes for push notifications
+		if cfg.DeviceHandler != nil && cfg.AuthMW != nil {
+			r.Route("/devices", func(r chi.Router) {
+				r.Use(cfg.AuthMW)
+				r.Post("/", cfg.DeviceHandler.RegisterDevice)
+				r.Delete("/", cfg.DeviceHandler.UnregisterDevice)
+			})
 		}
 
 		// Shopify integration routes

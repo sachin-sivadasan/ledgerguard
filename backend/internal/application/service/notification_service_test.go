@@ -137,6 +137,16 @@ func (m *mockNotificationPreferencesRepository) Upsert(ctx context.Context, pref
 	return nil
 }
 
+func (m *mockNotificationPreferencesRepository) FindUsersWithDailySummaryAtHour(ctx context.Context, hour int) ([]uuid.UUID, error) {
+	var userIDs []uuid.UUID
+	for userID, prefs := range m.prefs {
+		if prefs.DailySummaryEnabled && prefs.DailySummaryTime.Hour() == hour {
+			userIDs = append(userIDs, userID)
+		}
+	}
+	return userIDs, nil
+}
+
 type mockPushNotificationProvider struct {
 	sentNotifications []sentNotification
 	sendErr           error

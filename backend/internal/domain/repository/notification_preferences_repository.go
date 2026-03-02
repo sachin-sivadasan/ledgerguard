@@ -15,6 +15,9 @@ type NotificationPreferencesRepository interface {
 	// FindByUserID retrieves notification preferences for a user
 	FindByUserID(ctx context.Context, userID uuid.UUID) (*entity.NotificationPreferences, error)
 
+	// FindUsersWithDailySummaryAtHour finds all users who have daily summaries enabled at a specific hour
+	FindUsersWithDailySummaryAtHour(ctx context.Context, hour int) ([]uuid.UUID, error)
+
 	// Update updates notification preferences
 	Update(ctx context.Context, prefs *entity.NotificationPreferences) error
 

@@ -1434,3 +1434,92 @@ Implemented app install count tracking by querying Shopify Partner API events wi
 - `internal/interfaces/http/router/router.go` - Added routes
 - `internal/infrastructure/config/config.go` - Added InternalKey config
 - `cmd/server/main.go` - Initialize internal key middleware
+
+---
+
+## [2026-03-02] Notification Engine Wiring
+
+**Commit:** feat: complete notification engine wiring with device registration and daily summary scheduler
+
+**Summary:**
+Completed the notification engine implementation by wiring all existing services together. The notification system was already implemented (NotificationService, DeviceToken entity, Firebase Messaging) but not connected. This work adds the HTTP endpoints, automatic triggers, and scheduled notifications.
+
+**Implemented:**
+
+### 1. Device Registration Endpoints
+- `POST /api/v1/devices` - Register device token for push notifications
+- `DELETE /api/v1/devices` - Unregister device token
+- Platform validation (ios, android, web)
+- Automatic notification preferences creation on first registration
+
+### 2. Firebase Messaging Wiring
+- Initialized `FirebaseMessagingService` in main.go
+- Wired as `PushNotificationProvider` to `NotificationService`
+- Push notifications sent to all user's registered devices
+
+### 3. Automatic Critical Alert Triggers
+- WebhookService now sends notifications on risk state changes
+- Added `WithNotificationService()` builder method to WebhookService
+- Triggers in:
+  - `ProcessSubscriptionUpdate()` - When subscription status changes risk state
+  - `ProcessAppUninstalled()` - When app is uninstalled (churned)
+  - `ProcessBillingFailure()` - When payment fails (escalates risk)
+- Resolves UserID: Subscription → App → PartnerAccount → UserID
+
+### 4. Daily Summary Notification Scheduler
+- New `NotificationScheduler` with 15-minute check interval
+- Queries users with daily summary enabled at current hour (UTC)
+- Sends daily summary for each app with latest metrics snapshot
+- Graceful shutdown on server stop
+
+### 5. Slack Integration
+- Wired `SlackNotificationProvider` to NotificationService
+- Notifications sent to Slack webhook if configured in user preferences
+- Critical alerts: Red color
+- Daily summaries: Blue color
+
+**Files Created:**
+- `internal/interfaces/http/handler/device_handler.go` - Device registration endpoints
+- `internal/application/scheduler/notification_scheduler.go` - Daily summary scheduler
+
+**Files Updated:**
+- `internal/interfaces/http/router/router.go` - Added DeviceHandler config, device routes
+- `cmd/server/main.go` - Wired Firebase Messaging, NotificationService, DeviceHandler, NotificationScheduler
+- `internal/application/service/webhook_service.go` - Added notification triggers on risk state changes
+- `internal/domain/repository/notification_preferences_repository.go` - Added FindUsersWithDailySummaryAtHour method
+- `internal/infrastructure/persistence/notification_preferences_repository.go` - Implemented FindUsersWithDailySummaryAtHour
+- `internal/application/service/notification_service_test.go` - Updated mock for new interface method
+
+**Architecture:**
+
+```
+Webhook Event
+     ↓
+WebhookService.ProcessEvent()
+     ↓
+[Risk State Changed?] → Yes → sendRiskChangeNotification()
+                                    ↓
+                        NotificationService.SendCriticalAlert()
+                                    ↓
+                        ┌───────────┴───────────┐
+                        ↓                       ↓
+              Firebase (FCM/APNs)        Slack Webhook
+                        ↓                       ↓
+              Push Notification          Slack Message
+```
+
+```
+NotificationScheduler (15-min tick)
+     ↓
+[Current Hour = User's Summary Hour?]
+     ↓ Yes
+FindUsersWithDailySummaryAtHour(hour)
+     ↓
+For each User → PartnerAccount → Apps
+     ↓
+NotificationService.SendDailySummary()
+     ↓
+Push + Slack Notifications
+```
+
+**Tests:** All tests passing

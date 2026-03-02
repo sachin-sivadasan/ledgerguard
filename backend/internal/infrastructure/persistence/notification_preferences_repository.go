@@ -133,3 +133,32 @@ func (r *PostgresNotificationPreferencesRepository) Upsert(ctx context.Context, 
 
 	return err
 }
+
+func (r *PostgresNotificationPreferencesRepository) FindUsersWithDailySummaryAtHour(ctx context.Context, hour int) ([]uuid.UUID, error) {
+	query := `
+		SELECT user_id
+		FROM notification_preferences
+		WHERE daily_summary = true AND summary_hour = $1
+	`
+
+	rows, err := r.pool.Query(ctx, query, hour)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var userIDs []uuid.UUID
+	for rows.Next() {
+		var userID uuid.UUID
+		if err := rows.Scan(&userID); err != nil {
+			return nil, err
+		}
+		userIDs = append(userIDs, userID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return userIDs, nil
+}

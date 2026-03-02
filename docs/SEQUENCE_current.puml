@@ -697,4 +697,142 @@ API -> DB: Log audit entry
 
 API --> External: 200 OK\n{ "subscriptions": [{ ... }, { ... }] }
 
+' ==========================================
+' 13. Push Notification Flow
+' ==========================================
+newpage Push Notification Flow
+
+actor User
+participant "Client App" as App
+participant "API Server" as API
+participant "NotificationService" as NotifSvc
+participant "Firebase Messaging" as FCM
+participant "Slack" as Slack
+database "PostgreSQL" as DB
+
+note over User, DB
+  Push notifications via Firebase Cloud Messaging
+  and Slack webhooks. Triggered by risk state
+  changes and daily summary scheduler.
+end note
+
+== Device Registration ==
+
+User -> App: Enable push notifications
+App -> App: Get device token from FCM/APNs
+
+App -> API: POST /api/v1/devices\n[Authorization: Bearer <token>]\n{ "device_token": "fcm_xxx", "platform": "android" }
+
+API -> API: AuthMiddleware (verify user)
+
+API -> NotifSvc: RegisterDevice(userID, token, platform)
+
+NotifSvc -> DB: SELECT * FROM device_tokens\nWHERE device_token = ?
+
+alt Token exists for different user
+    NotifSvc -> DB: DELETE FROM device_tokens\nWHERE device_token = ?
+end
+
+NotifSvc -> DB: INSERT INTO device_tokens\n(user_id, device_token, platform)
+DB --> NotifSvc: Success
+
+NotifSvc -> DB: SELECT * FROM notification_preferences\nWHERE user_id = ?
+alt No preferences yet
+    NotifSvc -> DB: INSERT INTO notification_preferences\n(user_id) -- defaults
+end
+
+NotifSvc --> API: Success
+API --> App: 201 Created\n{ "message": "Device registered" }
+
+== Critical Alert (Risk State Change) ==
+
+participant "WebhookService" as Webhook
+
+note over Webhook: Triggered when subscription\nrisk state changes
+
+Webhook -> Webhook: Process subscription update\n(status change or billing failure)
+
+Webhook -> Webhook: Detect risk state change\n(old_risk_state != new_risk_state)
+
+Webhook -> DB: SELECT * FROM apps\nWHERE id = subscription.app_id
+DB --> Webhook: App record
+
+Webhook -> DB: SELECT * FROM partner_accounts\nWHERE id = app.partner_account_id
+DB --> Webhook: Partner account
+
+Webhook -> NotifSvc: SendCriticalAlert(\nuserID, appName, storeDomain,\noldRiskState, newRiskState)
+
+NotifSvc -> DB: SELECT * FROM notification_preferences\nWHERE user_id = ?
+DB --> NotifSvc: Preferences
+
+alt critical_alerts = true
+    NotifSvc -> NotifSvc: Build notification:\n"🚨 Risk Alert: {appName}\n{storeDomain}: {old} → {new}"
+
+    NotifSvc -> DB: SELECT * FROM device_tokens\nWHERE user_id = ?
+    DB --> NotifSvc: Device tokens
+
+    loop For each device token
+        NotifSvc -> FCM: sendNotification(token, title, body)
+        FCM --> NotifSvc: Success/Failure
+    end
+
+    alt Slack webhook configured
+        NotifSvc -> Slack: POST webhook\n{ title, body, color: "danger" }
+        Slack --> NotifSvc: Success
+    end
+else critical_alerts = false
+    NotifSvc --> Webhook: Skipped (user preference)
+end
+
+NotifSvc --> Webhook: Done
+
+== Daily Summary (Scheduled) ==
+
+participant "NotificationScheduler" as Scheduler
+
+note over Scheduler: Runs every 15 minutes\nto check for users whose\nsummary_hour matches current hour
+
+Scheduler -> Scheduler: Timer fires (15-min interval)
+Scheduler -> Scheduler: Get current hour (UTC)
+
+alt Current hour != last checked hour
+    Scheduler -> DB: SELECT user_id FROM notification_preferences\nWHERE daily_summary = true AND summary_hour = ?
+    DB --> Scheduler: List of user IDs
+
+    loop For each user
+        Scheduler -> DB: SELECT * FROM partner_accounts\nWHERE user_id = ?
+        DB --> Scheduler: Partner account
+
+        Scheduler -> DB: SELECT * FROM apps\nWHERE partner_account_id = ?
+        DB --> Scheduler: Apps
+
+        loop For each app
+            Scheduler -> DB: SELECT * FROM daily_metrics_snapshot\nWHERE app_id = ?\nORDER BY date DESC LIMIT 1
+            DB --> Scheduler: Latest snapshot
+
+            Scheduler -> NotifSvc: SendDailySummary(\nuserID, appName, snapshot)
+
+            NotifSvc -> DB: SELECT * FROM notification_preferences\nWHERE user_id = ?
+            DB --> NotifSvc: Preferences
+
+            alt daily_summary = true
+                NotifSvc -> NotifSvc: Build notification:\n"📊 Daily Summary: {appName}\nMRR: $X | At Risk: $Y | Rate: Z%"
+
+                NotifSvc -> DB: SELECT * FROM device_tokens\nWHERE user_id = ?
+                DB --> NotifSvc: Device tokens
+
+                loop For each device token
+                    NotifSvc -> FCM: sendNotification(token, title, body)
+                end
+
+                alt Slack webhook configured
+                    NotifSvc -> Slack: POST webhook\n{ title, body, color: "info" }
+                end
+            end
+        end
+    end
+end
+
+Scheduler -> Scheduler: Update lastCheckedHour
+
 @enduml

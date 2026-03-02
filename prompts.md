@@ -1101,3 +1101,27 @@
 - All 55+ domain service tests passing
 
 ---
+
+## [2026-03-02] Notification Engine Visualization Page
+
+**Original Prompt:**
+> the notification engine flow needed. check it can included in any of these. or implement separately with refering propt PROMPT-interactive-visualization-chat.md
+
+**Improved Prompt:**
+> Check if notification engine flow visualization can be included in existing marketing site pages (kpi-guide, money-flow, architecture, api-guide, affiliate-program). If not suitable for existing pages, create a dedicated /notifications visualization page following the pattern in PROMPT-interactive-visualization-chat.md with:
+> 1. Interactive flow diagrams for: Critical Alert flow, Daily Summary flow, Device Registration flow, Multi-channel delivery
+> 2. Animated step-by-step visualization with play/pause controls
+> 3. Risk state reference cards (SAFE, ONE_CYCLE_MISSED, TWO_CYCLES_MISSED, CHURNED)
+> 4. Notification types documentation (Critical Alert, Daily Summary, Billing Failure, App Uninstalled)
+> 5. Architecture overview (WebhookService, NotificationService, NotificationScheduler, Push Providers)
+> 6. Webhook events documentation with examples
+> 7. API endpoints reference
+> 8. User preferences section
+
+**Result:**
+- Determined notification flow is distinct topic, needs dedicated page
+- Created `/marketing/site/components/NotificationFlowVisualization.tsx` - Animated flow diagram with 4 flow types
+- Created `/marketing/site/app/notifications/page.tsx` - Full documentation page
+- Features: Flow selector, animated SVG diagram, step details, risk states reference, notification types, architecture cards, webhook events, API endpoints
+
+---

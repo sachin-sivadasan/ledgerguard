@@ -123,6 +123,12 @@ marketing/
 - **No authentication** – public landing page only
 - **Responsive** – mobile-first approach
 
+**Visualization Pages:**
+- Use `docs/prompts/PROMPT-interactive-visualization-chat.md` as template for new visualizations
+- Available pages: `/kpi-guide`, `/money-flow`, `/architecture`, `/api-guide`, `/affiliate-program`, `/notifications`
+- Each visualization has: animated flow diagrams, step-by-step progression, reference cards
+- **Always log visualization prompts to `prompts.md`**
+
 ### 11. Frontend App (Flutter + Bloc)
 ```
 frontend/

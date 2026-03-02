@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AffiliateFlowVisualization from '@/components/AffiliateFlowVisualization';
@@ -20,12 +21,12 @@ export default function AffiliateProgramPage() {
       <main className="min-h-screen bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-950 pt-24 pb-12 px-4">
         <div className="max-w-5xl mx-auto">
           {/* Back link */}
-          <a
+          <Link
             href="/"
             className="text-indigo-400 hover:text-indigo-300 text-sm transition-colors inline-flex items-center gap-2 mb-6"
           >
             &larr; Back to Home
-          </a>
+          </Link>
 
           {/* Title */}
           <h1 className="text-3xl md:text-4xl font-bold mb-3 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
@@ -205,12 +206,12 @@ export default function AffiliateProgramPage() {
               Track your Shopify app revenue and understand which growth channels work best.
               LedgerGuard helps you monitor affiliate-driven signups and their lifetime value.
             </p>
-            <a
+            <Link
               href="/"
               className="inline-block px-8 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
             >
               Learn More
-            </a>
+            </Link>
           </div>
         </div>
       </main>

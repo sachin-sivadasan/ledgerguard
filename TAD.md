@@ -47,16 +47,19 @@ backend/
 ### Frontend
 - **Framework:** Flutter 3.x
 - **Platforms:** Web + iOS + Android (unified codebase)
-- **State:** Riverpod
+- **State:** Flutter Bloc
 - **Pattern:** Clean Architecture
 
 ```
 frontend/
 ├── lib/
-│   ├── domain/                  # Entities, enums
-│   ├── data/                    # API client, repositories
-│   ├── application/             # Providers, state
-│   └── presentation/
+│   ├── domain/                  # Entities, repositories interfaces
+│   ├── data/                    # API client, repository implementations
+│   ├── presentation/
+│   │   ├── blocs/              # State management (Bloc pattern)
+│   │   ├── pages/              # Screen widgets
+│   │   └── widgets/            # Reusable components
+│   └── core/
 │       ├── pages/               # Screens
 │       └── widgets/             # Reusable components
 └── test/

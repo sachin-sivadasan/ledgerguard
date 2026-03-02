@@ -519,6 +519,7 @@ const FlowDiagram: React.FC<FlowDiagramProps> = ({
       </g>
 
       {/* Flows */}
+      {/* eslint-disable-next-line react-hooks/refs */}
       {section.flows.map((flow, index) => {
         const fromPos = entityPositions[index];
         const toPos = entityPositions[index + 1];
@@ -819,11 +820,13 @@ const ShopifyMoneyFlow: React.FC = () => {
   }, [isPlaying, phase, currentFlowIndex, data]);
 
   // Reset on model or usage type change
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setPhase('transaction');
     setCurrentFlowIndex(0);
     setFlowProgress(0);
   }, [model, usageType]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleRestart = () => {
     setPhase('transaction');
@@ -1503,18 +1506,18 @@ const ShopifyMoneyFlow: React.FC = () => {
           fontFamily: 'monospace',
           fontSize: '10px',
         }}>
-          <div style={{ color: '#9ca3af', marginBottom: '8px' }}>// Each transaction in Partner API:</div>
+          <div style={{ color: '#9ca3af', marginBottom: '8px' }}>{'// Each transaction in Partner API:'}</div>
           <div style={{ color: '#a855f7' }}>
             grossAmount: <span style={{ color: '#22c55e' }}>${data.billingBreakdown?.totalGross?.toFixed(2) || '49.00'}</span>
-            <span style={{ color: '#6b7280' }}> // merchant paid</span>
+            <span style={{ color: '#6b7280' }}>{' // merchant paid'}</span>
           </div>
           <div style={{ color: '#ef4444' }}>
             shopifyFee: <span style={{ color: '#ef4444' }}>-${data.billingBreakdown?.shopifyTakes?.toFixed(2) || '9.80'}</span>
-            <span style={{ color: '#6b7280' }}> // 20% platform fee</span>
+            <span style={{ color: '#6b7280' }}>{' // 20% platform fee'}</span>
           </div>
           <div style={{ color: '#3b82f6', fontWeight: 'bold' }}>
             netAmount: <span style={{ color: '#22c55e' }}>${data.billingBreakdown?.developerReceives?.toFixed(2) || '39.20'}</span>
-            <span style={{ color: '#6b7280' }}> // adds to YOUR payout</span>
+            <span style={{ color: '#6b7280' }}>{' // adds to YOUR payout'}</span>
           </div>
         </div>
 

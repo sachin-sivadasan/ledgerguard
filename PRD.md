@@ -256,8 +256,8 @@ CREATE TABLE daily_metrics_snapshot (
 | Database | PostgreSQL, pgcrypto |
 | Cache | Redis (session, rate limiting) |
 | Auth | Firebase Authentication |
-| Frontend | Flutter Web |
-| State | Riverpod |
+| Frontend | Flutter 3.x (Web + iOS + Android) |
+| State | Flutter Bloc |
 | Hosting | Cloud Run / Fly.io |
 | CI/CD | GitHub Actions |
 

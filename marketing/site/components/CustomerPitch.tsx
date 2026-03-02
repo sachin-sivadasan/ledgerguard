@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 // ============================================================================
 // SECTION 1: HERO
@@ -465,7 +465,7 @@ function HowItWorks() {
           <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-slate-200 -translate-y-1/2"></div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {steps.map((step, i) => (
+            {steps.map((step) => (
               <div key={step.title} className="relative">
                 <div className="bg-white rounded-xl p-6 text-center relative z-10 border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all">
                   <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-4">

@@ -310,6 +310,7 @@ function IngestionSection({ isActive, showDetails }: { isActive: boolean; showDe
 function ProcessingSection({ isActive, showDetails }: { isActive: boolean; showDetails: boolean }) {
   const [classifiedTx, setClassifiedTx] = useState<DataPacket[]>([]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isActive) {
       const timer = setTimeout(() => setClassifiedTx(SAMPLE_TRANSACTIONS), 500);
@@ -318,6 +319,7 @@ function ProcessingSection({ isActive, showDetails }: { isActive: boolean; showD
       setClassifiedTx([]);
     }
   }, [isActive]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <div className="space-y-2">
@@ -727,6 +729,7 @@ export default function ArchitectureFlow() {
     }, 3000 / speed);
 
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPhase, isPlaying, speed]);
 
   const isPhaseActive = useCallback((phase: AnimationPhase) => {

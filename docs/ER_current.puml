@@ -11,6 +11,7 @@ entity "users" as users {
   *email : VARCHAR(255)
   *role : VARCHAR(20) <<CHECK: OWNER, ADMIN>>
   plan_tier : VARCHAR(20) <<DEFAULT: FREE>>
+  onboarding_completed_at : TIMESTAMPTZ
   created_at : TIMESTAMPTZ
 }
 
@@ -32,6 +33,7 @@ entity "apps" as apps {
   *name : VARCHAR(255)
   tracking_enabled : BOOLEAN <<DEFAULT: TRUE>>
   revenue_share_tier : VARCHAR(20) <<DEFAULT: SMALL_DEV_0>>
+  install_count : INT <<DEFAULT: 0>>
   created_at : TIMESTAMPTZ
   updated_at : TIMESTAMPTZ
   <<UNIQUE: partner_account_id, partner_app_id>>
@@ -161,6 +163,7 @@ entity "user_preferences" as user_preferences {
   *id : UUID <<PK>>
   --
   *user_id : UUID <<FK, UNIQUE>>
+  default_app_id : UUID <<FK>>
   primary_kpis : TEXT[]
   secondary_widgets : TEXT[]
   created_at : TIMESTAMPTZ
@@ -171,12 +174,12 @@ entity "api_keys" as api_keys {
   *id : UUID <<PK>>
   --
   *user_id : UUID <<FK>>
-  *name : VARCHAR(100)
+  name : VARCHAR(100)
   *key_hash : VARCHAR(64) <<UNIQUE>>
   rate_limit_per_minute : INT <<DEFAULT: 60>>
-  is_active : BOOLEAN <<DEFAULT: TRUE>>
   created_at : TIMESTAMPTZ
   revoked_at : TIMESTAMPTZ
+  ' Active status determined by: revoked_at IS NULL
 }
 
 entity "api_audit_log" as api_audit_log {
@@ -236,6 +239,7 @@ apps ||--o{ daily_metrics_snapshot : "snapshots"
 apps ||--o{ daily_insight : "insights"
 subscriptions ||--o{ subscription_events : "logs"
 api_keys ||--o{ api_audit_log : "audits"
+user_preferences }o--o| apps : "default_app"
 
 ' CQRS Read Model (denormalized, populated from subscriptions/transactions)
 apps ..> api_subscription_status : "populates"
@@ -243,8 +247,10 @@ apps ..> api_usage_status : "populates"
 
 note right of users
   Migration: 000001_create_users_table
+  Migration: 000025_add_onboarding_completed_at
   - Firebase authentication
   - Role-based access control
+  - Onboarding status tracking
 end note
 
 note right of partner_accounts
@@ -260,13 +266,16 @@ end note
 note right of apps
   Migration: 000003_create_apps_table
   Migration: 000017_add_revenue_share_tier
+  Migration: 000027_add_install_count
   - Shopify apps being tracked
   - One app selected per user
   - Revenue share tier (0%, 15%, 20%)
+  - Install count from Partner API events
 
   Indexes:
   - idx_apps_partner_account_id
   - idx_apps_tracking_enabled
+  - idx_apps_install_count
 end note
 
 note right of transactions
@@ -347,9 +356,11 @@ end note
 
 note right of user_preferences
   Migration: 000019_create_user_preferences_table
+  Migration: 000026_add_default_app
   - Dashboard KPI configuration
   - Widget visibility preferences
   - Per-user customization
+  - Default app selection for multi-app users
 
   Indexes:
   - idx_user_preferences_user_id
@@ -361,10 +372,12 @@ note right of api_keys
   - SHA-256 hashed (raw key never stored)
   - Rate limiting per key
   - Owner role only
+  - Active status: revoked_at IS NULL
 
   Indexes:
   - idx_api_keys_user_id
   - idx_api_keys_key_hash
+  - idx_api_keys_active (partial)
 end note
 
 note right of api_audit_log

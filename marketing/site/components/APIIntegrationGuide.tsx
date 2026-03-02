@@ -322,16 +322,16 @@ const DataFlowVisualization: React.FC<DataFlowProps> = ({ animationProgress, sel
         opacity: responseProgress >= 0.5 ? 1 : 0.3,
         transition: 'opacity 0.3s',
       }}>
-        <div style={{ color: '#6b7280', marginBottom: '8px' }}>// Response</div>
+        <div style={{ color: '#6b7280', marginBottom: '8px' }}>{'// Response'}</div>
         <div style={{ color: '#9ca3af' }}>{'{'}</div>
         <div style={{ color: '#9ca3af', paddingLeft: '16px' }}>
-          <span style={{ color: '#818cf8' }}>"risk_state"</span>: <span style={{ color: riskConfig.color }}>"{selectedRisk}"</span>,
+          <span style={{ color: '#818cf8' }}>&quot;risk_state&quot;</span>: <span style={{ color: riskConfig.color }}>&quot;{selectedRisk}&quot;</span>,
         </div>
         <div style={{ color: '#9ca3af', paddingLeft: '16px' }}>
-          <span style={{ color: '#818cf8' }}>"mrr_cents"</span>: <span style={{ color: '#22c55e' }}>4900</span>,
+          <span style={{ color: '#818cf8' }}>&quot;mrr_cents&quot;</span>: <span style={{ color: '#22c55e' }}>4900</span>,
         </div>
         <div style={{ color: '#9ca3af', paddingLeft: '16px' }}>
-          <span style={{ color: '#818cf8' }}>"days_past_due"</span>: <span style={{ color: '#f59e0b' }}>{getRiskConfig(selectedRisk).daysRange.split('-')[0]}</span>
+          <span style={{ color: '#818cf8' }}>&quot;days_past_due&quot;</span>: <span style={{ color: '#f59e0b' }}>{getRiskConfig(selectedRisk).daysRange.split('-')[0]}</span>
         </div>
         <div style={{ color: '#9ca3af' }}>{'}'}</div>
       </div>
@@ -1146,7 +1146,7 @@ const APIIntegrationGuide: React.FC = () => {
           fontFamily: 'monospace',
           fontSize: '10px',
         }}>
-          <div style={{ color: '#6b7280', marginBottom: '6px' }}>// Webhook payload example</div>
+          <div style={{ color: '#6b7280', marginBottom: '6px' }}>{'// Webhook payload example'}</div>
           <div style={{ color: '#9ca3af' }}>{'POST /webhooks/shopify'}</div>
           <div style={{ color: '#9ca3af' }}>{'X-Shopify-Topic: app_subscriptions/update'}</div>
           <div style={{ color: '#9ca3af' }}>{'X-Shopify-Hmac-Sha256: <signature>'}</div>

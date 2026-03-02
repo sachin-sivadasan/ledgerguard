@@ -73,7 +73,7 @@ class ApiApiKeyRepository implements ApiKeyRepository {
   Future<void> revokeApiKey(String keyId) async {
     try {
       await _dio.delete(
-        '$_baseUrl/v1/api-keys/$keyId',
+        '$_baseUrl/api/v1/api-keys/$keyId',
         options: Options(headers: await _headers),
       );
     } on DioException catch (e) {

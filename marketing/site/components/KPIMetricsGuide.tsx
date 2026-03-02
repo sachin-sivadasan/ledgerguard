@@ -10,7 +10,6 @@ import {
   calculateRenewalSuccessRate,
   calculateRiskSummary,
   calculateDelta as calcDelta,
-  isDeltaGood,
   formatCurrency,
   formatPercent,
   type Subscription,
@@ -382,7 +381,7 @@ const RiskTimeline: React.FC<RiskTimelineProps> = ({ animationProgress }) => {
       {/* Timeline Track */}
       <div style={{ position: 'relative', height: '50px', margin: '0 10px 16px' }}>
         {/* Day markers */}
-        {[0, 30, 60, 90, 120].map((day, idx) => (
+        {[0, 30, 60, 90, 120].map((day) => (
           <div
             key={day}
             style={{
@@ -419,7 +418,6 @@ const RiskTimeline: React.FC<RiskTimelineProps> = ({ animationProgress }) => {
           const segStart = (seg.start / 120) * 100;
           const segWidth = ((seg.end - seg.start) / 120) * 100;
           const isActive = currentDay >= seg.start;
-          const isCurrent = currentDay >= seg.start && currentDay < seg.end;
 
           return (
             <div
@@ -1133,6 +1131,7 @@ const KPIMetricsGuide: React.FC = () => {
   }, [isPlaying]);
 
   // Update highlighted risk state based on selected KPI
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (selectedKPI === 'activeMRR') {
       setHighlightedRiskState('SAFE');
@@ -1144,6 +1143,7 @@ const KPIMetricsGuide: React.FC = () => {
       setHighlightedRiskState(undefined);
     }
   }, [selectedKPI, animationProgress]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleRestart = () => {
     setAnimationProgress(0);

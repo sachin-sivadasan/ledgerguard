@@ -474,10 +474,13 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000018_add_earnings_tracking | Add earnings availability tracking to transactions | ✓ Implemented |
 | 000019_create_user_preferences_table | Create user_preferences for dashboard configuration | ✓ Implemented |
 | 000020_add_transaction_subscription_details | Add shop/subscription details to transactions | ✓ Implemented |
-| 000021_add_subscriptions_shopify_shop_gid | Add shopify_shop_gid to subscriptions for webhook events | ✓ Implemented |
-| 000022_add_subscriptions_deleted_at | Add deleted_at for soft deletes on subscriptions | ✓ Implemented |
+| 000021_add_soft_deletes | Add deleted_at for soft deletes on subscriptions | ✓ Implemented |
+| 000022_add_shop_gid_to_subscriptions | Add shopify_shop_gid to subscriptions for webhook events | ✓ Implemented |
 | 000023_create_subscription_events_table | Create subscription_events for lifecycle tracking | ✓ Implemented |
 | 000024_create_audit_log_table | Create audit_log for general action logging | ✓ Implemented |
+| 000025_add_onboarding_completed_at | Add onboarding_completed_at to users table | ✓ Implemented |
+| 000026_add_default_app_to_preferences | Add default_app_id to user_preferences for multi-app support | ✓ Implemented |
+| 000027_add_install_count_to_apps | Add install_count to apps table for Partner API data | ✓ Implemented |
 
 ---
 

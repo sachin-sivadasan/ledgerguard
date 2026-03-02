@@ -87,7 +87,6 @@ const generateAttributionFlow = (window: AttributionWindow): FlowConfig => ({
 });
 
 const generateCommissionFlow = (model: CommissionModel): FlowConfig => {
-  const isRecurring = model === 'recurring' || model === 'hybrid';
   const commissionRate = model === 'oneTime' ? '25%' : model === 'recurring' ? '20%' : '15% + 10%';
 
   return {
@@ -269,6 +268,7 @@ const FlowDiagram: React.FC<FlowDiagramProps> = ({ config, currentStep, progress
       </g>
 
       {/* Flow Steps/Paths */}
+      {/* eslint-disable-next-line react-hooks/refs */}
       {config.steps.map((step, index) => {
         const path = getPath(step.from, step.to);
         const isActive = index === currentStep;
@@ -703,10 +703,12 @@ const AffiliateFlowVisualization: React.FC = () => {
   }, [isPlaying, currentStep, config.steps.length]);
 
   // Reset on flow type change
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setCurrentStep(0);
     setProgress(0);
   }, [flowType, commissionModel, attributionWindow]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleRestart = () => {
     setCurrentStep(0);

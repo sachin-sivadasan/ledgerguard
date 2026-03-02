@@ -7,6 +7,7 @@ title LedgerGuard - C4 Component Diagram (Current Implementation)
 Person(developer, "Shopify App Developer", "Uses LedgerGuard")
 System_Ext(firebase, "Firebase Auth", "Authentication")
 System_Ext(shopify, "Shopify Partners", "OAuth & Partner API")
+System_Ext(openai, "OpenAI API", "AI insights")
 ContainerDb_Ext(postgres, "PostgreSQL", "Data storage")
 
 Container_Boundary(api, "API Server (Go 1.22+)") {
@@ -22,10 +23,25 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(sync_handler, "SyncHandler", "HTTP Handler", "Transaction sync endpoints")
     Component(metrics_handler, "MetricsHandler", "HTTP Handler", "Metrics & dashboard endpoints")
     Component(subscription_handler, "SubscriptionHandler", "HTTP Handler", "Subscription list & detail")
+    Component(export_handler, "ExportHandler", "HTTP Handler", "Data export (CSV, JSON)")
+    Component(fee_handler, "FeeHandler", "HTTP Handler", "Fee tiers & breakdown")
+    Component(onboarding_handler, "OnboardingHandler", "HTTP Handler", "Onboarding status")
+    Component(me_handler, "MeHandler", "HTTP Handler", "GET /api/v1/me")
+    Component(webhook_handler, "WebhookHandler", "HTTP Handler", "Shopify webhooks")
+    Component(insight_handler, "InsightHandler", "HTTP Handler", "AI daily brief")
+    Component(integration_status_handler, "IntegrationStatusHandler", "HTTP Handler", "Integration status")
+    Component(user_prefs_handler, "UserPreferencesHandler", "HTTP Handler", "Dashboard preferences")
+    Component(revenue_handler, "RevenueHandler", "HTTP Handler", "Earnings timeline")
+    Component(store_health_handler, "StoreHealthHandler", "HTTP Handler", "Store health checks")
+    Component(apikey_handler, "APIKeyHandler", "HTTP Handler", "API key management")
 
     ' Application Layer - IMPLEMENTED
     Component(sync_service, "SyncService", "App Service", "Transaction sync orchestration")
     Component(metrics_agg_service, "MetricsAggregationService", "App Service", "Period metrics from transactions")
+    Component(audit_service, "AuditService", "App Service", "Audit logging")
+    Component(webhook_service, "WebhookService", "App Service", "Webhook processing")
+    Component(export_service, "ExportService", "App Service", "Data export generation")
+    Component(insight_service, "InsightService", "App Service", "AI insight generation")
 
     ' Domain Services - IMPLEMENTED
     Component(ledger_service, "LedgerService", "Domain Service", "Rebuild subscriptions from transactions")
@@ -44,6 +60,10 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(integration_vo, "IntegrationType", "Value Object", "OAUTH, MANUAL")
     Component(charge_vo, "ChargeType", "Value Object", "RECURRING, USAGE, ONE_TIME, REFUND")
     Component(risk_vo, "RiskState", "Value Object", "SAFE, ONE_CYCLE, TWO_CYCLES, CHURNED")
+    Component(billing_interval_vo, "BillingInterval", "Value Object", "MONTHLY, ANNUAL")
+    Component(revenue_tier_vo, "RevenueShareTier", "Value Object", "DEFAULT_20, SMALL_DEV_0, SMALL_DEV_15, LARGE_DEV_15")
+    Component(sub_status_vo, "SubscriptionStatus", "Value Object", "ACTIVE, CANCELLED, FROZEN, PENDING")
+    Component(time_range_vo, "TimeRange", "Value Object", "WEEK, MONTH, QUARTER, YEAR")
 
     Component(user_repo_if, "UserRepository", "Interface", "User persistence contract")
     Component(partner_repo_if, "PartnerAccountRepository", "Interface", "Partner account contract")
@@ -51,6 +71,11 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(tx_repo_if, "TransactionRepository", "Interface", "Transaction persistence contract")
     Component(sub_repo_if, "SubscriptionRepository", "Interface", "Subscription persistence contract")
     Component(snapshot_repo_if, "SnapshotRepository", "Interface", "Daily snapshot persistence contract")
+    Component(insight_repo_if, "InsightRepository", "Interface", "Daily insight persistence contract")
+    Component(audit_repo_if, "AuditLogRepository", "Interface", "Audit log persistence contract")
+    Component(apikey_repo_if, "APIKeyRepository", "Interface", "API key persistence contract")
+    Component(user_prefs_repo_if, "UserPreferencesRepository", "Interface", "User preferences contract")
+    Component(sub_event_repo_if, "SubscriptionEventRepository", "Interface", "Subscription events contract")
 
     ' Infrastructure Layer - IMPLEMENTED
     Component(config, "Config", "Infrastructure", "YAML + env config loader")
@@ -60,10 +85,27 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(tx_repo, "PostgresTransactionRepository", "Repository", "Transaction CRUD")
     Component(sub_repo, "PostgresSubscriptionRepository", "Repository", "Subscription CRUD")
     Component(snapshot_repo, "PostgresSnapshotRepository", "Repository", "Daily snapshot CRUD")
+    Component(insight_repo, "PostgresInsightRepository", "Repository", "Daily insight CRUD")
+    Component(audit_repo, "PostgresAuditLogRepository", "Repository", "Audit log CRUD")
+    Component(apikey_repo, "PostgresAPIKeyRepository", "Repository", "API key CRUD")
+    Component(user_prefs_repo, "PostgresUserPreferencesRepository", "Repository", "User preferences CRUD")
+    Component(sub_event_repo, "PostgresSubscriptionEventRepository", "Repository", "Subscription events CRUD")
     Component(firebase_auth, "FirebaseAuthService", "External Adapter", "Token verification")
     Component(shopify_oauth, "ShopifyOAuthService", "External Adapter", "OAuth token exchange")
     Component(partner_client, "ShopifyPartnerClient", "External Adapter", "Partner API GraphQL")
     Component(crypto, "AESEncryptor", "pkg/crypto", "AES-256-GCM encryption")
+    Component(openai_client, "OpenAIClient", "External Adapter", "AI insight generation")
+    Component(sync_scheduler, "SyncScheduler", "Scheduler", "12-hour background sync")
+}
+
+' Revenue API Module
+Container_Boundary(revenue_api, "Revenue API") {
+    Component(revenue_api_router, "Revenue API Router", "Chi Router", "/revenue-api/v1/*")
+    Component(rate_limiter, "RateLimiter", "Middleware", "Per-key rate limiting")
+    Component(api_key_auth, "APIKeyAuth", "Middleware", "API key authentication")
+    Component(sub_status_handler, "SubscriptionStatusHandler", "HTTP Handler", "GET /subscriptions/:id/status")
+    Component(usage_status_handler, "UsageStatusHandler", "HTTP Handler", "GET /usage/:id/status")
+    Component(read_model_builder, "ReadModelBuilder", "Service", "CQRS read model population")
 }
 
 ' Relationships
@@ -118,16 +160,57 @@ Rel(app_repo_if, app_repo, "Implements")
 Rel(tx_repo_if, tx_repo, "Implements")
 Rel(sub_repo_if, sub_repo, "Implements")
 Rel(snapshot_repo_if, snapshot_repo, "Implements")
+Rel(insight_repo_if, insight_repo, "Implements")
+Rel(audit_repo_if, audit_repo, "Implements")
+Rel(apikey_repo_if, apikey_repo, "Implements")
+Rel(user_prefs_repo_if, user_prefs_repo, "Implements")
+Rel(sub_event_repo_if, sub_event_repo, "Implements")
+
+' Additional handler relationships
+Rel(router, export_handler, "/api/v1/apps/{id}/export")
+Rel(router, fee_handler, "/api/v1/apps/{id}/fees")
+Rel(router, insight_handler, "/api/v1/apps/{id}/insights")
+Rel(router, me_handler, "/api/v1/me")
+Rel(router, webhook_handler, "/webhooks/shopify")
+Rel(router, user_prefs_handler, "/api/v1/user/preferences")
+Rel(router, revenue_handler, "/api/v1/apps/{id}/earnings")
+Rel(router, store_health_handler, "/api/v1/apps/{id}/stores/{domain}/health")
+Rel(router, apikey_handler, "/api/v1/api-keys")
+
+Rel(export_handler, export_service, "Generate exports")
+Rel(webhook_handler, webhook_service, "Process webhooks")
+Rel(insight_handler, insight_service, "Get insights")
+Rel(insight_service, openai_client, "Generate AI briefs")
+Rel(insight_service, insight_repo_if, "Store insights")
+Rel(webhook_service, sub_repo_if, "Update subscriptions")
+Rel(webhook_service, sub_event_repo_if, "Log events")
+Rel(apikey_handler, apikey_repo_if, "CRUD API keys")
+Rel(user_prefs_handler, user_prefs_repo_if, "CRUD preferences")
+Rel(sync_scheduler, sync_service, "Trigger periodic sync")
+
+' Revenue API relationships
+Rel(revenue_api_router, api_key_auth, "Uses")
+Rel(revenue_api_router, rate_limiter, "Uses")
+Rel(revenue_api_router, sub_status_handler, "/subscriptions/:id/status")
+Rel(revenue_api_router, usage_status_handler, "/usage/:id/status")
+Rel(api_key_auth, apikey_repo_if, "Validate key")
+Rel(read_model_builder, sub_repo_if, "Read subscriptions")
 
 Rel(firebase_auth, firebase, "Admin SDK")
 Rel(shopify_oauth, shopify, "OAuth 2.0")
 Rel(partner_client, shopify, "GraphQL API")
+Rel(openai_client, openai, "API calls")
 Rel(user_repo, postgres, "SQL")
 Rel(partner_repo, postgres, "SQL")
 Rel(app_repo, postgres, "SQL")
 Rel(tx_repo, postgres, "SQL")
 Rel(sub_repo, postgres, "SQL")
 Rel(snapshot_repo, postgres, "SQL")
+Rel(insight_repo, postgres, "SQL")
+Rel(audit_repo, postgres, "SQL")
+Rel(apikey_repo, postgres, "SQL")
+Rel(user_prefs_repo, postgres, "SQL")
+Rel(sub_event_repo, postgres, "SQL")
 
 SHOW_LEGEND()
 @enduml

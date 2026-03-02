@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ShopifyMoneyFlow from '@/components/ShopifyMoneyFlow';
@@ -20,12 +21,12 @@ export default function MoneyFlowPage() {
       <main className="min-h-screen bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-950 pt-24 pb-12 px-4">
         <div className="max-w-5xl mx-auto">
           {/* Back link */}
-          <a
+          <Link
             href="/"
             className="text-indigo-400 hover:text-indigo-300 text-sm transition-colors inline-flex items-center gap-2 mb-6"
           >
             &larr; Back to Home
-          </a>
+          </Link>
 
           {/* Title */}
           <h1 className="text-3xl md:text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
@@ -101,12 +102,12 @@ export default function MoneyFlowPage() {
               Get real-time insights into your Shopify app revenue, predict churn risk,
               and understand your true MRR after Shopify&apos;s cut.
             </p>
-            <a
+            <Link
               href="/"
               className="inline-block px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
             >
               Learn More
-            </a>
+            </Link>
           </div>
         </div>
       </main>

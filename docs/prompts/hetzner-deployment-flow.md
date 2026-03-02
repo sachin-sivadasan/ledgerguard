@@ -237,20 +237,20 @@ app.ledgerguard.com {
 
 | Component | Hetzner Product | Specs | Monthly Cost |
 |-----------|-----------------|-------|--------------|
-| VPS | CX21 | 2 vCPU, 4GB RAM, 40GB SSD | €5.18 |
-| Managed DB | PostgreSQL | 2 vCPU, 4GB RAM | €14.50 |
-| Storage | Storage Box | 100GB for backups | €3.81 |
+| VPS | CX21 | 2 vCPU, 4GB RAM, 40GB SSD | $5.50 |
+| Managed DB | PostgreSQL | 2 vCPU, 4GB RAM | $16 |
+| Storage | Storage Box | 100GB for backups | $4 |
 | DNS | Hetzner DNS | Included | Free |
-| **Total** | | | **~€23/month** |
+| **Total** | | | **~$25/month** |
 
 ### Alternative: Self-Hosted DB
 
 | Component | Hetzner Product | Specs | Monthly Cost |
 |-----------|-----------------|-------|--------------|
-| VPS | CX31 | 4 vCPU, 8GB RAM, 80GB SSD | €9.74 |
-| Storage | Storage Box | 100GB for backups | €3.81 |
+| VPS | CX31 | 4 vCPU, 8GB RAM, 80GB SSD | $10.50 |
+| Storage | Storage Box | 100GB for backups | $4 |
 | DNS | Hetzner DNS | Included | Free |
-| **Total** | | | **~€14/month** |
+| **Total** | | | **~$15/month** |
 
 ---
 

@@ -159,22 +159,22 @@ export default function DeploymentPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <CostCard
                 title="Managed Database Setup"
-                total="~€23/month"
+                total="~$25/month"
                 items={[
-                  { name: 'VPS CX21', spec: '2 vCPU, 4GB RAM', cost: '€5.18' },
-                  { name: 'Managed PostgreSQL', spec: '2 vCPU, 4GB RAM', cost: '€14.50' },
-                  { name: 'Storage Box', spec: '100GB', cost: '€3.81' },
+                  { name: 'VPS CX21', spec: '2 vCPU, 4GB RAM', cost: '$5.50' },
+                  { name: 'Managed PostgreSQL', spec: '2 vCPU, 4GB RAM', cost: '$16' },
+                  { name: 'Storage Box', spec: '100GB', cost: '$4' },
                   { name: 'DNS', spec: 'Included', cost: 'Free' },
                 ]}
                 recommended={true}
               />
               <CostCard
                 title="Self-Hosted DB Setup"
-                total="~€14/month"
+                total="~$15/month"
                 items={[
-                  { name: 'VPS CX31', spec: '4 vCPU, 8GB RAM', cost: '€9.74' },
+                  { name: 'VPS CX31', spec: '4 vCPU, 8GB RAM', cost: '$10.50' },
                   { name: 'PostgreSQL', spec: 'Self-managed', cost: 'Included' },
-                  { name: 'Storage Box', spec: '100GB', cost: '€3.81' },
+                  { name: 'Storage Box', spec: '100GB', cost: '$4' },
                   { name: 'DNS', spec: 'Included', cost: 'Free' },
                 ]}
                 recommended={false}
@@ -333,7 +333,7 @@ find /backups -mtime +7 -delete`}
             </h3>
             <p className="text-gray-400 mb-6 max-w-lg mx-auto">
               Deploy LedgerGuard to Hetzner Cloud with automatic SSL,
-              CI/CD pipeline, and cost-effective infrastructure starting at €14/month.
+              CI/CD pipeline, and cost-effective infrastructure starting at $15/month.
             </p>
             <Link
               href="/"

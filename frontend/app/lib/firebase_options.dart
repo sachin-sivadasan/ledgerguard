@@ -21,15 +21,9 @@ class DefaultFirebaseOptions {
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for android - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -61,4 +55,22 @@ class DefaultFirebaseOptions {
     storageBucket: 'ledgerguard-c7557.firebasestorage.app',
     measurementId: 'G-XJ1QZTCG2P',
   );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyBYRaLqbF_RUsOX-dnE4inE9iMJsiGckPs',
+    appId: '1:761541341095:ios:eb8ab14fe3a1780811d082',
+    messagingSenderId: '761541341095',
+    projectId: 'ledgerguard-c7557',
+    storageBucket: 'ledgerguard-c7557.firebasestorage.app',
+    iosBundleId: 'com.example.ledgerguard',
+  );
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyA7IoHNWWc6VlpgL_oX40uGsCYOzAexW-4',
+    appId: '1:761541341095:android:e4a78198a3a361a511d082',
+    messagingSenderId: '761541341095',
+    projectId: 'ledgerguard-c7557',
+    storageBucket: 'ledgerguard-c7557.firebasestorage.app',
+  );
+
 }

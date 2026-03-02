@@ -352,7 +352,7 @@ ledgerguard/
 | Action | Command |
 |--------|---------|
 | Run tests | `go test ./... -v` |
-| Run server | `go run ./cmd/server` |
+| Run server | `go run ./cmd/server -config config.local.yaml` |
 | Format code | `go fmt ./...` |
 | Lint | `golangci-lint run` |
 

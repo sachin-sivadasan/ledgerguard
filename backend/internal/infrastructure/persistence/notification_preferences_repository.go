@@ -24,7 +24,7 @@ func NewPostgresNotificationPreferencesRepository(pool *pgxpool.Pool) *PostgresN
 
 func (r *PostgresNotificationPreferencesRepository) Create(ctx context.Context, prefs *entity.NotificationPreferences) error {
 	query := `
-		INSERT INTO notification_preferences (id, user_id, critical_enabled, daily_summary_enabled, daily_summary_time, slack_webhook_url, created_at, updated_at)
+		INSERT INTO notification_preferences (id, user_id, critical_alerts, daily_summary, summary_hour, slack_webhook_url, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
@@ -33,7 +33,7 @@ func (r *PostgresNotificationPreferencesRepository) Create(ctx context.Context, 
 		prefs.UserID,
 		prefs.CriticalEnabled,
 		prefs.DailySummaryEnabled,
-		prefs.DailySummaryTime.Format("15:04:05"),
+		prefs.DailySummaryTime.Hour(),
 		prefs.SlackWebhookURL,
 		prefs.CreatedAt,
 		prefs.UpdatedAt,
@@ -44,13 +44,13 @@ func (r *PostgresNotificationPreferencesRepository) Create(ctx context.Context, 
 
 func (r *PostgresNotificationPreferencesRepository) FindByUserID(ctx context.Context, userID uuid.UUID) (*entity.NotificationPreferences, error) {
 	query := `
-		SELECT id, user_id, critical_enabled, daily_summary_enabled, daily_summary_time, slack_webhook_url, created_at, updated_at
+		SELECT id, user_id, critical_alerts, daily_summary, summary_hour, slack_webhook_url, created_at, updated_at
 		FROM notification_preferences
 		WHERE user_id = $1
 	`
 
 	var prefs entity.NotificationPreferences
-	var summaryTimeStr string
+	var summaryHour int
 	var slackURL *string
 
 	err := r.pool.QueryRow(ctx, query, userID).Scan(
@@ -58,7 +58,7 @@ func (r *PostgresNotificationPreferencesRepository) FindByUserID(ctx context.Con
 		&prefs.UserID,
 		&prefs.CriticalEnabled,
 		&prefs.DailySummaryEnabled,
-		&summaryTimeStr,
+		&summaryHour,
 		&slackURL,
 		&prefs.CreatedAt,
 		&prefs.UpdatedAt,
@@ -71,12 +71,8 @@ func (r *PostgresNotificationPreferencesRepository) FindByUserID(ctx context.Con
 		return nil, err
 	}
 
-	// Parse time from HH:MM:SS format
-	parsedTime, err := parseTimeOfDay(summaryTimeStr)
-	if err != nil {
-		return nil, err
-	}
-	prefs.DailySummaryTime = parsedTime
+	// Convert hour to time.Time
+	prefs.DailySummaryTime = time.Date(0, 1, 1, summaryHour, 0, 0, 0, time.UTC)
 
 	if slackURL != nil {
 		prefs.SlackWebhookURL = *slackURL
@@ -88,7 +84,7 @@ func (r *PostgresNotificationPreferencesRepository) FindByUserID(ctx context.Con
 func (r *PostgresNotificationPreferencesRepository) Update(ctx context.Context, prefs *entity.NotificationPreferences) error {
 	query := `
 		UPDATE notification_preferences
-		SET critical_enabled = $2, daily_summary_enabled = $3, daily_summary_time = $4, slack_webhook_url = $5, updated_at = $6
+		SET critical_alerts = $2, daily_summary = $3, summary_hour = $4, slack_webhook_url = $5, updated_at = $6
 		WHERE user_id = $1
 	`
 
@@ -96,7 +92,7 @@ func (r *PostgresNotificationPreferencesRepository) Update(ctx context.Context, 
 		prefs.UserID,
 		prefs.CriticalEnabled,
 		prefs.DailySummaryEnabled,
-		prefs.DailySummaryTime.Format("15:04:05"),
+		prefs.DailySummaryTime.Hour(),
 		prefs.SlackWebhookURL,
 		prefs.UpdatedAt,
 	)
@@ -114,12 +110,12 @@ func (r *PostgresNotificationPreferencesRepository) Update(ctx context.Context, 
 
 func (r *PostgresNotificationPreferencesRepository) Upsert(ctx context.Context, prefs *entity.NotificationPreferences) error {
 	query := `
-		INSERT INTO notification_preferences (id, user_id, critical_enabled, daily_summary_enabled, daily_summary_time, slack_webhook_url, created_at, updated_at)
+		INSERT INTO notification_preferences (id, user_id, critical_alerts, daily_summary, summary_hour, slack_webhook_url, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (user_id) DO UPDATE SET
-			critical_enabled = EXCLUDED.critical_enabled,
-			daily_summary_enabled = EXCLUDED.daily_summary_enabled,
-			daily_summary_time = EXCLUDED.daily_summary_time,
+			critical_alerts = EXCLUDED.critical_alerts,
+			daily_summary = EXCLUDED.daily_summary,
+			summary_hour = EXCLUDED.summary_hour,
 			slack_webhook_url = EXCLUDED.slack_webhook_url,
 			updated_at = EXCLUDED.updated_at
 	`
@@ -129,16 +125,11 @@ func (r *PostgresNotificationPreferencesRepository) Upsert(ctx context.Context, 
 		prefs.UserID,
 		prefs.CriticalEnabled,
 		prefs.DailySummaryEnabled,
-		prefs.DailySummaryTime.Format("15:04:05"),
+		prefs.DailySummaryTime.Hour(),
 		prefs.SlackWebhookURL,
 		prefs.CreatedAt,
 		prefs.UpdatedAt,
 	)
 
 	return err
-}
-
-// parseTimeOfDay parses a time string in HH:MM:SS format to a time.Time
-func parseTimeOfDay(s string) (t time.Time, err error) {
-	return time.Parse("15:04:05", s)
 }

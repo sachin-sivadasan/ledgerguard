@@ -14,6 +14,9 @@ Postponed ideas and features for later implementation.
 | Native mobile app | P3 | iOS/Android standalone |
 | Custom report builder | P3 | User-defined reports |
 | Dark mode support | P3 | System/manual theme toggle with dark color palette |
+| Home screen widgets | P3 | iOS/Android widgets for MRR, at-risk count |
+| Smart search | P3 | Fuzzy matching for store names |
+| Voice AI assistant | P4 | Voice commands for navigation and queries |
 | Affiliate program | P4 | Referral system |
 
 ---
@@ -75,3 +78,42 @@ Add dark theme support with system preference detection and manual toggle.
 - Primary colors remain consistent
 - Ensure WCAG contrast compliance
 - Charts and badges need dark-mode variants
+
+---
+
+### Voice AI Assistant (P4)
+**Added:** 2026-03-02
+
+**Description:**
+Voice-enabled assistant for hands-free navigation and queries. Users can speak commands like "Show store Acme health" or "List subscriptions at risk".
+
+**Why P4 (Low Priority):**
+- Target users (developers) prefer tapping/typing over voice
+- Privacy concerns with speaking financial data aloud
+- High implementation complexity vs value delivered
+- Better alternatives exist (widgets, smart search, better notifications)
+
+**Specification:**
+- Full visualization and spec at `/voice-assistant` marketing page
+- Prompt file: `docs/prompts/voice-assistant-flow.md`
+
+**Proposed Features:**
+- Voice capture using `speech_to_text` Flutter package
+- Intent classification via Claude API or local model
+- Entity extraction (store names, filters, metrics)
+- Navigation via GoRouter deep links
+- Fallback: Show suggestions if intent unclear
+
+**Supported Commands:**
+- "Show details of store [name]" → Subscription details
+- "Store [name] health" → Health score page
+- "List subscriptions at risk" → Filtered list
+- "What's my MRR?" → Dashboard metrics
+- "Any billing failures?" → Alerts page
+
+**Higher Priority Alternatives:**
+1. Home screen widgets (P3) - Instant access without opening app
+2. Smart search (P3) - Type "acme" to find store instantly
+3. Better push notifications - Proactive alerts eliminate need to ask
+
+**Implementation Effort:** High (speech recognition, AI integration, entity matching)

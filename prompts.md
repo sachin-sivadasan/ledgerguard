@@ -961,6 +961,33 @@
 
 ---
 
+## [2026-03-01] Shopify Money Flow Visualization
+
+**Original Prompt:**
+> (Based on shopify-money-flow-diagram.md prompt) Create animated visualization showing Shopify Partner fee structure
+
+**Improved Prompt:**
+> Create an animated money flow visualization for the marketing site showing:
+> 1. Revenue flow: Customer → Shopify → Developer (with fee breakdowns)
+> 2. Recurring subscription flow with revenue share tiers (0%, 15%, 20%)
+> 3. Usage-based billing flow with different charge types
+> 4. Processing fees (2.9%) and tax calculations
+> 5. Interactive toggles for subscription tiers and usage types
+> 6. Real-world example calculations
+> 7. Route at /money-flow
+
+**Prompt File:** `docs/prompts/shopify-money-flow-diagram.md`
+
+**Result:**
+- marketing/site/app/money-flow/page.tsx
+- Animated flow diagram with entity boxes and flowing currency symbols
+- Revenue share tier selector (Default 20%, Small Dev 0%, Large Dev 15%)
+- Usage type selector (Orders, SMS, API, AI, Storage)
+- Fee breakdown visualization
+- Commit: f46a758 feat(marketing): expand usage charge types in money-flow visualization
+
+---
+
 ## [2026-03-01] KPI Metrics Visualization Component
 
 **Original Prompt:**
@@ -978,12 +1005,41 @@
 > 8. Page route at /kpi-guide
 > 9. Commit and push changes
 
+**Prompt File:** `docs/prompts/kpi-metrics-visualization.md`
+
 **Result:**
 - marketing/site/components/KPIMetricsGuide.tsx (1264 lines)
 - marketing/site/app/kpi-guide/page.tsx
 - Build verified: `npm run build` successful
 - Commit: f91d064 feat(marketing): add KPI metrics visualization component
 - Pushed to origin/main
+
+---
+
+## [2026-03-01] API Integration Guide Visualization
+
+**Original Prompt:**
+> Create API integration guide visualization similar to KPI guide
+
+**Improved Prompt:**
+> Create an animated API Integration Guide visualization showing:
+> 1. Data flow: Your App → LedgerGuard API → Response
+> 2. Integration patterns: Checkout, Dashboard, Alerting, Feature Gating
+> 3. Code snippets in JavaScript, cURL, Python with tabs
+> 4. Single vs Batch request toggle with separate examples
+> 5. Risk state simulator with sample store data
+> 6. Request/response animation
+> 7. Route at /api-guide
+
+**Prompt File:** `docs/prompts/ledgerguard-api-integration.md`
+
+**Result:**
+- marketing/site/app/api-guide/page.tsx
+- marketing/site/components/APIIntegrationGuide.tsx
+- Interactive flow diagram with integration pattern selector
+- Code snippets with language tabs
+- Risk state simulator
+- Commit: 4043c8e feat(marketing): add API Integration Guide and visualization prompt template
 
 ---
 
@@ -1118,10 +1174,38 @@
 > 7. API endpoints reference
 > 8. User preferences section
 
+**Prompt File:** `docs/prompts/notification-engine-flow.md`
+
 **Result:**
 - Determined notification flow is distinct topic, needs dedicated page
 - Created `/marketing/site/components/NotificationFlowVisualization.tsx` - Animated flow diagram with 4 flow types
 - Created `/marketing/site/app/notifications/page.tsx` - Full documentation page
 - Features: Flow selector, animated SVG diagram, step details, risk states reference, notification types, architecture cards, webhook events, API endpoints
+
+---
+
+## [2026-03-02] Affiliate Program Flow Visualization
+
+**Original Prompt:**
+> Create visualization for affiliate program flow
+
+**Improved Prompt:**
+> Create an interactive animated visualization showing common affiliate and referral program patterns:
+> 1. Attribution Flow: Cookie-based tracking with configurable windows (30/60/90/lifetime)
+> 2. Commission Calculation: One-time vs recurring vs hybrid models with comparisons
+> 3. Multi-Tier Structure: Direct referral and sub-affiliate override commissions
+> 4. Affiliate Lifecycle: Application → Approval → Share → Earn → Tier progression
+> 5. Real-world examples from Shopify, ConvertKit, HubSpot, Webflow
+> 6. Program types: Referral links, Coupon codes, Partner programs
+> 7. Implementation considerations: Attribution window, fraud prevention, payout logistics, platform options
+> 8. Route at /affiliate-program
+
+**Prompt File:** `docs/prompts/affiliate-program-flow.md`
+
+**Result:**
+- Created `/marketing/site/components/AffiliateFlowVisualization.tsx` - Animated flow visualization
+- Created `/marketing/site/app/affiliate-program/page.tsx` - Full documentation page
+- Features: 4 flow types (Attribution, Commission, Multi-Tier, Lifecycle), animated SVG diagrams, real-world examples, implementation considerations
+- Commit: 5716527 feat: add affiliate program flow visualization page
 
 ---

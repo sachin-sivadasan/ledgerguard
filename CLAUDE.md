@@ -125,9 +125,24 @@ marketing/
 
 **Visualization Pages:**
 - Use `docs/prompts/PROMPT-interactive-visualization-chat.md` as template for new visualizations
-- Available pages: `/kpi-guide`, `/money-flow`, `/architecture`, `/api-guide`, `/affiliate-program`, `/notifications`
+- Available pages: `/kpi-guide`, `/money-flow`, `/architecture`, `/api-guide`, `/affiliate-program`, `/notifications`, `/pitch`
 - Each visualization has: animated flow diagrams, step-by-step progression, reference cards
-- **Always log visualization prompts to `prompts.md`**
+
+**Visualization Prompt Requirements:**
+- **Always create a separate prompt file** in `docs/prompts/` for each visualization page
+- Prompt file naming: `<page-name>-flow.md` or `<page-name>-visualization.md`
+- Include: context, audience, flow diagrams (ASCII), data definitions, technical requirements
+- **Log to `prompts.md`** with reference to the prompt file
+
+| Page | Prompt File |
+|------|-------------|
+| `/kpi-guide` | `docs/prompts/kpi-metrics-visualization.md` |
+| `/money-flow` | `docs/prompts/shopify-money-flow-diagram.md` |
+| `/architecture` | `docs/prompts/internal-architecture-flow.md` |
+| `/api-guide` | `docs/prompts/ledgerguard-api-integration.md` |
+| `/affiliate-program` | `docs/prompts/affiliate-program-flow.md` |
+| `/notifications` | `docs/prompts/notification-engine-flow.md` |
+| `/pitch` | `docs/prompts/customer-pitch-ui.md` |
 
 ### 11. Frontend App (Flutter + Bloc)
 ```

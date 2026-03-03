@@ -1258,3 +1258,27 @@
 - Fallback: Text response with suggested commands when intent unclear
 
 ---
+
+## [2026-03-03] Hetzner Infrastructure Visualization Page
+
+**Original Prompt:**
+> need a visualization page of how hetzner operates. from enduser perspective and hetzner perspective. their farm and all.
+
+**Improved Prompt:**
+> Create an interactive visualization page showing how Hetzner operates as a company:
+> 1. End-User Journey flow: Sign Up → Cloud Console → Order Server → Configure → Deploy
+> 2. Data Center Operations flow: Procure → Assemble → Rack & Stack → Network → Provision → Live
+> 3. Network Architecture flow: End User → IX/Peering → Backbone → DC Router → Server
+> 4. Server Lifecycle flow: Ordered → Provisioned → Active → Maintained → Decommission → Recycle
+> 5. Static sections: DC locations (6 sites), differentiators, product lineup, network infra, server auction, two-perspectives comparison
+> 6. Route at `/hetzner-infrastructure`, orange/red color theme (distinct from existing `/deployment` page)
+
+**Prompt File:** `docs/prompts/hetzner-infrastructure-visualization.md`
+
+**Result:**
+- Created `docs/prompts/hetzner-infrastructure-visualization.md` - Full specification
+- Created `marketing/site/components/HetznerInfrastructureVisualization.tsx` - Interactive 4-flow SVG animation
+- Created `marketing/site/app/hetzner-infrastructure/page.tsx` - Full page with DC locations, products, network, auction, perspectives
+- Features: 4 animated flows, 6 DC location cards, product lineup, network layers, server auction explainer, user vs Hetzner perspective rows
+
+---

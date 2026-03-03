@@ -18,6 +18,8 @@ Postponed ideas and features for later implementation.
 | Smart search | P3 | Fuzzy matching for store names |
 | Voice AI assistant | P4 | Voice commands for navigation and queries |
 | Affiliate program | P4 | Referral system |
+| GCP staging custom domain | P4 | Map staging.ledgerspear.com to Cloud Run URL |
+| Marketing site on GCP staging | P4 | Deploy Next.js marketing to Cloud Run for staging |
 
 ---
 

@@ -1,0 +1,28 @@
+[Unit]
+Description=LedgerSpear Marketing Site (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/ledgerspear/repo/marketing/site
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ledgerspear-marketing
+
+# Environment
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

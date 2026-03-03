@@ -1,0 +1,29 @@
+[Unit]
+Description=LedgerSpear API Server
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/ledgerspear
+ExecStart=/opt/ledgerspear/bin/ledgerspear-api -config /opt/ledgerspear/config.yaml
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ledgerspear-api
+
+# Environment
+Environment=GIN_MODE=release
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/ledgerspear
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

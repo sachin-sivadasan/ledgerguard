@@ -1,0 +1,4 @@
+project_id  = "ledgerspear-staging"
+region      = "us-central1"
+db_tier     = "db-f1-micro"
+db_password = "CHANGE_ME"

@@ -266,7 +266,27 @@ token := crypto.DecryptAES256GCM(encrypted, masterKey)
 
 ---
 
-## 6. Scalability Strategy
+## 6. Deployment Environments
+
+### Production — Hetzner Cloud
+- Single VPS (CX31: 4 vCPU, 8GB RAM)
+- Self-hosted PostgreSQL 16 (local)
+- Caddy reverse proxy (auto-SSL)
+- systemd services, ~$15/month
+- Deploy: `main` branch → GitHub Actions → SSH
+
+### Staging — GCP Cloud Run
+- Serverless containers (scale 0-2)
+- Cloud SQL PostgreSQL 14 (db-f1-micro, private IP)
+- Artifact Registry for Docker images
+- Secret Manager for credentials
+- VPC Connector for private networking
+- Deploy: `staging` branch → GitHub Actions → Docker build → Cloud Run
+- Cost: $0 (free credits)
+
+---
+
+## 7. Scalability Strategy
 
 ### Current (MVP)
 - Single instance
@@ -317,7 +337,7 @@ Phase 3: Event-driven updates via webhooks
 
 ---
 
-## 7. Database Schema
+## 8. Database Schema
 
 ```sql
 -- Core tables
@@ -407,7 +427,7 @@ CREATE TABLE notifications (
 
 ---
 
-## 8. External Integrations
+## 9. External Integrations
 
 ### Shopify Partner API
 - **Endpoint:** `https://partners.shopify.com/{org_id}/api/2025-07/graphql.json`
@@ -434,7 +454,7 @@ CREATE TABLE notifications (
 
 ---
 
-## 9. Error Handling
+## 10. Error Handling
 
 ### API Errors
 ```json
@@ -471,7 +491,7 @@ retrier := retry.New(
 
 ---
 
-## 10. Observability
+## 11. Observability
 
 ### Logging
 - **Format:** Structured JSON

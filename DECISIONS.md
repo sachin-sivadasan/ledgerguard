@@ -177,3 +177,29 @@ Change the default revenue share tier from DEFAULT_20 (20%) to SMALL_DEV_0 (0%):
 - Reduces initial confusion about fee calculations
 - Users on 20% tier need to manually update their setting
 - Existing apps in database retain their current tier (no data migration needed)
+
+---
+
+### ADR-009: GCP Cloud Run for Staging Environment
+**Date:** 2026-03-03
+**Status:** Accepted
+
+**Context:**
+GCP offers $300 in free credits for 90 days. We need a staging environment to test changes before deploying to production on Hetzner. Options considered: GCE (VM), GKE (Kubernetes), Cloud Run (serverless containers).
+
+**Decision:**
+Use GCP Cloud Run for staging because:
+- Scales to zero when idle (preserves free credits)
+- No infrastructure management (serverless)
+- Existing Dockerfile works without modification
+- Auto-HTTPS included (no Caddy needed)
+- Branch-based CI/CD: main → Hetzner, staging → Cloud Run
+
+Supporting services: Cloud SQL (PostgreSQL 14, db-f1-micro), Artifact Registry, Secret Manager, VPC Connector for private networking.
+
+**Consequences:**
+- Free staging environment for 90 days
+- After credits expire, estimated ~$20-30/month (can be shut down)
+- Cold starts when scaling from zero (~2s for Go binary, acceptable for staging)
+- No custom domain for staging (uses auto-generated Cloud Run URL)
+- Same codebase, different config — validates production readiness

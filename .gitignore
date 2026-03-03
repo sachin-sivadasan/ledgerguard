@@ -64,6 +64,16 @@ logs/
 *.db
 *.sqlite
 
+# Terraform
+deploy/gcp/.terraform/
+deploy/gcp/*.tfstate
+deploy/gcp/*.tfstate.backup
+deploy/gcp/terraform.tfvars
+deploy/gcp/.terraform.lock.hcl
+
+# GCP credentials
+gcp-sa-key.json
+
 # Temp
 tmp/
 temp/

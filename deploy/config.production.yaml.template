@@ -1,0 +1,27 @@
+# LedgerSpear Production Configuration
+# Copy to /opt/ledgerspear/config.yaml and fill in values
+
+server:
+  port: "8080"
+
+database:
+  host: "localhost"
+  port: "5432"
+  user: "ledgerspear"
+  password: "YOUR_SECURE_DB_PASSWORD"
+  name: "ledgerspear"
+  sslmode: "disable"  # Use "require" if connecting to external DB
+  migrations_path: "/opt/ledgerspear/repo/backend/migrations"
+
+firebase:
+  credentials_file: "/opt/ledgerspear/firebase-credentials.json"
+
+shopify:
+  client_id: "YOUR_SHOPIFY_CLIENT_ID"
+  client_secret: "YOUR_SHOPIFY_CLIENT_SECRET"
+  redirect_uri: "https://api.ledgerspear.com/api/v1/integrations/shopify/callback"
+  scopes: "read_analytics"
+
+encryption:
+  # Generate with: openssl rand -hex 16
+  master_key: "YOUR_32_BYTE_ENCRYPTION_KEY"

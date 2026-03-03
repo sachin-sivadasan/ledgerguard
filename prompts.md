@@ -1282,3 +1282,35 @@
 - Features: 4 animated flows, 6 DC location cards, product lineup, network layers, server auction explainer, user vs Hetzner perspective rows
 
 ---
+
+## [2026-03-03] GCP Staging Infrastructure + Visualization Page
+
+**Original Prompt:**
+> GCP provides free credit. proceed with that (staging env + visualization)
+
+**Improved Prompt:**
+> Set up GCP Cloud Run as a staging environment using free credits, alongside the existing Hetzner production:
+> 1. Terraform configs (deploy/gcp/): Cloud Run, Cloud SQL, VPC, Artifact Registry, Secret Manager
+> 2. CI/CD: staging branch → Docker build → Cloud Run deploy (alongside main → Hetzner)
+> 3. Scripts: gcp-setup.sh (one-time), gcp-deploy.sh (manual deploy)
+> 4. Visualization page at /gcp-staging with 4 flows: Dual Architecture, GCP Topology, CI/CD Branching, Request Flow
+> 5. Static sections: GCP services, environment comparison, CI/CD strategy, secrets, cost comparison
+> 6. Update Makefile, .gitignore, DECISIONS.md, TAD.md, future.md
+
+**Prompt File:** `docs/prompts/gcp-staging-visualization.md`
+
+**Result:**
+- Created `deploy/gcp/` — 9 Terraform files (main, variables, network, database, cloudrun, secrets, artifact_registry, outputs, tfvars.example)
+- Created `scripts/gcp-setup.sh` — One-time GCP project setup
+- Created `scripts/gcp-deploy.sh` — Manual deployment script
+- Updated `.github/workflows/deploy.yml` — Added staging branch + deploy-staging job
+- Updated `.gitignore` — Terraform state, tfvars, GCP credentials
+- Updated `Makefile` — Added gcp-setup, gcp-deploy, gcp-logs targets
+- Created `marketing/site/components/GCPStagingVisualization.tsx` — 4-flow interactive SVG component
+- Created `marketing/site/app/gcp-staging/page.tsx` — Full page with services, comparison, CI/CD, costs
+- Created `docs/prompts/gcp-staging-visualization.md` — Prompt specification
+- Updated `DECISIONS.md` — ADR-009: GCP Cloud Run for Staging
+- Updated `TAD.md` — Added Deployment Environments section
+- Updated `future.md` — Deferred: custom staging domain, marketing site on Cloud Run
+
+---

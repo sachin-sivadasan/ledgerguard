@@ -158,8 +158,8 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build Flutter web (production)
-        run: flutter build web --release -t lib/main_prod.dart
+      - name: Build Flutter web (staging)
+        run: flutter build web --release -t lib/main_staging.dart
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0

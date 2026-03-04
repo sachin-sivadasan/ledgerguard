@@ -1,7 +1,7 @@
 import 'dart:io' show Platform;
 
 /// Environment configuration for LedgerGuard
-enum Environment { dev, prod }
+enum Environment { dev, staging, prod }
 
 class EnvConfig {
   final Environment environment;
@@ -44,6 +44,14 @@ class EnvConfig {
     firebaseProjectId: 'ledgerguard-dev',
   );
 
+  static const EnvConfig staging = EnvConfig._(
+    environment: Environment.staging,
+    devApiBaseUrlAndroid: 'http://10.0.2.2:8080',
+    devApiBaseUrlOther: 'http://localhost:8080',
+    prodApiBaseUrl: 'https://ledgerspear-api-ineifpjrdq-uc.a.run.app',
+    firebaseProjectId: 'ledgerguard-c7557',
+  );
+
   static const EnvConfig prod = EnvConfig._(
     environment: Environment.prod,
     devApiBaseUrlAndroid: 'http://10.0.2.2:8080',
@@ -53,5 +61,6 @@ class EnvConfig {
   );
 
   bool get isDev => environment == Environment.dev;
+  bool get isStaging => environment == Environment.staging;
   bool get isProd => environment == Environment.prod;
 }

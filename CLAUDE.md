@@ -24,6 +24,7 @@ Update these files when relevant changes occur:
 | `frontend/prompts.md` | Frontend-specific prompts |
 | `frontend/IMPLEMENTATION_LOG.md` | Frontend feature implementations |
 | `docs/GCP_SETUP_LOG.md` | GCP/infrastructure commands run (for learning) |
+| `docs/FIREBASE_HOSTING_SETUP_LOG.md` | Firebase Hosting commands run (for learning) |
 
 ### 2. Architecture Diagrams
 Update when architecture changes:

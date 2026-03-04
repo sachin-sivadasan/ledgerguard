@@ -130,6 +130,9 @@ jobs:
         run: flutter build apk --release --no-tree-shake-icons
         continue-on-error: true
 
+      - name: Build Web
+        run: flutter build web --release
+
   marketing-build:
     name: Marketing Site Build
     runs-on: ubuntu-latest

@@ -1314,3 +1314,19 @@
 - Updated `future.md` — Deferred: custom staging domain, marketing site on Cloud Run
 
 ---
+
+### [2026-03-04] Deploy Flutter Frontend to Firebase Hosting
+**Original:**
+> frond end deploy
+
+**Improved:**
+> Deploy the Flutter web frontend to Firebase Hosting. Set up production entry point (main_prod.dart with Firebase init), update web branding (title, manifest), configure Firebase Hosting (firebase.json + .firebaserc), add CI/CD (flutter build web in CI, deploy-frontend job in deploy.yml using FirebaseExtended/action-hosting-deploy). Choose Firebase Hosting over Vercel ($0 vs $20/mo commercial) and Cloud Run (overkill for static files).
+
+**Result:**
+- Updated `main_prod.dart` with Firebase initialization
+- Updated `web/index.html` and `manifest.json` with LedgerGuard branding
+- Created `.firebaserc`, added hosting to `firebase.json`
+- Added web build to CI, frontend deploy job to deploy workflow
+- Build verified: `flutter build web --release -t lib/main_prod.dart`
+
+---

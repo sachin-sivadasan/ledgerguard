@@ -14,6 +14,7 @@ on:
           - all
           - backend
           - marketing
+          - frontend
 
 jobs:
   # Run tests first
@@ -129,3 +130,42 @@ jobs:
       - name: Notify on failure
         if: failure()
         run: echo "Staging deployment failed! Check the logs."
+
+  # Deploy Flutter web to Firebase Hosting
+  deploy-frontend:
+    name: Deploy Frontend to Firebase Hosting
+    needs: test
+    runs-on: ubuntu-latest
+    if: >
+      github.ref == 'refs/heads/main' &&
+      (github.event.inputs.component == 'frontend' || github.event.inputs.component == 'all' || github.event.inputs.component == '')
+
+    defaults:
+      run:
+        working-directory: frontend/app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Flutter web (production)
+        run: flutter build web --release -t lib/main_prod.dart
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: ledgerguard-c7557
+          entryPoint: frontend/app

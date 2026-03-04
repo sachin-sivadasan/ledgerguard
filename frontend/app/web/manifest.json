@@ -1,11 +1,11 @@
 {
-    "name": "app",
-    "short_name": "app",
+    "name": "LedgerGuard",
+    "short_name": "LedgerGuard",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1e293b",
+    "theme_color": "#2563eb",
+    "description": "Revenue Intelligence Platform for Shopify App Developers",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -823,3 +823,23 @@ The frontend was calling `/api/v1/user/preferences/dashboard` but this endpoint 
 **Tests:** All backend tests pass
 
 ---
+
+## Prompt 012 – Deploy Flutter Web to Firebase Hosting
+**Date:** 2026-03-04
+**Status:** Complete
+
+**Prompt:**
+> Deploy the Flutter web frontend to Firebase Hosting. Configure production entry point, update web branding, set up Firebase Hosting config, add CI/CD pipeline for automated deployment.
+
+**Changes:**
+- Updated `lib/main_prod.dart` — enabled Firebase initialization (was commented out)
+- Updated `web/index.html` — title "LedgerGuard", meta description
+- Updated `web/manifest.json` — name "LedgerGuard", theme colors (slate/blue)
+- Created `.firebaserc` — project `ledgerguard-c7557`
+- Updated `firebase.json` — added hosting section (public: build/web, SPA rewrites)
+- Updated `.github/workflows/ci.yml` — added `flutter build web` step
+- Updated `.github/workflows/deploy.yml` — added `deploy-frontend` job + `frontend` dispatch option
+
+**Decision:** Firebase Hosting chosen over Vercel ($0 vs $20/mo for commercial) and Cloud Run (overkill for static files). Firebase already used for Auth.
+
+---

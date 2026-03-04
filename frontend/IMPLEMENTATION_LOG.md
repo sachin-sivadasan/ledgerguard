@@ -1060,3 +1060,20 @@ EarningsKpiCard(status: earningsStatus)
 ```
 
 ---
+
+## [2026-03-04] Deploy Flutter Web to Firebase Hosting
+
+**Commit:** feat: add Firebase Hosting deployment for Flutter web frontend
+
+**Summary:**
+Configured Firebase Hosting for the Flutter web frontend. Firebase Hosting serves the static Flutter web build at zero cost (free tier: 10GB bandwidth/month).
+
+**Changes:**
+1. **Production entry point** — `lib/main_prod.dart` updated with Firebase initialization
+2. **Web branding** — title, description, manifest updated from defaults to "LedgerGuard"
+3. **Firebase Hosting** — `.firebaserc` + hosting section in `firebase.json` with SPA rewrites
+4. **CI/CD** — web build in CI, `deploy-frontend` job in deploy workflow
+
+**Build:** `flutter build web --release -t lib/main_prod.dart` — verified
+
+---

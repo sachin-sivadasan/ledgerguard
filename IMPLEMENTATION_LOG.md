@@ -1559,3 +1559,45 @@ Implemented per-partner rate limiting for outgoing Shopify Partner API calls. Ea
 Shopify rate limits are per access token (partner level), not per app. If one partner has 5 apps and we used a single global 3 RPS limit, they'd share it unfairly with other partners. Each partner should get their full rate limit quota.
 
 **Tests:** All tests passing
+
+---
+
+## [2026-03-04] Deploy Flutter Frontend to Firebase Hosting
+
+**Commit:** feat: add Firebase Hosting deployment for Flutter web frontend
+
+**Summary:**
+Set up Flutter web deployment to Firebase Hosting. Firebase was chosen over Vercel ($0 vs $20/mo for commercial use) and GCP Cloud Run (overkill for static files). The Firebase project `ledgerguard-c7557` was already initialized for Auth.
+
+**Implemented:**
+
+### 1. Production Entry Point
+- Updated `frontend/app/lib/main_prod.dart` — added Firebase initialization (was commented out)
+- Uses `EnvConfig.prod` pointing to `https://api.ledgerguard.com`
+
+### 2. Web Branding
+- `web/index.html` — title changed from "app" to "LedgerGuard", description updated
+- `web/manifest.json` — name/short_name set to "LedgerGuard", theme colors updated
+
+### 3. Firebase Hosting Config
+- Created `frontend/app/.firebaserc` — maps to project `ledgerguard-c7557`
+- Updated `frontend/app/firebase.json` — added `hosting` section with SPA rewrites
+- Build output: `build/web/` served as static files
+
+### 4. CI/CD
+- `.github/workflows/ci.yml` — added `flutter build web` to frontend-build job
+- `.github/workflows/deploy.yml` — added `deploy-frontend` job using `FirebaseExtended/action-hosting-deploy@v0`
+- Added `frontend` option to manual dispatch choices
+
+**Files Created:**
+- `frontend/app/.firebaserc`
+
+**Files Modified:**
+- `frontend/app/lib/main_prod.dart`
+- `frontend/app/web/index.html`
+- `frontend/app/web/manifest.json`
+- `frontend/app/firebase.json`
+- `.github/workflows/ci.yml`
+- `.github/workflows/deploy.yml`
+
+**Build Verified:** `flutter build web --release -t lib/main_prod.dart` — success

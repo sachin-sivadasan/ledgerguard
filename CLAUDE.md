@@ -23,6 +23,7 @@ Update these files when relevant changes occur:
 | `frontend/REQUIREMENTS.md` | Frontend app changes |
 | `frontend/prompts.md` | Frontend-specific prompts |
 | `frontend/IMPLEMENTATION_LOG.md` | Frontend feature implementations |
+| `docs/GCP_SETUP_LOG.md` | GCP/infrastructure commands run (for learning) |
 
 ### 2. Architecture Diagrams
 Update when architecture changes:

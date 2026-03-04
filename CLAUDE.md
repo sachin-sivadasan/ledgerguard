@@ -394,9 +394,28 @@ ledgerguard/
 |--------|---------|
 | Run tests | `cd frontend/app && flutter test` |
 | Run app | `cd frontend/app && flutter run` |
+| Build web (staging) | `cd frontend/app && flutter build web --release -t lib/main_staging.dart` |
+| Build web (prod) | `cd frontend/app && flutter build web --release -t lib/main_prod.dart` |
+| Deploy Firebase | `cd frontend/app && firebase deploy --only hosting` |
 | Build APK | `cd frontend/app && flutter build apk` |
 | Build iOS | `cd frontend/app && flutter build ios` |
 | Analyze | `cd frontend/app && flutter analyze` |
+
+### GCP Staging Deployment
+| Action | Command |
+|--------|---------|
+| Deploy backend | `./scripts/gcp-deploy.sh ledgerspear` |
+| Check logs | `gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=ledgerspear-api AND textPayload:*" --project=ledgerspear --limit=30 --format="table(timestamp,textPayload)"` |
+| Health check | `curl -sf https://ledgerspear-api-ineifpjrdq-uc.a.run.app/health` |
+
+**IMPORTANT: Docker builds for Cloud Run MUST use `--platform linux/amd64`** (dev machine is Apple Silicon ARM). Without this flag, the binary gets `exec format error` at runtime. The `gcp-deploy.sh` script handles this automatically.
+
+### Environment URLs
+| Environment | Frontend | Backend API |
+|-------------|----------|-------------|
+| Dev | `localhost` | `http://localhost:8080` |
+| Staging | `https://ledgerguard-c7557.web.app` | `https://ledgerspear-api-ineifpjrdq-uc.a.run.app` |
+| Production | TBD | `https://api.ledgerguard.com` (Hetzner) |
 
 ---
 

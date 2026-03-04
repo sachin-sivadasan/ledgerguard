@@ -59,6 +59,9 @@ cd frontend/app
 # Development build
 flutter build web
 
+# Staging build (uses EnvConfig.staging → Cloud Run API)
+flutter build web --release -t lib/main_staging.dart
+
 # Production build (uses EnvConfig.prod → https://api.ledgerguard.com)
 flutter build web --release -t lib/main_prod.dart
 
@@ -152,7 +155,8 @@ Developer → git push main
     ↓
 GitHub Actions (deploy.yml)
     ↓
-flutter build web --release -t lib/main_prod.dart
+flutter build web --release -t lib/main_staging.dart   (staging)
+flutter build web --release -t lib/main_prod.dart      (production — future)
     ↓
 firebase deploy --only hosting
     ↓
@@ -160,5 +164,17 @@ Firebase Hosting CDN (global)
     ↓
 Users access: https://ledgerguard-c7557.web.app
     ↓
-Flutter app calls: https://api.ledgerguard.com (Hetzner backend)
+Flutter app calls:
+  Staging → https://ledgerspear-api-ineifpjrdq-uc.a.run.app (GCP Cloud Run)
+  Production → https://api.ledgerguard.com (Hetzner backend — future)
+
+## Manual Deploy (Staging)
+
+```bash
+cd frontend/app
+flutter build web --release -t lib/main_staging.dart
+firebase deploy --only hosting
+# Hosting URL: https://ledgerguard-c7557.web.app
+# API target: https://ledgerspear-api-ineifpjrdq-uc.a.run.app
+```
 ```

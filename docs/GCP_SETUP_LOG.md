@@ -240,3 +240,54 @@ curl -sf https://ledgerspear-api-ineifpjrdq-uc.a.run.app/health
 | `exec format error` | Built ARM image on Mac, Cloud Run needs amd64 | `docker build --platform linux/amd64` |
 | Secret versions not found | Secrets created but empty | Populated with `gcloud secrets versions add` |
 | Startup probe failed | exec format error (wrong arch) | Rebuilt with correct platform |
+
+---
+
+## 10. Redeploy Backend (Update Migrations & Code)
+
+When backend code or migrations change, rebuild and redeploy:
+
+```bash
+# From repo root — builds Docker image, pushes to Artifact Registry, deploys to Cloud Run
+./scripts/gcp-deploy.sh ledgerspear
+
+# What it does:
+# 1. docker build -t us-central1-docker.pkg.dev/ledgerspear/ledgerspear/backend:<git-sha> backend/
+# 2. docker push (both :sha and :latest tags)
+# 3. gcloud run deploy ledgerspear-api --image <image> --region us-central1 --project ledgerspear
+# 4. Health check: curl <service-url>/health
+
+# Migrations auto-run on startup (baked into Docker image at /app/migrations)
+```
+
+**When to redeploy backend:**
+- New database migrations added
+- Backend code changes (handlers, middleware, domain logic)
+- Config changes (env vars in cloudrun.tf need `terraform apply` instead)
+
+---
+
+## 11. Check Cloud Run Logs
+
+```bash
+# Recent application logs
+gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=ledgerspear-api AND textPayload:*" \
+  --project=ledgerspear --limit=30 --format="table(timestamp,textPayload)"
+
+# Error logs only
+gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=ledgerspear-api AND severity>=WARNING" \
+  --project=ledgerspear --limit=10 --format=json
+
+# Full request logs (includes HTTP status codes)
+gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=ledgerspear-api" \
+  --project=ledgerspear --limit=20 --format="table(timestamp,httpRequest.status,httpRequest.requestUrl,textPayload)"
+```
+
+---
+
+## Troubleshooting Encountered (continued)
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| `failed to lookup user` (500) | Cloud SQL schema missing columns — stale Docker image without latest migrations | Redeploy backend: `./scripts/gcp-deploy.sh ledgerspear` |
+| `column "daily_summary" does not exist` | Migration 009+ not applied | Same fix — redeploy triggers auto-migration on startup |

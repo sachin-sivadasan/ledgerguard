@@ -22,7 +22,7 @@ class EnvConfig {
 
   /// Returns the appropriate API base URL based on environment and platform
   String get apiBaseUrl {
-    if (environment == Environment.prod) {
+    if (environment == Environment.prod || environment == Environment.staging) {
       return _prodApiBaseUrl;
     }
     // Dev environment - use 10.0.2.2 for Android emulator

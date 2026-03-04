@@ -16,9 +16,9 @@ echo "  Image: $IMAGE"
 echo "============================================"
 echo ""
 
-# Build Docker image
+# Build Docker image (must use linux/amd64 — Cloud Run runs amd64, Mac is ARM)
 echo "[1/4] Building Docker image..."
-docker build -t "$IMAGE" -t "$REGISTRY/backend:latest" \
+docker build --platform linux/amd64 -t "$IMAGE" -t "$REGISTRY/backend:latest" \
   -f "$REPO_ROOT/backend/Dockerfile" "$REPO_ROOT/backend/"
 
 # Push to Artifact Registry

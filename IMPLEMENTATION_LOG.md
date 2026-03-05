@@ -1601,3 +1601,54 @@ Set up Flutter web deployment to Firebase Hosting. Firebase was chosen over Verc
 - `.github/workflows/deploy.yml`
 
 **Build Verified:** `flutter build web --release -t lib/main_prod.dart` — success
+
+---
+
+## [2026-03-05] Staging Environment End-to-End Setup
+
+**Commit:** fix: staging environment end-to-end connectivity
+
+**Summary:**
+Connected the Flutter web frontend (Firebase Hosting) to the Go backend (GCP Cloud Run) for the staging environment. Required fixes across frontend config, backend CORS, Docker builds, database migrations, and Firebase Auth configuration.
+
+**Implemented:**
+
+### 1. Frontend Staging Environment
+- Added `Environment.staging` to `EnvConfig` pointing to Cloud Run API (`https://ledgerspear-api-ineifpjrdq-uc.a.run.app`)
+- Created `main_staging.dart` entry point for Firebase Hosting builds
+- Fixed `apiBaseUrl` getter — staging case was falling through to `localhost` instead of returning the Cloud Run URL
+
+### 2. Backend CORS Fix
+- Added `ledgerguard-c7557.web.app` and `ledgerguard-c7557.firebaseapp.com` to `AllowedOrigins` in `router.go`
+- Required for Firebase Hosting frontend to call Cloud Run backend
+
+### 3. Docker Build Fix
+- Fixed `gcp-deploy.sh` — added `--platform linux/amd64` flag to `docker build`
+- Required for Apple Silicon (ARM) Macs building containers for Cloud Run (x86_64)
+
+### 4. Database Migration Fix
+- Migration 17 was in a dirty state (partially applied)
+- Manually completed the partial migration, then ran migrations 18-27 successfully
+
+### 5. Firebase Auth Configuration
+- Enabled Email/Password authentication provider in Firebase Console
+- Updated API key restrictions to allow Identity Toolkit API + Token Service API
+- Without these, Firebase Auth calls from the frontend returned 403 errors
+
+### 6. Deploy Workflow Update
+- Changed Firebase Hosting build from `main_prod.dart` to `main_staging.dart` entry point
+- Staging deployment now builds with staging environment config
+
+**Files Created:**
+- `frontend/app/lib/main_staging.dart`
+
+**Files Modified:**
+- `frontend/app/lib/core/config/env_config.dart` — Added `Environment.staging`, fixed `apiBaseUrl` getter
+- `backend/internal/interfaces/http/router/router.go` — Added Firebase Hosting domains to CORS
+- `scripts/gcp-deploy.sh` — Added `--platform linux/amd64`
+- `.github/workflows/deploy.yml` — Changed build target to `main_staging.dart`
+
+**Key Learnings:**
+- Apple Silicon Docker builds must specify `--platform linux/amd64` for Cloud Run
+- Firebase API key restrictions must include Identity Toolkit API and Token Service API for auth to work
+- Dirty database migrations require manual intervention (set version, complete partial DDL)

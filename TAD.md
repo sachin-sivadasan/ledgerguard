@@ -275,7 +275,7 @@ token := crypto.DecryptAES256GCM(encrypted, masterKey)
 - systemd services, ~$15/month
 - Deploy: `main` branch → GitHub Actions → SSH
 
-### Staging — GCP Cloud Run
+### Staging — GCP Cloud Run (Backend)
 - Serverless containers (scale 0-2)
 - Cloud SQL PostgreSQL 14 (db-f1-micro, private IP)
 - Artifact Registry for Docker images
@@ -283,6 +283,15 @@ token := crypto.DecryptAES256GCM(encrypted, masterKey)
 - VPC Connector for private networking
 - Deploy: `staging` branch → GitHub Actions → Docker build → Cloud Run
 - Cost: $0 (free credits)
+
+### Frontend — Firebase Hosting
+- Static Flutter web builds served via Firebase CDN
+- Entry points: `main_dev.dart` (localhost), `main_staging.dart` (Cloud Run), `main_prod.dart` (Hetzner)
+- SPA routing with rewrites to `index.html`
+- Deploy: GitHub Actions → `flutter build web` → Firebase Hosting deploy
+- Project: `ledgerguard-c7557`
+- Cost: $0 (free tier: 10GB bandwidth/month)
+- CORS: Backend allowlists `ledgerguard-c7557.web.app` and `ledgerguard-c7557.firebaseapp.com`
 
 ---
 

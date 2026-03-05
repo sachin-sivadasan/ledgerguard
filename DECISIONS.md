@@ -203,3 +203,25 @@ Supporting services: Cloud SQL (PostgreSQL 14, db-f1-micro), Artifact Registry, 
 - Cold starts when scaling from zero (~2s for Go binary, acceptable for staging)
 - No custom domain for staging (uses auto-generated Cloud Run URL)
 - Same codebase, different config — validates production readiness
+
+---
+
+### ADR-010: Staging Frontend Deployment via Firebase Hosting + main_staging.dart
+**Date:** 2026-03-05
+**Status:** Accepted
+
+**Context:**
+The Flutter web frontend needed to be deployed for staging, pointing to the GCP Cloud Run backend rather than the production Hetzner backend. The existing entry points were `main_dev.dart` (localhost) and `main_prod.dart` (production API). Firebase Hosting was already configured from ADR for production deployment.
+
+**Decision:**
+- Create a separate `main_staging.dart` entry point with `Environment.staging` pointing to Cloud Run URL (`https://ledgerspear-api-ineifpjrdq-uc.a.run.app`)
+- Deploy to the same Firebase Hosting project (`ledgerguard-c7557`) using the staging entry point
+- Add Firebase Hosting domains to backend CORS allowlist
+- Use `--platform linux/amd64` in Docker builds for Cloud Run compatibility with Apple Silicon
+
+**Consequences:**
+- Clean separation of dev/staging/prod environments in frontend config
+- Single Firebase Hosting project serves staging for now (can split later)
+- CORS explicitly lists allowed origins rather than using wildcards (more secure)
+- Apple Silicon developers must use platform flag for Cloud Run builds
+- Firebase Auth requires Identity Toolkit API + Token Service API enabled on API key restrictions

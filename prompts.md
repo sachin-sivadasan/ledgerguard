@@ -1330,3 +1330,29 @@
 - Build verified: `flutter build web --release -t lib/main_prod.dart`
 
 ---
+
+### [2026-03-05] Staging Environment End-to-End Setup
+**Original:**
+> Connect the Flutter web frontend (Firebase Hosting) to the Go backend (GCP Cloud Run) for staging. Fix all issues needed for end-to-end connectivity: staging environment config, CORS, Docker builds, database migrations, Firebase Auth.
+
+**Improved:**
+> Set up staging environment end-to-end connectivity:
+> 1. Add `Environment.staging` to Flutter EnvConfig pointing to Cloud Run API
+> 2. Create `main_staging.dart` entry point for Firebase Hosting builds
+> 3. Fix `apiBaseUrl` getter — staging falling through to localhost
+> 4. Fix `gcp-deploy.sh` — add `--platform linux/amd64` for Apple Silicon
+> 5. Add Firebase Hosting domains to CORS AllowedOrigins in router.go
+> 6. Fix dirty database migration 17, run migrations 18-27
+> 7. Enable Firebase Auth Email/Password provider, update API key restrictions (Identity Toolkit + Token Service APIs)
+> 8. Change deploy workflow from `main_prod.dart` to `main_staging.dart`
+
+**Result:**
+- Created `main_staging.dart`, added `Environment.staging` to EnvConfig
+- Fixed `apiBaseUrl` getter for staging
+- Added `--platform linux/amd64` to gcp-deploy.sh
+- Added Firebase Hosting domains to backend CORS
+- Fixed dirty migration 17, ran migrations 18-27
+- Enabled Firebase Auth Email/Password, updated API key restrictions
+- Changed deploy workflow to use staging entry point
+
+---

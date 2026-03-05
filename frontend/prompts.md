@@ -843,3 +843,18 @@ The frontend was calling `/api/v1/user/preferences/dashboard` but this endpoint 
 **Decision:** Firebase Hosting chosen over Vercel ($0 vs $20/mo for commercial) and Cloud Run (overkill for static files). Firebase already used for Auth.
 
 ---
+
+## Prompt 013 – Staging Environment Configuration
+**Date:** 2026-03-05
+**Status:** Complete
+
+**Prompt:**
+> Add staging environment support to the Flutter frontend. Create `Environment.staging` pointing to Cloud Run backend, create `main_staging.dart` entry point, fix `apiBaseUrl` getter for staging, update deploy workflow to use staging entry point.
+
+**Changes:**
+- Added `Environment.staging` to `EnvConfig` with Cloud Run API URL (`https://ledgerspear-api-ineifpjrdq-uc.a.run.app`)
+- Created `lib/main_staging.dart` entry point with Firebase initialization
+- Fixed `apiBaseUrl` getter — staging case was falling through to localhost
+- Updated deploy workflow to build with `main_staging.dart` instead of `main_prod.dart`
+
+---

@@ -39,7 +39,7 @@ func New(cfg Config) *chi.Mux {
 
 	// CORS configuration
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:*", "https://*.ledgerguard.app"},
+		AllowedOrigins:   []string{"http://localhost:*", "https://*.ledgerguard.app", "https://ledgerguard-c7557.web.app", "https://ledgerguard-c7557.firebaseapp.com"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID"},
 		ExposedHeaders:   []string{"Link"},

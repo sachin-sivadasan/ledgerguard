@@ -285,9 +285,97 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
 
 ---
 
+## 12. Fix Dirty Database Migrations
+
+If migrations fail mid-way, the `schema_migrations` table gets stuck in a dirty state. The server logs will show:
+```
+WARNING: failed to run migrations: Dirty database version N. Fix and force version.
+```
+
+**Step 1: Enable public IP temporarily (Cloud SQL is private-only)**
+```bash
+# Enable public IP
+gcloud sql instances patch ledgerspear-staging --project=ledgerspear --assign-ip --quiet
+
+# Get your public IP
+curl -s https://checkip.amazonaws.com
+# Example: 49.37.233.65
+
+# Authorize your IP
+gcloud sql instances patch ledgerspear-staging --project=ledgerspear \
+  --authorized-networks="<YOUR_IP>/32" --quiet
+
+# Get the public IP of Cloud SQL
+gcloud sql instances describe ledgerspear-staging --project=ledgerspear \
+  --format="value(ipAddresses)"
+# Look for type: PRIMARY → e.g., 35.184.158.238
+```
+
+**Step 2: Check migration state**
+```bash
+DB_PASS=$(gcloud secrets versions access latest --secret=ledgerspear-db-password --project=ledgerspear)
+
+# Check current migration version
+PGPASSWORD="$DB_PASS" psql -h <PUBLIC_IP> -p 5432 -U ledgerspear -d ledgerspear \
+  -c "SELECT version, dirty FROM schema_migrations;"
+
+# Check table schema
+PGPASSWORD="$DB_PASS" psql -h <PUBLIC_IP> -p 5432 -U ledgerspear -d ledgerspear \
+  -c "\dt"
+```
+
+**Step 3: Fix dirty state**
+```bash
+# Option A: If migration N didn't apply at all, force back to N-1
+PGPASSWORD="$DB_PASS" psql -h <PUBLIC_IP> -p 5432 -U ledgerspear -d ledgerspear \
+  -c "UPDATE schema_migrations SET version = <N-1>, dirty = false;"
+
+# Option B: If migration partially applied, manually complete it, then mark clean
+PGPASSWORD="$DB_PASS" psql -h <PUBLIC_IP> -p 5432 -U ledgerspear -d ledgerspear \
+  -c "UPDATE schema_migrations SET version = N, dirty = false;"
+
+# Run remaining migrations
+cd backend
+go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest \
+  -path=migrations \
+  -database="postgres://ledgerspear:${DB_PASS}@<PUBLIC_IP>:5432/ledgerspear?sslmode=require" up
+```
+
+**Step 4: Disable public IP**
+```bash
+gcloud sql instances patch ledgerspear-staging --project=ledgerspear --no-assign-ip --quiet
+```
+
+---
+
+## 13. Get All Cloud Run Logs (Including Hidden)
+
+Default `textPayload:*` filter misses some logs. Use JSON format to see everything:
+
+```bash
+gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=ledgerspear-api" \
+  --project=ledgerspear --limit=50 --format=json | \
+  python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for entry in reversed(data):
+    ts = entry.get('timestamp','')[:19]
+    tp = entry.get('textPayload','')
+    sev = entry.get('severity','')
+    if tp:
+        print(f'{ts} [{sev}] {tp}')
+"
+```
+
+---
+
 ## Troubleshooting Encountered (continued)
 
 | Issue | Cause | Fix |
 |-------|-------|-----|
 | `failed to lookup user` (500) | Cloud SQL schema missing columns — stale Docker image without latest migrations | Redeploy backend: `./scripts/gcp-deploy.sh ledgerspear` |
 | `column "daily_summary" does not exist` | Migration 009+ not applied | Same fix — redeploy triggers auto-migration on startup |
+| `Dirty database version 17` | Migration 17 partially applied (some ALTER TABLEs succeeded, then failed) | Manually complete partial migration via psql, force version clean (see §12) |
+| `exec format error` on Cloud Run | Docker image built on Apple Silicon (ARM) without `--platform linux/amd64` | Fixed in `gcp-deploy.sh` — always uses `--platform linux/amd64` |
+| Can't connect to Cloud SQL from local | Instance has private IP only | Temporarily enable public IP (see §12), then disable after |
+| `gcloud sql connect` IPv6 error | ISP uses IPv6, Cloud SQL doesn't support it | Use public IP + psql directly instead of `gcloud sql connect` |

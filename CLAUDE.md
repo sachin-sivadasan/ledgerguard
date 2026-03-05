@@ -425,3 +425,6 @@ ledgerguard/
 - **Small commits** – Easier to review and revert
 - **Docs are code** – Keep them in sync
 - **Future.md is your friend** – Don't scope creep
+- **Log all infra commands** – Every GCP/Firebase/deployment command goes in `docs/GCP_SETUP_LOG.md` or `docs/FIREBASE_HOSTING_SETUP_LOG.md`
+- **Check dirty migrations after deploy** – If Cloud Run logs show `Dirty database version N`, follow §12 in `docs/GCP_SETUP_LOG.md` to fix
+- **Always disable Cloud SQL public IP** after direct DB access — it's private-only by default

@@ -1356,3 +1356,82 @@
 - Changed deploy workflow to use staging entry point
 
 ---
+
+
+### [2026-03-07] Create Excalidraw Architecture Diagrams
+**Original:**
+> Implement the plan to create Excalidraw diagrams for LedgerGuard
+
+**Improved:**
+> Create 7 Excalidraw JSON diagram files in docs/diagrams/ for visual architectural documentation: system architecture (C4-style), auth & onboarding flow, sync & ledger rebuild pipeline, risk engine decision tree, database ER diagram, frontend screen flow, and snapshot backfill lifecycle. Use consistent color coding (blue=backend, green=frontend, orange=external, purple=database, red/yellow=risk states).
+
+**Result:**
+- Created docs/diagrams/ directory with 7 .excalidraw files
+- All files valid JSON, openable in Excalidraw or VS Code extension
+- Consistent color scheme across all diagrams
+
+---
+
+### [2026-03-07] Add API Interface Diagram
+**Original:**
+> update about graphql — i mean api interface from this app
+
+**Improved:**
+> Create an Excalidraw diagram documenting all REST API endpoints exposed by the LedgerGuard Go backend, organized by resource group (Auth, Apps, Subscriptions, Revenue, Sync, etc.), showing middleware stack and endpoint categories (authenticated, external, internal).
+
+**Result:**
+- Created `docs/diagrams/api-interface.excalidraw` (38 elements)
+- 12 endpoint group cards covering all routes from router.go
+- Shows middleware stack (CORS, Firebase Auth, Admin, Logging)
+- Color-coded: blue=authenticated, orange=external, gray=internal
+
+---
+
+### [2026-03-07] AI Chat + GraphQL Developer API (Future Feature)
+**Original:**
+> also thinking to add a chat window (ai) as anything. So ai tool can introduce so query anything if graphql. suggest anything. improve the prompt. visualization and diagram first. add it to future
+
+**Improved:**
+> Add two synergistic future features: (1) GraphQL Developer API (P2) — gqlgen-based schema-driven API for external Shopify app developers, replacing/supplementing REST Revenue API, authenticated via API keys. (2) AI Chat Assistant (P3) — Flutter chat widget where developers ask natural language questions, Claude API translates to GraphQL queries, returns conversational responses with data tables and follow-ups. Create prompt file, Excalidraw diagram, and detailed future.md entries.
+
+**Result:**
+- Created `docs/prompts/ai-graphql-chat-flow.md` (full spec with schema, examples, pipeline)
+- Created `docs/diagrams/ai-graphql-chat.excalidraw` (53 elements)
+- Updated `future.md` with GraphQL API (P2) and AI Chat (P3) detailed specs
+
+---
+
+### [2026-03-07] Adapt Chat Builder System Prompt for LedgerGuard
+**Original:**
+> Refer to OpenAI Explorer's chat-builder-system-prompt.md for AI chat. Convert it for this app removing template and broadcast module. Improve the prompt.
+
+**Improved:**
+> Adapt the Chat Builder System Prompt from OpenAI Explorer for LedgerGuard's AI Chat Assistant. Keep core architecture patterns (module interface, registry, tool call loop, state extraction, context-aware input, dynamic system prompt). Remove WhatsApp-specific modules (Templates, Broadcast, CSV, Catalog). Replace with LedgerGuard domain modules: Subscriptions (4 tools), Metrics (3), Risk (3), Store Health (2), Earnings (2), Sync (2). Swap OpenAI for Claude API tool use. Adapt frontend from React to Flutter Bloc. Use internal GraphQL (gqlgen) as query execution layer. Preserve applicable gotchas.
+
+**Result:**
+- Created `docs/prompts/chat-builder-system-prompt.md` — full implementation prompt
+- 8 architecture patterns adapted from OpenAI Explorer
+- 6 LedgerGuard modules defined with 16 total tools
+- API contracts (WebSocket messages), wiring pattern, implementation order (38 steps)
+- Gotchas table with 12 LedgerGuard-specific issues and fixes
+
+---
+
+### [2026-03-07] Switch AI Chat to OpenAI-First Architecture
+**Original:**
+> make OpenAI function calling now & make the architecture add claude api later
+
+**Improved:**
+> Update the AI Chat Builder prompt to use OpenAI function calling (gpt-4o) as the default AI provider — the same proven pattern from OpenAI Explorer. Add a provider-agnostic `AIClient` interface so Claude API can be swapped in later without changing the chat handler, modules, or frontend. Update all references from Claude-specific to OpenAI-first with Claude as future option. Add Phase 9 (Claude Migration) to implementation order.
+
+**Result:**
+- Updated `docs/prompts/chat-builder-system-prompt.md`:
+  - Added `AIClient` interface with `OpenAIClient` (default) and `ClaudeClient` (future) implementations
+  - All Claude API references → OpenAI function calling
+  - Architecture diagram shows AIClient with OpenAI default
+  - Wiring shows one-line swap from OpenAI to Claude
+  - Added Phase 9: Claude API Migration to implementation order
+  - Gotchas reflect OpenAI-specific errors
+- Updated `future.md` Phase 1 description to reflect OpenAI-first approach
+
+---

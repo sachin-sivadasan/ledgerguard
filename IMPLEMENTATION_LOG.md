@@ -1652,3 +1652,35 @@ Connected the Flutter web frontend (Firebase Hosting) to the Go backend (GCP Clo
 - Apple Silicon Docker builds must specify `--platform linux/amd64` for Cloud Run
 - Firebase API key restrictions must include Identity Toolkit API and Token Service API for auth to work
 - Dirty database migrations require manual intervention (set version, complete partial DDL)
+
+---
+
+## [2026-03-07] Excalidraw Architecture Diagrams
+
+**Summary:**
+Created 7 Excalidraw diagram files providing hand-drawn-style visual documentation for developer onboarding and architectural reference.
+
+**Diagrams Created:**
+| Diagram | Elements | Description |
+|---------|----------|-------------|
+| `system-architecture.excalidraw` | 33 | C4-style container diagram: Flutter, Go Backend (DDD layers), PostgreSQL, Shopify, Firebase |
+| `auth-onboarding-flow.excalidraw` | 56 | Left-to-right sequence: login → auth → onboarding → first sync → dashboard |
+| `sync-ledger-rebuild-flow.excalidraw` | 46 | 10-step vertical pipeline: trigger → fetch → rebuild → snapshot |
+| `risk-engine-flow.excalidraw` | 52 | Decision tree: status checks → days past due → risk state classification |
+| `database-er-diagram.excalidraw` | 62 | ER diagram: 13 tables across 5 tiers with relationship arrows |
+| `frontend-screen-flow.excalidraw` | 55 | Navigation map: auth → dashboard → subscriptions/settings/risk |
+| `snapshot-backfill-flow.excalidraw` | 58 | Daily upsert + first-sync backfill + timeline visualization |
+
+**Color Scheme:**
+- Blue (#4A90D9) = Backend/Go | Green (#27AE60) = Frontend/Flutter
+- Orange (#F39C12) = External (Shopify, Firebase) | Purple (#8E44AD) = Database
+- Red (#E74C3C) = Risk/danger | Yellow (#F1C40F) = Warning | Gray (#95A5A6) = Infrastructure
+
+**Files Created:**
+- `docs/diagrams/system-architecture.excalidraw`
+- `docs/diagrams/auth-onboarding-flow.excalidraw`
+- `docs/diagrams/sync-ledger-rebuild-flow.excalidraw`
+- `docs/diagrams/risk-engine-flow.excalidraw`
+- `docs/diagrams/database-er-diagram.excalidraw`
+- `docs/diagrams/frontend-screen-flow.excalidraw`
+- `docs/diagrams/snapshot-backfill-flow.excalidraw`

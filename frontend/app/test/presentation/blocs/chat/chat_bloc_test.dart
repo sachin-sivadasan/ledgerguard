@@ -5,16 +5,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:ledgerguard/domain/entities/chat_message.dart';
+import 'package:ledgerguard/domain/entities/shopify_app.dart';
+import 'package:ledgerguard/domain/repositories/app_repository.dart';
 import 'package:ledgerguard/domain/repositories/chat_repository.dart';
 import 'package:ledgerguard/presentation/blocs/chat/chat.dart';
 
 class MockChatRepository extends Mock implements ChatRepository {}
 
+class MockAppRepository extends Mock implements AppRepository {}
+
+ChatBloc _buildBloc(MockChatRepository mockRepo, MockAppRepository mockAppRepo) {
+  return ChatBloc(repository: mockRepo, appRepository: mockAppRepo);
+}
+
 void main() {
   late MockChatRepository mockRepo;
+  late MockAppRepository mockAppRepo;
 
   setUp(() {
     mockRepo = MockChatRepository();
+    mockAppRepo = MockAppRepository();
+    when(() => mockAppRepo.getSelectedApp()).thenAnswer(
+      (_) async => const ShopifyApp(id: 'app-123', name: 'Test App'),
+    );
   });
 
   group('ChatBloc', () {
@@ -35,7 +48,7 @@ void main() {
               ),
             ]));
 
-        return ChatBloc(repository: mockRepo);
+        return _buildBloc(mockRepo, mockAppRepo);
       },
       act: (bloc) => bloc.add(const SendMessageRequested('What is my MRR?')),
       expect: () => [
@@ -56,6 +69,14 @@ void main() {
               ['Show trend'],
             ),
       ],
+      verify: (_) {
+        // Verify app ID was resolved and passed
+        verify(() => mockRepo.sendMessage(
+              messages: any(named: 'messages'),
+              appId: 'app-123',
+              scopedModule: any(named: 'scopedModule'),
+            )).called(1);
+      },
     );
 
     blocTest<ChatBloc, ChatState>(
@@ -80,7 +101,7 @@ void main() {
               ),
             ]));
 
-        return ChatBloc(repository: mockRepo);
+        return _buildBloc(mockRepo, mockAppRepo);
       },
       act: (bloc) => bloc.add(const SendMessageRequested('Show risk')),
       expect: () => [
@@ -108,7 +129,7 @@ void main() {
               ),
             ]));
 
-        return ChatBloc(repository: mockRepo);
+        return _buildBloc(mockRepo, mockAppRepo);
       },
       act: (bloc) => bloc.add(const SendMessageRequested('hello')),
       expect: () => [
@@ -119,7 +140,7 @@ void main() {
 
     blocTest<ChatBloc, ChatState>(
       'ClearChatRequested resets to ChatInitial',
-      build: () => ChatBloc(repository: mockRepo),
+      build: () => _buildBloc(mockRepo, mockAppRepo),
       seed: () => ChatLoaded(messages: [ChatMessage.user('hi')]),
       act: (bloc) => bloc.add(const ClearChatRequested()),
       expect: () => [isA<ChatInitial>()],
@@ -139,7 +160,7 @@ void main() {
               ),
             ]));
 
-        return ChatBloc(repository: mockRepo);
+        return _buildBloc(mockRepo, mockAppRepo);
       },
       seed: () => ChatError(
         'AI unavailable',
@@ -148,7 +169,6 @@ void main() {
       act: (bloc) =>
           bloc.add(const SendMessageRequested('What is my MRR?')),
       verify: (bloc) {
-        // The API should receive exactly 1 user message, not 2
         final captured = verify(() => mockRepo.sendMessage(
               messages: captureAny(named: 'messages'),
               appId: any(named: 'appId'),
@@ -179,7 +199,7 @@ void main() {
               ),
             ]));
 
-        return ChatBloc(repository: mockRepo);
+        return _buildBloc(mockRepo, mockAppRepo);
       },
       act: (bloc) => bloc.add(const SendMessageRequested('Show risk')),
       expect: () => [
@@ -190,6 +210,33 @@ void main() {
           {'safe': 40, 'churned': 2},
         ),
       ],
+    );
+
+    blocTest<ChatBloc, ChatState>(
+      'sends null appId when no app is selected',
+      build: () {
+        when(() => mockAppRepo.getSelectedApp()).thenAnswer((_) async => null);
+        when(() => mockRepo.sendMessage(
+              messages: any(named: 'messages'),
+              appId: any(named: 'appId'),
+              scopedModule: any(named: 'scopedModule'),
+            )).thenAnswer((_) => Stream.fromIterable([
+              const ChatSSEEvent(
+                type: 'response',
+                data: {'message': 'Please select an app'},
+              ),
+            ]));
+
+        return _buildBloc(mockRepo, mockAppRepo);
+      },
+      act: (bloc) => bloc.add(const SendMessageRequested('hello')),
+      verify: (_) {
+        verify(() => mockRepo.sendMessage(
+              messages: any(named: 'messages'),
+              appId: null,
+              scopedModule: any(named: 'scopedModule'),
+            )).called(1);
+      },
     );
   });
 }

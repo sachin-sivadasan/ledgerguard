@@ -3,18 +3,21 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../domain/entities/chat_message.dart';
+import '../../../domain/repositories/app_repository.dart';
 import '../../../domain/repositories/chat_repository.dart';
 import 'chat_event.dart';
 import 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final ChatRepository _repository;
-  final String? appId;
+  final AppRepository _appRepository;
+  String? _resolvedAppId;
 
   ChatBloc({
     required ChatRepository repository,
-    this.appId,
+    required AppRepository appRepository,
   })  : _repository = repository,
+        _appRepository = appRepository,
         super(const ChatInitial()) {
     on<SendMessageRequested>(_onSendMessage);
     on<SuggestionTapped>(_onSuggestionTapped);
@@ -25,6 +28,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     SendMessageRequested event,
     Emitter<ChatState> emit,
   ) async {
+    // Resolve app ID on first send
+    _resolvedAppId ??= (await _appRepository.getSelectedApp())?.id;
+
     var currentMessages = state is ChatLoaded
         ? (state as ChatLoaded).messages
         : state is ChatError
@@ -48,7 +54,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     final sseStream = _repository.sendMessage(
       messages: [...currentMessages, userMsg],
-      appId: appId,
+      appId: _resolvedAppId,
     );
 
     await emit.forEach<ChatSSEEvent>(

@@ -23,6 +23,7 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/router"
 	"github.com/sachin-sivadasan/ledgerguard/pkg/crypto"
+	chatgraphql "github.com/sachin-sivadasan/ledgerguard/internal/chat/graphql"
 	apikeyhandler "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/handler"
 	apikeysvc "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/application/service"
 	apikeypersist "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/infrastructure/persistence"
@@ -334,6 +335,29 @@ func run() error {
 		log.Println("Insight handler initialized")
 	}
 
+	// Initialize chat GraphQL handler
+	var graphqlHandler http.Handler
+	if subscriptionRepo != nil && txRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
+		riskEngine := domainservice.NewRiskEngine()
+		metricsEngine := domainservice.NewMetricsEngine()
+
+		var subscriptionEventRepo *persistence.PostgresSubscriptionEventRepository
+		subscriptionEventRepo = persistence.NewPostgresSubscriptionEventRepository(db.Pool)
+
+		chatResolver := &chatgraphql.Resolver{
+			SubscriptionRepo:      subscriptionRepo,
+			TransactionRepo:       txRepo,
+			SnapshotRepo:          snapshotRepo,
+			AppRepo:               appRepo,
+			PartnerAccountRepo:    partnerRepo,
+			SubscriptionEventRepo: subscriptionEventRepo,
+			RiskEngine:            riskEngine,
+			MetricsEngine:         metricsEngine,
+		}
+		graphqlHandler = chatgraphql.NewHandler(chatResolver)
+		log.Println("Chat GraphQL handler initialized")
+	}
+
 	// Initialize auth middleware
 	var authMW func(http.Handler) http.Handler
 	if firebaseAuth != nil && userRepo != nil {
@@ -372,6 +396,7 @@ func run() error {
 		DeviceHandler:                   deviceHandler,
 		InsightHandler:                  insightHandler,
 		APIKeyHandler:                   apiKeyHandler,
+		GraphQLHandler:                  graphqlHandler,
 		AuthMW:                          authMW,
 		AdminMW:                         adminMW,
 		InternalMW:                      internalMW,

@@ -29,6 +29,7 @@ type Config struct {
 	InsightHandler                  *handler.InsightHandler
 	WebhookHandler                  *handler.WebhookHandler
 	APIKeyHandler                   *apikeyhandler.APIKeyHandler
+	GraphQLHandler                  http.Handler // Internal chat GraphQL endpoint
 	AuthMW                          func(next http.Handler) http.Handler
 	AdminMW                         func(next http.Handler) http.Handler // RequireRoles(ADMIN)
 	InternalMW                      func(next http.Handler) http.Handler // Internal key authentication
@@ -61,6 +62,15 @@ func New(cfg Config) *chi.Mux {
 			r.Post("/subscriptions", cfg.WebhookHandler.HandleSubscriptionUpdate)
 			r.Post("/uninstalled", cfg.WebhookHandler.HandleAppUninstalled)
 			r.Post("/billing-failure", cfg.WebhookHandler.HandleBillingFailure)
+		})
+	}
+
+	// Internal chat GraphQL endpoint (requires auth)
+	if cfg.GraphQLHandler != nil && cfg.AuthMW != nil {
+		r.Route("/graphql", func(r chi.Router) {
+			r.Use(cfg.AuthMW)
+			r.Handle("/*", cfg.GraphQLHandler)
+			r.Handle("/", cfg.GraphQLHandler)
 		})
 	}
 

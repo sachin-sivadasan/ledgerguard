@@ -25,11 +25,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     SendMessageRequested event,
     Emitter<ChatState> emit,
   ) async {
-    final currentMessages = state is ChatLoaded
+    var currentMessages = state is ChatLoaded
         ? (state as ChatLoaded).messages
         : state is ChatError
             ? (state as ChatError).previousMessages
             : <ChatMessage>[];
+
+    // Remove loading messages and filter out duplicate trailing user message
+    // (prevents double-send on retry after error)
+    currentMessages = currentMessages.where((m) => !m.isLoading).toList();
+    if (currentMessages.isNotEmpty &&
+        currentMessages.last.isUser &&
+        currentMessages.last.content == event.message) {
+      currentMessages = currentMessages.sublist(0, currentMessages.length - 1);
+    }
 
     final userMsg = ChatMessage.user(event.message);
     final loadingMsg = ChatMessage.loading();

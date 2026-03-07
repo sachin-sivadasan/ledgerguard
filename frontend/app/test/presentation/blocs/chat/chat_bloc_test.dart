@@ -126,6 +126,43 @@ void main() {
     );
 
     blocTest<ChatBloc, ChatState>(
+      'retry after error deduplicates trailing user message',
+      build: () {
+        when(() => mockRepo.sendMessage(
+              messages: any(named: 'messages'),
+              appId: any(named: 'appId'),
+              scopedModule: any(named: 'scopedModule'),
+            )).thenAnswer((_) => Stream.fromIterable([
+              const ChatSSEEvent(
+                type: 'response',
+                data: {'message': 'Your MRR is \$1,500'},
+              ),
+            ]));
+
+        return ChatBloc(repository: mockRepo);
+      },
+      seed: () => ChatError(
+        'AI unavailable',
+        previousMessages: [ChatMessage.user('What is my MRR?')],
+      ),
+      act: (bloc) =>
+          bloc.add(const SendMessageRequested('What is my MRR?')),
+      verify: (bloc) {
+        // The API should receive exactly 1 user message, not 2
+        final captured = verify(() => mockRepo.sendMessage(
+              messages: captureAny(named: 'messages'),
+              appId: any(named: 'appId'),
+              scopedModule: any(named: 'scopedModule'),
+            )).captured;
+        final sentMessages = captured.first as List<ChatMessage>;
+        final userMessages =
+            sentMessages.where((m) => m.isUser).toList();
+        expect(userMessages.length, 1,
+            reason: 'should deduplicate on retry');
+      },
+    );
+
+    blocTest<ChatBloc, ChatState>(
       'response with data state populates state fields',
       build: () {
         when(() => mockRepo.sendMessage(

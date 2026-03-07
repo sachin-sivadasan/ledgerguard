@@ -1435,3 +1435,19 @@
 - Updated `future.md` Phase 1 description to reflect OpenAI-first approach
 
 ---
+
+### [2026-03-07] AI Chat + Internal GraphQL — 12-Commit Implementation
+**Original:**
+> implement [the 13-commit AI Chat plan from `docs/prompts/chat-builder-system-prompt.md`]
+
+**Improved:**
+> Implement the AI Chat + Internal GraphQL feature as a 12-commit micro-phase plan. Each commit is a self-contained, testable unit: (1) docs, (2) config+deps, (3) GraphQL schema, (4) gqlgen+resolvers, (5) GraphQL endpoint+tests, (6) module framework, (7) risk module, (8) remaining 5 modules, (9) AIClient+OpenAI, (10) chat handler+SSE, (11) DB migration, (12) Flutter chat UI. Use SSE streaming instead of WebSocket (user decision). All commits follow TDD with tests before implementation.
+
+**Result:**
+- 12 commits implemented across backend and frontend
+- Backend: `internal/chat/` package with GraphQL, 6 modules (16 tools), AIClient interface, SSE handler
+- Frontend: ChatBloc, ChatPage, DataPanel, SSE client, `/chat` route
+- 47 Go tests + 5 Flutter tests passing
+- Architectural change: SSE chosen over WebSocket for chat streaming
+
+---

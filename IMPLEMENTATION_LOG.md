@@ -1684,3 +1684,55 @@ Created 7 Excalidraw diagram files providing hand-drawn-style visual documentati
 - `docs/diagrams/database-er-diagram.excalidraw`
 - `docs/diagrams/frontend-screen-flow.excalidraw`
 - `docs/diagrams/snapshot-backfill-flow.excalidraw`
+
+---
+
+## [2026-03-07] AI Chat + Internal GraphQL — Full Implementation
+
+**Commits:** 12 commits implementing AI-powered chat assistant
+
+### Commit 1: Documentation Updates
+Updated CLAUDE.md, TAD.md, DECISIONS.md, DATABASE_SCHEMA.md, C4.puml, SEQUENCE.puml with AI Chat architecture (GraphQL, SSE, modules, AIClient interface).
+
+### Commit 2: Config + Dependencies
+Added `github.com/sashabaranov/go-openai` dependency, `OpenAIConfig` struct (APIKey, Model) with env var overrides.
+
+### Commit 3: Chat GraphQL Schema
+Created `internal/chat/graphql/schema.graphql` with types (Subscription, Metrics, StoreHealth, RiskSummary, Earnings, DailySnapshot) and `gqlgen.yml` config.
+
+### Commit 4: gqlgen Generation + Resolvers
+Ran `gqlgen generate`, implemented all resolvers in `schema.resolvers.go` delegating to existing domain services (RiskEngine, MetricsEngine) and repositories.
+
+### Commit 5: GraphQL Endpoint + Tests
+Created `handler.go` wrapping gqlgen (GET=playground, POST=execute), wired `/graphql` route with auth middleware. 13 resolver unit tests with hand-written mocks.
+
+### Commit 6: Module Framework
+Created `Module` interface, `Registry` (Register, ListAllTools, RouteToolCall, BuildSystemPrompt), and core types (ToolDefinition, ToolCall, ToolResult). 7 registry tests.
+
+### Commit 7: Risk Module
+First concrete module with 3 tools (get_risk_summary, list_at_risk, get_risk_timeline). Created `GraphQLExecutor` wrapping gqlgen handler with httptest for programmatic execution. 7 tests.
+
+### Commit 8: Remaining 5 Modules
+Implemented subscriptions (4 tools), metrics (3), store_health (2), earnings (2), sync (2) = 13 additional tools across 5 modules. Total: 16 tools in 6 modules.
+
+### Commit 9: AIClient Interface + OpenAI
+Created provider-agnostic `AIClient` interface, `AIProviderRegistry`, and `OpenAIClient` implementation using go-openai SDK with function calling. 7 tests.
+
+### Commit 10: Chat Handler + SSE
+Core orchestration: POST `/api/v1/chat` with SSE streaming (chose SSE over WebSocket for simplicity). Tool call loop (max 5 iterations), state extraction (latest-wins), suggestive replies. 8 handler tests.
+
+### Commit 11: Database Migration
+Migration 000028: `ALTER TABLE notification_preferences ADD COLUMN ai_provider VARCHAR(20) DEFAULT 'openai'`.
+
+### Commit 12: Flutter Chat UI
+ChatBloc (send, suggestions, clear, streaming events), ChatPage with responsive split-pane (chat + data panel on wide screens), SSE stream parsing, message bubbles with suggestion chips. 5 bloc tests.
+
+**Key Architecture Decisions:**
+- SSE streaming over WebSocket (simpler, stateless, works with standard HTTP infrastructure)
+- Module plugin architecture with `module__tool_name` naming convention
+- Provider-agnostic AIClient interface (OpenAI default, Claude future)
+- GraphQL executor via httptest.NewRecorder for programmatic query execution
+
+**Files Created:** ~50 new files across backend `internal/chat/` and frontend `presentation/blocs/chat/`, `widgets/chat/`
+
+**Tests:** 47 new Go tests + 5 Flutter bloc tests

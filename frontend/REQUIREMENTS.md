@@ -131,3 +131,27 @@ dev_dependencies:
 - Firebase Auth integrated
 - AppBar overflow menu on small screens
 - KPI cards scale down for narrow widths
+
+---
+
+## Chat Page (`/chat`)
+
+AI-powered Revenue Intelligence Assistant accessible via dashboard menu.
+
+### Features
+- Natural language queries about subscriptions, revenue, risk, and metrics
+- SSE streaming for real-time tool call progress and responses
+- Responsive split-pane layout: ChatPane (left) + DataPanel (right) on wide screens
+- Suggestion chips for follow-up questions
+- Active tool indicator showing which query is running
+- Welcome screen with starter suggestions
+
+### Architecture
+- `ChatBloc` — Events: SendMessage, SuggestionTapped, ClearChat
+- `ApiChatRepository` — SSE client parsing `data:` events from POST `/api/v1/chat`
+- `ChatMessage` entity with user/assistant/loading states and data panel fields
+- `MessageBubble` — User (blue, right) / Assistant (surface, left) with suggestion chips
+- `DataPanel` — Displays structured risk/metrics/subscription/earnings/store_health data
+
+### Tests
+- [x] ChatBloc: simple response, tool call streaming, error handling, clear, data state

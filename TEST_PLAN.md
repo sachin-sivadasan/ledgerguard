@@ -898,3 +898,65 @@ flutter test --watch
 | Repositories | 80% | - |
 | Widgets | 70% | - |
 | Overall | 80% | - |
+
+---
+
+## 10. AI Chat + GraphQL
+
+### 10.1 GraphQL Resolvers
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| GQL-001 | Subscriptions query with pagination | Returns page with correct limit/offset | ✓ |
+| GQL-002 | Subscription by ID | Returns single subscription or null | ✓ |
+| GQL-003 | Metrics snapshot | Returns latest metrics for app | ✓ |
+| GQL-004 | Metrics trend with date range | Returns snapshots in range | ✓ |
+| GQL-005 | Store health query | Returns risk state for domain | ✓ |
+| GQL-006 | Earnings aggregation by type | Groups transactions correctly | ✓ |
+| GQL-007 | Risk summary counts | Safe/atRisk/churned calculated correctly | ✓ |
+
+### 10.2 Module Registry
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| REG-001 | Register module | Module accessible by name | ✓ |
+| REG-002 | List all tools | Returns tools from all modules with prefixes | ✓ |
+| REG-003 | Route tool call | Dispatches to correct module | ✓ |
+| REG-004 | Route unknown tool | Returns error result | ✓ |
+| REG-005 | Build system prompt | Includes base + module fragments | ✓ |
+
+### 10.3 Risk Module Tools
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| RISK-001 | get_risk_summary tool | Executes GraphQL, returns risk counts | ✓ |
+| RISK-002 | list_at_risk with filter | Returns filtered at-risk subscriptions | ✓ |
+| RISK-003 | get_risk_timeline tool | Returns snapshots over time range | ✓ |
+| RISK-004 | Unknown tool name | Returns error | ✓ |
+
+### 10.4 AIClient / OpenAI
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| AI-001 | Convert system message | Maps to openai.ChatMessageRoleSystem | ✓ |
+| AI-002 | Convert tool definitions | Maps to openai.Tool with FunctionDefinition | ✓ |
+| AI-003 | Convert tool call messages | Maps assistant tool calls correctly | ✓ |
+| AI-004 | Convert tool result messages | Maps to tool role with content | ✓ |
+| AI-005 | Default model | Uses gpt-4o when no model specified | ✓ |
+
+### 10.5 Chat Handler (SSE)
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| CHAT-001 | Simple text response | SSE response event with message | ✓ |
+| CHAT-002 | Tool call loop | tool_call → tool_result → response events | ✓ |
+| CHAT-003 | Empty messages | 400 Bad Request | ✓ |
+| CHAT-004 | No AI provider configured | 503 Service Unavailable | ✓ |
+| CHAT-005 | List modules | Returns module names with tool counts | ✓ |
+| CHAT-006 | State extraction latest-wins | Last non-error result per module | ✓ |
+| CHAT-007 | State extraction skips errors | Error results excluded from state | ✓ |
+| CHAT-008 | Generate suggestions | Context-aware suggestions from tool records | ✓ |
+
+### 10.6 Flutter Chat Bloc
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FBLOC-001 | Send message → response | ChatLoaded with user + assistant messages | ✓ |
+| FBLOC-002 | Tool call streaming | activeToolName set during tool_call event | ✓ |
+| FBLOC-003 | Error event | ChatError with previous messages | ✓ |
+| FBLOC-004 | Clear chat | Resets to ChatInitial | ✓ |
+| FBLOC-005 | Response with data state | Risk/metrics state populated on message | ✓ |

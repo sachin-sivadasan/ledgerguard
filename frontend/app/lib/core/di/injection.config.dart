@@ -38,7 +38,6 @@ import '../../domain/repositories/store_health_repository.dart';
 import '../../domain/repositories/subscription_repository.dart';
 import '../../domain/repositories/user_profile_repository.dart';
 import '../../presentation/blocs/api_key/api_key_bloc.dart';
-import '../../presentation/blocs/chat/chat_bloc.dart';
 import '../../presentation/blocs/app_selection/app_selection_bloc.dart';
 import '../../presentation/blocs/auth/auth_bloc.dart';
 import '../../presentation/blocs/dashboard/dashboard_bloc.dart';
@@ -128,7 +127,7 @@ extension GetItInjectableX on _i1.GetIt {
     registerFactory<ApiKeyBloc>(() => ApiKeyBloc(repository: get<ApiKeyRepository>()));
     registerFactory<EarningsBloc>(() => EarningsBloc(earningsRepository: get<EarningsRepository>()));
     registerFactory<StoreHealthBloc>(() => StoreHealthBloc(get<StoreHealthRepository>()));
-    registerFactory<ChatBloc>(() => ChatBloc(repository: get<ChatRepository>()));
+    // ChatBloc is created manually in app_router.dart with appId from selected app
 
     return this;
   }

@@ -3,6 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../domain/entities/shopify_app.dart';
+import '../../domain/repositories/app_repository.dart';
+import '../../domain/repositories/chat_repository.dart';
 import '../blocs/api_key/api_key.dart';
 import '../blocs/auth/auth.dart';
 import '../blocs/chat/chat.dart';
@@ -100,10 +103,23 @@ class AppRouter {
       GoRoute(
         path: '/chat',
         name: 'chat',
-        builder: (context, state) => BlocProvider(
-          create: (_) => GetIt.instance<ChatBloc>(),
-          child: const ChatPage(),
-        ),
+        builder: (context, state) {
+          // Resolve selected app ID synchronously from AppRepository cache
+          final appRepo = GetIt.instance<AppRepository>();
+          return FutureBuilder<ShopifyApp?>(
+            future: appRepo.getSelectedApp(),
+            builder: (context, snapshot) {
+              final appId = snapshot.data?.id;
+              return BlocProvider(
+                create: (_) => ChatBloc(
+                  repository: GetIt.instance<ChatRepository>(),
+                  appId: appId,
+                ),
+                child: const ChatPage(),
+              );
+            },
+          );
+        },
       ),
       GoRoute(
         path: '/risk-breakdown',

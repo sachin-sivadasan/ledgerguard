@@ -25,6 +25,7 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/pkg/crypto"
 	"github.com/sachin-sivadasan/ledgerguard/internal/chat"
 	chatgraphql "github.com/sachin-sivadasan/ledgerguard/internal/chat/graphql"
+	chatapps "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/apps"
 	chatearnings "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/earnings"
 	chatmetrics "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/metrics"
 	chatrisk "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/risk"
@@ -367,6 +368,7 @@ func run() error {
 		// Set up module registry and chat handler
 		gqlExecutor := chat.NewGraphQLExecutor(graphqlHandler)
 		moduleRegistry := chat.NewRegistry()
+		moduleRegistry.Register(chatapps.New(gqlExecutor))
 		moduleRegistry.Register(chatrisk.New(gqlExecutor))
 		moduleRegistry.Register(chatsubs.New(gqlExecutor))
 		moduleRegistry.Register(chatmetrics.New(gqlExecutor))

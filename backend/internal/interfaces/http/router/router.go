@@ -29,7 +29,9 @@ type Config struct {
 	InsightHandler                  *handler.InsightHandler
 	WebhookHandler                  *handler.WebhookHandler
 	APIKeyHandler                   *apikeyhandler.APIKeyHandler
-	GraphQLHandler                  http.Handler // Internal chat GraphQL endpoint
+	GraphQLHandler                  http.Handler       // Internal chat GraphQL endpoint
+	ChatHandler                     http.HandlerFunc   // POST /api/v1/chat (SSE)
+	ChatModulesHandler              http.HandlerFunc   // GET /api/v1/chat/modules
 	AuthMW                          func(next http.Handler) http.Handler
 	AdminMW                         func(next http.Handler) http.Handler // RequireRoles(ADMIN)
 	InternalMW                      func(next http.Handler) http.Handler // Internal key authentication
@@ -199,6 +201,17 @@ func New(cfg Config) *chi.Mux {
 				r.Use(cfg.AuthMW)
 				r.Post("/", cfg.SyncHandler.SyncAllApps)
 				r.Post("/{appID}", cfg.SyncHandler.SyncApp)
+			})
+		}
+
+		// Chat routes (requires auth, SSE streaming)
+		if cfg.ChatHandler != nil && cfg.AuthMW != nil {
+			r.Route("/chat", func(r chi.Router) {
+				r.Use(cfg.AuthMW)
+				r.Post("/", cfg.ChatHandler)
+				if cfg.ChatModulesHandler != nil {
+					r.Get("/modules", cfg.ChatModulesHandler)
+				}
 			})
 		}
 

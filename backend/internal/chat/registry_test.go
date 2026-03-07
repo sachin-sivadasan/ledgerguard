@@ -2,47 +2,8 @@ package chat
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 )
-
-// stubModule is a minimal Module implementation for testing.
-type stubModule struct {
-	name        string
-	description string
-	prompt      string
-	tools       []ToolDefinition
-	lastCall    *ToolCall
-}
-
-func (m *stubModule) Name() string           { return m.name }
-func (m *stubModule) Description() string    { return m.description }
-func (m *stubModule) PromptFragment() string { return m.prompt }
-func (m *stubModule) Tools() []ToolDefinition { return m.tools }
-func (m *stubModule) ExecuteTool(ctx context.Context, call ToolCall) ToolResult {
-	m.lastCall = &call
-	return ToolResult{
-		ToolCallID: call.ID,
-		Content:    `{"ok": true}`,
-	}
-}
-
-func newStubModule(name string, toolNames ...string) *stubModule {
-	tools := make([]ToolDefinition, len(toolNames))
-	for i, tn := range toolNames {
-		tools[i] = ToolDefinition{
-			Name:        tn,
-			Description: "Test tool " + tn,
-			Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
-		}
-	}
-	return &stubModule{
-		name:        name,
-		description: "Test " + name + " module",
-		prompt:      "You can query " + name + " data.",
-		tools:       tools,
-	}
-}
 
 func TestRegistry_Register(t *testing.T) {
 	reg := NewRegistry()
@@ -181,17 +142,4 @@ func TestRegistry_BuildSystemPrompt_Scoped(t *testing.T) {
 	if contains(prompt, "metrics") {
 		t.Error("expected prompt to NOT contain metrics fragment when scoped to risk")
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && searchString(s, substr)
-}
-
-func searchString(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

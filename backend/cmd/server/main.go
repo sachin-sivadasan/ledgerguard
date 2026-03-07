@@ -23,7 +23,13 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/router"
 	"github.com/sachin-sivadasan/ledgerguard/pkg/crypto"
+	"github.com/sachin-sivadasan/ledgerguard/internal/chat"
 	chatgraphql "github.com/sachin-sivadasan/ledgerguard/internal/chat/graphql"
+	chatearnings "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/earnings"
+	chatmetrics "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/metrics"
+	chatrisk "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/risk"
+	chatstorehealth "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/store_health"
+	chatsubs "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/subscriptions"
 	apikeyhandler "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/handler"
 	apikeysvc "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/application/service"
 	apikeypersist "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/infrastructure/persistence"
@@ -335,8 +341,9 @@ func run() error {
 		log.Println("Insight handler initialized")
 	}
 
-	// Initialize chat GraphQL handler
+	// Initialize chat GraphQL handler and chat handler
 	var graphqlHandler http.Handler
+	var chatHandler *chat.Handler
 	if subscriptionRepo != nil && txRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
 		riskEngine := domainservice.NewRiskEngine()
 		metricsEngine := domainservice.NewMetricsEngine()
@@ -356,6 +363,26 @@ func run() error {
 		}
 		graphqlHandler = chatgraphql.NewHandler(chatResolver)
 		log.Println("Chat GraphQL handler initialized")
+
+		// Set up module registry and chat handler
+		gqlExecutor := chat.NewGraphQLExecutor(graphqlHandler)
+		moduleRegistry := chat.NewRegistry()
+		moduleRegistry.Register(chatrisk.New(gqlExecutor))
+		moduleRegistry.Register(chatsubs.New(gqlExecutor))
+		moduleRegistry.Register(chatmetrics.New(gqlExecutor))
+		moduleRegistry.Register(chatstorehealth.New(gqlExecutor))
+		moduleRegistry.Register(chatearnings.New(gqlExecutor))
+
+		// Set up AI provider
+		aiProviders := chat.NewAIProviderRegistry("openai")
+		if cfg.OpenAI.APIKey != "" {
+			openaiClient := external.NewOpenAIClient(cfg.OpenAI.APIKey, cfg.OpenAI.Model)
+			aiProviders.Register("openai", openaiClient)
+			log.Println("OpenAI chat provider registered")
+		}
+
+		chatHandler = chat.NewHandler(moduleRegistry, aiProviders)
+		log.Println("Chat handler initialized with", len(moduleRegistry.Modules()), "modules")
 	}
 
 	// Initialize auth middleware
@@ -400,6 +427,12 @@ func run() error {
 		AuthMW:                          authMW,
 		AdminMW:                         adminMW,
 		InternalMW:                      internalMW,
+	}
+
+	// Wire chat handler if available
+	if chatHandler != nil {
+		routerCfg.ChatHandler = chatHandler.HandleChat
+		routerCfg.ChatModulesHandler = chatHandler.HandleListModules
 	}
 
 	r := router.New(routerCfg)

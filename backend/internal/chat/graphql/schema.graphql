@@ -1,0 +1,123 @@
+type Query {
+  # Subscriptions
+  subscriptions(
+    appId: ID!
+    riskState: RiskState
+    status: SubscriptionStatus
+    domain: String
+    limit: Int = 50
+    offset: Int = 0
+  ): SubscriptionConnection!
+
+  subscription(id: ID!): Subscription
+
+  # Metrics
+  metrics(appId: ID!): Metrics!
+  metricsTrend(appId: ID!, months: Int = 6): [DailySnapshot!]!
+
+  # Store Health
+  storeHealth(appId: ID!, domain: String!): StoreHealth!
+
+  # Earnings
+  earnings(appId: ID!): Earnings!
+
+  # Risk Summary
+  riskSummary(appId: ID!): RiskSummary!
+}
+
+type Subscription {
+  id: ID!
+  domain: String!
+  shopName: String!
+  plan: String
+  status: SubscriptionStatus!
+  riskState: RiskState!
+  mrrCents: Int!
+  currency: String!
+  daysPastDue: Int
+  lastPaymentDate: DateTime
+  expectedNextCharge: DateTime
+  billingInterval: BillingInterval!
+}
+
+type Metrics {
+  activeMrrCents: Int!
+  revenueAtRiskCents: Int!
+  usageRevenueCents: Int!
+  totalRevenueCents: Int!
+  renewalSuccessRate: Float!
+  safeCount: Int!
+  oneCycleMissedCount: Int!
+  twoCyclesMissedCount: Int!
+  churnedCount: Int!
+}
+
+type StoreHealth {
+  domain: String!
+  shopName: String!
+  isPaid: Boolean!
+  riskState: RiskState!
+  subscription: Subscription
+  lastPaymentDate: DateTime
+  daysPastDue: Int
+}
+
+type RiskSummary {
+  totalSubscriptions: Int!
+  safe: Int!
+  oneCycleMissed: Int!
+  twoCyclesMissed: Int!
+  churned: Int!
+  revenueAtRiskCents: Int!
+  atRiskSubscriptions: [Subscription!]!
+}
+
+type DailySnapshot {
+  date: DateTime!
+  activeMrrCents: Int!
+  renewalSuccessRate: Float!
+  revenueAtRiskCents: Int!
+  safeCount: Int!
+  churnedCount: Int!
+}
+
+type Earnings {
+  recurringCents: Int!
+  usageCents: Int!
+  oneTimeCents: Int!
+  refundCents: Int!
+  totalCents: Int!
+}
+
+type SubscriptionConnection {
+  nodes: [Subscription!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+enum RiskState {
+  SAFE
+  ONE_CYCLE_MISSED
+  TWO_CYCLES_MISSED
+  CHURNED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  FROZEN
+  PENDING
+  UNINSTALLED
+}
+
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
+}
+
+scalar DateTime

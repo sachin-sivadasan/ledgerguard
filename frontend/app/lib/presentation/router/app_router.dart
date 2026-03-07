@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../blocs/api_key/api_key.dart';
 import '../blocs/auth/auth.dart';
+import '../blocs/chat/chat.dart';
 import '../blocs/store_health/store_health.dart';
 import '../blocs/subscription_detail/subscription_detail.dart';
 import '../blocs/subscription_list/subscription_list.dart';
@@ -22,6 +23,7 @@ import '../pages/risk_breakdown_page.dart';
 import '../pages/signup_page.dart';
 import '../pages/store_health_page.dart';
 import '../pages/onboarding_page.dart';
+import '../pages/chat_page.dart';
 import '../pages/placeholder_page.dart';
 import '../pages/settings_page.dart';
 import '../pages/subscription_detail_page.dart';
@@ -94,6 +96,14 @@ class AppRouter {
         path: '/admin/manual-integration',
         name: 'manual-integration',
         builder: (context, state) => const ManualIntegrationPage(),
+      ),
+      GoRoute(
+        path: '/chat',
+        name: 'chat',
+        builder: (context, state) => BlocProvider(
+          create: (_) => GetIt.instance<ChatBloc>(),
+          child: const ChatPage(),
+        ),
       ),
       GoRoute(
         path: '/risk-breakdown',

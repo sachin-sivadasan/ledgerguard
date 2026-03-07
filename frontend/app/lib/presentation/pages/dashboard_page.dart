@@ -107,6 +107,9 @@ class _DashboardPageState extends State<DashboardPage> {
             tooltip: 'More options',
             onSelected: (value) {
               switch (value) {
+                case 'chat':
+                  context.push('/chat');
+                  break;
                 case 'sync':
                   _triggerSync(context);
                   break;
@@ -125,6 +128,15 @@ class _DashboardPageState extends State<DashboardPage> {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'chat',
+                child: ListTile(
+                  leading: Icon(Icons.smart_toy_outlined),
+                  title: Text('AI Assistant'),
+                  contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
               const PopupMenuItem(
                 value: 'sync',
                 child: ListTile(

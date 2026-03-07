@@ -14,6 +14,12 @@ type Config struct {
 	Firebase   FirebaseConfig   `yaml:"firebase"`
 	Shopify    ShopifyConfig    `yaml:"shopify"`
 	Encryption EncryptionConfig `yaml:"encryption"`
+	OpenAI     OpenAIConfig     `yaml:"openai"`
+}
+
+type OpenAIConfig struct {
+	APIKey string `yaml:"api_key"`
+	Model  string `yaml:"model"` // default "gpt-4o"
 }
 
 type ServerConfig struct {
@@ -65,6 +71,9 @@ func Load(configPath string) (*Config, error) {
 		},
 		Shopify: ShopifyConfig{
 			RateLimitRPS: 3.0, // Default 3 requests per second for Partner API
+		},
+		OpenAI: OpenAIConfig{
+			Model: "gpt-4o",
 		},
 	}
 
@@ -153,6 +162,14 @@ func applyEnvOverrides(cfg *Config) {
 	// Encryption
 	if v := os.Getenv("ENCRYPTION_MASTER_KEY"); v != "" {
 		cfg.Encryption.MasterKey = v
+	}
+
+	// OpenAI
+	if v := os.Getenv("OPENAI_API_KEY"); v != "" {
+		cfg.OpenAI.APIKey = v
+	}
+	if v := os.Getenv("OPENAI_MODEL"); v != "" {
+		cfg.OpenAI.Model = v
 	}
 }
 

@@ -225,3 +225,76 @@ The Flutter web frontend needed to be deployed for staging, pointing to the GCP 
 - CORS explicitly lists allowed origins rather than using wildcards (more secure)
 - Apple Silicon developers must use platform flag for Cloud Run builds
 - Firebase Auth requires Identity Toolkit API + Token Service API enabled on API key restrictions
+
+---
+
+### ADR-011: gqlgen for Internal GraphQL Layer
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:**
+Need a GraphQL layer for AI Chat to query revenue data. Options: gqlgen (code-first Go), graphql-go, or custom JSON-based query engine.
+
+**Decision:**
+Use gqlgen — already a transitive dependency via Revenue API. Schema-first approach with code generation. Internal-only (not a public API contract), protected by Firebase Auth.
+
+**Consequences:**
+- Type-safe resolvers generated from schema
+- Resolvers delegate to existing domain services (no new business logic)
+- GraphQL Playground available for testing at `/graphql` (GET)
+- Schema can iterate freely since it's internal
+- `go generate` step required after schema changes
+
+---
+
+### ADR-012: OpenAI-First with AIClient Interface
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:**
+Need an LLM for chat function calling. OpenAI gpt-4o has mature function calling. Want to add Claude later.
+
+**Decision:**
+Create `AIClient` interface with OpenAI as first implementation. Interface methods: `ChatCompletion()` with tool definitions. Provider selected per-user via `ai_provider` column in `user_preferences`.
+
+**Consequences:**
+- OpenAI ships first — proven function calling pattern
+- Claude API can be added as parallel provider without changing chat handler or modules
+- Users can switch providers in settings
+- Each provider handles its own tool format conversion
+
+---
+
+### ADR-013: WebSocket for Chat Communication
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:**
+AI chat needs real-time communication. Options: REST polling, SSE, WebSocket.
+
+**Decision:**
+Use WebSocket (`gorilla/websocket`) for bidirectional streaming. Supports typing indicators, tool call progress, and streaming responses.
+
+**Consequences:**
+- Real-time UX (no polling delay)
+- Slightly more complex than REST
+- Needs WebSocket upgrade support in reverse proxy (Caddy handles this)
+- Firebase Auth token sent as query parameter on connection
+
+---
+
+### ADR-014: Module Plugin Architecture for Chat Tools
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:**
+AI chat needs 16+ tools across 6 domains (risk, subscriptions, metrics, etc.). Need organized, extensible structure.
+
+**Decision:**
+Module plugin pattern: each module implements `Module` interface with `Name()`, `Description()`, `PromptFragment()`, `Tools()`, `ExecuteTool()`. Registry manages registration and routing. Tool names use `module__tool_name` format (double underscore for OpenAI compliance).
+
+**Consequences:**
+- Modules are self-contained and independently testable
+- New modules can be added without touching existing code
+- System prompt assembled dynamically from registered modules
+- Clear ownership: each module owns its tools and GraphQL queries

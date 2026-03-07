@@ -230,7 +230,50 @@ class AppsBloc extends Bloc<AppsEvent, AppsState> {
 - Widget tests for UI components
 - Run: `flutter test`
 
-### 12. Risk Engine (Authoritative)
+### 12. AI Chat + Internal GraphQL
+```
+backend/internal/chat/
+├── module.go                         → Module interface
+├── registry.go                       → Module registry (register, route, build prompt)
+├── types.go                          → ToolDefinition, ToolCall, ToolResult, ChatMessage
+├── handler.go                        → Chat WebSocket handler + /chat/modules endpoint
+├── ai_client.go                      → AIClient interface (provider-agnostic)
+├── ai_provider_registry.go           → AIProviderRegistry (OpenAI, Claude, etc.)
+├── graphql_executor.go               → Thread-safe gqlgen executor wrapper
+├── graphql/
+│   ├── schema.graphql                → Internal GraphQL schema
+│   ├── gqlgen.yml                    → gqlgen config
+│   ├── generated.go                  → Generated runtime (gqlgen)
+│   ├── models_gen.go                 → Generated models (gqlgen)
+│   ├── resolver.go                   → Root resolver with injected repos/services
+│   ├── schema.resolvers.go           → Resolver implementations
+│   └── handler.go                    → HTTP handler (GET=playground, POST=execute)
+└── modules/
+    ├── risk/                         → Risk module (3 tools)
+    ├── subscriptions/                → Subscriptions module (4 tools)
+    ├── metrics/                      → Metrics module (3 tools)
+    ├── store_health/                 → Store health module (2 tools)
+    ├── earnings/                     → Earnings module (2 tools)
+    └── sync/                         → Sync module (2 tools)
+```
+
+**Commands:**
+| Action | Command |
+|--------|---------|
+| Generate GraphQL | `cd backend && go generate ./internal/chat/graphql/` |
+| Run chat tests | `cd backend && go test ./internal/chat/... -v` |
+
+**Endpoints:**
+| Endpoint | Auth | Description |
+|----------|------|-------------|
+| `/graphql` (GET) | Firebase | GraphQL Playground |
+| `/graphql` (POST) | Firebase | Execute GraphQL query |
+| `/api/v1/chat` | Firebase (WebSocket) | AI chat via WebSocket |
+| `/api/v1/chat/modules` | Firebase | List available modules + tools |
+
+**Module Tool Naming:** `module__tool_name` (double underscore, OpenAI-compliant)
+
+### 13. Risk Engine (Authoritative)
 ```go
 func ClassifyRisk(status string, expectedNextCharge time.Time, now time.Time) RiskState {
     if status == "ACTIVE" {

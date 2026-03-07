@@ -98,6 +98,24 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(sync_scheduler, "SyncScheduler", "Scheduler", "12-hour background sync")
 }
 
+' AI Chat Module
+Container_Boundary(chat_module, "AI Chat") {
+    Component(chat_handler, "ChatHandler", "WebSocket Handler", "WS /api/v1/chat")
+    Component(chat_modules_handler, "ModulesHandler", "HTTP Handler", "GET /api/v1/chat/modules")
+    Component(module_registry, "ModuleRegistry", "Registry", "Register modules, route tool calls")
+    Component(ai_client_if, "AIClient", "Interface", "Provider-agnostic AI abstraction")
+    Component(openai_chat_client, "OpenAIChatClient", "External Adapter", "GPT-4o function calling")
+    Component(graphql_executor, "GraphQLExecutor", "Executor", "Thread-safe gqlgen wrapper")
+    Component(chat_graphql_handler, "GraphQLHandler", "HTTP Handler", "GET/POST /graphql")
+    Component(chat_resolvers, "ChatResolvers", "GraphQL", "Delegates to domain services")
+    Component(risk_module, "RiskModule", "Module", "3 tools: summary, at-risk list, timeline")
+    Component(sub_module, "SubscriptionsModule", "Module", "4 tools: list, detail, search, summary")
+    Component(metrics_module, "MetricsModule", "Module", "3 tools: current, trend, compare")
+    Component(store_health_module, "StoreHealthModule", "Module", "2 tools: check, overview")
+    Component(earnings_module, "EarningsModule", "Module", "2 tools: summary, timeline")
+    Component(sync_module, "SyncModule", "Module", "2 tools: trigger, status")
+}
+
 ' Revenue API Module
 Container_Boundary(revenue_api, "Revenue API") {
     Component(revenue_api_router, "Revenue API Router", "Chi Router", "/revenue-api/v1/*")
@@ -189,6 +207,33 @@ Rel(user_prefs_handler, user_prefs_repo_if, "CRUD preferences")
 Rel(sync_scheduler, sync_service, "Trigger periodic sync")
 
 ' Revenue API relationships
+' AI Chat relationships
+Rel(router, chat_handler, "WS /api/v1/chat")
+Rel(router, chat_modules_handler, "/api/v1/chat/modules")
+Rel(router, chat_graphql_handler, "/graphql")
+Rel(chat_handler, module_registry, "Route tool calls")
+Rel(chat_handler, ai_client_if, "Chat completions")
+Rel(ai_client_if, openai_chat_client, "Implements")
+Rel(openai_chat_client, openai, "GPT-4o API")
+Rel(module_registry, risk_module, "Routes")
+Rel(module_registry, sub_module, "Routes")
+Rel(module_registry, metrics_module, "Routes")
+Rel(module_registry, store_health_module, "Routes")
+Rel(module_registry, earnings_module, "Routes")
+Rel(module_registry, sync_module, "Routes")
+Rel(risk_module, graphql_executor, "Executes queries")
+Rel(sub_module, graphql_executor, "Executes queries")
+Rel(metrics_module, graphql_executor, "Executes queries")
+Rel(store_health_module, graphql_executor, "Executes queries")
+Rel(earnings_module, graphql_executor, "Executes queries")
+Rel(sync_module, graphql_executor, "Executes queries")
+Rel(graphql_executor, chat_resolvers, "Resolves")
+Rel(chat_resolvers, risk_engine, "Classify risk")
+Rel(chat_resolvers, metrics_engine, "Calculate KPIs")
+Rel(chat_resolvers, sub_repo_if, "Query subscriptions")
+Rel(chat_resolvers, tx_repo_if, "Query transactions")
+Rel(chat_resolvers, snapshot_repo_if, "Query snapshots")
+
 Rel(revenue_api_router, api_key_auth, "Uses")
 Rel(revenue_api_router, rate_limiter, "Uses")
 Rel(revenue_api_router, sub_status_handler, "/subscriptions/:id/status")

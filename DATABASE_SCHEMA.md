@@ -188,6 +188,7 @@ User notification settings.
 | daily_summary_enabled | BOOLEAN | DEFAULT TRUE | Daily summary email |
 | daily_summary_time | TIME | DEFAULT '08:00' | Local time for summary |
 | slack_webhook_url | VARCHAR(500) | | Slack integration (Pro) |
+| ai_provider | VARCHAR(20) | DEFAULT 'openai' | Preferred AI provider (openai, claude) |
 | created_at | TIMESTAMPTZ | DEFAULT NOW() | Creation time |
 | updated_at | TIMESTAMPTZ | DEFAULT NOW() | Last modified |
 
@@ -481,6 +482,7 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000025_add_onboarding_completed_at | Add onboarding_completed_at to users table | ✓ Implemented |
 | 000026_add_default_app_to_preferences | Add default_app_id to user_preferences for multi-app support | ✓ Implemented |
 | 000027_add_install_count_to_apps | Add install_count to apps table for Partner API data | ✓ Implemented |
+| 000028_add_ai_provider_to_user_preferences | Add ai_provider column for per-user AI provider selection | Planned |
 
 ---
 

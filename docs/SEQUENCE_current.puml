@@ -835,4 +835,79 @@ end
 
 Scheduler -> Scheduler: Update lastCheckedHour
 
+' ==========================================
+' 14. AI Chat Flow (WebSocket)
+' ==========================================
+newpage AI Chat Flow (WebSocket)
+
+actor User
+participant "Flutter App" as App
+participant "Chat Handler" as Chat
+participant "Module Registry" as Registry
+participant "AIClient\n(OpenAI)" as AI
+participant "GraphQL Executor" as GQL
+participant "Domain Services" as Domain
+database "PostgreSQL" as DB
+
+note over User, DB
+  AI-powered chat via WebSocket.
+  OpenAI function calling → GraphQL queries → Domain services.
+  Max 5 tool call iterations per message.
+end note
+
+== WebSocket Connection ==
+
+User -> App: Open chat page
+App -> Chat: WS Upgrade\n/api/v1/chat?token=<firebase_token>
+Chat -> Chat: Verify Firebase token
+Chat --> App: WS Connected
+
+== User Message ==
+
+User -> App: "Which stores haven't paid in 60+ days?"
+App -> Chat: { type: "message",\ncontent: "Which stores...",\ncontext: [] }
+
+Chat -> Registry: BuildSystemPrompt()
+Registry --> Chat: System prompt with\nall module descriptions + tools
+
+Chat -> AI: ChatCompletion(\nsystem_prompt,\nuser_message,\ntool_definitions)
+
+AI --> Chat: ToolCallRequest[\n{ name: "risk__list_at_risk",\n  args: { min_days_overdue: 60 } }\n]
+
+Chat --> App: { type: "tool_call",\ntool: "risk__list_at_risk" }
+
+== Tool Execution Loop (max 5 iterations) ==
+
+Chat -> Registry: RouteToolCall("risk__list_at_risk", args)
+Registry -> Registry: Find "risk" module
+
+Registry -> GQL: Execute GraphQL query\n{ subscriptions(riskState: [...]) }
+GQL -> Domain: RiskEngine.ClassifyRisk()
+Domain -> DB: SELECT subscriptions WHERE risk_state IN (...)
+DB --> Domain: Subscription records
+Domain --> GQL: Classified subscriptions
+GQL --> Registry: GraphQL response
+
+Registry --> Chat: ToolResult { data: [...] }
+
+Chat -> AI: ChatCompletion(\nmessages + tool_result)
+
+alt AI needs more data
+    AI --> Chat: Another ToolCallRequest
+    Chat -> Chat: Increment iteration counter
+    note right: Loop continues (max 5)
+else AI has enough data
+    AI --> Chat: Final text response
+end
+
+== State Extraction ==
+
+Chat -> Chat: Reverse scan tool results\nExtract latest state per module\n(subscriptions, metrics, risk, etc.)
+
+Chat -> Chat: Generate suggestive replies\n(3 follow-up questions)
+
+Chat --> App: { type: "message",\ncontent: "Here are 5 stores...",\nstate: { subscriptions: [...] },\nsuggestions: [\n  "What's the total revenue at risk?",\n  "Show me their payment history",\n  "Which plans are most affected?"\n] }
+
+App --> User: Display message + data panel\n(subscription table on right)
+
 @enduml

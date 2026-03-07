@@ -448,10 +448,10 @@ CREATE TABLE notifications (
 - **Client SDK:** Login, token refresh
 
 ### OpenAI (Pro)
-- **Model:** GPT-4o-mini
-- **Purpose:** Daily insight generation
-- **Input:** Structured JSON snapshot
-- **Output:** 80-120 word summary
+- **Model:** GPT-4o-mini (insights), GPT-4o (chat)
+- **Purpose:** Daily insight generation + AI Chat function calling
+- **Input:** Structured JSON snapshot (insights) / natural language + tools (chat)
+- **Output:** 80-120 word summary (insights) / tool calls + response (chat)
 
 ### Email (Notifications)
 - **Provider:** SendGrid / AWS SES
@@ -463,7 +463,61 @@ CREATE TABLE notifications (
 
 ---
 
-## 10. Error Handling
+## 10. AI Chat + Internal GraphQL
+
+### Architecture
+
+```
+Flutter Chat UI ──WebSocket──► Chat Handler
+                                    │
+                                    ├── Module Registry (6 modules, 16 tools)
+                                    │       │
+                                    │       └── Tool Execution → GraphQL Executor
+                                    │                                │
+                                    ├── AIClient Interface ◄─────────┘
+                                    │       │
+                                    │       ├── OpenAIClient (gpt-4o, function calling)
+                                    │       └── ClaudeClient (future)
+                                    │
+                                    └── GraphQL Resolvers → Domain Services → PostgreSQL
+```
+
+### Components
+
+| Component | Purpose |
+|-----------|---------|
+| `AIClient` interface | Provider-agnostic AI abstraction (OpenAI today, Claude later) |
+| `Module` interface | Self-contained plugin: `Name()`, `Tools()`, `ExecuteTool()` |
+| `Registry` | Registers modules, routes tool calls, builds system prompts |
+| `GraphQL Executor` | Thread-safe gqlgen wrapper for tool execution |
+| `Chat Handler` | WebSocket endpoint, tool call loop (max 5), state extraction |
+
+### Modules
+
+| Module | Tools | Description |
+|--------|-------|-------------|
+| `risk` | 3 | Risk summary, at-risk list, risk timeline |
+| `subscriptions` | 4 | List, detail, search, summary |
+| `metrics` | 3 | Current, trend, compare |
+| `store_health` | 2 | Health check, overview |
+| `earnings` | 2 | Summary, timeline |
+| `sync` | 2 | Trigger sync, sync status |
+
+### WebSocket Protocol
+
+```json
+// Client → Server
+{ "type": "message", "content": "What's my MRR?", "context": [] }
+
+// Server → Client (streaming)
+{ "type": "thinking", "content": "Fetching metrics..." }
+{ "type": "tool_call", "tool": "metrics__get_current", "args": {...} }
+{ "type": "message", "content": "Your MRR is $4,250...", "state": {...}, "suggestions": [...] }
+```
+
+---
+
+## 11. Error Handling
 
 ### API Errors
 ```json
@@ -500,7 +554,7 @@ retrier := retry.New(
 
 ---
 
-## 11. Observability
+## 12. Observability
 
 ### Logging
 - **Format:** Structured JSON

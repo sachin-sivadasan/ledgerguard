@@ -1,5 +1,5 @@
 schema:
-  - schema.graphql
+  - "*.graphql"
 
 exec:
   filename: generated.go
@@ -13,6 +13,7 @@ resolver:
   layout: follow-schema
   dir: .
   package: graphql
+  filename_template: "{name}.resolvers.go"
 
 models:
   DateTime:

@@ -3,13 +3,13 @@ type Query {
   subscriptions(
     appId: ID!
     riskState: RiskState
-    status: SubscriptionStatus
+    status: AppSubscriptionStatus
     domain: String
     limit: Int = 50
     offset: Int = 0
-  ): SubscriptionConnection!
+  ): AppSubscriptionConnection!
 
-  subscription(id: ID!): Subscription
+  subscription(id: ID!): AppSubscription
 
   # Metrics
   metrics(appId: ID!): Metrics!
@@ -21,16 +21,31 @@ type Query {
   # Earnings
   earnings(appId: ID!): Earnings!
 
+  # Transactions
+  transactions(
+    appId: ID!
+    chargeType: ChargeType
+    domain: String
+    startDate: DateTime
+    endDate: DateTime
+    limit: Int = 50
+    offset: Int = 0
+  ): TransactionConnection!
+
   # Risk Summary
   riskSummary(appId: ID!): RiskSummary!
+
+  # Apps
+  apps: [App!]!
+  app(id: ID!): App
 }
 
-type Subscription {
+type AppSubscription {
   id: ID!
   domain: String!
   shopName: String!
   plan: String
-  status: SubscriptionStatus!
+  status: AppSubscriptionStatus!
   riskState: RiskState!
   mrrCents: Int!
   currency: String!
@@ -38,6 +53,26 @@ type Subscription {
   lastPaymentDate: DateTime
   expectedNextCharge: DateTime
   billingInterval: BillingInterval!
+  events(limit: Int = 10): [AppSubscriptionEvent!]!
+}
+
+type AppSubscriptionEvent {
+  id: ID!
+  eventType: String!
+  fromStatus: String
+  toStatus: String
+  fromRiskState: String
+  toRiskState: String
+  reason: String
+  occurredAt: DateTime!
+}
+
+type App {
+  id: ID!
+  name: String!
+  partnerAppId: String!
+  trackingEnabled: Boolean!
+  installCount: Int!
 }
 
 type Metrics {
@@ -57,7 +92,7 @@ type StoreHealth {
   shopName: String!
   isPaid: Boolean!
   riskState: RiskState!
-  subscription: Subscription
+  subscription: AppSubscription
   lastPaymentDate: DateTime
   daysPastDue: Int
 }
@@ -69,7 +104,7 @@ type RiskSummary {
   twoCyclesMissed: Int!
   churned: Int!
   revenueAtRiskCents: Int!
-  atRiskSubscriptions: [Subscription!]!
+  atRiskSubscriptions: [AppSubscription!]!
 }
 
 type DailySnapshot {
@@ -89,8 +124,27 @@ type Earnings {
   totalCents: Int!
 }
 
-type SubscriptionConnection {
-  nodes: [Subscription!]!
+type Transaction {
+  id: ID!
+  domain: String!
+  shopName: String!
+  chargeType: ChargeType!
+  grossAmountCents: Int!
+  netAmountCents: Int!
+  currency: String!
+  transactionDate: DateTime!
+  subscriptionGid: String
+  billingInterval: BillingInterval
+}
+
+type TransactionConnection {
+  nodes: [Transaction!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
+}
+
+type AppSubscriptionConnection {
+  nodes: [AppSubscription!]!
   totalCount: Int!
   pageInfo: PageInfo!
 }
@@ -107,7 +161,7 @@ enum RiskState {
   CHURNED
 }
 
-enum SubscriptionStatus {
+enum AppSubscriptionStatus {
   ACTIVE
   CANCELLED
   FROZEN
@@ -118,6 +172,13 @@ enum SubscriptionStatus {
 enum BillingInterval {
   MONTHLY
   ANNUAL
+}
+
+enum ChargeType {
+  RECURRING
+  USAGE
+  ONE_TIME
+  REFUND
 }
 
 scalar DateTime

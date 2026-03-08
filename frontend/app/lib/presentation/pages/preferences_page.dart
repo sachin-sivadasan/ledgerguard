@@ -30,6 +30,7 @@ class _PreferencesPageState extends State<PreferencesPage> {
             builder: (context, state) {
               if (state is PreferencesLoaded && state.hasUnsavedChanges) {
                 return TextButton(
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
                   onPressed: state.isSaving
                       ? null
                       : () {
@@ -41,7 +42,10 @@ class _PreferencesPageState extends State<PreferencesPage> {
                       ? const SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text('Save'),
                 );

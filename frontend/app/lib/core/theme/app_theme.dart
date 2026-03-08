@@ -23,9 +23,10 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: background,
       appBarTheme: const AppBarTheme(
-        backgroundColor: background,
-        foregroundColor: secondary,
+        backgroundColor: primary,
+        foregroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

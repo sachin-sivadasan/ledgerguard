@@ -281,28 +281,51 @@ EXPIRED TRIAL (read-only mode):
 |  7. Backend updates billing_subscription + plan_tier = STARTER        |
 |  8. User redirected to success_url, sees features unlocked            |
 |                                                                       |
-|  UPGRADE (STARTER -> PRO):                                            |
+|  UPGRADE (STARTER -> PRO) — IMMEDIATE with proration:                 |
 |  1. User clicks "Upgrade to Pro" in settings                         |
-|  2. Frontend calls POST /api/v1/billing/checkout                      |
+|  2. Frontend calls POST /api/v1/billing/upgrade                       |
 |     { plan_id: "pro_monthly" }                                        |
-|  3. Stripe handles proration (credit remaining Starter, charge Pro)   |
-|  4. Webhook confirms update, plan_tier = PRO                          |
-|  5. AI Chat, API Keys, Slack, export, multi-app unlocked              |
+|  3. Backend calls Stripe: update subscription                         |
+|     - proration_behavior: "create_prorations"                         |
+|     - Stripe credits unused Starter time                              |
+|     - Stripe charges Pro price minus credit                           |
+|     - Prorated invoice generated immediately                          |
+|  4. Stripe fires customer.subscription.updated webhook                |
+|  5. Backend sets plan_tier = PRO immediately                          |
+|  6. AI Chat, API Keys, Slack, export, multi-app unlocked right away   |
 |                                                                       |
-|  CANCEL (any paid -> EXPIRED):                                        |
+|  DOWNGRADE (PRO -> STARTER) — SCHEDULED at period end:                |
+|  1. User clicks "Downgrade to Starter" in settings                   |
+|  2. Frontend calls POST /api/v1/billing/downgrade                     |
+|     { plan_id: "starter_monthly" }                                    |
+|  3. Backend records scheduled downgrade:                              |
+|     - billing_subscription.scheduled_plan_id = starter plan ID        |
+|     - billing_subscription.scheduled_change_at = current_period_end   |
+|     - Does NOT call Stripe yet                                        |
+|  4. User keeps PRO features until current period ends                 |
+|  5. Daily cron job checks scheduled_change_at <= NOW():               |
+|     - Calls Stripe: update subscription to Starter price              |
+|     - Sets plan_tier = STARTER                                        |
+|     - Clears scheduled_plan_id and scheduled_change_at                |
+|     - Locks PRO-only features (AI Chat, API Keys, etc.)               |
+|  6. User sees "Downgrade scheduled for [date]" in billing settings    |
+|  7. User can cancel the scheduled downgrade before it takes effect    |
+|                                                                       |
+|  CANCEL (any paid -> EXPIRED) — at period end:                        |
 |  1. User clicks "Cancel Subscription" in settings                     |
 |  2. Frontend calls POST /api/v1/billing/cancel                        |
 |  3. Backend calls Stripe: cancel at period end                        |
+|     - cancel_at_period_end: true                                      |
 |  4. User keeps current plan until period ends                         |
 |  5. At period end: Stripe fires customer.subscription.deleted          |
 |  6. Backend sets plan_tier = EXPIRED, read-only mode                  |
-|  7. Gated features locked on next request                             |
 |                                                                       |
-|  PLAN CHANGE (PRO Monthly -> PRO Annual):                             |
+|  PLAN CHANGE (PRO Monthly -> PRO Annual) — IMMEDIATE with proration:  |
 |  1. User selects annual plan in billing settings                      |
-|  2. Backend calls Stripe: update subscription with proration          |
-|  3. Stripe calculates credit/charge and invoices immediately          |
-|  4. Webhook confirms update                                           |
+|  2. Backend calls Stripe: update subscription                         |
+|     - proration_behavior: "create_prorations"                         |
+|  3. Stripe credits remaining monthly, charges annual (prorated)       |
+|  4. Webhook confirms update, same tier, new interval                  |
 |                                                                       |
 +-----------------------------------------------------------------------+
 ```
@@ -363,11 +386,13 @@ CREATE TABLE billing_subscriptions (
     plan_id               UUID NOT NULL REFERENCES plans(id),
     stripe_customer_id    VARCHAR(100) NOT NULL,
     stripe_subscription_id VARCHAR(100),         -- NULL during trial/free
-    status                VARCHAR(20) NOT NULL,  -- 'trialing', 'active', 'past_due', 'canceled', 'free'
+    status                VARCHAR(20) NOT NULL,  -- 'trialing', 'active', 'past_due', 'canceled', 'expired'
     current_period_start  TIMESTAMPTZ,
     current_period_end    TIMESTAMPTZ,
     trial_ends_at         TIMESTAMPTZ,
     canceled_at           TIMESTAMPTZ,
+    scheduled_plan_id     UUID REFERENCES plans(id),       -- pending downgrade target plan
+    scheduled_change_at   TIMESTAMPTZ,                     -- when downgrade takes effect (period end)
     created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -394,6 +419,9 @@ CREATE TABLE billing_events (
 | GET | `/api/v1/billing/plans` | Public | List available plans + features |
 | GET | `/api/v1/billing/subscription` | Firebase | Get user's current subscription |
 | POST | `/api/v1/billing/checkout` | Firebase | Create Stripe Checkout Session |
+| POST | `/api/v1/billing/upgrade` | Firebase | Upgrade plan (immediate, prorated) |
+| POST | `/api/v1/billing/downgrade` | Firebase | Schedule downgrade (takes effect at period end) |
+| DELETE | `/api/v1/billing/downgrade` | Firebase | Cancel a scheduled downgrade |
 | POST | `/api/v1/billing/portal` | Firebase | Create Stripe Customer Portal link |
 | POST | `/api/v1/billing/cancel` | Firebase | Cancel subscription at period end |
 | POST | `/webhooks/stripe` | Stripe Sig | Handle Stripe webhook events |
@@ -452,7 +480,23 @@ CREATE TABLE billing_events (
 |  |      - Set status = 'active' (webhook may have already done)    |   |
 |  +---------------------------------------------------------------+   |
 |                                                                       |
-|  Step 3: Send trial reminders                                         |
+|  Step 3: Execute scheduled downgrades                                 |
+|  +---------------------------------------------------------------+   |
+|  | SELECT * FROM billing_subscriptions                            |   |
+|  | WHERE scheduled_plan_id IS NOT NULL                             |   |
+|  |   AND scheduled_change_at <= NOW()                              |   |
+|  |                                                                |   |
+|  | For each scheduled downgrade:                                  |   |
+|  |   1. Call Stripe: update subscription to scheduled plan price   |   |
+|  |   2. Set plan_id = scheduled_plan_id                           |   |
+|  |   3. Set user.plan_tier = new plan's tier (e.g. STARTER)       |   |
+|  |   4. Clear scheduled_plan_id and scheduled_change_at            |   |
+|  |   5. Lock features no longer available on lower plan            |   |
+|  |   6. Send "Plan downgraded" email                              |   |
+|  |   7. Log to billing_events                                     |   |
+|  +---------------------------------------------------------------+   |
+|                                                                       |
+|  Step 4: Send trial reminders                                         |
 |  +---------------------------------------------------------------+   |
 |  | SELECT * FROM billing_subscriptions                            |   |
 |  | WHERE status = 'trialing'                                      |   |
@@ -462,6 +506,16 @@ CREATE TABLE billing_events (
 |  |   IF days_left = 7: Send "7 days left" email                   |   |
 |  |   IF days_left = 2: Send "2 days left" email                   |   |
 |  |   IF days_left = 1: Send "Last day!" email + in-app warning    |   |
+|  +---------------------------------------------------------------+   |
+|                                                                       |
+|  Summary of upgrade vs downgrade behavior:                            |
+|  +---------------------------------------------------------------+   |
+|  | Action         | When it takes effect | Proration              |   |
+|  |----------------+----------------------+------------------------|   |
+|  | Upgrade        | Immediately          | Yes (credit + charge)  |   |
+|  | Downgrade      | Next period start    | No (use paid period)   |   |
+|  | Cancel         | Period end           | No (use paid period)   |   |
+|  | Monthly->Annual| Immediately          | Yes (credit + charge)  |   |
 |  +---------------------------------------------------------------+   |
 |                                                                       |
 |  Implementation:                                                      |

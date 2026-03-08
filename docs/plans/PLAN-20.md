@@ -34,26 +34,40 @@ Stripe-based billing system. All plans are paid — no free tier. Starter plan i
 2. **Trial → STARTER:** User subscribes, Stripe Checkout, plan_tier = STARTER
 3. **Trial → EXPIRED:** No payment, daily cron sets read-only mode
 4. **STARTER → PRO:** Upgrade via Stripe, proration handled
-5. **Daily Cron Job:** Checks trial expiry, past-due subscriptions, sends reminders
+5. **Upgrade (immediate):** Stripe proration — credit unused time on old plan, charge new plan
+6. **Downgrade (scheduled):** NOT immediate — scheduled for period end, daily cron executes it
+7. **Daily Cron Job:** 4 checks (trials, past-due, scheduled downgrades, reminders)
+
+## Upgrade vs Downgrade Behavior
+| Action | When | Proration |
+|--------|------|-----------|
+| Upgrade (STARTER → PRO) | Immediate | Yes (credit remaining Starter, charge Pro) |
+| Downgrade (PRO → STARTER) | Period end (scheduled) | No (user keeps PRO until paid period ends) |
+| Cancel | Period end | No (user keeps plan until paid period ends) |
+| Monthly → Annual | Immediate | Yes (credit remaining monthly) |
 
 ## Daily Subscription Check Job
 - Runs daily at 00:00 UTC (in-process goroutine or GCP Cloud Scheduler)
 - **Step 1:** Expire trials where `trial_ends_at < NOW()` → set plan_tier = EXPIRED
 - **Step 2:** Check past-due subscriptions > 7 days → verify with Stripe, cancel if still unpaid
-- **Step 3:** Send trial reminders (7 days, 2 days, 1 day left)
+- **Step 3:** Execute scheduled downgrades where `scheduled_change_at <= NOW()` → update Stripe subscription, set new plan_tier, clear schedule
+- **Step 4:** Send trial reminders (7 days, 2 days, 1 day left)
 - Idempotent, logs all actions to `billing_events`
 - Internal-only endpoint: `POST /internal/cron/billing-check`
-4. **Upgrade:** Stripe Checkout Session → hosted page → webhook
-5. **Cancel:** Cancel at period end, keep PRO until period expires
-6. **Feature Gate:** PlanMiddleware checks plan_features before allowing access
 
 ## API Endpoints
 - `GET /api/v1/billing/plans` — List plans + features
-- `GET /api/v1/billing/subscription` — Current subscription
-- `POST /api/v1/billing/checkout` — Create Stripe Checkout
+- `GET /api/v1/billing/subscription` — Current subscription (includes scheduled downgrade info)
+- `POST /api/v1/billing/checkout` — Create Stripe Checkout (new subscription)
+- `POST /api/v1/billing/upgrade` — Upgrade plan (immediate, prorated)
+- `POST /api/v1/billing/downgrade` — Schedule downgrade (period end)
+- `DELETE /api/v1/billing/downgrade` — Cancel scheduled downgrade
 - `POST /api/v1/billing/portal` — Stripe Customer Portal
-- `POST /api/v1/billing/cancel` — Cancel at period end
+- `POST /api/v1/billing/cancel` — Cancel subscription at period end
 - `POST /webhooks/stripe` — Stripe webhook handler
+4. **Upgrade:** Stripe Checkout Session → hosted page → webhook
+5. **Cancel:** Cancel at period end, keep PRO until period expires
+6. **Feature Gate:** PlanMiddleware checks plan_features before allowing access
 
 ## Key Decisions
 - ADR-017: Stripe for Billing (Not Shopify Billing)

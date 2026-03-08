@@ -51,6 +51,47 @@ lib/
 
 ---
 
+## Theming & Material Design Standards
+
+### Typography
+- All text MUST use `Theme.of(context).textTheme.*` semantic styles
+- Custom type scale defined in `core/theme/app_theme.dart`
+- Never use hardcoded `TextStyle(fontSize:)` in the presentation layer
+- Colors remain inline via `.copyWith(color: ...)`
+
+| Semantic Style | Size | Weight | Usage |
+|---|---|---|---|
+| `headlineLarge` | 26 | bold | Page hero text |
+| `headlineMedium` | 24 | bold | Section titles |
+| `titleLarge` | 18 | bold | Card/section headers |
+| `titleMedium` | 16 | w600 | Sub-headers, emphasis |
+| `titleSmall` | 14 | w600 | Small headers |
+| `bodyLarge` | 16 | normal | Primary body text |
+| `bodyMedium` | 14 | normal | Default body text |
+| `bodySmall` | 13 | normal | Secondary text |
+| `labelMedium` | 12 | w500 | Labels, badges |
+| `labelSmall` | 11 | w500 | Tiny labels |
+
+### Scaffold Background
+- Set via `scaffoldBackgroundColor` in theme (grey-50)
+- Never set `backgroundColor` on individual `Scaffold` widgets
+
+### AppBar
+- Primary blue background (`AppTheme.primary`) with white text/icons
+- `scrolledUnderElevation: 0` to prevent M3 tint on scroll
+- Any `TextButton`/action in AppBar must use explicit white foreground
+
+### Dialogs & Popups
+- White background with `surfaceTintColor: Colors.transparent`
+- Prevents Material 3 blue tint on overlays
+- Defined in `popupMenuTheme` and `dialogTheme` in app_theme.dart
+
+### Card Backgrounds
+- Use `Colors.white` for cards on grey scaffold background
+- Provides visual elevation contrast
+
+---
+
 ## Screens (Implementation Status)
 
 ### Authentication

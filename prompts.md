@@ -1451,3 +1451,17 @@
 - Architectural change: SSE chosen over WebSocket for chat streaming
 
 ---
+
+### [2026-03-09] Material 3 Theme Standardization (Frontend)
+**Original:**
+> Migrate hardcoded TextStyle to M3 theme styles. Fix AppBar visibility, scaffold backgrounds, popup tints, button visibility.
+
+**Improved:**
+> Comprehensive Material 3 theme standardization across Flutter frontend: (1) Define custom textTheme in app_theme.dart and migrate ~120 hardcoded TextStyle(fontSize:) to Theme.of(context).textTheme.* across 21 files. (2) Fix dashboard initial load race condition — auto-select first app, defer load via BlocListener. (3) Switch AppBar to primary blue with white foreground. (4) Centralize scaffoldBackgroundColor grey-50, remove 9 hardcoded overrides. (5) Fix preferences Save button blue-on-blue visibility. (6) Add popupMenuTheme/dialogTheme with white bg + transparent surfaceTintColor.
+
+**Result:**
+- 8 commits: typography (ce6002d), auto-select app (b9aa36e), deferred dashboard load (e0123e9), blank flash fix, AppBar theme (20aa855), scaffold bg (b311d44), Save button (c5d31b9), popup/dialog theme (3be9e1c)
+- All 405 Flutter tests passing
+- Frontend docs updated: REQUIREMENTS.md (theming standards), IMPLEMENTATION_LOG.md, prompts.md
+
+---

@@ -1113,3 +1113,73 @@ Added staging environment support to the Flutter frontend, connecting Firebase H
 - `lib/core/config/env_config.dart` — Added `Environment.staging`, fixed `apiBaseUrl` getter
 
 ---
+
+## [2026-03-09] Material 3 Theme Standardization
+
+**Commits:** ce6002d, 20aa855, b311d44, c5d31b9, 3be9e1c
+
+**Summary:**
+Comprehensive Material 3 theming standardization across the entire presentation layer — typography, scaffold backgrounds, AppBar, popups, and dialogs.
+
+**Changes:**
+
+### 1. Typography Migration (ce6002d)
+- Migrated ~120 hardcoded `TextStyle(fontSize:)` to `Theme.of(context).textTheme.*`
+- Defined custom `textTheme` in `app_theme.dart`:
+  - `headlineLarge` (26/bold), `headlineMedium` (24/bold)
+  - `titleLarge` (18/bold), `titleMedium` (16/w600), `titleSmall` (14/w600)
+  - `bodyLarge` (16), `bodyMedium` (14), `bodySmall` (13)
+  - `labelMedium` (12/w500), `labelSmall` (11/w500)
+- Updated `risk_badge_test.dart` to use `AppTheme.lightTheme`
+- 21 presentation files modified, 22 files total
+
+### 2. Primary-Colored AppBar (20aa855)
+- Changed AppBar from white to primary blue with white foreground
+- Fixed `AppSelector` visibility (hardcoded white text was invisible on white AppBar)
+- Disabled `scrolledUnderElevation` to prevent M3 tint on scroll
+
+### 3. Scaffold Background Standardization (b311d44)
+- Set `scaffoldBackgroundColor: Color(0xFFF9FAFB)` (grey-50) in theme
+- Removed 9 hardcoded `backgroundColor: Colors.grey[50]` overrides from Scaffolds
+- All pages now inherit consistent background from theme
+
+### 4. Preferences Save Button Fix (c5d31b9)
+- `TextButton` in AppBar used default primary color (blue-on-blue = invisible)
+- Set explicit white foreground for Save button and spinner
+
+### 5. Popup & Dialog Theme (3be9e1c)
+- Added `popupMenuTheme` with white background, transparent `surfaceTintColor`
+- Added `dialogTheme` with white background, transparent `surfaceTintColor`
+- Prevents M3 blue tint on overlays
+
+**Files Modified:**
+- `core/theme/app_theme.dart` — textTheme, AppBar, scaffold, popup, dialog themes
+- 21 presentation files — typography migration
+- `pages/preferences_page.dart` — Save button white foreground
+
+---
+
+## [2026-03-09] Dashboard Initial Load Fix
+
+**Commits:** b9aa36e, e0123e9
+
+**Summary:**
+Fixed dashboard metrics failing to load after login due to a race condition between app selection and metrics fetch.
+
+**Changes:**
+
+### 1. Auto-Select First App (b9aa36e)
+- `AppSelectionBloc._onFetchApps` now auto-selects and saves the first app when none was previously saved in SharedPreferences
+- Prevents `NoAppSelectedException` on fresh logins
+
+### 2. Deferred Dashboard Load (e0123e9)
+- Removed premature `LoadDashboardRequested` from `build()` on `DashboardInitial`
+- Added `BlocListener<AppSelectionBloc>` to trigger metrics load when app becomes available
+- Added `didChangeDependencies` for returning users (app already in SharedPreferences)
+- Eliminates blank flash after login
+
+**Files Modified:**
+- `blocs/app_selection/app_selection_bloc.dart` — auto-select logic
+- `pages/dashboard_page.dart` — deferred load via BlocListener
+
+---

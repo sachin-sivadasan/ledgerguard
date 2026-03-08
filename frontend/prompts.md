@@ -858,3 +858,56 @@ The frontend was calling `/api/v1/user/preferences/dashboard` but this endpoint 
 - Updated deploy workflow to build with `main_staging.dart` instead of `main_prod.dart`
 
 ---
+
+## Prompt 014 – Material 3 Typography Standardization
+**Date:** 2026-03-09
+**Status:** Complete
+
+**Original Prompt:**
+> Migrate all hardcoded TextStyle declarations to Material 3 semantic theme styles across the Flutter frontend.
+
+**Improved Prompt:**
+> Standardize all ~120 hardcoded `TextStyle(fontSize:)` declarations across 26 presentation-layer files to use `Theme.of(context).textTheme.*` semantic styles. Define a custom `textTheme` in `app_theme.dart` matching the project's type scale. Map each hardcoded pattern to M3 equivalents (headlineLarge through labelSmall). Retain inline `.copyWith(color:)` for contextual colors. Accept chart tooltip exceptions where BuildContext is unavailable.
+
+**Changes:**
+- Defined `textTheme` in `core/theme/app_theme.dart` with full M3 type scale (10 styles)
+- Migrated ~120 hardcoded `TextStyle` instances across 21 presentation files
+- Fixed `risk_badge_test.dart` to include `AppTheme.lightTheme` in test MaterialApp
+- 3 acceptable exceptions: 2 chart tooltips (no BuildContext), 1 pagination widget (out of scope)
+
+---
+
+## Prompt 015 – Fix Dashboard Initial Load Race Condition
+**Date:** 2026-03-09
+**Status:** Complete
+
+**Original Prompt:**
+> Dashboard analytics not loading initially after login, only showing me, dashboard, available.
+
+**Improved Prompt:**
+> Fix dashboard initial load race condition: `LoadDashboardRequested` fires before `FetchAppsRequested` completes, causing `getSelectedApp()` to return null and the API call to fail silently. Auto-select the first app in `AppSelectionBloc` when none is saved, and defer dashboard load via `BlocListener` on `AppSelectionBloc` state changes instead of firing in `build()`.
+
+**Changes:**
+- `AppSelectionBloc`: Auto-select and save first app when none previously selected
+- `DashboardPage`: Removed premature `LoadDashboardRequested` from `build()`, added `BlocListener<AppSelectionBloc>` and `didChangeDependencies` for deferred loading
+- Updated `app_selection_bloc_test.dart` and `dashboard_page_test.dart`
+
+---
+
+## Prompt 016 – AppBar & Scaffold Background Standardization
+**Date:** 2026-03-09
+**Status:** Complete
+
+**Original Prompt:**
+> On Android app title is not visible on app bar. Also saw different pages having different background.
+
+**Improved Prompt:**
+> Fix AppBar visibility: switch from white AppBar to primary blue with white foreground in theme. Standardize scaffold background: set `scaffoldBackgroundColor: grey-50` in theme and remove all 9 hardcoded `backgroundColor: Colors.grey[50]` overrides from individual pages. Fix preferences page Save button visibility (blue-on-blue). Add white background + transparent surfaceTintColor to popupMenuTheme and dialogTheme to prevent M3 blue tint.
+
+**Changes:**
+- `app_theme.dart`: AppBar primary blue, scaffoldBackgroundColor grey-50, popupMenuTheme, dialogTheme
+- Removed hardcoded scaffold backgrounds from 9 pages
+- `preferences_page.dart`: Added `foregroundColor: Colors.white` to Save TextButton
+- All 405 tests passing
+
+---

@@ -50,6 +50,20 @@ class AppTheme {
         labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
         labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
       ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),

@@ -1465,3 +1465,19 @@
 - Frontend docs updated: REQUIREMENTS.md (theming standards), IMPLEMENTATION_LOG.md, prompts.md
 
 ---
+
+### [2026-03-09] Welcome & Onboarding Flow — Hybrid Design (Documentation)
+**Original:**
+> Now I am thinking about how to welcome new signups. Via email, via a flow (maybe call the webhook URL of that flow, maybe an external app). Visualization flow needed, Excalidraw if necessary. I need custom option along with this — calling an external API (that may be a third-party flow builder with their own mailer).
+
+**Improved:**
+> Design a Hybrid Welcome & Onboarding Flow for LedgerGuard combining: (1) Webhook-triggered email drip campaign via n8n (self-hosted) + Postmark (transactional email), (2) In-app onboarding checklist with step tracking and progress banner, (3) Custom webhook escape hatch for third-party flow builders (Customer.io, Brevo, ActiveCampaign) with HMAC-signed payloads. Deliverables: visualization prompt file, PlantUML flow diagram, ADR-015 (n8n) + ADR-016 (Postmark), future.md entry. Documentation only — no code implementation.
+
+**Result:**
+- Created `docs/prompts/welcome-onboarding-flow.md` — full visualization prompt with 4 flows + 2 decision comparison tables
+- Created `docs/welcome-onboarding-flow.puml` — PlantUML activity diagram of hybrid flow
+- Added ADR-015 (n8n) + ADR-016 (Postmark) to DECISIONS.md
+- Added P1 entry to future.md
+- No code changes — documentation/visualization deliverable
+
+---

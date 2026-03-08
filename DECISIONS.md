@@ -298,3 +298,58 @@ Module plugin pattern: each module implements `Module` interface with `Name()`, 
 - New modules can be added without touching existing code
 - System prompt assembled dynamically from registered modules
 - Clear ownership: each module owns its tools and GraphQL queries
+
+---
+
+### ADR-015: n8n for Automation Platform (Welcome Flow)
+**Date:** 2026-03-09
+**Status:** Accepted
+
+**Context:**
+Need an automation platform to orchestrate the post-signup welcome email drip campaign. The platform receives webhook events from the backend (user.created, onboarding.step_completed, onboarding.completed) and triggers email sequences via Postmark. Options evaluated: n8n, Make (Integromat), Zapier, GCP Cloud Functions.
+
+**Decision:**
+Use n8n (self-hosted) as the automation platform:
+- Free and open-source (no per-operation costs)
+- Self-hosted on existing Hetzner infrastructure (Docker deployment)
+- Visual workflow builder for non-technical iteration on drip campaigns
+- Full data control — user data never leaves our infrastructure (GDPR-friendly)
+- Built-in webhook receiver for bidirectional communication
+- 400+ integrations including Postmark, Slack, and custom HTTP
+
+Architecture also supports a **custom webhook escape hatch**: admins can configure any external API URL (Customer.io, Brevo, ActiveCampaign, etc.) instead of n8n, with the same HMAC-signed event payloads.
+
+**Consequences:**
+- Zero recurring cost for automation (vs $20+/mo for Zapier)
+- Requires Docker hosting and maintenance on Hetzner
+- Visual builder enables rapid drip campaign iteration without code changes
+- Custom webhook option prevents vendor lock-in
+- Need to set up n8n backup/monitoring alongside existing infra
+
+---
+
+### ADR-016: Postmark for Transactional Email
+**Date:** 2026-03-09
+**Status:** Accepted
+
+**Context:**
+Need a transactional email provider for the welcome drip campaign and future notification emails. Options evaluated: SendGrid, Postmark, Resend, Firebase Extensions.
+
+**Decision:**
+Use Postmark as the transactional email provider:
+- Best-in-class delivery speed (<1 second to inbox)
+- Pure transactional focus — no marketing email contamination of sender reputation
+- Dedicated IP reputation (not shared with bulk mailers like SendGrid's free tier)
+- B2B SaaS industry standard for welcome/notification/alert emails
+- Clean analytics: open rate, bounce rate, spam complaints
+- $15/month for 10,000 emails (sufficient for early-stage B2B SaaS)
+- Mustache-based templates with visual preview
+
+Postmark will be called from n8n workflows (or directly from custom webhook endpoints for third-party integrations).
+
+**Consequences:**
+- $15/month cost (vs free tiers of SendGrid/Resend) — justified by delivery quality
+- Superior inbox placement due to dedicated transactional focus
+- Need to set up Postmark account, verify sending domain, create email templates
+- Templates managed in Postmark dashboard (not in codebase)
+- If email volume grows significantly, can negotiate volume pricing

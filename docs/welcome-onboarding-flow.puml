@@ -1,0 +1,148 @@
+@startuml Welcome & Onboarding Flow (Hybrid)
+!theme plain
+title LedgerGuard – Hybrid Welcome & Onboarding Flow
+
+skinparam activity {
+  BackgroundColor White
+  BorderColor #2563EB
+  FontSize 12
+}
+skinparam note {
+  BackgroundColor #F8FAFC
+  BorderColor #94A3B8
+}
+
+|#E8F0FE|Firebase|
+|#FFF3E0|Backend|
+|#E8F5E9|n8n / Custom Webhook|
+|#F3E5F5|Postmark|
+|#E0F7FA|Flutter App|
+
+' === SIGNUP TRIGGER ===
+
+|Firebase|
+start
+:User signs up\n(Email/Password or Google);
+
+|Backend|
+:Auth Middleware\nverifies Firebase token;
+if (User exists in DB?) then (yes)
+  :Load existing user;
+else (no)
+  :Create new user\n(role=OWNER, plan=FREE,\nonboarding_completed_at=NULL);
+  :Fire **user.created** event;
+
+  |n8n / Custom Webhook|
+  fork
+    :POST webhook URL\n(HMAC-SHA256 signed);
+    note right
+      Configurable destination:
+      - n8n (default, self-hosted)
+      - Customer.io
+      - Brevo / ActiveCampaign
+      - Any custom endpoint
+    end note
+
+    |Postmark|
+    :Send **Welcome Email**\n"Welcome to LedgerGuard!";
+    :Wait 24 hours;
+
+    |n8n / Custom Webhook|
+    if (connect_partner\ncompleted?) then (yes)
+      :Skip email;
+    else (no)
+      |Postmark|
+      :Send **Connect Shopify**\nemail (Day 1);
+    endif
+
+    |n8n / Custom Webhook|
+    :Wait 48 hours;
+    if (view_dashboard\ncompleted?) then (yes)
+      :Skip email;
+    else (no)
+      |Postmark|
+      :Send **Explore Dashboard**\nemail (Day 3);
+    endif
+
+    |n8n / Custom Webhook|
+    :Wait 4 days;
+    if (try_ai_chat\ncompleted?) then (yes)
+      :Skip email;
+    else (no)
+      |Postmark|
+      :Send **Try AI Chat**\nemail (Day 7);
+    endif
+
+  fork again
+
+    ' === IN-APP CHECKLIST ===
+
+    |Flutter App|
+    :User lands on Dashboard;
+    :GET /api/v1/users/\nonboarding-status;
+
+    |Backend|
+    :Return onboarding status\n{is_complete, next_step,\nhas_partner, has_apps};
+
+    |Flutter App|
+    :Show **Onboarding\nChecklist Banner**;
+    note right
+      Checklist Steps:
+      [x] Sign up
+      [ ] Connect Shopify Partner
+      [ ] Select an App
+      [ ] View Dashboard Metrics
+      [ ] Try AI Chat
+    end note
+
+    :User completes step;
+    :POST /api/v1/users/\nonboarding-step;
+
+    |Backend|
+    :Record step completion;
+    :Fire **onboarding.step_completed**\nevent -> webhook;
+
+    |Flutter App|
+    :Update checklist UI\n(animate checkmark);
+
+    if (All steps\ncomplete?) then (yes)
+      :POST /api/v1/users/\nonboarding-complete;
+
+      |Backend|
+      :Set onboarding_completed_at\n= NOW();
+      :Fire **onboarding.completed**\nevent -> webhook;
+
+      |n8n / Custom Webhook|
+      :Cancel remaining drip;
+
+      |Postmark|
+      :Send **You're All Set!**\ncelebration email;
+
+      |Flutter App|
+      :Hide checklist\nShow success message;
+    else (no)
+      :Continue showing checklist;
+    endif
+
+  end fork
+endif
+
+|Flutter App|
+:Dashboard with\nfull functionality;
+stop
+
+' === NOTES ===
+
+note bottom
+  **Webhook Security:**
+  - HMAC-SHA256 signature (X-LedgerGuard-Signature)
+  - Timestamp header (X-LedgerGuard-Timestamp)
+  - Idempotency key (X-LedgerGuard-Idempotency-Key)
+  - Retry: 3 attempts (1s, 5s, 30s backoff)
+
+  **Configuration:**
+  WELCOME_WEBHOOK_URL (env var or admin setting)
+  WELCOME_WEBHOOK_SECRET (HMAC signing key)
+end note
+
+@enduml

@@ -1,0 +1,114 @@
+@startuml LedgerGuard Screen Flow
+!theme plain
+title LedgerGuard – Screen Navigation Flow
+
+skinparam state {
+  BackgroundColor White
+  BorderColor #2563EB
+  FontSize 12
+}
+
+skinparam note {
+  BackgroundColor #F8FAFC
+  BorderColor #94A3B8
+}
+
+' ─── Authentication ───
+state "Authentication" as auth {
+  state "LoginPage\n/login" as login
+  state "SignupPage\n/signup" as signup
+
+  login --> signup : "Create account"
+  signup --> login : "Back to login"
+}
+
+' ─── Onboarding ───
+state "Onboarding" as onboarding {
+  state "OnboardingPage\n/onboarding" as onboard
+  state "PartnerIntegrationPage\n/partner-integration" as partner
+  state "AppSelectionPage\n/app-selection" as appSelect
+
+  onboard --> partner : "Connect Shopify"
+  partner --> appSelect : "Partner connected"
+}
+
+' ─── App Shell (Tab Navigation) ───
+state "AppShell (BottomNav / NavigationRail)" as shell {
+  state "DashboardPage\n/dashboard" as dashboard
+  state "ChatPage\n/chat" as chat
+  state "SubscriptionsTabPage\n/subscriptions" as subTab
+  state "SettingsPage\n/settings" as settings
+
+  dashboard -[hidden]right-> chat
+  chat -[hidden]right-> subTab
+  subTab -[hidden]right-> settings
+}
+
+' ─── Dashboard Detail Routes ───
+state "Dashboard Details" as dashDetail {
+  state "RiskBreakdownPage\n/risk-breakdown" as risk
+  state "SubscriptionListPage\n/apps/:appId/subscriptions" as subList
+  state "SubscriptionDetailPage\n/apps/:appId/subscriptions/:id" as subDetail
+  state "StoreHealthPage\n/apps/:appId/stores/:domain/health" as storeHealth
+
+  subList --> subDetail : "Tap subscription"
+  subList --> storeHealth : "Tap store"
+}
+
+' ─── Settings Detail Routes ───
+state "Settings Details" as settingsDetail {
+  state "ProfilePage\n/profile" as profile
+  state "PreferencesPage\n/settings/preferences" as prefs
+  state "AppSettingsPage\n/settings/app" as appSettings
+  state "NotificationSettingsPage\n/settings/notifications" as notifSettings
+  state "ApiKeyListPage\n/settings/api-keys" as apiKeys
+}
+
+' ─── Admin ───
+state "Admin" as admin {
+  state "ManualIntegrationPage\n/admin/manual-integration" as manualInt
+}
+
+' ─── Flow Connections ───
+
+' Auth → Onboarding / Dashboard
+login --> onboard : "First login\n(no partner)"
+login --> dashboard : "Returning user\n(has app selected)"
+appSelect --> dashboard : "App selected"
+
+' Auth guard
+[*] --> login : "Unauthenticated"
+[*] --> dashboard : "Authenticated\n(redirect)"
+
+' Dashboard → Details
+dashboard --> risk : "View risk breakdown"
+dashboard --> subList : "View subscriptions"
+dashboard --> manualInt : "Admin: manual token"
+
+' Settings → Details
+settings --> profile : "My Profile"
+settings --> prefs : "Preferences"
+settings --> appSettings : "App Settings"
+settings --> notifSettings : "Notifications"
+settings --> apiKeys : "API Keys"
+
+' Logout
+settings --> login : "Sign out"
+
+' ─── Notes ───
+note right of shell
+  **Responsive Navigation**
+  Mobile (<600px): BottomNavigationBar
+  Tablet/Web (≥600px): NavigationRail
+  4 tabs with preserved state
+  (StatefulShellRoute.indexedStack)
+end note
+
+note right of auth
+  **Auth Guard (GoRouter)**
+  Unauthenticated → /login
+  Authenticated on /login → /dashboard
+  Listens to AuthBloc stream
+end note
+
+@enduml

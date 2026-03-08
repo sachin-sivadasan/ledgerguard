@@ -296,7 +296,7 @@ class _EarningsTimelineChartState extends State<EarningsTimelineChart> {
   Widget _buildModeToggle(BuildContext context, EarningsMode currentMode) {
     return Row(
       children: [
-        const Text('View:', style: TextStyle(fontSize: 12)),
+        Text('View:', style: Theme.of(context).textTheme.labelMedium),
         const SizedBox(width: 8),
         ChoiceChip(
           label: const Text('Combined'),

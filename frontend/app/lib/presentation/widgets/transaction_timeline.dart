@@ -17,7 +17,7 @@ class TransactionTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (transactions.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState(context);
     }
 
     final displayTransactions = transactions.take(maxItems).toList();
@@ -48,21 +48,19 @@ class TransactionTimeline extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Transaction History',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
                 Text(
                   '${transactions.length} total',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
                 ),
               ],
             ),
@@ -71,6 +69,7 @@ class TransactionTimeline extends StatelessWidget {
                 .asMap()
                 .entries
                 .map((entry) => _buildTransactionItem(
+                      context,
                       entry.value,
                       isLast: entry.key == displayTransactions.length - 1,
                     )),
@@ -79,10 +78,9 @@ class TransactionTimeline extends StatelessWidget {
               Center(
                 child: Text(
                   '+${transactions.length - maxItems} more transactions',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
                 ),
               ),
             ],
@@ -92,7 +90,7 @@ class TransactionTimeline extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -111,10 +109,9 @@ class TransactionTimeline extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'No transactions yet',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
             ),
           ],
         ),
@@ -122,7 +119,8 @@ class TransactionTimeline extends StatelessWidget {
     );
   }
 
-  Widget _buildTransactionItem(Transaction tx, {bool isLast = false}) {
+  Widget _buildTransactionItem(BuildContext context, Transaction tx,
+      {bool isLast = false}) {
     final dateFormat = DateFormat('MMM d, y');
     final color = _getChargeTypeColor(tx.chargeType);
 
@@ -175,20 +173,25 @@ class TransactionTimeline extends StatelessWidget {
                               ),
                               child: Text(
                                 tx.chargeType.displayName,
-                                style: TextStyle(
-                                  color: color,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: color,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
+                                    ),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               dateFormat.format(tx.transactionDate),
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
                             ),
                           ],
                         ),
@@ -197,13 +200,16 @@ class TransactionTimeline extends StatelessWidget {
                           children: [
                             Text(
                               tx.formattedNetAmount,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                             const SizedBox(width: 8),
-                            _buildEarningsStatusBadge(tx.earningsStatus),
+                            _buildEarningsStatusBadge(
+                                context, tx.earningsStatus),
                           ],
                         ),
                       ],
@@ -221,11 +227,13 @@ class TransactionTimeline extends StatelessWidget {
                       ),
                       child: Text(
                         '${tx.daysUntilAvailable}d',
-                        style: TextStyle(
-                          color: Colors.amber[700],
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(
+                              color: Colors.amber[700],
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ),
                 ],
@@ -237,7 +245,7 @@ class TransactionTimeline extends StatelessWidget {
     );
   }
 
-  Widget _buildEarningsStatusBadge(EarningsStatus status) {
+  Widget _buildEarningsStatusBadge(BuildContext context, EarningsStatus status) {
     Color color;
     IconData icon;
 
@@ -263,11 +271,10 @@ class TransactionTimeline extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           status.displayName,
-          style: TextStyle(
-            color: color,
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-          ),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: color,
+                fontSize: 10,
+              ),
         ),
       ],
     );

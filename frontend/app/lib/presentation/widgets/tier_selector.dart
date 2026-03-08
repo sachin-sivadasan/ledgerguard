@@ -39,10 +39,9 @@ class TierSelector extends StatelessWidget {
                   color: Color(currentTier.badgeColor),
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Revenue Share Tier',
-                  style: TextStyle(
-                    fontSize: 16,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -53,19 +52,17 @@ class TierSelector extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               currentTier.description,
-              style: TextStyle(
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Colors.grey[600],
-                fontSize: 13,
               ),
             ),
             const SizedBox(height: 16),
             if (!readOnly) ...[
               const Divider(),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Change Tier',
-                style: TextStyle(
-                  fontSize: 14,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -102,9 +99,8 @@ class _TierBadge extends StatelessWidget {
       ),
       child: Text(
         '${tier.revenueSharePercent.toStringAsFixed(0)}% + 2.9%',
-        style: TextStyle(
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: Color(tier.badgeColor),
-          fontSize: 12,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -218,8 +214,7 @@ class _TierOption extends StatelessWidget {
                 if (!isSelected)
                   Text(
                     tier.description,
-                    style: TextStyle(
-                      fontSize: 11,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Colors.grey[500],
                     ),
                     maxLines: 1,
@@ -262,10 +257,10 @@ class TierIndicator extends StatelessWidget {
         ),
         child: Text(
           '${tier.revenueSharePercent.toStringAsFixed(0)}%',
-          style: TextStyle(
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
             color: Color(tier.badgeColor),
-            fontSize: 10,
             fontWeight: FontWeight.bold,
+            fontSize: 10,
           ),
         ),
       );
@@ -285,8 +280,7 @@ class TierIndicator extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           tier.displayName,
-          style: TextStyle(
-            fontSize: 12,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
             color: Colors.grey[600],
           ),
         ),

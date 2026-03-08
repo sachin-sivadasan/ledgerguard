@@ -161,9 +161,8 @@ class ProfilePage extends StatelessWidget {
               Center(
                 child: Text(
                   'LedgerGuard v1.0.0',
-                  style: TextStyle(
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[400],
-                    fontSize: 12,
                   ),
                 ),
               ),
@@ -221,9 +220,7 @@ class ProfilePage extends StatelessWidget {
                           backgroundColor: Colors.white.withOpacity(0.2),
                           child: Text(
                             _getInitials(displayName ?? email),
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                               color: Colors.white,
                             ),
                           ),
@@ -234,9 +231,7 @@ class ProfilePage extends StatelessWidget {
                       // Name
                       Text(
                         displayName ?? email.split('@').first,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: Colors.white,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -246,8 +241,7 @@ class ProfilePage extends StatelessWidget {
                       // Email
                       Text(
                         email,
-                        style: TextStyle(
-                          fontSize: 13,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.white.withOpacity(0.8),
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -306,9 +300,8 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: Colors.white,
-              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -393,9 +386,8 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: TextStyle(
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: Colors.grey[600],
-              fontSize: 11,
             ),
             textAlign: TextAlign.center,
           ),
@@ -411,9 +403,7 @@ class ProfilePage extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
             color: Colors.grey[700],
             letterSpacing: 0.5,
           ),
@@ -495,17 +485,14 @@ class ProfilePage extends StatelessWidget {
                     children: [
                       Text(
                         isPro ? 'Pro Plan' : 'Free Plan',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: isPro ? Colors.white : Colors.grey[800],
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         isPro ? 'Full access to all features' : 'Basic features included',
-                        style: TextStyle(
-                          fontSize: 13,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: isPro ? Colors.white70 : Colors.grey[600],
                         ),
                       ),
@@ -520,9 +507,9 @@ class ProfilePage extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _buildFeatureChip('AI Insights', false),
-                  _buildFeatureChip('Priority Support', false),
-                  _buildFeatureChip('Advanced Analytics', false),
+                  _buildFeatureChip(context, 'AI Insights', false),
+                  _buildFeatureChip(context, 'Priority Support', false),
+                  _buildFeatureChip(context, 'Advanced Analytics', false),
                 ],
               ),
               const SizedBox(height: 16),
@@ -553,7 +540,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureChip(String label, bool included) {
+  Widget _buildFeatureChip(BuildContext context, String label, bool included) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -571,8 +558,7 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 11,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: Colors.grey[600],
             ),
           ),
@@ -608,16 +594,14 @@ class ProfilePage extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[500],
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    fontSize: 15,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -661,16 +645,14 @@ class ProfilePage extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 15,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Colors.grey[500],
                       ),
                     ),
@@ -722,10 +704,8 @@ class ProfilePage extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   'Log Out',
-                  style: TextStyle(
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: AppTheme.danger,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],

@@ -222,10 +222,8 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
               children: [
                 Text(
                   _selectedApp!.name,
-                  style: const TextStyle(
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 if (_selectedApp!.description != null &&
@@ -233,9 +231,8 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                   const SizedBox(height: 4),
                   Text(
                     _selectedApp!.description!,
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.white.withOpacity(0.8),
-                      fontSize: 13,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -252,10 +249,8 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                     ),
                     child: Text(
                       '${_selectedApp!.installCount} installs',
-                      style: const TextStyle(
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -275,9 +270,7 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
             color: Colors.grey[700],
             letterSpacing: 0.5,
           ),
@@ -322,9 +315,8 @@ class _FeeCalculatorCardState extends State<_FeeCalculatorCard> {
             // Amount slider
             Text(
               'Transaction Amount',
-              style: TextStyle(
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Colors.grey[600],
-                fontSize: 13,
               ),
             ),
             const SizedBox(height: 8),
@@ -344,10 +336,7 @@ class _FeeCalculatorCardState extends State<_FeeCalculatorCard> {
                   alignment: Alignment.centerRight,
                   child: Text(
                     '\$${_amount.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(),
                   ),
                 ),
               ],
@@ -412,16 +401,16 @@ class _FeeCalculatorCardState extends State<_FeeCalculatorCard> {
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: isHeader ? 14 : 13,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: isHeader ? 14 : null,
               fontWeight: isHeader || isBold ? FontWeight.w600 : FontWeight.normal,
               color: isHeader ? Colors.grey[800] : Colors.grey[600],
             ),
           ),
           Text(
             amount,
-            style: TextStyle(
-              fontSize: isHeader ? 16 : 14,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: isHeader ? 16 : null,
               fontWeight: isHeader || isBold ? FontWeight.bold : FontWeight.w500,
               color: color ?? Colors.grey[800],
             ),
@@ -455,9 +444,8 @@ class _TierComparisonCard extends StatelessWidget {
           children: [
             Text(
               'On a \$100 transaction:',
-              style: TextStyle(
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Colors.grey[600],
-                fontSize: 13,
               ),
             ),
             const SizedBox(height: 16),
@@ -502,11 +490,10 @@ class _TierComparisonCard extends StatelessWidget {
                             children: [
                               Text(
                                 tier.displayName,
-                                style: TextStyle(
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontWeight: isCurrentTier
                                       ? FontWeight.bold
                                       : FontWeight.w500,
-                                  fontSize: 13,
                                 ),
                               ),
                               if (isCurrentTier) ...[
@@ -520,12 +507,12 @@ class _TierComparisonCard extends StatelessWidget {
                                     color: Color(tier.badgeColor),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     'Current',
-                                    style: TextStyle(
+                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                       color: Colors.white,
-                                      fontSize: 10,
                                       fontWeight: FontWeight.bold,
+                                      fontSize: 10,
                                     ),
                                   ),
                                 ),
@@ -535,9 +522,8 @@ class _TierComparisonCard extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             'Fees: \$${(breakdown.totalFeesCents / 100).toStringAsFixed(2)} · Net: \$${(breakdown.netAmountCents / 100).toStringAsFixed(2)}',
-                            style: TextStyle(
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
                               color: Colors.grey[600],
-                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -545,10 +531,9 @@ class _TierComparisonCard extends StatelessWidget {
                     ),
                     Text(
                       '${breakdown.revenueSharePercent.toStringAsFixed(0)}% + 2.9%',
-                      style: TextStyle(
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Color(tier.badgeColor),
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
                       ),
                     ),
                   ],

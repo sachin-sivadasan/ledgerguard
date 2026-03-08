@@ -134,11 +134,10 @@ class DashboardConfigDialog extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Dashboard Configuration',
-                  style: TextStyle(
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 if (state.hasUnsavedChanges)
@@ -155,10 +154,9 @@ class DashboardConfigDialog extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Text(
+                        Text(
                           'Unsaved changes',
-                          style: TextStyle(
-                            fontSize: 12,
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: AppTheme.warning,
                           ),
                         ),
@@ -208,10 +206,9 @@ class DashboardConfigDialog extends StatelessWidget {
               ),
               child: Text(
                 '(${preferences.primaryKpis.length}/4)',
-                style: const TextStyle(
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: AppTheme.primary,
                   fontWeight: FontWeight.w600,
-                  fontSize: 12,
                 ),
               ),
             ),
@@ -220,7 +217,7 @@ class DashboardConfigDialog extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           'Drag to reorder. These appear at the top of your dashboard.',
-          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
         ),
         const SizedBox(height: 12),
         ReorderableListView.builder(
@@ -280,14 +277,14 @@ class DashboardConfigDialog extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           color: AppTheme.primary.withOpacity(0.05),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.add_circle_outline, color: AppTheme.primary, size: 20),
-            SizedBox(width: 8),
+            const Icon(Icons.add_circle_outline, color: AppTheme.primary, size: 20),
+            const SizedBox(width: 8),
             Text(
               'Add KPI',
-              style: TextStyle(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppTheme.primary,
                 fontWeight: FontWeight.w600,
               ),
@@ -335,7 +332,7 @@ class DashboardConfigDialog extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           'Toggle widgets to show or hide them on your dashboard.',
-          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
         ),
         const SizedBox(height: 12),
         ...SecondaryWidget.values.map((widget) => _PremiumWidgetTile(
@@ -465,7 +462,7 @@ class _PremiumKpiTile extends StatelessWidget {
         ),
         title: Text(
           kpi.displayName,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         trailing: IconButton(
           icon: const Icon(Icons.remove_circle_outline),
@@ -517,7 +514,7 @@ class _PremiumWidgetTile extends StatelessWidget {
         ),
         title: Text(
           widget.displayName,
-          style: TextStyle(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w500,
             color: isEnabled ? Colors.black87 : Colors.grey[600],
           ),

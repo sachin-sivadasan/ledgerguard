@@ -205,16 +205,14 @@ class _FeeInsightsCardState extends State<FeeInsightsCard> with WidgetsBindingOb
                     children: [
                       Text(
                         'Fees: ',
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           color: Colors.grey[600],
-                          fontSize: 12,
                         ),
                       ),
                       Text(
                         '\$${(breakdown.totalFeesCents / 100).toStringAsFixed(2)}',
-                        style: const TextStyle(
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -222,9 +220,8 @@ class _FeeInsightsCardState extends State<FeeInsightsCard> with WidgetsBindingOb
                   const SizedBox(height: 2),
                   Text(
                     tier.displayName,
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Colors.grey[500],
-                      fontSize: 11,
                     ),
                   ),
                 ],
@@ -248,10 +245,9 @@ class _FeeInsightsCardState extends State<FeeInsightsCard> with WidgetsBindingOb
                     const SizedBox(width: 4),
                     Text(
                       '\$${(savingsCents / 100).toStringAsFixed(0)}',
-                      style: const TextStyle(
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: AppTheme.success,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -301,19 +297,17 @@ class _FeeInsightsCardState extends State<FeeInsightsCard> with WidgetsBindingOb
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Fee Insights',
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Based on ${tier.displayName}',
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           color: Colors.grey[600],
-                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -388,19 +382,17 @@ class _FeeInsightsCardState extends State<FeeInsightsCard> with WidgetsBindingOb
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Tier Savings',
-                            style: TextStyle(
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w600,
-                              fontSize: 13,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'vs Default 20% tier',
-                            style: TextStyle(
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: Colors.grey[600],
-                              fontSize: 11,
                             ),
                           ),
                         ],
@@ -411,17 +403,15 @@ class _FeeInsightsCardState extends State<FeeInsightsCard> with WidgetsBindingOb
                       children: [
                         Text(
                           '\$${(savingsCents / 100).toStringAsFixed(2)}',
-                          style: const TextStyle(
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: AppTheme.success,
                             fontWeight: FontWeight.bold,
-                            fontSize: 18,
                           ),
                         ),
                         Text(
                           '${savingsPercent.toStringAsFixed(1)}% less',
-                          style: const TextStyle(
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: AppTheme.success,
-                            fontSize: 11,
                           ),
                         ),
                       ],
@@ -454,9 +444,8 @@ class _FeeInsightsCardState extends State<FeeInsightsCard> with WidgetsBindingOb
                     Expanded(
                       child: Text(
                         'Consider applying for Shopify\'s Reduced Revenue Share Plan to save on fees.',
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           color: Colors.grey[700],
-                          fontSize: 12,
                         ),
                       ),
                     ),
@@ -488,8 +477,7 @@ class _FeeInsightsCardState extends State<FeeInsightsCard> with WidgetsBindingOb
           Expanded(
             child: Text(
               label,
-              style: TextStyle(
-                fontSize: 13,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
                 color: Colors.grey[700],
               ),
@@ -497,11 +485,16 @@ class _FeeInsightsCardState extends State<FeeInsightsCard> with WidgetsBindingOb
           ),
           Text(
             amount,
-            style: TextStyle(
-              fontSize: isBold ? 15 : 13,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: color ?? Colors.grey[800],
-            ),
+            style: isBold
+                ? Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: color ?? Colors.grey[800],
+                  )
+                : Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: color ?? Colors.grey[800],
+                  ),
           ),
         ],
       ),
@@ -563,17 +556,15 @@ class FeeKpiCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               '\$${(breakdown.totalFeesCents / 100).toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 24,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               'Total Fees (${effectiveFeePercent.toStringAsFixed(1)}%)',
-              style: TextStyle(
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: Colors.grey[600],
-                fontSize: 12,
               ),
             ),
             const SizedBox(height: 8),
@@ -581,17 +572,15 @@ class FeeKpiCard extends StatelessWidget {
               children: [
                 Text(
                   'Net: ',
-                  style: TextStyle(
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[500],
-                    fontSize: 12,
                   ),
                 ),
                 Text(
                   '\$${(breakdown.netAmountCents / 100).toStringAsFixed(2)}',
-                  style: const TextStyle(
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: AppTheme.success,
                     fontWeight: FontWeight.w600,
-                    fontSize: 12,
                   ),
                 ),
               ],

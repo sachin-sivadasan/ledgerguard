@@ -152,11 +152,10 @@ class StoreHealthPage extends StatelessWidget {
             child: Center(
               child: Text(
                 _getInitials(subscription.myshopifyDomain),
-                style: const TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                ),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: Colors.blue,
+                      fontSize: 22,
+                    ),
               ),
             ),
           ),
@@ -181,21 +180,20 @@ class StoreHealthPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    _buildStatusBadge(subscription.status),
+                    _buildStatusBadge(context, subscription.status),
                     const SizedBox(width: 8),
                     Text(
                       subscription.formattedPrice,
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                     Text(
                       '/${subscription.billingInterval == BillingInterval.annual ? 'yr' : 'mo'}',
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 12,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Colors.grey[500],
+                          ),
                     ),
                   ],
                 ),
@@ -207,7 +205,7 @@ class StoreHealthPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge(String status) {
+  Widget _buildStatusBadge(BuildContext context, String status) {
     final isActive = status == 'ACTIVE';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -219,11 +217,10 @@ class StoreHealthPage extends StatelessWidget {
       ),
       child: Text(
         status,
-        style: TextStyle(
-          color: isActive ? Colors.green : Colors.grey[600],
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: isActive ? Colors.green : Colors.grey[600],
+              fontWeight: FontWeight.w600,
+            ),
       ),
     );
   }
@@ -255,12 +252,11 @@ class StoreHealthPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'Store Earnings',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
@@ -269,6 +265,7 @@ class StoreHealthPage extends StatelessWidget {
               children: [
                 Expanded(
                   child: _buildEarningsTile(
+                    context,
                     'Pending',
                     earnings.formattedPending,
                     Colors.amber,
@@ -278,6 +275,7 @@ class StoreHealthPage extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildEarningsTile(
+                    context,
                     'Available',
                     earnings.formattedAvailable,
                     AppTheme.success,
@@ -302,16 +300,18 @@ class StoreHealthPage extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         'Paid Out',
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey[600],
+                            ),
                       ),
                     ],
                   ),
                   Text(
                     earnings.formattedPaidOut,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[700],
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
                   ),
                 ],
               ),
@@ -323,6 +323,7 @@ class StoreHealthPage extends StatelessWidget {
   }
 
   Widget _buildEarningsTile(
+    BuildContext context,
     String label,
     String amount,
     Color color,
@@ -344,22 +345,20 @@ class StoreHealthPage extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: color,
+                    ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             amount,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
           ),
         ],
       ),
@@ -381,27 +380,29 @@ class StoreHealthPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Quick Stats',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             _buildStatRow(
+              context,
               'Total Transactions',
               '${health.transactions.length}',
               Icons.receipt,
             ),
             const Divider(height: 20),
             _buildStatRow(
+              context,
               'Total Revenue',
               health.formattedTotalRevenue,
               Icons.attach_money,
             ),
             const Divider(height: 20),
             _buildStatRow(
+              context,
               'MRR Contribution',
               '\$${(sub.mrrCents / 100).toStringAsFixed(2)}/mo',
               Icons.trending_up,
@@ -409,6 +410,7 @@ class StoreHealthPage extends StatelessWidget {
             if (sub.lastChargeDate != null) ...[
               const Divider(height: 20),
               _buildStatRow(
+                context,
                 'Last Charge',
                 dateFormat.format(sub.lastChargeDate!),
                 Icons.payment,
@@ -417,6 +419,7 @@ class StoreHealthPage extends StatelessWidget {
             if (sub.expectedNextCharge != null) ...[
               const Divider(height: 20),
               _buildStatRow(
+                context,
                 'Next Charge',
                 dateFormat.format(sub.expectedNextCharge!),
                 Icons.event,
@@ -432,6 +435,7 @@ class StoreHealthPage extends StatelessWidget {
   }
 
   Widget _buildStatRow(
+    BuildContext context,
     String label,
     String value,
     IconData icon, {
@@ -451,15 +455,17 @@ class StoreHealthPage extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: TextStyle(color: Colors.grey[600]),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[600],
+                ),
           ),
         ),
         Text(
           value,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: valueColor,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: valueColor,
+              ),
         ),
       ],
     );

@@ -129,16 +129,14 @@ class _EarningsStatusCardState extends State<EarningsStatusCard> {
                     children: [
                       Text(
                         'Available: ',
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           color: Colors.grey[600],
-                          fontSize: 12,
                         ),
                       ),
                       Text(
                         status.formattedAvailable,
-                        style: const TextStyle(
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
                           color: AppTheme.success,
                         ),
                       ),
@@ -148,9 +146,8 @@ class _EarningsStatusCardState extends State<EarningsStatusCard> {
                   if (status.totalPendingCents > 0)
                     Text(
                       'Pending: ${status.formattedPending}',
-                      style: TextStyle(
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Colors.amber[700],
-                        fontSize: 11,
                       ),
                     ),
                 ],
@@ -178,10 +175,9 @@ class _EarningsStatusCardState extends State<EarningsStatusCard> {
                           : daysUntil == 1
                               ? 'Tomorrow'
                               : '${daysUntil}d',
-                      style: TextStyle(
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Colors.blue[700],
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -221,23 +217,21 @@ class _EarningsStatusCardState extends State<EarningsStatusCard> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Earnings Status',
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
                         'Payout availability',
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           color: Colors.grey,
-                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -281,11 +275,10 @@ class _EarningsStatusCardState extends State<EarningsStatusCard> {
             // Upcoming Availability Timeline
             if (status.upcomingAvailability.isNotEmpty) ...[
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Upcoming Availability',
-                style: TextStyle(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  fontSize: 14,
                 ),
               ),
               const SizedBox(height: 12),
@@ -312,15 +305,14 @@ class _EarningsStatusCardState extends State<EarningsStatusCard> {
                     Expanded(
                       child: Text(
                         'Already Paid Out',
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey[600],
-                          fontSize: 13,
                         ),
                       ),
                     ),
                     Text(
                       status.formattedPaidOut,
-                      style: TextStyle(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: Colors.grey[700],
                       ),
@@ -359,9 +351,8 @@ class _EarningsStatusCardState extends State<EarningsStatusCard> {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: TextStyle(
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: color,
-                  fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -370,7 +361,7 @@ class _EarningsStatusCardState extends State<EarningsStatusCard> {
           const SizedBox(height: 8),
           Text(
             amount,
-            style: TextStyle(
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: color,
@@ -404,17 +395,15 @@ class _EarningsStatusCardState extends State<EarningsStatusCard> {
               Expanded(
                 child: Text(
                   entry.displayDate,
-                  style: TextStyle(
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey[700],
-                    fontSize: 13,
                   ),
                 ),
               ),
               Text(
                 entry.formattedAmount,
-                style: const TextStyle(
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
-                  fontSize: 13,
                 ),
               ),
               const SizedBox(width: 8),
@@ -436,7 +425,7 @@ class _EarningsStatusCardState extends State<EarningsStatusCard> {
                         : daysUntil == 1
                             ? 'Tomorrow'
                             : 'in ${daysUntil}d',
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       fontSize: 10,
                       color: daysUntil <= 3 ? Colors.blue[700] : Colors.grey[600],
                       fontWeight: FontWeight.w500,
@@ -517,7 +506,7 @@ class EarningsKpiCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           status.formattedPending,
-                          style: TextStyle(
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: Colors.amber[700],
                             fontWeight: FontWeight.w600,
                             fontSize: 10,
@@ -531,17 +520,15 @@ class EarningsKpiCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               status.formattedAvailable,
-              style: const TextStyle(
-                fontSize: 24,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               'Available for Payout',
-              style: TextStyle(
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: Colors.grey[600],
-                fontSize: 12,
               ),
             ),
             if (status.nextAvailable != null) ...[
@@ -556,9 +543,8 @@ class EarningsKpiCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     'Next: ${status.nextAvailable!.formattedAmount} on ${status.nextAvailable!.displayDate}',
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Colors.blue[600],
-                      fontSize: 11,
                     ),
                   ),
                 ],

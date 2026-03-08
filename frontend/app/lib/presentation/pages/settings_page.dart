@@ -150,10 +150,9 @@ class SettingsPage extends StatelessWidget {
                 Center(
                   child: Text(
                     'LedgerGuard v1.0.0',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 12,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: Colors.grey[400],
+                        ),
                   ),
                 ),
 
@@ -173,12 +172,10 @@ class SettingsPage extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
-            letterSpacing: 0.5,
-          ),
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: Colors.grey[700],
+                letterSpacing: 0.5,
+              ),
         ),
       ],
     );
@@ -235,18 +232,16 @@ class SettingsPage extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Colors.grey[500],
+                          ),
                     ),
                   ],
                 ),
@@ -283,19 +278,17 @@ class SettingsPage extends StatelessWidget {
                   children: [
                     Text(
                       'Log Out',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.danger,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.danger,
+                          ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Sign out of your account',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Colors.grey[500],
+                          ),
                     ),
                   ],
                 ),

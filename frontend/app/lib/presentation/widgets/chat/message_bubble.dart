@@ -46,11 +46,10 @@ class MessageBubble extends StatelessWidget {
               ),
               child: SelectableText(
                 message.content,
-                style: TextStyle(
-                  color: isUser ? Colors.white : null,
-                  fontSize: 14,
-                  height: 1.4,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: isUser ? Colors.white : null,
+                      height: 1.4,
+                    ),
               ),
             ),
             if (message.hasSuggestions) ...[
@@ -60,7 +59,7 @@ class MessageBubble extends StatelessWidget {
                 runSpacing: 4,
                 children: message.suggestions.map((s) {
                   return ActionChip(
-                    label: Text(s, style: const TextStyle(fontSize: 12)),
+                    label: Text(s, style: Theme.of(context).textTheme.labelMedium),
                     onPressed: () => onSuggestionTapped?.call(s),
                     backgroundColor: AppTheme.primary.withValues(alpha: 0.08),
                     side: BorderSide(
@@ -107,10 +106,9 @@ class MessageBubble extends StatelessWidget {
             const SizedBox(width: 10),
             Text(
               'Thinking...',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 14,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ],
         ),

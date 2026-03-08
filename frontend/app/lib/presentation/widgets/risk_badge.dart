@@ -44,12 +44,12 @@ class RiskBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isCompact) {
-      return _buildCompact();
+      return _buildCompact(context);
     }
-    return _buildFull();
+    return _buildFull(context);
   }
 
-  Widget _buildFull() {
+  Widget _buildFull(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -64,18 +64,17 @@ class RiskBadge extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             riskState.displayName,
-            style: TextStyle(
-              color: _color,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: _color,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCompact() {
+  Widget _buildCompact(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -84,11 +83,10 @@ class RiskBadge extends StatelessWidget {
       ),
       child: Text(
         riskState.displayName,
-        style: TextStyle(
-          color: _color,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: _color,
+              fontWeight: FontWeight.w600,
+            ),
       ),
     );
   }
@@ -168,19 +166,17 @@ class RiskStateIndicator extends StatelessWidget {
               children: [
                 Text(
                   riskState.displayName,
-                  style: TextStyle(
-                    color: _color,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: _color,
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _description,
-                  style: TextStyle(
-                    color: Colors.grey[700],
-                    fontSize: 13,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[700],
+                      ),
                 ),
               ],
             ),

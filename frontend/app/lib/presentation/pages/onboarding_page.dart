@@ -152,10 +152,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     _currentPage == _steps.length - 1
                         ? 'Get Started'
                         : 'Continue',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
               ),
@@ -191,9 +188,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           // Title
           Text(
             step.title,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
               color: Colors.black87,
             ),
             textAlign: TextAlign.center,
@@ -203,8 +198,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           // Description
           Text(
             step.description,
-            style: TextStyle(
-              fontSize: 16,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Colors.grey[600],
               height: 1.5,
             ),

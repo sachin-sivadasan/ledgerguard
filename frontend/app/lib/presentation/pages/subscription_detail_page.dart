@@ -145,11 +145,10 @@ class SubscriptionDetailPage extends StatelessWidget {
             child: Center(
               child: Text(
                 _getInitials(subscription.myshopifyDomain),
-                style: const TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                ),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: Colors.blue,
+                      fontSize: 22,
+                    ),
               ),
             ),
           ),
@@ -172,7 +171,7 @@ class SubscriptionDetailPage extends StatelessWidget {
                       ),
                 ),
                 const SizedBox(height: 8),
-                _buildStatusBadge(subscription.status),
+                _buildStatusBadge(context, subscription.status),
               ],
             ),
           ),
@@ -181,7 +180,7 @@ class SubscriptionDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge(String status) {
+  Widget _buildStatusBadge(BuildContext context, String status) {
     final isActive = status == 'ACTIVE';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -193,11 +192,10 @@ class SubscriptionDetailPage extends StatelessWidget {
       ),
       child: Text(
         status,
-        style: TextStyle(
-          color: isActive ? Colors.green : Colors.grey[600],
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: isActive ? Colors.green : Colors.grey[600],
+              fontWeight: FontWeight.w600,
+            ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:ledgerguard/core/theme/app_theme.dart';
 import 'package:ledgerguard/domain/entities/subscription.dart';
 import 'package:ledgerguard/presentation/widgets/risk_badge.dart';
 
@@ -8,6 +9,7 @@ void main() {
   group('RiskBadge', () {
     Widget buildTestWidget(RiskState riskState, {bool isCompact = false}) {
       return MaterialApp(
+        theme: AppTheme.lightTheme,
         home: Scaffold(
           body: RiskBadge(
             riskState: riskState,
@@ -123,6 +125,7 @@ void main() {
   group('RiskStateIndicator', () {
     Widget buildTestWidget(RiskState riskState) {
       return MaterialApp(
+        theme: AppTheme.lightTheme,
         home: Scaffold(
           body: SizedBox(
             width: 400,

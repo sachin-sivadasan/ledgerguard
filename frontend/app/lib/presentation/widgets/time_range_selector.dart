@@ -82,11 +82,11 @@ class TimeRangeSelector extends StatelessWidget {
               isCompact
                   ? currentRange.preset.shortName
                   : currentRange.preset.displayName,
-              style: TextStyle(
-                fontSize: isCompact ? 12 : 13,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: isCompact ? 12 : null,
+                  ),
             ),
             const SizedBox(width: 2),
             Icon(
@@ -157,11 +157,9 @@ class TimeRangeChip extends StatelessWidget {
           children: [
             Text(
               currentRange.preset.displayName,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSecondaryContainer,
-              ),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  ),
             ),
             const SizedBox(width: 4),
             Icon(

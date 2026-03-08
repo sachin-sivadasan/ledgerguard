@@ -301,7 +301,7 @@ class NotificationSettingsPage extends StatelessWidget {
       enabled: enabled,
       title: Text(
         title,
-        style: TextStyle(
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: enabled ? null : Colors.grey,
         ),
       ),
@@ -335,7 +335,7 @@ class NotificationSettingsPage extends StatelessWidget {
             : null,
         child: Text(
           _formatTime(time),
-          style: TextStyle(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: enabled ? AppTheme.primary : Colors.grey,
             fontWeight: FontWeight.w600,
           ),

@@ -163,9 +163,9 @@ class _PreferencesPageState extends State<PreferencesPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'You have unsaved changes',
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppTheme.warning,
                       fontWeight: FontWeight.w500,
                     ),
@@ -261,9 +261,8 @@ class _PreferencesPageState extends State<PreferencesPage> {
               ),
               Text(
                 subtitle,
-                style: TextStyle(
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: Colors.grey[600],
-                  fontSize: 12,
                 ),
               ),
             ],
@@ -294,9 +293,9 @@ class _PreferencesPageState extends State<PreferencesPage> {
               children: [
                 const Icon(Icons.star, size: 18, color: AppTheme.primary),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Primary KPIs',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 Container(
@@ -308,10 +307,9 @@ class _PreferencesPageState extends State<PreferencesPage> {
                   ),
                   child: Text(
                     '${preferences.primaryKpis.length}/4',
-                    style: const TextStyle(
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: AppTheme.primary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -320,7 +318,7 @@ class _PreferencesPageState extends State<PreferencesPage> {
             const SizedBox(height: 4),
             Text(
               'Drag to reorder. These appear at the top of your dashboard.',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 12),
             ReorderableListView.builder(
@@ -384,14 +382,14 @@ class _PreferencesPageState extends State<PreferencesPage> {
           borderRadius: BorderRadius.circular(10),
           color: AppTheme.primary.withOpacity(0.05),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_circle_outline, color: AppTheme.primary, size: 20),
-            SizedBox(width: 8),
+            const Icon(Icons.add_circle_outline, color: AppTheme.primary, size: 20),
+            const SizedBox(width: 8),
             Text(
               'Add KPI',
-              style: TextStyle(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppTheme.primary,
                 fontWeight: FontWeight.w600,
               ),
@@ -419,16 +417,16 @@ class _PreferencesPageState extends State<PreferencesPage> {
               children: [
                 const Icon(Icons.widgets, size: 18, color: AppTheme.secondary),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Secondary Widgets',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
               'Toggle widgets to show or hide them on your dashboard.',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 12),
             ...SecondaryWidget.values.map((widget) => _WidgetTile(
@@ -521,7 +519,7 @@ class _KpiTile extends StatelessWidget {
         ),
         title: Text(
           kpi.displayName,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline),
@@ -574,7 +572,7 @@ class _WidgetTile extends StatelessWidget {
         ),
         title: Text(
           widget.displayName,
-          style: TextStyle(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w500,
             color: isEnabled ? Colors.black87 : Colors.grey[600],
           ),

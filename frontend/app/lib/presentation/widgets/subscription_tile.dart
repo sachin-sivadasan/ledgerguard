@@ -47,11 +47,11 @@ class SubscriptionTile extends StatelessWidget {
                     child: Center(
                       child: Text(
                         _getInitials(subscription.displayName),
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: isCompact ? 13 : 16,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                              fontSize: isCompact ? 13 : null,
+                            ),
                       ),
                     ),
                   ),

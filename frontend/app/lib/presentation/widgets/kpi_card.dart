@@ -163,11 +163,11 @@ class _DeltaBadge extends StatelessWidget {
           const SizedBox(width: 2),
           Text(
             delta.formattedValue,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w600,
-              color: delta.color,
-            ),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: delta.color,
+                  fontSize: isCompact ? 9.0 : null,
+                ),
           ),
         ],
       ),
@@ -264,11 +264,10 @@ class _DeltaBadgeSmall extends StatelessWidget {
         ),
         Text(
           delta.formattedValue,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: delta.color,
-          ),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: delta.color,
+              ),
         ),
       ],
     );

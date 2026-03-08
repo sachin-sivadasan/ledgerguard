@@ -33,6 +33,8 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  bool _initialLoadTriggered = false;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +44,22 @@ class _DashboardPageState extends State<DashboardPage> {
     context.read<AppSelectionBloc>().add(const FetchAppsRequested());
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // For returning users: if app is already selected, trigger load immediately
+    if (!_initialLoadTriggered) {
+      final appState = context.read<AppSelectionBloc>().state;
+      final dashState = context.read<DashboardBloc>().state;
+      if (appState is AppSelectionLoaded &&
+          appState.hasSelection &&
+          dashState is DashboardInitial) {
+        _initialLoadTriggered = true;
+        context.read<DashboardBloc>().add(const LoadDashboardRequested());
+      }
+    }
+  }
+
   void _onAppChanged() {
     // Refresh dashboard when app selection changes
     context.read<DashboardBloc>().add(const LoadDashboardRequested());
@@ -49,7 +67,18 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocListener<AppSelectionBloc, AppSelectionState>(
+      listener: (context, state) {
+        if (state is AppSelectionLoaded && state.hasSelection) {
+          // App became available — load dashboard if not already loaded
+          final dashState = context.read<DashboardBloc>().state;
+          if (dashState is DashboardInitial || dashState is DashboardError) {
+            _initialLoadTriggered = true;
+            context.read<DashboardBloc>().add(const LoadDashboardRequested());
+          }
+        }
+      },
+      child: Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('Dashboard'),
@@ -151,8 +180,7 @@ class _DashboardPageState extends State<DashboardPage> {
           return BlocBuilder<DashboardBloc, DashboardState>(
             builder: (context, state) {
               if (state is DashboardInitial) {
-                // Trigger load on first build
-                context.read<DashboardBloc>().add(const LoadDashboardRequested());
+                // Wait for BlocListener on AppSelectionBloc to trigger load
                 return const Center(child: CircularProgressIndicator());
               }
 
@@ -182,6 +210,7 @@ class _DashboardPageState extends State<DashboardPage> {
           );
         },
       ),
+    ),
     );
   }
 

@@ -106,12 +106,7 @@ void main() {
       ),
     );
     when(() => mockAppSelectionBloc.stream).thenAnswer(
-      (_) => Stream.value(
-        AppSelectionLoaded(
-          apps: const [ShopifyApp(id: 'test-app', name: 'Test App')],
-          selectedApp: const ShopifyApp(id: 'test-app', name: 'Test App'),
-        ),
-      ),
+      (_) => const Stream.empty(),
     );
 
     // Setup AppRepository defaults for FeeInsightsCard
@@ -217,7 +212,8 @@ void main() {
       expect(find.text('Dashboard'), findsOneWidget);
     });
 
-    testWidgets('fetches metrics on init when in initial state', (tester) async {
+    testWidgets('fetches metrics on init when app is already selected', (tester) async {
+      // Simulate app already selected (returning user) — didChangeDependencies triggers load
       await tester.pumpWidget(buildTestWidget());
 
       verify(() => mockBloc.add(const LoadDashboardRequested())).called(1);

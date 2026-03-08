@@ -1481,3 +1481,20 @@
 - No code changes — documentation/visualization deliverable
 
 ---
+
+### [2026-03-09] Billing System Design — Stripe + Trial-Freemium (Documentation)
+**Original:**
+> Implement my billing. How to introduce plans table? Feature list as config in table? Payment gateway as Stripe or Shopify. If we're providing manual app connection we can't direct him to Shopify right because of no access token? Or we can ask them to install during billing setup. I need custom option along with this — calling an external API (that may be a third-party flow builder with their own mailer).
+
+**Improved:**
+> Design LedgerGuard's billing system using Stripe (confirmed — Shopify Billing is merchant-only, Partner API has no billing endpoints, no Partner Tools marketplace exists). Model: 14-day free trial (all features) → FREE tier (limited: 1 app, no AI Chat/API Keys/Slack/export) → PRO (paid, unlimited) → ENTERPRISE (custom). Database-driven feature gating via plans + plan_features tables. Deliverables: visualization prompt, PlantUML diagram, ADR-017 (Stripe) + ADR-018 (Trial-Freemium), plan doc PLAN-20.
+
+**Result:**
+- Created `docs/prompts/billing-system-flow.md` — full visualization prompt with 4 flows + Stripe decision table + data model
+- Created `docs/billing-system-flow.puml` — PlantUML activity diagram of billing lifecycle
+- Added ADR-017 (Stripe) + ADR-018 (Trial-Freemium) to DECISIONS.md
+- Created `docs/plans/PLAN-20.md` + updated PLAN_INDEX.md
+- Added P1 entry to future.md
+- No code changes — documentation/visualization deliverable
+
+---

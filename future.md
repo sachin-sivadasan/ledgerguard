@@ -9,6 +9,7 @@ Postponed ideas and features for later implementation.
 | Feature | Priority | Notes |
 |---------|----------|-------|
 | Welcome & Onboarding Flow (Hybrid) | P1 | n8n + Postmark email drip + in-app checklist; custom webhook support for third-party flow builders; see `docs/prompts/welcome-onboarding-flow.md` |
+| Billing System (Stripe + Trial-Freemium) | P1 | Stripe Checkout, plans + plan_features tables, 14-day trial, feature gating middleware; see `docs/prompts/billing-system-flow.md` |
 | AI Chat + Internal GraphQL | P2 | OpenAI-powered chat widget; GraphQL as query layer; AIClient interface for provider swap |
 | Public GraphQL Developer API | P3 | Promote internal GraphQL to public API for external devs (after AI chat ships) |
 | Claude API as Parallel Provider | P3 | Add Claude alongside OpenAI — user picks preferred AI provider in settings |

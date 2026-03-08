@@ -353,3 +353,60 @@ Postmark will be called from n8n workflows (or directly from custom webhook endp
 - Need to set up Postmark account, verify sending domain, create email templates
 - Templates managed in Postmark dashboard (not in codebase)
 - If email volume grows significantly, can negotiate volume pricing
+
+---
+
+### ADR-017: Stripe for Billing (Not Shopify Billing)
+**Date:** 2026-03-09
+**Status:** Accepted
+
+**Context:**
+LedgerGuard needs a billing system for its own SaaS subscription plans (FREE, PRO, ENTERPRISE). Evaluated Stripe vs Shopify Billing API.
+
+Shopify Billing was ruled out after confirming with Shopify documentation:
+1. Shopify Billing API is exclusively for merchant-facing apps installed in shops — it cannot bill Partner organizations
+2. Partner API exposes no billing endpoints
+3. No Partner Tools marketplace exists
+4. Manual token users (admin flow) have no OAuth/app installation — Shopify Billing impossible for them
+5. All comparable partner-facing tools (Baremetrics, Ship) use external billing
+
+**Decision:**
+Use Stripe as the billing provider:
+- Stripe Checkout (hosted) for payment collection — no PCI compliance needed
+- Stripe Customer Portal for self-service plan management
+- Webhook-driven state sync (checkout.session.completed, invoice.paid, etc.)
+- Subscription lifecycle: Trial (14 days) → Free (limited) → Pro (paid) → Enterprise (custom)
+- `billing_subscriptions` table (not `subscriptions` to avoid Shopify data collision)
+
+**Consequences:**
+- Works for all users regardless of Shopify connection method (OAuth or manual token)
+- Stripe fees (~2.9% + 30c per transaction) vs 0% Shopify rev share avoided
+- Full control over subscription lifecycle, trials, proration, coupons
+- Need Stripe account setup, webhook endpoint, PCI-compliant checkout (handled by hosted page)
+- Database-driven `plans` + `plan_features` tables for admin-editable feature gating
+
+---
+
+### ADR-018: Trial-Freemium Billing Model
+**Date:** 2026-03-09
+**Status:** Accepted
+
+**Context:**
+Need to decide on pricing model for LedgerGuard SaaS. Options: pure freemium, trial-only, or trial + freemium hybrid.
+
+**Decision:**
+Trial + Freemium hybrid:
+- **Signup:** 14-day free trial with ALL features unlocked (PRO-level access)
+- **Trial expires + paid:** plan_tier = PRO, Stripe subscription active
+- **Trial expires + no payment:** plan_tier = FREE, gated features locked
+- **FREE tier:** Dashboard, basic risk overview, 1 app, push notifications
+- **PRO gated:** AI Chat, API Keys, Slack notifications, data export, multi-app, advanced risk
+
+Feature configuration stored in database (`plans` + `plan_features` tables) for runtime admin editability.
+
+**Consequences:**
+- Trial converts users by showing full value before locking features
+- FREE tier retains users who aren't ready to pay (potential future conversion)
+- Database-driven features allow plan changes without code deploy
+- Need daily cron to check trial expiry and downgrade
+- Frontend needs `BillingBloc` to gate UI elements per plan

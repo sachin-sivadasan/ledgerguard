@@ -1,0 +1,181 @@
+@startuml BillingSystemFlow
+!theme plain
+title LedgerGuard - Billing System Flow (Stripe + Trial-Freemium)
+
+skinparam ActivityBackgroundColor White
+skinparam ActivityBorderColor #2563EB
+skinparam ActivityFontSize 12
+skinparam NoteBackgroundColor #F8FAFC
+skinparam NoteBorderColor #94A3B8
+
+|#E8F0FE|Firebase|
+|#FFF3E0|Backend|
+|#F3E5F5|Stripe|
+|#E0F7FA|Flutter|
+|#E8F5E9|n8n|
+
+|Firebase|
+start
+:User signs up;
+
+|Backend|
+:Create user record\n(plan_tier = TRIAL);
+:Create Stripe Customer\n(no payment method yet);
+:Set trial_ends_at = NOW + 14 days;
+:Insert billing_subscription\n(status = trialing);
+
+|n8n|
+:Send Welcome + Trial email\n(via Postmark);
+
+|Flutter|
+:Show trial banner\n""14 days remaining"";
+:All features unlocked;
+
+note right
+  **Trial Period (14 days)**
+  Day 7: email reminder
+  Day 12: email reminder
+  Day 13: in-app warning
+end note
+
+' === TRIAL EXPIRY ===
+
+|Backend|
+:Daily cron checks\ntrial_ends_at;
+
+if (Trial expired?) then (yes)
+  if (Payment method added?) then (yes)
+    |Stripe|
+    :Create Subscription\n(Stripe handles first invoice);
+    :Fire checkout.session.completed;
+
+    |Backend|
+    :Update plan_tier = PRO;
+    :Update billing_subscription\n(status = active);
+
+    |n8n|
+    :Send ""Welcome to PRO"" email;
+
+    |Flutter|
+    :Remove trial banner;
+    :All features remain unlocked;
+  else (no)
+    |Backend|
+    :Update plan_tier = FREE;
+    :Update billing_subscription\n(status = free);
+
+    |n8n|
+    :Send ""Trial ended"" email\nwith upgrade CTA;
+
+    |Flutter|
+    :Show upgrade prompts;
+    :Lock gated features;
+    note right
+      **Locked on FREE:**
+      AI Chat
+      API Keys
+      Slack notifications
+      Data export
+      Multi-app (limit: 1)
+    end note
+  endif
+else (no)
+  :Continue trial;
+endif
+
+' === UPGRADE FLOW ===
+
+|Flutter|
+:User clicks ""Upgrade to PRO"";
+
+|Backend|
+:POST /api/v1/billing/checkout;
+:Create Stripe Checkout Session;
+
+|Stripe|
+:Hosted Checkout Page;
+:User enters payment method;
+:Payment succeeds;
+:Fire checkout.session.completed;
+
+|Backend|
+:POST /webhooks/stripe;
+:Verify webhook signature;
+:Check billing_events\nfor idempotency;
+:Create billing_subscription\n(status = active, plan = PRO);
+:Update user.plan_tier = PRO;
+
+|Flutter|
+:Redirect to success URL;
+:Unlock all PRO features;
+
+' === ONGOING BILLING ===
+
+|Stripe|
+:Monthly invoice generated;
+
+if (Payment succeeds?) then (yes)
+  :Fire invoice.paid;
+
+  |Backend|
+  :Renew subscription period;
+  :Log billing_event;
+else (no)
+  :Fire invoice.payment_failed;
+
+  |Backend|
+  :Set status = past_due;
+  :Send payment failed alert;
+
+  |n8n|
+  :Send ""Update payment"" email;
+
+  |Stripe|
+  :Retry payment (Stripe Smart Retries);
+endif
+
+' === CANCEL FLOW ===
+
+|Flutter|
+:User clicks ""Cancel Subscription"";
+
+|Backend|
+:POST /api/v1/billing/cancel;
+:Stripe: cancel at period end;
+
+|Stripe|
+:User keeps PRO until period end;
+:At period end fire\ncustomer.subscription.deleted;
+
+|Backend|
+:Set plan_tier = FREE;
+:Set billing_subscription\nstatus = canceled;
+
+|Flutter|
+:Lock gated features;
+:Show ""Resubscribe"" option;
+
+' === FEATURE GATING ===
+
+|Backend|
+:Request to protected endpoint\n(e.g. /api/v1/chat);
+note right
+  **Plan Middleware**
+  1. Get user.plan_tier
+  2. Check trial_ends_at
+  3. Lookup plan_features
+  4. Allow or 403
+end note
+
+if (Feature allowed for plan?) then (yes)
+  :Process request normally;
+else (no)
+  :Return 403\n{error: ""upgrade_required"",\nplan: ""PRO"", feature: ""ai_chat""};
+
+  |Flutter|
+  :Show upgrade dialog\nwith plan comparison;
+endif
+
+stop
+
+@enduml

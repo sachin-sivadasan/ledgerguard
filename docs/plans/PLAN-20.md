@@ -4,7 +4,7 @@
 **Status:** Designed (awaiting implementation)
 
 ## Overview
-Stripe-based billing system with Trial-Freemium model. 14-day trial with full features, then FREE (limited) or PRO (paid). Database-driven feature gating via `plans` + `plan_features` tables.
+Stripe-based billing system. All plans are paid — no free tier. Starter plan includes a 14-day trial. After trial expires without payment, user enters read-only mode. Database-driven feature gating via `plans` + `plan_features` tables.
 
 ## Why Stripe (Not Shopify Billing)
 - LedgerGuard is a partner-facing SaaS, NOT a Shopify-installed merchant app
@@ -14,13 +14,14 @@ Stripe-based billing system with Trial-Freemium model. 14-day trial with full fe
 - Manual token users can't use Shopify Billing (no OAuth/app installation)
 - All comparable tools (Baremetrics, Ship) use external billing
 
-## Plan Tiers
-| Tier | Price | Apps | AI Chat | API Keys | Slack | Export |
-|------|-------|------|---------|----------|-------|--------|
-| TRIAL | $0 (14 days) | Unlimited | Yes | Yes | Yes | Yes |
-| FREE | $0 | 1 | No | No | No | No |
-| PRO | $XX/mo | Unlimited | Yes | Yes | Yes | CSV/PDF |
-| ENTERPRISE | Custom | Unlimited | Yes+ | Yes+ | Yes | Full |
+## Plan Tiers (No Free Plan)
+| Tier | Price | Trial | Apps | AI Chat | API Keys | Slack | Export |
+|------|-------|-------|------|---------|----------|-------|--------|
+| TRIAL | $0 (14 days) | This IS the trial | 1 | Yes | Yes | Yes | Yes |
+| STARTER | $X/mo | 14-day trial | 1 | No | No | No | No |
+| PRO | $XX/mo | No trial | Unlimited | Yes | Yes | Yes | CSV/PDF |
+| ENTERPRISE | Custom | No trial | Unlimited | Yes+ | Yes+ | Yes | Full |
+| EXPIRED | — | — | Read-only | No | No | No | No |
 
 ## Data Model
 - `plans` — tier definitions with Stripe Price IDs
@@ -29,9 +30,10 @@ Stripe-based billing system with Trial-Freemium model. 14-day trial with full fe
 - `billing_events` — webhook audit log (idempotency via stripe_event_id)
 
 ## Key Flows
-1. **Signup → Trial:** Create user + Stripe Customer, 14-day trial, all features
-2. **Trial → PRO:** User adds payment, Stripe Checkout, webhook updates plan_tier
-3. **Trial → FREE:** No payment, daily cron downgrades, features locked
+1. **Signup → Trial:** Create user + Stripe Customer, 14-day Starter trial
+2. **Trial → STARTER:** User subscribes, Stripe Checkout, plan_tier = STARTER
+3. **Trial → EXPIRED:** No payment, daily cron sets read-only mode
+4. **STARTER → PRO:** Upgrade via Stripe, proration handled
 4. **Upgrade:** Stripe Checkout Session → hosted page → webhook
 5. **Cancel:** Cancel at period end, keep PRO until period expires
 6. **Feature Gate:** PlanMiddleware checks plan_features before allowing access
@@ -46,7 +48,7 @@ Stripe-based billing system with Trial-Freemium model. 14-day trial with full fe
 
 ## Key Decisions
 - ADR-017: Stripe for Billing (Not Shopify Billing)
-- ADR-018: Trial-Freemium Billing Model
+- ADR-018: All-Paid Billing Model (Trial on Starter, no free tier)
 
 ## Visualization
 - Prompt: `docs/prompts/billing-system-flow.md`

@@ -19,7 +19,7 @@ start
 :User signs up;
 
 |Backend|
-:Create user record\n(plan_tier = TRIAL);
+:Create user record\n(plan_tier = TRIAL\n(Starter-level trial));
 :Create Stripe Customer\n(no payment method yet);
 :Set trial_ends_at = NOW + 14 days;
 :Insert billing_subscription\n(status = trialing);
@@ -50,7 +50,7 @@ if (Trial expired?) then (yes)
     :Fire checkout.session.completed;
 
     |Backend|
-    :Update plan_tier = PRO;
+    :Update plan_tier = STARTER;
     :Update billing_subscription\n(status = active);
 
     |n8n|
@@ -61,7 +61,7 @@ if (Trial expired?) then (yes)
     :All features remain unlocked;
   else (no)
     |Backend|
-    :Update plan_tier = FREE;
+    :Update plan_tier = EXPIRED;
     :Update billing_subscription\n(status = free);
 
     |n8n|
@@ -69,7 +69,7 @@ if (Trial expired?) then (yes)
 
     |Flutter|
     :Show upgrade prompts;
-    :Lock gated features;
+    :Enter read-only mode;
     note right
       **Locked on FREE:**
       AI Chat
@@ -86,7 +86,7 @@ endif
 ' === UPGRADE FLOW ===
 
 |Flutter|
-:User clicks ""Upgrade to PRO"";
+:User clicks ""Upgrade"";
 
 |Backend|
 :POST /api/v1/billing/checkout;
@@ -107,7 +107,7 @@ endif
 
 |Flutter|
 :Redirect to success URL;
-:Unlock all PRO features;
+:Unlock STARTER features\n(or PRO if selected);
 
 ' === ONGOING BILLING ===
 
@@ -148,11 +148,11 @@ endif
 :At period end fire\ncustomer.subscription.deleted;
 
 |Backend|
-:Set plan_tier = FREE;
+:Set plan_tier = EXPIRED;
 :Set billing_subscription\nstatus = canceled;
 
 |Flutter|
-:Lock gated features;
+:Enter read-only mode;
 :Show ""Resubscribe"" option;
 
 ' === FEATURE GATING ===

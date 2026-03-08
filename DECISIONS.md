@@ -395,18 +395,20 @@ Use Stripe as the billing provider:
 Need to decide on pricing model for LedgerGuard SaaS. Options: pure freemium, trial-only, or trial + freemium hybrid.
 
 **Decision:**
-Trial + Freemium hybrid:
-- **Signup:** 14-day free trial with ALL features unlocked (PRO-level access)
-- **Trial expires + paid:** plan_tier = PRO, Stripe subscription active
-- **Trial expires + no payment:** plan_tier = FREE, gated features locked
-- **FREE tier:** Dashboard, basic risk overview, 1 app, push notifications
-- **PRO gated:** AI Chat, API Keys, Slack notifications, data export, multi-app, advanced risk
+All-paid model with trial on the base plan. No free tier.
+- **Signup:** 14-day free trial with all Starter features unlocked
+- **Trial expires + paid:** plan_tier = STARTER (or PRO if user chose Pro during checkout)
+- **Trial expires + no payment:** plan_tier = EXPIRED, read-only mode (view last-synced dashboard, no sync/chat/export)
+- **STARTER:** Dashboard, risk analytics, sync, notifications, 1 app
+- **PRO:** + AI Chat, API Keys, Slack, data export, unlimited apps
+- **ENTERPRISE:** + custom risk rules, priority support, SLA
 
 Feature configuration stored in database (`plans` + `plan_features` tables) for runtime admin editability.
 
 **Consequences:**
-- Trial converts users by showing full value before locking features
-- FREE tier retains users who aren't ready to pay (potential future conversion)
+- Trial shows value before requiring payment — higher conversion than paywall
+- No free tier simplifies the business model and ensures revenue from all active users
+- Read-only mode preserves data and keeps users engaged (not locked out entirely)
 - Database-driven features allow plan changes without code deploy
-- Need daily cron to check trial expiry and downgrade
-- Frontend needs `BillingBloc` to gate UI elements per plan
+- Need daily cron to check trial expiry and downgrade to EXPIRED
+- Frontend needs `BillingBloc` to gate UI elements per plan tier

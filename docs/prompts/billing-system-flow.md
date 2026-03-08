@@ -77,39 +77,55 @@ Decision: Stripe
 
 ## Plan Tiers
 
+**No free plan.** All paid. Starter plan includes a 14-day trial. After trial expires without payment, user enters **read-only mode** (can view dashboard, cannot sync/chat/export/take actions).
+
 ```
 +-----------------------------------------------------------------------+
 |                         PLAN TIERS                                    |
-+==========+================+================+==========================+
-|          | FREE           | PRO            | ENTERPRISE               |
-+==========+================+================+==========================+
-| Price    | $0/mo          | $XX/mo         | Custom                   |
-|          | (after trial)  | (monthly/annual)| (contact sales)         |
-+----------+----------------+----------------+--------------------------+
-| Trial    | 14-day full    | --             | --                       |
-|          | access on      |                |                          |
-|          | signup         |                |                          |
-+----------+----------------+----------------+--------------------------+
-| Apps     | 1              | Unlimited      | Unlimited                |
-+----------+----------------+----------------+--------------------------+
-| Dashboard| Yes            | Yes            | Yes                      |
-+----------+----------------+----------------+--------------------------+
-| Risk     | Basic          | Full           | Full + Custom Rules      |
-| Analytics| (overview)     | (breakdown,    |                          |
-|          |                | timeline)      |                          |
-+----------+----------------+----------------+--------------------------+
-| AI Chat  | No             | Yes            | Yes + Priority           |
-+----------+----------------+----------------+--------------------------+
-| API Keys | No             | Yes            | Yes + Higher Limits      |
-+----------+----------------+----------------+--------------------------+
-| Slack    | No             | Yes            | Yes                      |
-+----------+----------------+----------------+--------------------------+
-| Export   | No             | CSV/PDF        | CSV/PDF + API            |
-+----------+----------------+----------------+--------------------------+
-| Notifs   | Push only      | Push + Slack   | Push + Slack + Email     |
-+----------+----------------+----------------+--------------------------+
-| Support  | Community      | Email          | Dedicated + SLA          |
-+----------+----------------+----------------+--------------------------+
++==========+=============+===============+===============+==============+
+|          | TRIAL       | STARTER       | PRO           | ENTERPRISE   |
+|          | (14 days)   | (base paid)   | (advanced)    | (custom)     |
++==========+=============+===============+===============+==============+
+| Price    | $0          | $X/mo or      | $XX/mo or     | Custom       |
+|          | (14 days)   | $X/yr         | $XX/yr        | (sales)      |
++----------+-------------+---------------+---------------+--------------+
+| Trial    | This IS the | Paid after    | No trial      | No trial     |
+|          | Starter     | trial ends    | (pay upfront) | (negotiated) |
+|          | trial       |               |               |              |
++----------+-------------+---------------+---------------+--------------+
+| Apps     | 1           | 1             | Unlimited     | Unlimited    |
++----------+-------------+---------------+---------------+--------------+
+| Dashboard| Full        | Full          | Full          | Full         |
++----------+-------------+---------------+---------------+--------------+
+| Risk     | Full        | Full          | Full          | Full +       |
+|          |             |               |               | Custom Rules |
++----------+-------------+---------------+---------------+--------------+
+| Sync     | Yes         | Yes           | Yes           | Yes          |
++----------+-------------+---------------+---------------+--------------+
+| AI Chat  | Yes (trial) | No            | Yes           | Yes +        |
+|          |             |               |               | Priority     |
++----------+-------------+---------------+---------------+--------------+
+| API Keys | Yes (trial) | No            | Yes           | Yes +        |
+|          |             |               |               | Higher Limits|
++----------+-------------+---------------+---------------+--------------+
+| Slack    | Yes (trial) | No            | Yes           | Yes          |
++----------+-------------+---------------+---------------+--------------+
+| Export   | Yes (trial) | No            | CSV/PDF       | CSV/PDF +    |
+|          |             |               |               | API          |
++----------+-------------+---------------+---------------+--------------+
+| Notifs   | Push +Slack | Push only     | Push + Slack  | Push + Slack |
+|          | (trial)     |               |               | + Email      |
++----------+-------------+---------------+---------------+--------------+
+| Support  | Community   | Community     | Email         | Dedicated +  |
+|          |             |               |               | SLA          |
++----------+-------------+---------------+---------------+--------------+
+
+EXPIRED TRIAL (read-only mode):
+- Can view dashboard (last synced data, no new syncs)
+- Cannot sync, use AI chat, export, manage API keys
+- Upgrade prompts shown throughout UI
+- Data preserved (not deleted)
+- User must subscribe to Starter or higher to regain access
 ```
 
 ---
@@ -147,10 +163,12 @@ Decision: Stripe
 |  Day 14: Trial Expires                                                |
 |  +-----------------------------------------------------------------+  |
 |  | Option A: User added payment -> Stripe subscription created     |  |
-|  |           plan_tier = PRO, billing starts                       |  |
+|  |           plan_tier = STARTER, billing starts                   |  |
+|  |           (or PRO if user chose PRO during checkout)            |  |
 |  |                                                                 |  |
-|  | Option B: User didn't pay -> plan_tier = FREE                   |  |
-|  |           Gated features locked, upgrade prompts shown          |  |
+|  | Option B: User didn't pay -> plan_tier = EXPIRED                |  |
+|  |           Read-only mode: view dashboard, no sync/chat/export   |  |
+|  |           Upgrade prompts shown, data preserved                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                       |
 +-----------------------------------------------------------------------+
@@ -228,17 +246,19 @@ Decision: Stripe
 |  +-----------------------------+                                      |
 |                                                                       |
 |  Frontend Gating:                                                     |
-|  +---------------------------------------------------------------+   |
-|  | Feature     | FREE          | TRIAL/PRO      | ENTERPRISE     |   |
-|  |-------------+---------------+----------------+----------------|   |
-|  | AI Chat     | Lock icon +   | Full access    | Full access    |   |
-|  |             | "Upgrade to   |                | + priority     |   |
-|  |             | PRO" button   |                |                |   |
-|  | API Keys    | Hidden        | Full access    | Higher limits  |   |
-|  | Slack       | Hidden        | Full access    | Full access    |   |
-|  | Export      | Hidden        | CSV/PDF        | CSV/PDF + API  |   |
-|  | Multi-app   | "1 app" badge | Unlimited      | Unlimited      |   |
-|  +---------------------------------------------------------------+   |
+|  +------------------------------------------------------------------+ |
+|  | Feature  | EXPIRED     | STARTER     | PRO         | ENTERPRISE  | |
+|  |----------+-------------+-------------+-------------+-------------| |
+|  | Dashboard| Read-only   | Full        | Full        | Full        | |
+|  | Sync     | Blocked     | Yes         | Yes         | Yes         | |
+|  | AI Chat  | Blocked     | Blocked     | Full        | Full+       | |
+|  | API Keys | Blocked     | Blocked     | Full        | Higher lim  | |
+|  | Slack    | Blocked     | Blocked     | Full        | Full        | |
+|  | Export   | Blocked     | Blocked     | CSV/PDF     | CSV/PDF+API | |
+|  | Apps     | Blocked     | 1 app       | Unlimited   | Unlimited   | |
+|  | Actions  | Subscribe   | Upgrade     | Full        | Full        | |
+|  |          | prompts     | prompts     |             |             | |
+|  +------------------------------------------------------------------+ |
 |                                                                       |
 +-----------------------------------------------------------------------+
 ```
@@ -250,25 +270,32 @@ Decision: Stripe
 |                    PLAN CHANGE FLOW                                    |
 +-----------------------------------------------------------------------+
 |                                                                       |
-|  UPGRADE (FREE -> PRO):                                               |
-|  1. User clicks "Upgrade" in app                                      |
-|  2. Frontend creates Stripe Checkout Session                          |
-|     POST /api/v1/billing/checkout                                     |
-|     { plan_id: "pro_monthly", success_url, cancel_url }               |
+|  SUBSCRIBE (EXPIRED/TRIAL -> STARTER):                                |
+|  1. User clicks "Subscribe" in app                                    |
+|  2. Frontend calls POST /api/v1/billing/checkout                      |
+|     { plan_id: "starter_monthly", success_url, cancel_url }           |
 |  3. Backend creates Stripe Checkout Session                           |
 |  4. User redirected to Stripe Checkout (hosted page)                  |
 |  5. User enters payment method + confirms                             |
 |  6. Stripe fires checkout.session.completed webhook                   |
-|  7. Backend updates billing_subscription + plan_tier = PRO            |
-|  8. User redirected to success_url, sees PRO features unlocked        |
+|  7. Backend updates billing_subscription + plan_tier = STARTER        |
+|  8. User redirected to success_url, sees features unlocked            |
 |                                                                       |
-|  DOWNGRADE (PRO -> FREE):                                             |
+|  UPGRADE (STARTER -> PRO):                                            |
+|  1. User clicks "Upgrade to Pro" in settings                         |
+|  2. Frontend calls POST /api/v1/billing/checkout                      |
+|     { plan_id: "pro_monthly" }                                        |
+|  3. Stripe handles proration (credit remaining Starter, charge Pro)   |
+|  4. Webhook confirms update, plan_tier = PRO                          |
+|  5. AI Chat, API Keys, Slack, export, multi-app unlocked              |
+|                                                                       |
+|  CANCEL (any paid -> EXPIRED):                                        |
 |  1. User clicks "Cancel Subscription" in settings                     |
 |  2. Frontend calls POST /api/v1/billing/cancel                        |
 |  3. Backend calls Stripe: cancel at period end                        |
-|  4. User keeps PRO until current period ends                          |
+|  4. User keeps current plan until period ends                         |
 |  5. At period end: Stripe fires customer.subscription.deleted          |
-|  6. Backend sets plan_tier = FREE                                     |
+|  6. Backend sets plan_tier = EXPIRED, read-only mode                  |
 |  7. Gated features locked on next request                             |
 |                                                                       |
 |  PLAN CHANGE (PRO Monthly -> PRO Annual):                             |
@@ -301,12 +328,14 @@ CREATE TABLE plans (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Seed data
+-- Seed data (no free plan — all paid, Starter has trial)
 INSERT INTO plans (name, display_name, tier, price_cents, interval, trial_days, max_apps) VALUES
-('free',         'Free',            'FREE',       0,    'month', 0,  1),
-('pro_monthly',  'Pro (Monthly)',   'PRO',        2900, 'month', 14, -1),
-('pro_annual',   'Pro (Annual)',    'PRO',        24900,'year',  14, -1),
-('enterprise',   'Enterprise',     'ENTERPRISE', 0,    'custom',0,  -1);
+('starter_monthly', 'Starter (Monthly)', 'STARTER',    0,     'month', 14, 1),
+('starter_annual',  'Starter (Annual)',  'STARTER',    0,     'year',  14, 1),
+('pro_monthly',     'Pro (Monthly)',     'PRO',        0,     'month', 0,  -1),
+('pro_annual',      'Pro (Annual)',      'PRO',        0,     'year',  0,  -1),
+('enterprise',      'Enterprise',       'ENTERPRISE', 0,     'custom',0,  -1);
+-- NOTE: price_cents set to 0 as placeholder — actual prices set via Stripe Price IDs
 ```
 
 ### plan_features table
@@ -379,7 +408,7 @@ CREATE TABLE billing_events (
 | `invoice.paid` | Renew subscription, update period dates |
 | `invoice.payment_failed` | Set status=past_due, send alert, retry |
 | `customer.subscription.updated` | Handle plan changes, proration |
-| `customer.subscription.deleted` | Downgrade to FREE, lock features |
+| `customer.subscription.deleted` | Set plan_tier = EXPIRED, read-only mode |
 | `customer.subscription.trial_will_end` | Send "trial ending" reminder (3 days before) |
 
 ---

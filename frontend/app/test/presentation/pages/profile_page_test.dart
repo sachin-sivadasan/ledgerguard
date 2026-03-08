@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:ledgerguard/domain/entities/user_entity.dart';
@@ -13,8 +12,6 @@ import 'package:ledgerguard/presentation/pages/profile_page.dart';
 class MockAuthBloc extends Mock implements AuthBloc {}
 
 class MockRoleBloc extends Mock implements RoleBloc {}
-
-class MockGoRouter extends Mock implements GoRouter {}
 
 class FakeAuthEvent extends Fake implements AuthEvent {}
 
@@ -201,22 +198,22 @@ void main() {
       expect(find.text('Upgrade coming soon!'), findsOneWidget);
     });
 
-    testWidgets('shows notification settings link', (tester) async {
+    testWidgets('shows support section', (tester) async {
       await tester.pumpWidget(buildTestWidget());
-
-      // Scroll to find Notifications in Settings section
       await tester.pumpAndSettle();
-      final notificationsFinder = find.text('Notifications');
-      if (notificationsFinder.evaluate().isEmpty) {
+
+      // Scroll to find Support section
+      final supportFinder = find.text('Support');
+      if (supportFinder.evaluate().isEmpty) {
         await tester.dragUntilVisible(
-          notificationsFinder,
+          supportFinder,
           find.byType(Scrollable),
           const Offset(0, -100),
         );
       }
       await tester.pumpAndSettle();
 
-      expect(notificationsFinder, findsOneWidget);
+      expect(supportFinder, findsOneWidget);
     });
 
     testWidgets('shows logout button', (tester) async {
@@ -308,37 +305,22 @@ void main() {
       expect(find.text('Account Security'), findsOneWidget);
     });
 
-    testWidgets('shows settings section', (tester) async {
+    testWidgets('shows subscription section', (tester) async {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      // Scroll down to find Settings section
-      final settingsFinder = find.text('Settings');
-      await tester.dragUntilVisible(
-        settingsFinder,
-        find.byType(Scrollable),
-        const Offset(0, -200),
-      );
+      // Scroll to find Subscription section
+      final subscriptionFinder = find.text('Subscription');
+      if (subscriptionFinder.evaluate().isEmpty) {
+        await tester.dragUntilVisible(
+          subscriptionFinder,
+          find.byType(Scrollable),
+          const Offset(0, -200),
+        );
+      }
       await tester.pumpAndSettle();
 
-      expect(settingsFinder, findsOneWidget);
-    });
-
-    testWidgets('shows integrations section', (tester) async {
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
-
-      // Scroll to find Integrations section
-      final integrationsFinder = find.text('Integrations');
-      await tester.dragUntilVisible(
-        integrationsFinder,
-        find.byType(Scrollable),
-        const Offset(0, -100),
-      );
-      await tester.pumpAndSettle();
-
-      expect(integrationsFinder, findsOneWidget);
-      expect(find.text('Shopify Partner'), findsOneWidget);
+      expect(subscriptionFinder, findsOneWidget);
     });
   });
 }

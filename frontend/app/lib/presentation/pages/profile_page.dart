@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/user_profile.dart';
 import '../blocs/auth/auth.dart';
@@ -64,9 +62,22 @@ class ProfilePage extends StatelessWidget {
   }) {
     return CustomScrollView(
       slivers: [
-        // Premium Header with gradient
-        SliverToBoxAdapter(
-          child: _buildPremiumHeader(context, email, displayName, profile),
+        // Pinned app bar with gradient — stays visible on scroll
+        SliverAppBar(
+          pinned: true,
+          backgroundColor: AppTheme.primary,
+          foregroundColor: Colors.white,
+          title: const Text('Profile'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: Colors.white70),
+              onPressed: () => _showComingSoon(context, 'Edit Profile'),
+            ),
+          ],
+          expandedHeight: 300,
+          flexibleSpace: FlexibleSpaceBar(
+            background: _buildProfileBanner(context, email, displayName, profile),
+          ),
         ),
 
         // Main content
@@ -110,71 +121,6 @@ class ProfilePage extends StatelessWidget {
               _buildSectionHeader(context, 'Subscription', Icons.workspace_premium_outlined),
               const SizedBox(height: 12),
               _buildSubscriptionCard(context, profile),
-
-              const SizedBox(height: 24),
-
-              // Integrations Section
-              _buildSectionHeader(context, 'Integrations', Icons.hub_outlined),
-              const SizedBox(height: 12),
-              _buildPremiumCard(
-                context,
-                children: [
-                  _buildNavigationTile(
-                    context,
-                    icon: Icons.storefront_outlined,
-                    iconColor: Colors.green,
-                    title: 'Shopify Partner',
-                    subtitle: 'Connect your Partner account',
-                    onTap: () => context.push('/partner-integration'),
-                  ),
-                  _buildDivider(),
-                  _buildNavigationTile(
-                    context,
-                    icon: Icons.tune_outlined,
-                    iconColor: Colors.blue,
-                    title: 'App Settings',
-                    subtitle: 'Revenue share tier and fee settings',
-                    onTap: () => context.push('/settings/app'),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Settings Section
-              _buildSectionHeader(context, 'Settings', Icons.settings_outlined),
-              const SizedBox(height: 12),
-              _buildPremiumCard(
-                context,
-                children: [
-                  _buildNavigationTile(
-                    context,
-                    icon: Icons.notifications_outlined,
-                    iconColor: Colors.orange,
-                    title: 'Notifications',
-                    subtitle: 'Manage alert preferences',
-                    onTap: () => context.push('/settings/notifications'),
-                  ),
-                  _buildDivider(),
-                  _buildNavigationTile(
-                    context,
-                    icon: Icons.key_outlined,
-                    iconColor: Colors.purple,
-                    title: 'API Keys',
-                    subtitle: 'Manage Revenue API access',
-                    onTap: () => context.push('/settings/api-keys'),
-                  ),
-                  _buildDivider(),
-                  _buildNavigationTile(
-                    context,
-                    icon: Icons.tune_outlined,
-                    iconColor: Colors.blueGrey,
-                    title: 'Preferences',
-                    subtitle: 'Dashboard and display settings',
-                    onTap: () => context.push('/settings/preferences'),
-                  ),
-                ],
-              ),
 
               const SizedBox(height: 24),
 
@@ -230,128 +176,112 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildPremiumHeader(
+  Widget _buildProfileBanner(
     BuildContext context,
     String email,
     String? displayName,
     UserProfile profile,
   ) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppTheme.primary,
-            AppTheme.primary.withBlue(180),
-          ],
+    return ClipRect(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppTheme.primary,
+              AppTheme.primary.withBlue(180),
+            ],
+          ),
         ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // App Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => context.pop(),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'Profile',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, color: Colors.white70),
-                    onPressed: () => _showComingSoon(context, 'Edit Profile'),
-                  ),
-                ],
-              ),
-            ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // SliverAppBar toolbar height (~kToolbarHeight + status bar)
+            final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight;
+            final availableHeight = constraints.maxHeight - topPadding;
 
-            // Profile Info
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-              child: Column(
-                children: [
-                  // Avatar with border
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white30, width: 2),
-                    ),
-                    child: CircleAvatar(
-                      radius: 44,
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      child: Text(
-                        _getInitials(displayName ?? email),
+            return Padding(
+              padding: EdgeInsets.only(top: topPadding),
+              child: SizedBox(
+                height: availableHeight,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Avatar with border
+                      Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white30, width: 2),
+                        ),
+                        child: CircleAvatar(
+                          radius: 32,
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          child: Text(
+                            _getInitials(displayName ?? email),
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Name
+                      Text(
+                        displayName ?? email.split('@').first,
                         style: const TextStyle(
-                          fontSize: 32,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 2),
 
-                  // Name
-                  Text(
-                    displayName ?? email.split('@').first,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-
-                  // Email
-                  Text(
-                    email,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.8),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Badges Row
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
-                      _buildHeaderBadge(
-                        context,
-                        icon: Icons.verified_user,
-                        label: profile.role.displayName,
-                        color: Colors.white.withOpacity(0.2),
+                      // Email
+                      Text(
+                        email,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      _buildHeaderBadge(
-                        context,
-                        icon: profile.planTier.isPro ? Icons.star : Icons.star_border,
-                        label: profile.planTier.displayName,
-                        color: profile.planTier.isPro
-                            ? Colors.amber.withOpacity(0.3)
-                            : Colors.white.withOpacity(0.2),
+                      const SizedBox(height: 10),
+
+                      // Badges Row
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          _buildHeaderBadge(
+                            context,
+                            icon: Icons.verified_user,
+                            label: profile.role.displayName,
+                            color: Colors.white.withOpacity(0.2),
+                          ),
+                          _buildHeaderBadge(
+                            context,
+                            icon: profile.planTier.isPro ? Icons.star : Icons.star_border,
+                            label: profile.planTier.displayName,
+                            color: profile.planTier.isPro
+                                ? Colors.amber.withOpacity(0.3)
+                                : Colors.white.withOpacity(0.2),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

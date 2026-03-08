@@ -16,13 +16,8 @@ class SettingsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
         title: const Text('Settings'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/dashboard'),
-        ),
+        automaticallyImplyLeading: false,
       ),
       body: BlocBuilder<RoleBloc, RoleState>(
         builder: (context, roleState) {

@@ -107,36 +107,18 @@ class _DashboardPageState extends State<DashboardPage> {
             tooltip: 'More options',
             onSelected: (value) {
               switch (value) {
-                case 'chat':
-                  context.push('/chat');
-                  break;
                 case 'sync':
                   _triggerSync(context);
                   break;
-                case 'subscriptions':
-                  _navigateToSubscriptions(context);
-                  break;
-                case 'settings':
+                case 'configure':
                   context
                       .read<PreferencesBloc>()
                       .add(const LoadPreferencesRequested());
                   DashboardConfigDialog.show(context);
                   break;
-                case 'profile':
-                  context.push('/profile');
-                  break;
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'chat',
-                child: ListTile(
-                  leading: Icon(Icons.smart_toy_outlined),
-                  title: Text('AI Assistant'),
-                  contentPadding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
               const PopupMenuItem(
                 value: 'sync',
                 child: ListTile(
@@ -147,28 +129,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
               const PopupMenuItem(
-                value: 'subscriptions',
-                child: ListTile(
-                  leading: Icon(Icons.subscriptions_outlined),
-                  title: Text('Subscriptions'),
-                  contentPadding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'settings',
+                value: 'configure',
                 child: ListTile(
                   leading: Icon(Icons.settings),
                   title: Text('Configure Dashboard'),
-                  contentPadding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'profile',
-                child: ListTile(
-                  leading: Icon(Icons.person_outline),
-                  title: Text('Profile'),
                   contentPadding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
                 ),
@@ -219,21 +183,6 @@ class _DashboardPageState extends State<DashboardPage> {
         },
       ),
     );
-  }
-
-  Future<void> _navigateToSubscriptions(BuildContext context) async {
-    final appRepository = GetIt.instance<AppRepository>();
-    final selectedApp = await appRepository.getSelectedApp();
-    if (selectedApp != null && context.mounted) {
-      // Extract numeric ID from GID (e.g., "gid://partners/App/4599915" -> "4599915")
-      final parts = selectedApp.id.split('/');
-      final numericAppId = parts.isNotEmpty ? parts.last : selectedApp.id;
-      context.push('/apps/$numericAppId/subscriptions');
-    } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an app first')),
-      );
-    }
   }
 
   Future<void> _triggerSync(BuildContext context) async {

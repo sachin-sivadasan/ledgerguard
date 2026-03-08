@@ -129,7 +129,7 @@ class _ChatPageState extends State<ChatPage> {
       children: [
         Expanded(
           child: Center(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -264,46 +264,43 @@ class _ChatPageState extends State<ChatPage> {
           top: BorderSide(color: Theme.of(context).dividerColor),
         ),
       ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                enabled: !isStreaming,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _sendMessage(),
-                decoration: InputDecoration(
-                  hintText: isStreaming
-                      ? 'Waiting for response...'
-                      : 'Ask about your revenue data...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  isDense: true,
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              enabled: !isStreaming,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => _sendMessage(),
+              decoration: InputDecoration(
+                hintText: isStreaming
+                    ? 'Waiting for response...'
+                    : 'Ask about your revenue data...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                maxLines: 3,
-                minLines: 1,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                isDense: true,
               ),
+              maxLines: 3,
+              minLines: 1,
             ),
-            const SizedBox(width: 8),
-            IconButton.filled(
-              onPressed: isStreaming ? null : _sendMessage,
-              icon: const Icon(Icons.send, size: 20),
-              style: IconButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                disabledBackgroundColor:
-                    AppTheme.primary.withValues(alpha: 0.3),
-              ),
+          ),
+          const SizedBox(width: 8),
+          IconButton.filled(
+            onPressed: isStreaming ? null : _sendMessage,
+            icon: const Icon(Icons.send, size: 20),
+            style: IconButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              disabledBackgroundColor:
+                  AppTheme.primary.withValues(alpha: 0.3),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

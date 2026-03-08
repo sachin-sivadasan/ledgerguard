@@ -15,21 +15,22 @@ import '../pages/admin/manual_integration_page.dart';
 import '../pages/api_key_list_page.dart';
 import '../pages/app_selection_page.dart';
 import '../pages/app_settings_page.dart';
+import '../pages/chat_page.dart';
 import '../pages/dashboard_page.dart';
 import '../pages/login_page.dart';
 import '../pages/notification_settings_page.dart';
+import '../pages/onboarding_page.dart';
 import '../pages/partner_integration_page.dart';
 import '../pages/preferences_page.dart';
 import '../pages/profile_page.dart';
 import '../pages/risk_breakdown_page.dart';
+import '../pages/settings_page.dart';
 import '../pages/signup_page.dart';
 import '../pages/store_health_page.dart';
-import '../pages/onboarding_page.dart';
-import '../pages/chat_page.dart';
-import '../pages/placeholder_page.dart';
-import '../pages/settings_page.dart';
 import '../pages/subscription_detail_page.dart';
 import '../pages/subscription_list_page.dart';
+import '../pages/subscriptions_tab_page.dart';
+import '../widgets/app_shell.dart';
 
 /// App routes configuration using GoRouter
 class AppRouter {
@@ -59,6 +60,7 @@ class AppRouter {
       return null;
     },
     routes: [
+      // Auth routes — outside shell
       GoRoute(
         path: '/login',
         name: 'login',
@@ -69,20 +71,66 @@ class AppRouter {
         name: 'signup',
         builder: (context, state) => const SignupPage(),
       ),
-      GoRoute(
-        path: '/dashboard',
-        name: 'dashboard',
-        builder: (context, state) => const DashboardPage(),
+
+      // Main navigation shell with 4 tabs
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            AppShell(navigationShell: navigationShell),
+        branches: [
+          // Tab 0: Dashboard
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/dashboard',
+                name: 'dashboard',
+                builder: (context, state) => const DashboardPage(),
+              ),
+            ],
+          ),
+          // Tab 1: Chat
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/chat',
+                name: 'chat',
+                builder: (context, state) => BlocProvider(
+                  create: (_) => ChatBloc(
+                    repository: GetIt.instance<ChatRepository>(),
+                    appRepository: GetIt.instance<AppRepository>(),
+                  ),
+                  child: const ChatPage(),
+                ),
+              ),
+            ],
+          ),
+          // Tab 2: Subscriptions
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/subscriptions',
+                name: 'subscriptions-tab',
+                builder: (context, state) => const SubscriptionsTabPage(),
+              ),
+            ],
+          ),
+          // Tab 3: Settings
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/settings',
+                name: 'settings',
+                builder: (context, state) => const SettingsPage(),
+              ),
+            ],
+          ),
+        ],
       ),
+
+      // Detail routes — outside shell (full-screen, no nav bar)
       GoRoute(
         path: '/onboarding',
         name: 'onboarding',
         builder: (context, state) => const OnboardingPage(),
-      ),
-      GoRoute(
-        path: '/settings',
-        name: 'settings',
-        builder: (context, state) => const SettingsPage(),
       ),
       GoRoute(
         path: '/partner-integration',
@@ -98,17 +146,6 @@ class AppRouter {
         path: '/admin/manual-integration',
         name: 'manual-integration',
         builder: (context, state) => const ManualIntegrationPage(),
-      ),
-      GoRoute(
-        path: '/chat',
-        name: 'chat',
-        builder: (context, state) => BlocProvider(
-          create: (_) => ChatBloc(
-            repository: GetIt.instance<ChatRepository>(),
-            appRepository: GetIt.instance<AppRepository>(),
-          ),
-          child: const ChatPage(),
-        ),
       ),
       GoRoute(
         path: '/risk-breakdown',

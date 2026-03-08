@@ -56,8 +56,8 @@ class EnvConfig {
     environment: Environment.prod,
     devApiBaseUrlAndroid: 'http://10.0.2.2:8080',
     devApiBaseUrlOther: 'http://localhost:8080',
-    prodApiBaseUrl: 'https://api.ledgerguard.com',
-    firebaseProjectId: 'ledgerguard-prod',
+    prodApiBaseUrl: 'https://ledgerspear-api-ineifpjrdq-uc.a.run.app',
+    firebaseProjectId: 'ledgerguard-c7557',
   );
 
   bool get isDev => environment == Environment.dev;

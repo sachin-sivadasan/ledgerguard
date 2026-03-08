@@ -413,6 +413,69 @@ CREATE TABLE billing_events (
 
 ---
 
+## Daily Subscription Check Job (Cron)
+
+```
++-----------------------------------------------------------------------+
+|                    DAILY SUBSCRIPTION CHECK                            |
++-----------------------------------------------------------------------+
+|                                                                       |
+|  Runs: Every day at 00:00 UTC (backend cron / Cloud Scheduler)        |
+|                                                                       |
+|  Step 1: Check expired trials                                         |
+|  +---------------------------------------------------------------+   |
+|  | SELECT * FROM billing_subscriptions                            |   |
+|  | WHERE status = 'trialing'                                      |   |
+|  |   AND trial_ends_at < NOW()                                    |   |
+|  |                                                                |   |
+|  | For each expired trial:                                        |   |
+|  |   1. Set billing_subscription.status = 'expired'               |   |
+|  |   2. Set user.plan_tier = 'EXPIRED'                            |   |
+|  |   3. Fire webhook: { event: "trial.expired" }                  |   |
+|  |   4. Send "Trial ended" email via n8n/Postmark                 |   |
+|  |   5. Log to billing_events                                     |   |
+|  +---------------------------------------------------------------+   |
+|                                                                       |
+|  Step 2: Check past-due subscriptions                                 |
+|  +---------------------------------------------------------------+   |
+|  | SELECT * FROM billing_subscriptions                            |   |
+|  | WHERE status = 'past_due'                                      |   |
+|  |   AND updated_at < NOW() - INTERVAL '7 days'                   |   |
+|  |                                                                |   |
+|  | For each past-due > 7 days:                                    |   |
+|  |   1. Call Stripe API to check latest invoice status             |   |
+|  |   2. If still unpaid after Stripe retries:                      |   |
+|  |      - Cancel Stripe subscription                              |   |
+|  |      - Set plan_tier = 'EXPIRED'                               |   |
+|  |      - Send "Subscription canceled due to payment failure"      |   |
+|  |   3. If paid (Stripe retry succeeded):                          |   |
+|  |      - Set status = 'active' (webhook may have already done)    |   |
+|  +---------------------------------------------------------------+   |
+|                                                                       |
+|  Step 3: Send trial reminders                                         |
+|  +---------------------------------------------------------------+   |
+|  | SELECT * FROM billing_subscriptions                            |   |
+|  | WHERE status = 'trialing'                                      |   |
+|  |                                                                |   |
+|  | For each active trial:                                         |   |
+|  |   days_left = trial_ends_at - NOW()                            |   |
+|  |   IF days_left = 7: Send "7 days left" email                   |   |
+|  |   IF days_left = 2: Send "2 days left" email                   |   |
+|  |   IF days_left = 1: Send "Last day!" email + in-app warning    |   |
+|  +---------------------------------------------------------------+   |
+|                                                                       |
+|  Implementation:                                                      |
+|  - Go: goroutine with time.Ticker (simple, runs in-process)           |
+|  - OR: GCP Cloud Scheduler -> POST /internal/cron/billing-check       |
+|  - Endpoint protected by internal-only auth (not public)              |
+|  - Idempotent: safe to run multiple times per day                     |
+|  - Logs all actions to billing_events for audit trail                 |
+|                                                                       |
++-----------------------------------------------------------------------+
+```
+
+---
+
 ## Email Triggers (via n8n + Postmark)
 
 | Trigger | Email | Timing |

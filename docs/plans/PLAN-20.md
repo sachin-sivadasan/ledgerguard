@@ -34,6 +34,15 @@ Stripe-based billing system. All plans are paid — no free tier. Starter plan i
 2. **Trial → STARTER:** User subscribes, Stripe Checkout, plan_tier = STARTER
 3. **Trial → EXPIRED:** No payment, daily cron sets read-only mode
 4. **STARTER → PRO:** Upgrade via Stripe, proration handled
+5. **Daily Cron Job:** Checks trial expiry, past-due subscriptions, sends reminders
+
+## Daily Subscription Check Job
+- Runs daily at 00:00 UTC (in-process goroutine or GCP Cloud Scheduler)
+- **Step 1:** Expire trials where `trial_ends_at < NOW()` → set plan_tier = EXPIRED
+- **Step 2:** Check past-due subscriptions > 7 days → verify with Stripe, cancel if still unpaid
+- **Step 3:** Send trial reminders (7 days, 2 days, 1 day left)
+- Idempotent, logs all actions to `billing_events`
+- Internal-only endpoint: `POST /internal/cron/billing-check`
 4. **Upgrade:** Stripe Checkout Session → hosted page → webhook
 5. **Cancel:** Cancel at period end, keep PRO until period expires
 6. **Feature Gate:** PlanMiddleware checks plan_features before allowing access

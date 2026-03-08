@@ -35,9 +35,15 @@ class AppSelectionBloc extends Bloc<AppSelectionEvent, AppSelectionState> {
 
       // Check if there's a previously selected app
       final selectedApp = await _appRepository.getSelectedApp();
-      final matchingApp = selectedApp != null
+      var matchingApp = selectedApp != null
           ? apps.where((a) => a.id == selectedApp.id).firstOrNull
           : null;
+
+      // Auto-select the first app if none was previously selected
+      if (matchingApp == null && apps.isNotEmpty) {
+        matchingApp = apps.first;
+        await _appRepository.saveSelectedApp(matchingApp);
+      }
 
       emit(AppSelectionLoaded(
         apps: apps,

@@ -42,6 +42,8 @@ void main() {
               .thenAnswer((_) async => testApps);
           when(() => mockRepository.getSelectedApp())
               .thenAnswer((_) async => null);
+          when(() => mockRepository.saveSelectedApp(any()))
+              .thenAnswer((_) async {});
           return AppSelectionBloc(appRepository: mockRepository);
         },
         act: (bloc) => bloc.add(const FetchAppsRequested()),
@@ -49,8 +51,11 @@ void main() {
           isA<AppSelectionLoading>(),
           isA<AppSelectionLoaded>()
               .having((s) => s.apps, 'apps', testApps)
-              .having((s) => s.selectedApp, 'selectedApp', isNull),
+              .having((s) => s.selectedApp, 'selectedApp', testApps[0]),
         ],
+        verify: (_) {
+          verify(() => mockRepository.saveSelectedApp(testApps[0])).called(1);
+        },
       );
 
       blocTest<AppSelectionBloc, AppSelectionState>(

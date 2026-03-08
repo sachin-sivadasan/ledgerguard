@@ -13,7 +13,6 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, authState) {
           if (authState is! Authenticated) {

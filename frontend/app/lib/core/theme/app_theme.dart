@@ -21,7 +21,7 @@ class AppTheme {
         surface: surface,
         error: danger,
       ),
-      scaffoldBackgroundColor: background,
+      scaffoldBackgroundColor: const Color(0xFFF9FAFB), // Grey-50
       appBarTheme: const AppBarTheme(
         backgroundColor: primary,
         foregroundColor: Colors.white,

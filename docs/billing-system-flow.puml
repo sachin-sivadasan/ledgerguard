@@ -109,10 +109,18 @@ endif
 :Redirect to success URL;
 :Unlock STARTER features\n(or PRO if selected);
 
-' === ONGOING BILLING ===
+' === ONGOING BILLING (AUTO-DEDUCT) ===
 
 |Stripe|
-:Monthly invoice generated;
+:Monthly invoice generated\n(auto-deduct from saved card);
+
+note right
+  **Auto-Deduct Behavior**
+  Stripe charges saved payment method
+  automatically each billing cycle.
+  No user action required.
+  RBI mandate: auto for < ₹15,000.
+end note
 
 if (Payment succeeds?) then (yes)
   :Fire invoice.paid;

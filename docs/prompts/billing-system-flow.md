@@ -681,6 +681,44 @@ marketing/site/
 
 ---
 
+## Auto-Deduct Behaviors
+
+### 1. Auto-Renewal Charges
+Stripe automatically charges the saved payment method each billing cycle (monthly/annual) without user action. This is standard SaaS auto-debit behavior.
+- Stripe creates an invoice at each period end
+- Charges the default payment method on file
+- Fires `invoice.paid` on success, `invoice.payment_failed` on failure
+- User sees charge on card statement as "LEDGERGUARD" (configurable in Stripe Dashboard)
+- No user action required — fully automatic recurring billing
+
+### 2. Auto-Downgrade on Payment Failure
+After Stripe exhausts smart retry attempts (typically 3-4 retries over ~2 weeks), the system automatically downgrades the user.
+- `invoice.payment_failed` → set `status = past_due`, send alert
+- Daily cron checks `past_due > 7 days` → verify with Stripe API
+- If Stripe retries exhausted → cancel subscription → `plan_tier = EXPIRED`
+- User enters read-only mode automatically (no manual intervention)
+- Send "Subscription canceled due to payment failure" email
+
+### 3. Auto Trial-to-Paid Conversion
+If user adds a payment method during trial, Stripe automatically creates the subscription when trial ends.
+- During trial: user visits Stripe Customer Portal or checkout to add card
+- At trial expiry: Stripe creates subscription + first invoice
+- Fires `checkout.session.completed` → backend sets `plan_tier = STARTER`
+- Seamless transition — user keeps access without interruption
+- If no payment method added: `plan_tier = EXPIRED` (read-only mode)
+
+### 4. RBI Auto-Debit Mandate (India)
+For Indian cards, RBI (Reserve Bank of India) requires additional authorization for recurring payments exceeding ₹15,000/transaction.
+- Stripe handles e-mandate registration during first checkout
+- Payments ≤ ₹15,000: auto-debit without additional auth
+- Payments > ₹15,000: Stripe sends pre-debit notification 24h before charge
+- Customer must approve via bank/UPI app for amounts > ₹15,000
+- If customer doesn't approve: payment fails → follow auto-downgrade flow
+- LedgerGuard plans likely under ₹15,000 threshold ($29 Pro ≈ ₹2,400), so most charges auto-debit seamlessly
+- Enterprise custom pricing may exceed threshold — handle with Stripe's mandate flow
+
+---
+
 ## Implementation Notes
 
 1. **Stripe Checkout (hosted):** Use Stripe's hosted checkout page — no PCI compliance needed
@@ -691,3 +729,6 @@ marketing/site/
 6. **Frontend plan context:** `BillingBloc` fetches subscription state, provides to all widgets
 7. **Proration:** Stripe handles proration math — backend just updates subscription
 8. **Naming:** `billing_subscriptions` (not `subscriptions`) to avoid collision with Shopify subscription data
+9. **Auto-renewal:** Stripe handles recurring charges automatically — no backend cron needed for billing
+10. **Auto-downgrade:** Daily cron + Stripe webhooks handle failed payment → EXPIRED transition
+11. **RBI compliance:** Stripe India handles e-mandate registration; most LedgerGuard charges below ₹15,000 threshold

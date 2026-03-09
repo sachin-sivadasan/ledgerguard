@@ -412,3 +412,24 @@ Feature configuration stored in database (`plans` + `plan_features` tables) for 
 - Database-driven features allow plan changes without code deploy
 - Need daily cron to check trial expiry and downgrade to EXPIRED
 - Frontend needs `BillingBloc` to gate UI elements per plan tier
+
+### ADR-019: Auto-Deduct Billing Behaviors
+**Date:** 2026-03-09
+**Status:** Accepted
+
+**Context:**
+Need to document how recurring charges, payment failures, trial conversions, and RBI compliance are handled automatically.
+
+**Decision:**
+Four auto-deduct behaviors in the billing system:
+
+1. **Auto-renewal:** Stripe auto-charges saved payment method each billing cycle (monthly/annual). No user action or backend cron needed — Stripe handles invoicing and charging.
+2. **Auto-downgrade on failure:** After Stripe exhausts smart retries (~2 weeks), daily cron detects `past_due > 7 days`, cancels subscription, sets `plan_tier = EXPIRED`. User enters read-only mode automatically.
+3. **Auto trial-to-paid:** If user adds payment method during trial, Stripe auto-creates subscription at trial expiry. Seamless transition with no interruption. If no payment method → `plan_tier = EXPIRED`.
+4. **RBI auto-debit mandate (India):** Stripe India handles e-mandate registration. Charges ≤ ₹15,000 auto-debit without extra auth. Charges > ₹15,000 require customer approval via bank/UPI (24h pre-debit notification). LedgerGuard Pro ($29 ≈ ₹2,400) is well under threshold.
+
+**Consequences:**
+- Minimal backend logic for recurring billing — Stripe does the heavy lifting
+- Daily cron only needed for: trial expiry, past-due cleanup, scheduled downgrades
+- RBI compliance handled by Stripe India entity — no custom mandate code needed
+- Enterprise plans with custom pricing may exceed ₹15,000 — Stripe's mandate flow handles this

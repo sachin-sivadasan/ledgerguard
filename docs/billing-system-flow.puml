@@ -179,3 +179,171 @@ endif
 stop
 
 @enduml
+
+' ============================================================================
+' PAYMENT MONEY FLOW (Separate Diagram)
+' ============================================================================
+@startuml PaymentMoneyFlow
+!theme plain
+title LedgerGuard - Payment Money Flow (USD → Stripe → Developer Bank)
+
+skinparam ActivityBackgroundColor White
+skinparam ActivityBorderColor #10B981
+skinparam ActivityFontSize 12
+skinparam NoteBackgroundColor #F0FDF4
+skinparam NoteBorderColor #6EE7B7
+
+|#E0F7FA|Customer|
+|#F3E5F5|Stripe|
+|#FFF3E0|Developer Bank|
+
+|Customer|
+start
+:Customer subscribes\n$29.00/mo (Pro Monthly);
+:Enter card details\non Stripe Checkout;
+
+|Stripe|
+:Process card payment\nGross: **$29.00**;
+:Deduct Stripe fees\n~2.9% + $0.30 = **$1.14**;
+:Net after fees: **$27.86**;
+
+note right
+  **Stripe Fee Breakdown**
+  Processing: 2.9% × $29.00 = $0.84
+  Fixed fee: $0.30
+  Total: **$1.14**
+  Net: $29.00 − $1.14 = **$27.86**
+end note
+
+if (Stripe India entity?) then (yes)
+  :Convert USD → INR\nat market exchange rate;
+  :Apply forex markup\n(~1-2% spread);
+  note right
+    **Example Conversion**
+    $27.86 × ₹83.30 = ~**₹2,321**
+    (rate varies daily)
+  end note
+else (no)
+  :Hold in USD balance;
+endif
+
+:Queue for payout;
+
+note right
+  **Payout Schedule**
+  Standard: **T+2** business days
+  First payout: **T+7** business days
+  Payout frequency: Daily (configurable)
+end note
+
+|Developer Bank|
+:Receive bank deposit;
+:Amount: **₹2,321** (INR)\nor **$27.86** (USD);
+
+note right
+  **Monthly Revenue Example**
+  50 Pro subscribers × $29.00 = $1,450.00 gross
+  Stripe fees: ~$57.00
+  Net payout: ~$1,393.00
+  INR equivalent: ~₹116,037
+end note
+
+stop
+
+@enduml
+
+' ============================================================================
+' STRIPE CUSTOMER CREATION STRATEGIES (Separate Diagram)
+' ============================================================================
+@startuml StripeCustomerCreation
+!theme plain
+title LedgerGuard - Stripe Customer Creation Strategies
+
+skinparam ActivityBackgroundColor White
+skinparam ActivityBorderColor #8B5CF6
+skinparam ActivityFontSize 12
+skinparam NoteBackgroundColor #F5F3FF
+skinparam NoteBorderColor #A78BFA
+
+start
+
+:User registers\n(Firebase Auth);
+
+if (When to create\nStripe Customer?) then
+
+  ' Option A - CHOSEN
+  :====\n**Option A: At Signup [CHOSEN]**\n====;
+  note right #E0F7FA
+    **Why Option A was chosen:**
+    1. Simplifies trial tracking
+       (Stripe Customer exists from day 1)
+    2. Stripe can send trial reminder emails
+       (customer.subscription.trial_will_end)
+    3. No lazy-init complexity
+    4. Associates user with Stripe immediately
+    5. Enables Stripe Customer Portal access
+       even during trial
+    6. Industry standard for SaaS
+  end note
+
+  :Create Stripe Customer\nimmediately on signup;
+  :Store stripe_customer_id\nin billing_subscriptions;
+  :No payment method yet;
+  :Start 14-day trial;
+
+  note left
+    **Stripe Customer at Signup**
+    stripe.customers.create({
+      email: user.email,
+      name: user.name,
+      metadata: {
+        user_id: user.id,
+        source: "signup"
+      }
+    })
+  end note
+
+elseif (Option B) then
+
+  :====\n**Option B: At First Checkout**\n====;
+  note right #FFF3E0
+    **Trade-offs:**
+    + Fewer Stripe Customers created
+      (only paying users)
+    + Lower Stripe API calls
+    - Cannot use Stripe trial features
+    - Must build own trial tracking
+    - More complex checkout flow
+      (create customer + subscription)
+    - No Stripe Customer Portal
+      during trial
+  end note
+
+  :Trial runs without Stripe;
+  :Create Stripe Customer\nonly when user subscribes;
+  :Combine with Checkout Session;
+
+elseif (Option C) then
+
+  :====\n**Option C: At Trial End**\n====;
+  note right #FEF3C7
+    **Trade-offs:**
+    + Fewest Stripe Customers
+    + No Stripe involvement during trial
+    - Cannot use Stripe trial reminders
+    - Delayed Stripe integration
+    - Risk: user leaves before
+      Stripe Customer created
+    - No pre-trial payment method
+      collection
+  end note
+
+  :Trial runs independently;
+  :At trial expiry, prompt user;
+  :Create Stripe Customer\nonly if user decides to pay;
+
+endif
+
+stop
+
+@enduml

@@ -580,9 +580,10 @@ STRIPE_PRICE_PRO_ANNUAL=price_xxx
 - Stripe brand purple for payment flows
 
 ### Interactions
-- Flow type selector (5 tabs: Lifecycle, Stripe, Feature Gate, Upgrade, Data Model)
+- Flow type selector (6 tabs: Lifecycle, Payment, Checkout, Webhooks, Gating, Upgrade)
 - Plan comparison table with hover highlights
 - Animated webhook event processing
+- Payment money flow with fee breakdown
 
 ---
 
@@ -590,16 +591,92 @@ STRIPE_PRICE_PRO_ANNUAL=price_xxx
 
 ```
 marketing/site/
-+-- app/billing-flow/page.tsx            # Page wrapper
++-- app/billing-flow/page.tsx            # Page wrapper (metadata, layout, explanation sections)
 +-- components/
-    +-- BillingFlowVisualization.tsx      # Main visualization
-        +-- FlowSelector                  # Tab buttons
-        +-- LifecycleFlow                 # Trial -> Free -> Pro
-        +-- StripeWebhookFlow            # Webhook event processing
-        +-- FeatureGateFlow              # Plan-based access control
-        +-- UpgradeFlow                  # Checkout + cancel flows
-        +-- DataModelDiagram             # ER diagram of billing tables
-        +-- PlanComparison               # Feature comparison table
+    +-- BillingFlowVisualization.tsx      # Main interactive visualization (6 tabs)
+        +-- Tab 1: Lifecycle              # Trial → Starter → Pro → Enterprise state machine
+        +-- Tab 2: Payment Flow           # Customer USD → Stripe fees → Developer bank (INR)
+        +-- Tab 3: Checkout               # Frontend → Backend → Stripe → Webhook → DB
+        +-- Tab 4: Webhooks               # Event processing with dedup/idempotency
+        +-- Tab 5: Feature Gating         # Auth → Plan Check → Allow/403
+        +-- Tab 6: Upgrade/Downgrade      # Proration vs scheduled changes
+        +-- PaymentReference              # Fee breakdown card
+        +-- LifecycleReference            # Plan states card
+        +-- WebhookReference              # Event list card
+        +-- GatingReference               # Feature access table
+        +-- UpgradeReference              # Plan change behavior card
+```
+
+---
+
+### Flow 5: Payment Money Flow
+
+```
++-----------------------------------------------------------------------+
+|                    PAYMENT MONEY FLOW                                   |
++-----------------------------------------------------------------------+
+|                                                                       |
+|  Customer → pays $29/mo (USD via card)                                |
+|    → Stripe processes payment                                         |
+|    → Stripe deducts: platform fee (~2.9% + $0.30)                     |
+|      Processing: 2.9% × $29.00 = $0.84                               |
+|      Fixed fee: $0.30                                                 |
+|      Total fee: $1.14                                                 |
+|    → Net: $27.86                                                      |
+|    → Stripe India: converts USD → INR at market rate                  |
+|      $27.86 × ₹83.30 = ~₹2,321 (rate varies daily)                   |
+|    → Payout to developer's Indian bank account                        |
+|    → Settlement: T+2 (standard) to T+7 (first payout)                |
+|                                                                       |
+|  Monthly Revenue Example (50 Pro subscribers):                        |
+|  +---------------------------------------------------------------+   |
+|  | 50 × $29.00 = $1,450.00 gross                                 |   |
+|  | Stripe fees: ~$57.00                                           |   |
+|  | Net payout: ~$1,393.00                                         |   |
+|  | INR equivalent: ~₹116,037                                      |   |
+|  +---------------------------------------------------------------+   |
+|                                                                       |
++-----------------------------------------------------------------------+
+```
+
+### Flow 6: Stripe Customer Creation Strategies
+
+```
++-----------------------------------------------------------------------+
+|                    STRIPE CUSTOMER CREATION                            |
++-----------------------------------------------------------------------+
+|                                                                       |
+|  Option A: At Signup [CHOSEN]                                         |
+|  +---------------------------------------------------------------+   |
+|  | Create Stripe Customer immediately on user registration        |   |
+|  | No payment method yet — just email + metadata                  |   |
+|  |                                                                |   |
+|  | Why chosen:                                                    |   |
+|  |   1. Simplifies trial tracking (Stripe knows from day 1)      |   |
+|  |   2. Stripe sends trial_will_end reminders automatically       |   |
+|  |   3. No lazy-init complexity in checkout flow                  |   |
+|  |   4. Enables Customer Portal access during trial               |   |
+|  |   5. Industry standard for B2B SaaS                           |   |
+|  +---------------------------------------------------------------+   |
+|                                                                       |
+|  Option B: At First Checkout                                          |
+|  +---------------------------------------------------------------+   |
+|  | + Fewer Stripe Customers (only paying users)                   |   |
+|  | + Lower Stripe API calls at signup                             |   |
+|  | - Cannot use Stripe trial features                             |   |
+|  | - Must build own trial tracking                                |   |
+|  | - More complex checkout (create customer + subscription)       |   |
+|  +---------------------------------------------------------------+   |
+|                                                                       |
+|  Option C: At Trial End                                               |
+|  +---------------------------------------------------------------+   |
+|  | + Fewest Stripe Customers                                      |   |
+|  | - Cannot use Stripe trial reminders                            |   |
+|  | - Delayed Stripe integration                                   |   |
+|  | - Risk: user leaves before Stripe Customer created             |   |
+|  +---------------------------------------------------------------+   |
+|                                                                       |
++-----------------------------------------------------------------------+
 ```
 
 ---

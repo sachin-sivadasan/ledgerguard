@@ -127,7 +127,7 @@ marketing/
 
 **Visualization Pages:**
 - Use `docs/prompts/PROMPT-interactive-visualization-chat.md` as template for new visualizations
-- Available pages: `/kpi-guide`, `/money-flow`, `/architecture`, `/api-guide`, `/affiliate-program`, `/notifications`, `/pitch`, `/voice-assistant`, `/hetzner-infrastructure`, `/gcp-staging`
+- Available pages: `/kpi-guide`, `/money-flow`, `/architecture`, `/api-guide`, `/affiliate-program`, `/notifications`, `/pitch`, `/voice-assistant`, `/hetzner-infrastructure`, `/gcp-staging`, `/billing-flow`
 - Each visualization has: animated flow diagrams, step-by-step progression, reference cards
 
 **Visualization Prompt Requirements:**
@@ -148,6 +148,7 @@ marketing/
 | `/voice-assistant` | `docs/prompts/voice-assistant-flow.md` |
 | `/hetzner-infrastructure` | `docs/prompts/hetzner-infrastructure-visualization.md` |
 | `/gcp-staging` | `docs/prompts/gcp-staging-visualization.md` |
+| `/billing-flow` | `docs/prompts/billing-system-flow.md` |
 
 ### 11. Frontend App (Flutter + Bloc)
 ```

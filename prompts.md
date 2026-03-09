@@ -1498,3 +1498,19 @@
 - No code changes — documentation/visualization deliverable
 
 ---
+
+### [2026-03-09] Billing Visualization — PlantUML + Marketing Page
+**Original:**
+> Implement the plan: Stripe Billing Visualization — PlantUML + Marketing Page. Add payment money flow (USD → Stripe → fees → INR → bank) and Stripe Customer creation strategies to PlantUML. Create interactive marketing page at /billing-flow with 6 tabs (Lifecycle, Payment, Checkout, Webhooks, Gating, Upgrade). Update prompt file with Flow 5 + Flow 6.
+
+**Improved:**
+> Extend billing system documentation with two missing flows: (1) Payment Money Flow showing customer USD → Stripe processing → fee deduction (~2.9% + $0.30) → USD→INR conversion → developer bank payout (T+2 to T+7), and (2) Stripe Customer Creation Strategies comparing 3 options (At Signup [chosen], At First Checkout, At Trial End) with trade-off analysis. Create interactive marketing visualization page at `/billing-flow` following existing pattern (ShopifyMoneyFlow.tsx) with 6 selectable tabs, SVG-based animated flow diagrams, play/pause controls, and reference cards. Update `docs/prompts/billing-system-flow.md` with new flows and component structure.
+
+**Result:**
+- Updated `docs/billing-system-flow.puml` — added PaymentMoneyFlow + StripeCustomerCreation diagrams
+- Created `marketing/site/app/billing-flow/page.tsx` — page wrapper with explanation sections
+- Created `marketing/site/components/BillingFlowVisualization.tsx` — 6-tab interactive visualization
+- Updated `docs/prompts/billing-system-flow.md` — added Flow 5 (Payment Money Flow) + Flow 6 (Stripe Customer Creation)
+- Logged to `prompts.md`
+
+---

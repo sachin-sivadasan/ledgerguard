@@ -911,3 +911,44 @@ The frontend was calling `/api/v1/user/preferences/dashboard` but this endpoint 
 - All 405 tests passing
 
 ---
+
+## Prompt 017 – Shop Logo & Store Name on All Pages
+**Date:** 2026-03-15
+**Status:** Complete
+
+**Original Prompt:**
+> frontend sub detail page not loading logo and store name. store health also from the domain parsing.
+
+**Improved Prompt:**
+> Fix subscription detail page and store health page to display shop logos (`CachedNetworkImage` with letter-initial fallback) and real shop names (from Shopify Storefront API via `displayName` getter) instead of domain-parsing logic. Backend: enrich store health API response with `shop_name`, `shop_logo_url`, `shop_square_logo_url` from shops table. Wire shopRepo into StoreHealthHandler.
+
+**Changes:**
+- `subscription_detail_page.dart`: Use `subscription.displayName` instead of domain parsing; `_buildDetailAvatar` with CachedNetworkImage
+- `store_health_page.dart`: Use `subscription.displayName` instead of domain parsing; added `_buildStoreAvatar` with CachedNetworkImage + letter fallback
+- Backend `store_health.go`: Added `shopRepo`, `SetShopRepo()`, logo URL fields in `SubscriptionResponse`, shop data enrichment
+- Backend `subscription.go`: Added `shop_name` enrichment from shops table in List/GetByID handlers
+- Backend `main.go`: Wired shopRepo to storeHealthHandler
+- Backend `shopify_storefront_client.go`: Added `shop { id }` to GraphQL query for `shopify_shop_gid`
+- All tests passing
+
+---
+
+## Prompt – Billing UI (Razorpay Integration)
+**Date:** 2026-03-18
+**Status:** Complete
+
+**Prompt:**
+> Add Billing/Subscription UI to Flutter app for the Razorpay billing flow. BillingStatus entity, BillingRepository + API impl, BillingBloc, BillingPage with plan cards, hosted checkout via url_launcher. Wire into DI, GoRouter, settings page.
+
+**Changes:**
+- `domain/entities/billing_status.dart`: BillingStatus + CheckoutResult entities with fromJson
+- `domain/repositories/billing_repository.dart`: BillingRepository interface + BillingException
+- `data/repositories/api_billing_repository.dart`: ApiBillingRepository using ApiClient
+- `presentation/blocs/billing/`: BillingBloc, events, states (LoadBillingStatus, StartCheckout)
+- `presentation/pages/billing_page.dart`: Current plan card, Starter/Pro plan cards, subscribe CTA
+- `core/di/injection.config.dart`: Registered BillingRepository + BillingBloc
+- `presentation/router/app_router.dart`: Added /settings/billing route
+- `presentation/pages/settings_page.dart`: Added "Plan & Billing" tile
+- Flutter analyze: 0 errors
+
+---

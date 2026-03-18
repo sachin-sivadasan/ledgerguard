@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/repositories/app_repository.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../blocs/api_key/api_key.dart';
+import '../blocs/billing/billing.dart';
 import '../blocs/auth/auth.dart';
 import '../blocs/chat/chat.dart';
 import '../blocs/store_health/store_health.dart';
@@ -13,6 +14,7 @@ import '../blocs/subscription_detail/subscription_detail.dart';
 import '../blocs/subscription_list/subscription_list.dart';
 import '../pages/admin/manual_integration_page.dart';
 import '../pages/api_key_list_page.dart';
+import '../pages/billing_page.dart';
 import '../pages/app_selection_page.dart';
 import '../pages/app_settings_page.dart';
 import '../pages/chat_page.dart';
@@ -179,6 +181,14 @@ class AppRouter {
         path: '/settings/preferences',
         name: 'preferences',
         builder: (context, state) => const PreferencesPage(),
+      ),
+      GoRoute(
+        path: '/settings/billing',
+        name: 'billing',
+        builder: (context, state) => BlocProvider(
+          create: (_) => GetIt.instance<BillingBloc>(),
+          child: const BillingPage(),
+        ),
       ),
       GoRoute(
         path: '/apps/:appId/subscriptions',

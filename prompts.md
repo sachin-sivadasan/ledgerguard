@@ -1556,3 +1556,22 @@
 - All tests pass, server starts without Razorpay config (graceful skip)
 
 ---
+
+### [2026-03-18] Frontend Billing UI (Razorpay Integration)
+**Original:**
+> frontend changes
+
+**Improved:**
+> Add Billing/Subscription UI to Flutter app for the Razorpay billing flow. Follow existing Bloc + Clean Architecture pattern. Create BillingStatus entity, BillingRepository interface + API impl, BillingBloc, BillingPage with plan cards and Razorpay hosted checkout via url_launcher. Wire into DI, GoRouter, and settings page.
+
+**Result:**
+- Created `BillingStatus` entity with `fromJson`, display helpers
+- Created `BillingRepository` interface + `ApiBillingRepository` (ApiClient)
+- Created `BillingBloc` (LoadBillingStatus, StartCheckout events)
+- Created `BillingPage` with current plan card, Starter/Pro plan cards, subscribe CTA
+- Opens Razorpay `short_url` via `url_launcher` (no SDK needed)
+- Registered in get_it DI, added `/settings/billing` GoRoute
+- Added "Plan & Billing" tile to settings page
+- Flutter analyze: 0 errors
+
+---

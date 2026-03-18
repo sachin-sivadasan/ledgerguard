@@ -10,6 +10,7 @@ import 'package:get_it/get_it.dart' as _i1;
 import 'package:injectable/injectable.dart' as _i2;
 
 import '../../data/repositories/api_api_key_repository.dart';
+import '../../data/repositories/api_billing_repository.dart';
 import '../../data/repositories/api_chat_repository.dart';
 import '../../data/repositories/api_dashboard_repository.dart';
 import '../../data/repositories/api_dashboard_preferences_repository.dart';
@@ -24,6 +25,7 @@ import '../../data/repositories/firebase_auth_repository.dart';
 import '../../data/repositories/api_app_repository.dart';
 import '../../data/repositories/api_partner_integration_repository.dart';
 import '../../domain/repositories/api_key_repository.dart';
+import '../../domain/repositories/billing_repository.dart';
 import '../../domain/repositories/app_repository.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -38,6 +40,7 @@ import '../../domain/repositories/store_health_repository.dart';
 import '../../domain/repositories/subscription_repository.dart';
 import '../../domain/repositories/user_profile_repository.dart';
 import '../../presentation/blocs/api_key/api_key_bloc.dart';
+import '../../presentation/blocs/billing/billing_bloc.dart';
 import '../../presentation/blocs/app_selection/app_selection_bloc.dart';
 import '../../presentation/blocs/auth/auth_bloc.dart';
 import '../../presentation/blocs/dashboard/dashboard_bloc.dart';
@@ -111,6 +114,9 @@ extension GetItInjectableX on _i1.GetIt {
     registerLazySingleton<ChatRepository>(() => ApiChatRepository(
           authRepository: get<AuthRepository>(),
         ));
+    registerLazySingleton<BillingRepository>(() => ApiBillingRepository(
+          apiClient: get<ApiClient>(),
+        ));
 
     // Blocs
     registerFactory<AuthBloc>(() => AuthBloc(authRepository: get<AuthRepository>()));
@@ -127,6 +133,7 @@ extension GetItInjectableX on _i1.GetIt {
     registerFactory<ApiKeyBloc>(() => ApiKeyBloc(repository: get<ApiKeyRepository>()));
     registerFactory<EarningsBloc>(() => EarningsBloc(earningsRepository: get<EarningsRepository>()));
     registerFactory<StoreHealthBloc>(() => StoreHealthBloc(get<StoreHealthRepository>()));
+    registerFactory<BillingBloc>(() => BillingBloc(billingRepository: get<BillingRepository>()));
     // ChatBloc is created manually in app_router.dart with appId from selected app
 
     return this;

@@ -124,6 +124,25 @@ class SettingsPage extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
+                // Billing Section
+                _buildSectionHeader(context, 'Billing', Icons.payment_outlined),
+                const SizedBox(height: 12),
+                _buildCard(
+                  context,
+                  children: [
+                    _buildNavigationTile(
+                      context,
+                      icon: Icons.credit_card_outlined,
+                      iconColor: Colors.teal,
+                      title: 'Plan & Billing',
+                      subtitle: 'Manage your subscription plan',
+                      onTap: () => context.push('/settings/billing'),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
                 // Account Section
                 _buildSectionHeader(context, 'Account', Icons.person_outline),
                 const SizedBox(height: 12),

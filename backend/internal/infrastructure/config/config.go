@@ -15,6 +15,15 @@ type Config struct {
 	Shopify    ShopifyConfig    `yaml:"shopify"`
 	Encryption EncryptionConfig `yaml:"encryption"`
 	OpenAI     OpenAIConfig     `yaml:"openai"`
+	Razorpay   RazorpayConfig   `yaml:"razorpay"`
+}
+
+type RazorpayConfig struct {
+	KeyID         string `yaml:"key_id"`
+	KeySecret     string `yaml:"key_secret"`
+	WebhookSecret string `yaml:"webhook_secret"`
+	StarterPlanID string `yaml:"starter_plan_id"`
+	ProPlanID     string `yaml:"pro_plan_id"`
 }
 
 type OpenAIConfig struct {
@@ -170,6 +179,23 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("OPENAI_MODEL"); v != "" {
 		cfg.OpenAI.Model = v
+	}
+
+	// Razorpay
+	if v := os.Getenv("RAZORPAY_KEY_ID"); v != "" {
+		cfg.Razorpay.KeyID = v
+	}
+	if v := os.Getenv("RAZORPAY_KEY_SECRET"); v != "" {
+		cfg.Razorpay.KeySecret = v
+	}
+	if v := os.Getenv("RAZORPAY_WEBHOOK_SECRET"); v != "" {
+		cfg.Razorpay.WebhookSecret = v
+	}
+	if v := os.Getenv("RAZORPAY_STARTER_PLAN_ID"); v != "" {
+		cfg.Razorpay.StarterPlanID = v
+	}
+	if v := os.Getenv("RAZORPAY_PRO_PLAN_ID"); v != "" {
+		cfg.Razorpay.ProPlanID = v
 	}
 }
 

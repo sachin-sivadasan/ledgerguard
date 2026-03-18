@@ -433,3 +433,28 @@ Four auto-deduct behaviors in the billing system:
 - Daily cron only needed for: trial expiry, past-due cleanup, scheduled downgrades
 - RBI compliance handled by Stripe India entity — no custom mandate code needed
 - Enterprise plans with custom pricing may exceed ₹15,000 — Stripe's mandate flow handles this
+
+---
+
+### ADR-020: Razorpay as Primary Payment Provider (India)
+**Date:** 2026-03-18
+**Status:** Accepted
+
+**Context:**
+Stripe India is invite-only and we don't have access yet. We need a payment provider for B2B SaaS billing (Starter $249/mo, Pro $499/mo).
+
+**Decision:**
+Use Razorpay Subscriptions as the primary payment provider. Key choices:
+1. **BillingSubscription is a separate entity** from Shopify Subscription — different domain concepts
+2. **Domain layer has zero Razorpay deps** — RazorpayClient lives in infrastructure/external
+3. **Razorpay plan IDs stored in config** — created via Razorpay dashboard first, referenced by env vars
+4. **Webhook handler returns 200 always** — logs processing errors but prevents Razorpay retry storms
+5. **Billing routes are optional** — server starts gracefully without Razorpay config
+6. **HMAC-SHA256 for webhook verification** — standard Razorpay signature validation
+7. **Test mode only** — no GST calculations or live mode config needed yet
+
+**Consequences:**
+- Can start accepting payments immediately via Razorpay test mode
+- Clean separation from Stripe code (future migration path preserved)
+- No vendor lock-in at domain layer — only infrastructure layer knows about Razorpay
+- Will need to add GST/tax handling before going live in India

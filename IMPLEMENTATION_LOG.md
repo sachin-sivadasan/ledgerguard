@@ -1736,3 +1736,83 @@ ChatBloc (send, suggestions, clear, streaming events), ChatPage with responsive 
 **Files Created:** ~50 new files across backend `internal/chat/` and frontend `presentation/blocs/chat/`, `widgets/chat/`
 
 **Tests:** 47 new Go tests + 5 Flutter bloc tests
+
+---
+
+## [2026-03-15] Shop Logos on Subscription Pages
+
+**Commit:** feat: add shop logos to subscription list and detail pages
+
+**Summary:**
+Added shop brand data (logo, square logo, cover image) fetched from the Shopify Storefront API. Logos display on subscription list tiles and detail pages with letter-initial fallback.
+
+**Implemented:**
+
+1. **Database Migration (000029):** `shops` table with `myshopify_domain` UNIQUE key, logo URLs, country/currency, indexed by domain
+2. **Domain Layer:** `entity.Shop` struct, `repository.ShopRepository` interface (Upsert, FindByDomain, FindByDomains)
+3. **Persistence Layer:** `PostgresShopRepository` with upsert-on-conflict and batch domain lookup
+4. **Storefront Client:** `ShopifyStorefrontClient.FetchBrand()` — public GraphQL API call (no auth, 5s timeout), graceful failure returns empty Shop
+5. **Sync Integration:** After ledger rebuild, collects unique domains from subscriptions, fetches brand data only for **new** domains not already in shops table
+6. **API Response:** Subscription list, detail, and store health endpoints now include `shop_name`, `shop_logo_url`, and `shop_square_logo_url` fields (batch-fetched via `FindByDomains`)
+7. **Flutter Entity:** Added `shopName`, `shopLogoUrl`, and `shopSquareLogoUrl` nullable fields to `Subscription`, plus `displayName` getter (prefers shop name over domain)
+8. **Flutter UI:** `SubscriptionTile`, `SubscriptionDetailPage`, and `StoreHealthPage` show `CachedNetworkImage` with letter-initial fallback on error/null. Store name uses `displayName` (real shop name from Storefront API) instead of domain parsing.
+
+**Files Created:**
+- `backend/migrations/000029_create_shops_table.{up,down}.sql`
+- `backend/internal/domain/entity/shop.go`
+- `backend/internal/domain/repository/shop_repository.go`
+- `backend/internal/infrastructure/persistence/shop_repository.go`
+- `backend/internal/infrastructure/external/shopify_storefront_client.go`
+
+**Files Modified:**
+- `backend/internal/application/service/sync_service.go` — ShopBrandFetcher interface + fetchShopBrands method
+- `backend/internal/interfaces/http/handler/subscription.go` — shop logo + name enrichment in List/GetByID
+- `backend/internal/interfaces/http/handler/store_health.go` — shopRepo + logo/name enrichment in SubscriptionResponse
+- `backend/cmd/server/main.go` — wired shopRepo to subscriptionHandler + storeHealthHandler + syncService
+- `frontend/app/lib/domain/entities/subscription.dart` — logo URL + shopName fields, displayName getter
+- `frontend/app/lib/presentation/widgets/subscription_tile.dart` — CachedNetworkImage avatar
+- `frontend/app/lib/presentation/pages/subscription_detail_page.dart` — CachedNetworkImage avatar + displayName
+- `frontend/app/lib/presentation/pages/store_health_page.dart` — CachedNetworkImage avatar + displayName
+- `frontend/app/pubspec.yaml` — cached_network_image dependency
+- `DATABASE_SCHEMA.md` — shops table documentation
+
+---
+
+## [2026-03-18] Razorpay Subscriptions Integration (Test Mode)
+
+**Summary:**
+Integrated Razorpay Subscriptions for LedgerSpear B2B SaaS billing (Starter $249/mo, Pro $499/mo). Test mode only — no GST/live mode yet.
+
+**8 Incremental Commits:**
+1. Domain value objects: BillingPlan (STARTER/PRO with PriceUSDCents), BillingSubscriptionStatus (6 states), PlanTierStarter
+2. BillingSubscription entity with lifecycle methods (Activate, Cancel, Halt, MapToPlanTier)
+3. BillingSubscriptionRepository interface + migration 000030
+4. PostgresBillingSubscriptionRepository (pgx pool, raw SQL)
+5. RazorpayClient HTTP client (Basic Auth, HMAC-SHA256 webhook verification)
+6. BillingService application service (CreateCheckout, GetBillingStatus, HandleWebhookEvent)
+7. BillingHandler HTTP handlers (POST /checkout, GET /status, POST /webhooks/razorpay)
+8. Wiring: RazorpayConfig, router routes, main.go initialization, doc updates
+
+**Key Decisions:**
+- BillingSubscription is separate from Shopify Subscription entity
+- Razorpay plan IDs stored in config (created via Razorpay dashboard)
+- Webhook handler returns 200 always (logs errors) to prevent retries
+- Billing routes are optional — server starts fine without Razorpay config
+
+**Files Created:**
+- `backend/internal/domain/valueobject/billing_plan.go` + test
+- `backend/internal/domain/valueobject/billing_subscription_status.go` + test
+- `backend/internal/domain/valueobject/plan_tier_test.go`
+- `backend/internal/domain/entity/billing_subscription.go` + test
+- `backend/internal/domain/repository/billing_subscription_repository.go`
+- `backend/migrations/000030_create_billing_subscriptions_table.up.sql` + down
+- `backend/internal/infrastructure/persistence/billing_subscription_repository.go`
+- `backend/internal/infrastructure/external/razorpay_client.go` + test
+- `backend/internal/application/service/billing_service.go` + test
+- `backend/internal/interfaces/http/handler/billing.go` + test
+
+**Files Modified:**
+- `backend/internal/domain/valueobject/plan_tier.go` — added PlanTierStarter
+- `backend/internal/infrastructure/config/config.go` — added RazorpayConfig
+- `backend/internal/interfaces/http/router/router.go` — billing + webhook routes
+- `backend/cmd/server/main.go` — wired billing components

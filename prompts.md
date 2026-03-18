@@ -1514,3 +1514,45 @@
 - Logged to `prompts.md`
 
 ---
+
+### [2026-03-15] Shop Logos on Subscription Pages
+**Original:**
+> Implement the plan: Add Shop Logo to Subscription Pages. Subscription list and detail pages currently show letter initials. Display actual shop logo from Shopify Storefront API, falling back to letter initials when unavailable.
+
+**Improved:**
+> Create `shops` table (migration 000029) to store Shopify store brand data (logo, square logo, cover image) fetched from the public Storefront API (`https://{domain}/api/2026-01/graphql.json`, no auth required). Add `entity.Shop`, `repository.ShopRepository`, `PostgresShopRepository`, `ShopifyStorefrontClient.FetchBrand()`. Integrate brand fetch into sync service (only for new domains). Enrich subscription list/detail API responses with `shop_logo_url` and `shop_square_logo_url`. Update Flutter `Subscription` entity with logo URL fields. Replace letter-initial avatars in `SubscriptionTile` and `SubscriptionDetailPage` with `CachedNetworkImage` + letter fallback.
+
+**Result:**
+- Created migration 000029 (shops table with domain unique index)
+- Created `entity.Shop`, `repository.ShopRepository`, `PostgresShopRepository`
+- Created `ShopifyStorefrontClient` for public Storefront API brand fetching (including `shop { id }` for GID)
+- Integrated brand fetch into `SyncService` (only fetches new domains)
+- Updated subscription handler to include `shop_name`, logo URLs in list/detail responses
+- Updated store health handler with shopRepo for logo + name enrichment
+- Updated Flutter `Subscription` entity with `shopName`, `shopLogoUrl`, `shopSquareLogoUrl`, `displayName` getter
+- Updated `SubscriptionTile`, `SubscriptionDetailPage`, and `StoreHealthPage` with `CachedNetworkImage` + letter fallback
+- Replaced domain-parsing name logic with `displayName` (prefers real shop name)
+- Added `cached_network_image` dependency to pubspec.yaml
+- Updated `DATABASE_SCHEMA.md` and `IMPLEMENTATION_LOG.md`
+- All backend tests pass, all Flutter tests pass
+
+---
+
+### [2026-03-18] Razorpay Subscriptions Integration (Test Mode)
+**Original:**
+> Implement the Razorpay Subscriptions Integration plan (8 incremental commits)
+
+**Improved:**
+> Integrate Razorpay Subscriptions into the Go backend for LedgerSpear B2B SaaS billing (Starter $249/mo, Pro $499/mo). 8 incremental commits: domain value objects, entity, repository interface + migration, PostgreSQL repo, Razorpay HTTP client, BillingService, HTTP handlers, wire everything. Test mode only.
+
+**Result:**
+- 8 commits implementing full Razorpay billing integration
+- Domain: BillingPlan, BillingSubscriptionStatus, BillingSubscription entity
+- Infrastructure: RazorpayClient (Basic Auth, HMAC webhook verification)
+- Application: BillingService (checkout, status, webhook event routing)
+- Handlers: POST /billing/checkout, GET /billing/status, POST /webhooks/razorpay
+- Migration 000030: billing_subscriptions table
+- Config: RazorpayConfig with env var overrides
+- All tests pass, server starts without Razorpay config (graceful skip)
+
+---

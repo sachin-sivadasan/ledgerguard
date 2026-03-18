@@ -27,6 +27,11 @@ users
             │
             └──< api_audit_log
 
+shops (standalone - linked to subscriptions via myshopify_domain)
+
+billing_subscriptions (user's Razorpay B2B subscriptions)
+  └── users (via user_id FK)
+
 api_subscription_status (CQRS read model - populated from subscriptions)
 api_usage_status (CQRS read model - populated from transactions)
 
@@ -191,6 +196,27 @@ User notification settings.
 | ai_provider | VARCHAR(20) | DEFAULT 'openai' | Preferred AI provider (openai, claude) |
 | created_at | TIMESTAMPTZ | DEFAULT NOW() | Creation time |
 | updated_at | TIMESTAMPTZ | DEFAULT NOW() | Last modified |
+
+### shops
+Shop brand data fetched from Shopify Storefront API during sync. Linked to subscriptions via `myshopify_domain`.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK, DEFAULT gen_random_uuid() | Shop ID |
+| myshopify_domain | VARCHAR(255) | UNIQUE, NOT NULL | Store domain (e.g., my-store.myshopify.com) |
+| shopify_shop_gid | VARCHAR(255) | | Shopify shop GID |
+| shop_name | VARCHAR(255) | | Store display name |
+| logo_url | TEXT | | Brand logo URL |
+| square_logo_url | TEXT | | Square brand logo URL |
+| cover_image_url | TEXT | | Brand cover image URL |
+| primary_domain | VARCHAR(255) | | Custom domain (if set) |
+| country_code | VARCHAR(10) | | Store country |
+| currency_code | VARCHAR(3) | | Store currency |
+| created_at | TIMESTAMPTZ | DEFAULT NOW() | First fetched |
+| updated_at | TIMESTAMPTZ | DEFAULT NOW() | Last updated |
+
+**Indexes:**
+- `idx_shops_domain` - Lookup by myshopify_domain
 
 ---
 
@@ -483,6 +509,7 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000026_add_default_app_to_preferences | Add default_app_id to user_preferences for multi-app support | ✓ Implemented |
 | 000027_add_install_count_to_apps | Add install_count to apps table for Partner API data | ✓ Implemented |
 | 000028_add_ai_provider_to_user_preferences | Add ai_provider column for per-user AI provider selection | Planned |
+| 000029_create_shops_table | Create shops table for Shopify store brand data (logos) | ✓ Implemented |
 
 ---
 
@@ -493,3 +520,28 @@ CREATE TRIGGER notification_preferences_updated_at
 3. **Soft Delete:** Implemented for subscriptions via `deleted_at` column; use `tracking_enabled` for apps
 4. **Retention:** Transactions kept for 12 months; snapshots kept permanently
 5. **Timezone:** All timestamps in UTC (TIMESTAMPTZ)
+
+---
+
+## billing_subscriptions (Migration 000030)
+
+Tracks LedgerSpear B2B subscriptions managed via Razorpay.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| user_id | UUID | FK → users(id) |
+| razorpay_subscription_id | VARCHAR(255) | Unique, Razorpay sub ID |
+| razorpay_plan_id | VARCHAR(255) | Razorpay plan ID |
+| razorpay_customer_id | VARCHAR(255) | Razorpay customer ID |
+| plan | VARCHAR(50) | STARTER, PRO |
+| status | VARCHAR(50) | CREATED, ACTIVE, PENDING, HALTED, CANCELLED, COMPLETED |
+| amount_cents | INTEGER | Monthly price in USD cents |
+| currency | VARCHAR(10) | Default USD |
+| current_period_start | TIMESTAMPTZ | Nullable |
+| current_period_end | TIMESTAMPTZ | Nullable |
+| short_url | TEXT | Razorpay hosted checkout URL |
+| created_at | TIMESTAMPTZ | |
+| updated_at | TIMESTAMPTZ | |
+
+**Indexes:** user_id, razorpay_subscription_id, status

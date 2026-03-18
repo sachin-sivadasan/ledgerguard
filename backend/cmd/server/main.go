@@ -130,6 +130,8 @@ func run() error {
 	var txRepo *persistence.PostgresTransactionRepository
 	var subscriptionRepo *persistence.PostgresSubscriptionRepository
 	var snapshotRepo *persistence.PostgresDailyMetricsSnapshotRepository
+	var shopRepo *persistence.PostgresShopRepository
+	var billingSubRepo *persistence.PostgresBillingSubscriptionRepository
 
 	if db != nil {
 		userRepo = persistence.NewPostgresUserRepository(db.Pool)
@@ -138,6 +140,8 @@ func run() error {
 		txRepo = persistence.NewPostgresTransactionRepository(db.Pool)
 		subscriptionRepo = persistence.NewPostgresSubscriptionRepository(db.Pool)
 		snapshotRepo = persistence.NewPostgresDailyMetricsSnapshotRepository(db.Pool)
+		shopRepo = persistence.NewPostgresShopRepository(db.Pool)
+		billingSubRepo = persistence.NewPostgresBillingSubscriptionRepository(db.Pool)
 	}
 
 	// Initialize OAuth state store (10 minute TTL)
@@ -230,6 +234,16 @@ func run() error {
 			ledgerService,
 		)
 
+		// Wire subscription repo for status enrichment and brand fetch
+		syncService = syncService.WithSubscriptionRepo(subscriptionRepo)
+
+		// Wire shop brand fetcher for logo sync
+		if shopRepo != nil {
+			storefrontClient := external.NewShopifyStorefrontClient()
+			syncService = syncService.WithShopBrandFetcher(storefrontClient, shopRepo)
+			log.Println("Shop brand fetcher initialized")
+		}
+
 		syncHandler = handler.NewSyncHandler(syncService, partnerRepo, appRepo)
 		log.Println("Sync handler initialized")
 
@@ -243,6 +257,9 @@ func run() error {
 	var subscriptionHandler *handler.SubscriptionHandler
 	if subscriptionRepo != nil && partnerRepo != nil && appRepo != nil {
 		subscriptionHandler = handler.NewSubscriptionHandler(subscriptionRepo, partnerRepo, appRepo)
+		if shopRepo != nil {
+			subscriptionHandler.SetShopRepo(shopRepo)
+		}
 		log.Println("Subscription handler initialized")
 	}
 
@@ -250,6 +267,9 @@ func run() error {
 	var storeHealthHandler *handler.StoreHealthHandler
 	if subscriptionRepo != nil && txRepo != nil && partnerRepo != nil && appRepo != nil {
 		storeHealthHandler = handler.NewStoreHealthHandler(subscriptionRepo, txRepo, partnerRepo, appRepo)
+		if shopRepo != nil {
+			storeHealthHandler.SetShopRepo(shopRepo)
+		}
 		log.Println("Store health handler initialized")
 	}
 
@@ -342,6 +362,22 @@ func run() error {
 		log.Println("Insight handler initialized")
 	}
 
+	// Initialize Razorpay billing (optional — gracefully skipped if not configured)
+	var billingHandler *handler.BillingHandler
+	if cfg.Razorpay.KeyID != "" && billingSubRepo != nil && userRepo != nil {
+		razorpayClient := external.NewRazorpayClient(cfg.Razorpay.KeyID, cfg.Razorpay.KeySecret)
+		billingService := appservice.NewBillingService(
+			razorpayClient,
+			billingSubRepo,
+			userRepo,
+			cfg.Razorpay.WebhookSecret,
+			cfg.Razorpay.StarterPlanID,
+			cfg.Razorpay.ProPlanID,
+		)
+		billingHandler = handler.NewBillingHandler(billingService)
+		log.Println("Razorpay billing handler initialized")
+	}
+
 	// Initialize chat GraphQL handler and chat handler
 	var graphqlHandler http.Handler
 	var chatHandler *chat.Handler
@@ -424,6 +460,7 @@ func run() error {
 		NotificationPreferencesHandler:  notificationPreferencesHandler,
 		DeviceHandler:                   deviceHandler,
 		InsightHandler:                  insightHandler,
+		BillingHandler:                  billingHandler,
 		APIKeyHandler:                   apiKeyHandler,
 		GraphQLHandler:                  graphqlHandler,
 		AuthMW:                          authMW,

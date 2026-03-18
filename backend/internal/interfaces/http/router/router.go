@@ -28,6 +28,7 @@ type Config struct {
 	DeviceHandler                   *handler.DeviceHandler
 	InsightHandler                  *handler.InsightHandler
 	WebhookHandler                  *handler.WebhookHandler
+	BillingHandler                  *handler.BillingHandler
 	APIKeyHandler                   *apikeyhandler.APIKeyHandler
 	GraphQLHandler                  http.Handler       // Internal chat GraphQL endpoint
 	ChatHandler                     http.HandlerFunc   // POST /api/v1/chat (SSE)
@@ -65,6 +66,11 @@ func New(cfg Config) *chi.Mux {
 			r.Post("/uninstalled", cfg.WebhookHandler.HandleAppUninstalled)
 			r.Post("/billing-failure", cfg.WebhookHandler.HandleBillingFailure)
 		})
+	}
+
+	// Razorpay webhook route (no auth - validated via HMAC)
+	if cfg.BillingHandler != nil {
+		r.Post("/webhooks/razorpay", cfg.BillingHandler.HandleWebhook)
 	}
 
 	// Internal chat GraphQL endpoint (requires auth)
@@ -187,6 +193,15 @@ func New(cfg Config) *chi.Mux {
 				// Install count routes
 				r.Get("/{appID}/install-count", cfg.AppHandler.GetInstallCount)
 				r.Post("/{appID}/refresh-install-count", cfg.AppHandler.RefreshInstallCount)
+			})
+		}
+
+		// Billing routes (requires auth)
+		if cfg.BillingHandler != nil && cfg.AuthMW != nil {
+			r.Route("/billing", func(r chi.Router) {
+				r.Use(cfg.AuthMW)
+				r.Post("/checkout", cfg.BillingHandler.CreateCheckout)
+				r.Get("/status", cfg.BillingHandler.GetStatus)
 			})
 		}
 

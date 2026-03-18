@@ -9,7 +9,7 @@ Postponed ideas and features for later implementation.
 | Feature | Priority | Notes |
 |---------|----------|-------|
 | Welcome & Onboarding Flow (Hybrid) | P1 | n8n + Postmark email drip + in-app checklist; custom webhook support for third-party flow builders; see `docs/prompts/welcome-onboarding-flow.md` |
-| Billing System (Stripe, all-paid) | P1 | Stripe Checkout; Starter (14-day trial) / Pro / Enterprise; no free tier; read-only on expiry; plans + plan_features tables; see `docs/prompts/billing-system-flow.md` |
+| Billing System — Live mode + GST | P2 | Razorpay test mode done; need live keys, GST tax handling, invoice generation before launch |
 | AI Chat + Internal GraphQL | P2 | OpenAI-powered chat widget; GraphQL as query layer; AIClient interface for provider swap |
 | Public GraphQL Developer API | P3 | Promote internal GraphQL to public API for external devs (after AI chat ships) |
 | Claude API as Parallel Provider | P3 | Add Claude alongside OpenAI — user picks preferred AI provider in settings |
@@ -18,6 +18,7 @@ Postponed ideas and features for later implementation.
 | Stripe integration | P3 | Non-Shopify revenue |
 | Native mobile app | P3 | iOS/Android standalone |
 | Custom report builder | P3 | User-defined reports |
+| Quick Stats dashboard row | P3 | Always-visible compact stats row at top of dashboard: Active MRR, At-Risk Stores, Renewal Rate, Churned (30d) with deltas; uses existing metrics API + KpiCardCompact |
 | Dark mode support | P3 | System/manual theme toggle with dark color palette |
 | Home screen widgets | P3 | iOS/Android widgets for MRR, at-risk count |
 | Smart search | P3 | Fuzzy matching for store names |
@@ -25,6 +26,7 @@ Postponed ideas and features for later implementation.
 | Affiliate program | P4 | Referral system |
 | GCP staging custom domain | P4 | Map staging.ledgerspear.com to Cloud Run URL |
 | Marketing site on GCP staging | P4 | Deploy Next.js marketing to Cloud Run for staging |
+| Smart shop logo fetch (active-first) | P2 | During sync, only fetch brand data for stores with ≥2 months of recurring transactions (confirmed active). Deprioritize one-time/trial stores. Avoids wasting Storefront API calls on churned/inactive domains. Current implementation fetches all domains equally. |
 
 ---
 
@@ -42,6 +44,7 @@ Postponed ideas and features for later implementation.
 | io.ReadAll error handling | 2026-03-01 | Verified all usages handle errors correctly |
 | Repository contract clarity | 2026-03-01 | Added documentation to AppRepository interface |
 | Multi-app support | 2026-03-01 | Aggregate metrics, default app preference, app selector support |
+| Billing System (Razorpay test mode) | 2026-03-18 | Razorpay Subscriptions integration — backend (8 commits) + Flutter UI; Starter $249/mo, Pro $499/mo; hosted checkout via short_url |
 
 ---
 

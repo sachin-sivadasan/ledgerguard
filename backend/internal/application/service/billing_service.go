@@ -89,9 +89,10 @@ func (s *BillingService) CreateCheckout(ctx context.Context, userID uuid.UUID, p
 
 	// Create Razorpay subscription
 	sub, err := s.razorpayClient.CreateSubscription(ctx, external.CreateSubscriptionRequest{
-		PlanID:     razorpayPlanID,
-		CustomerID: cust.ID,
-		TotalCount: 120, // 10 years of monthly billing
+		PlanID:         razorpayPlanID,
+		CustomerID:     cust.ID,
+		TotalCount:     120, // 10 years of monthly billing
+		CustomerNotify: 1,   // required for hosted checkout page
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create razorpay subscription: %w", err)

@@ -75,9 +75,10 @@ type CreateCustomerRequest struct {
 
 // CreateSubscriptionRequest is the payload for creating a Razorpay subscription.
 type CreateSubscriptionRequest struct {
-	PlanID     string `json:"plan_id"`
-	CustomerID string `json:"customer_id"`
-	TotalCount int    `json:"total_count"`
+	PlanID         string `json:"plan_id"`
+	CustomerID     string `json:"customer_id,omitempty"`
+	TotalCount     int    `json:"total_count"`
+	CustomerNotify int    `json:"customer_notify"`
 }
 
 // CreateCustomer creates a customer in Razorpay.

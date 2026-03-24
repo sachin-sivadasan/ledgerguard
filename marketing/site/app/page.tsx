@@ -1,6 +1,8 @@
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Problem from "@/components/Problem";
+import HowItWorks from "@/components/HowItWorks";
+import ProductScreenshots from "@/components/ProductScreenshots";
 import RenewalRate from "@/components/RenewalRate";
 import RevenueAtRisk from "@/components/RevenueAtRisk";
 import AIBrief from "@/components/AIBrief";
@@ -15,6 +17,8 @@ export default function Home() {
       <main className="pt-16">
         <Hero />
         <Problem />
+        <HowItWorks />
+        <ProductScreenshots />
         <RenewalRate />
         <RevenueAtRisk />
         <AIBrief />

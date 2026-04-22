@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/scheduler"
 	appservice "github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
@@ -19,6 +20,8 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/config"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue/processors"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/handler"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/router"
@@ -123,6 +126,17 @@ func run() error {
 		}
 	}
 
+	// Initialize Redis client (optional — for queue-based sync)
+	var redisClient *redis.Client
+	if cfg.Queue.Enabled && cfg.Redis.Addr != "" {
+		redisClient, err = queue.NewRedisClient(ctx, cfg.Redis)
+		if err != nil {
+			log.Printf("WARNING: Redis not available: %v", err)
+			log.Printf("Queue-based sync will be disabled")
+			redisClient = nil
+		}
+	}
+
 	// Initialize repositories
 	var userRepo *persistence.PostgresUserRepository
 	var partnerRepo *persistence.PostgresPartnerAccountRepository
@@ -132,6 +146,9 @@ func run() error {
 	var snapshotRepo *persistence.PostgresDailyMetricsSnapshotRepository
 	var shopRepo *persistence.PostgresShopRepository
 	var billingSubRepo *persistence.PostgresBillingSubscriptionRepository
+	var reviewRepo *persistence.PostgresAppReviewRepository
+	var syncJobRepo *persistence.PostgresSyncJobRepository
+	var appEventRepo *persistence.PostgresAppEventRepository
 
 	if db != nil {
 		userRepo = persistence.NewPostgresUserRepository(db.Pool)
@@ -142,6 +159,9 @@ func run() error {
 		snapshotRepo = persistence.NewPostgresDailyMetricsSnapshotRepository(db.Pool)
 		shopRepo = persistence.NewPostgresShopRepository(db.Pool)
 		billingSubRepo = persistence.NewPostgresBillingSubscriptionRepository(db.Pool)
+		reviewRepo = persistence.NewPostgresAppReviewRepository(db.Pool)
+		syncJobRepo = persistence.NewPostgresSyncJobRepository(db.Pool)
+		appEventRepo = persistence.NewPostgresAppEventRepository(db.Pool)
 	}
 
 	// Initialize OAuth state store (10 minute TTL)
@@ -242,6 +262,13 @@ func run() error {
 			storefrontClient := external.NewShopifyStorefrontClient()
 			syncService = syncService.WithShopBrandFetcher(storefrontClient, shopRepo)
 			log.Println("Shop brand fetcher initialized")
+		}
+
+		// Wire review scraper for app store review sync
+		if reviewRepo != nil {
+			syncAppStoreScraper := external.NewShopifyAppStoreClient()
+			syncService = syncService.WithReviewScraper(syncAppStoreScraper, reviewRepo)
+			log.Println("Review scraper initialized for sync")
 		}
 
 		syncHandler = handler.NewSyncHandler(syncService, partnerRepo, appRepo)
@@ -378,6 +405,96 @@ func run() error {
 		log.Println("Razorpay billing handler initialized")
 	}
 
+	// Initialize review handler with Shopify App Store scraper
+	var reviewHandler *handler.ReviewHandler
+	appStoreScraper := external.NewShopifyAppStoreClient()
+	if reviewRepo != nil && appRepo != nil && partnerRepo != nil {
+		reviewHandler = handler.NewReviewHandler(reviewRepo, appRepo, partnerRepo, appStoreScraper)
+		log.Println("Review handler initialized")
+	}
+
+	// Initialize queue-based sync system (optional — requires Redis + Queue enabled)
+	var queueSyncHandler *handler.QueueSyncHandler
+	var regularWorkerPool *queue.WorkerPool
+	var fullSyncWorkerPool *queue.WorkerPool
+	var recoveryService *queue.RecoveryService
+
+	if cfg.Queue.Enabled && redisClient != nil && syncJobRepo != nil && appRepo != nil && partnerRepo != nil && encryptor != nil {
+		lockManager := queue.NewLockManager(redisClient)
+		progressTracker := queue.NewProgressTracker(redisClient, syncJobRepo, 2*time.Second, 30*time.Second)
+		processorRegistry := queue.NewProcessorRegistry()
+
+		// Register processors
+		if txRepo != nil && subscriptionRepo != nil {
+			ledgerServiceForQueue := domainservice.NewLedgerService(txRepo, subscriptionRepo)
+			if snapshotRepo != nil {
+				ledgerServiceForQueue = ledgerServiceForQueue.WithSnapshotRepository(snapshotRepo)
+			}
+
+			processorRegistry.Register(processors.NewTransactionProcessor(
+				partnerClient, txRepo, appRepo, partnerRepo, encryptor, ledgerServiceForQueue,
+				syncJobRepo, lockManager, progressTracker,
+			))
+			processorRegistry.Register(processors.NewSnapshotProcessor(
+				txRepo, appRepo, partnerRepo, encryptor, ledgerServiceForQueue,
+				syncJobRepo, lockManager, progressTracker,
+			))
+			processorRegistry.Register(processors.NewStatusProcessor(
+				partnerClient, subscriptionRepo, appRepo, partnerRepo, encryptor,
+				syncJobRepo, lockManager, progressTracker,
+			))
+			processorRegistry.Register(processors.NewStoreProcessor(
+				external.NewShopifyStorefrontClient(), shopRepo, subscriptionRepo,
+				appRepo, partnerRepo, encryptor,
+				syncJobRepo, lockManager, progressTracker,
+			))
+
+			if appEventRepo != nil {
+				processorRegistry.Register(processors.NewEventProcessor(
+					partnerClient, appEventRepo, subscriptionRepo,
+					appRepo, partnerRepo, encryptor,
+					syncJobRepo, lockManager, progressTracker,
+				))
+			}
+		}
+
+		if reviewRepo != nil {
+			processorRegistry.Register(processors.NewReviewProcessor(
+				external.NewShopifyAppStoreClient(), reviewRepo, appRepo,
+				syncJobRepo, lockManager, progressTracker,
+			))
+		}
+
+		processorRegistry.Register(processors.NewFullSyncProcessor(
+			syncJobRepo, redisClient, lockManager, progressTracker,
+		))
+
+		// Start worker pools
+		regularWorkerPool = queue.NewWorkerPool(
+			"regular", queue.RegularQueueKey, cfg.Queue.NumWorkers,
+			redisClient, syncJobRepo, lockManager, progressTracker, processorRegistry,
+		)
+		regularWorkerPool.Start(ctx)
+
+		fullSyncWorkerPool = queue.NewWorkerPool(
+			"full", queue.FullSyncQueueKey, cfg.Queue.FullSyncWorkers,
+			redisClient, syncJobRepo, lockManager, progressTracker, processorRegistry,
+		)
+		fullSyncWorkerPool.Start(ctx)
+
+		// Start recovery
+		recoveryService = queue.NewRecoveryService(syncJobRepo, redisClient, lockManager, 10*time.Minute)
+		recoveryService.RecoverOnStartup(ctx)
+		recoveryService.StartPeriodicRecovery(ctx)
+
+		// Create queue sync service and handler
+		queueSyncService := appservice.NewQueueSyncService(
+			syncJobRepo, appRepo, partnerRepo, redisClient, lockManager, progressTracker,
+		)
+		queueSyncHandler = handler.NewQueueSyncHandler(queueSyncService, partnerRepo, appRepo)
+		log.Println("Queue-based sync system initialized")
+	}
+
 	// Initialize chat GraphQL handler and chat handler
 	var graphqlHandler http.Handler
 	var chatHandler *chat.Handler
@@ -461,6 +578,8 @@ func run() error {
 		DeviceHandler:                   deviceHandler,
 		InsightHandler:                  insightHandler,
 		BillingHandler:                  billingHandler,
+		ReviewHandler:                   reviewHandler,
+		QueueSyncHandler:                queueSyncHandler,
 		APIKeyHandler:                   apiKeyHandler,
 		GraphQLHandler:                  graphqlHandler,
 		AuthMW:                          authMW,
@@ -496,6 +615,20 @@ func run() error {
 	<-quit
 
 	log.Println("Shutting down server...")
+
+	// Stop queue worker pools gracefully (before server shutdown)
+	if regularWorkerPool != nil {
+		regularWorkerPool.Stop()
+		log.Println("Regular worker pool stopped")
+	}
+	if fullSyncWorkerPool != nil {
+		fullSyncWorkerPool.Stop()
+		log.Println("Full sync worker pool stopped")
+	}
+	if recoveryService != nil {
+		recoveryService.Stop()
+		log.Println("Recovery service stopped")
+	}
 
 	// Stop schedulers gracefully
 	if syncScheduler != nil {

@@ -16,6 +16,23 @@ type Config struct {
 	Encryption EncryptionConfig `yaml:"encryption"`
 	OpenAI     OpenAIConfig     `yaml:"openai"`
 	Razorpay   RazorpayConfig   `yaml:"razorpay"`
+	Redis      RedisConfig      `yaml:"redis"`
+	Queue      QueueConfig      `yaml:"queue"`
+}
+
+type RedisConfig struct {
+	Addr     string `yaml:"addr"`
+	Password string `yaml:"password"`
+	DB       int    `yaml:"db"`
+}
+
+type QueueConfig struct {
+	Enabled              bool   `yaml:"enabled"`
+	NumWorkers           int    `yaml:"num_workers"`
+	FullSyncWorkers      int    `yaml:"full_sync_workers"`
+	RecoveryInterval     string `yaml:"recovery_interval"`      // e.g. "10m"
+	ProgressRedisInterval string `yaml:"progress_redis_interval"` // e.g. "2s"
+	ProgressDBInterval   string `yaml:"progress_db_interval"`    // e.g. "30s"
 }
 
 type RazorpayConfig struct {
@@ -83,6 +100,14 @@ func Load(configPath string) (*Config, error) {
 		},
 		OpenAI: OpenAIConfig{
 			Model: "gpt-4o",
+		},
+		Queue: QueueConfig{
+			Enabled:               false,
+			NumWorkers:            3,
+			FullSyncWorkers:       1,
+			RecoveryInterval:      "10m",
+			ProgressRedisInterval: "2s",
+			ProgressDBInterval:    "30s",
 		},
 	}
 
@@ -196,6 +221,34 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("RAZORPAY_PRO_PLAN_ID"); v != "" {
 		cfg.Razorpay.ProPlanID = v
+	}
+
+	// Redis
+	if v := os.Getenv("REDIS_ADDR"); v != "" {
+		cfg.Redis.Addr = v
+	}
+	if v := os.Getenv("REDIS_PASSWORD"); v != "" {
+		cfg.Redis.Password = v
+	}
+	if v := os.Getenv("REDIS_DB"); v != "" {
+		if db, err := strconv.Atoi(v); err == nil {
+			cfg.Redis.DB = db
+		}
+	}
+
+	// Queue
+	if v := os.Getenv("QUEUE_ENABLED"); v != "" {
+		cfg.Queue.Enabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("QUEUE_NUM_WORKERS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.Queue.NumWorkers = n
+		}
+	}
+	if v := os.Getenv("QUEUE_FULL_SYNC_WORKERS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.Queue.FullSyncWorkers = n
+		}
 	}
 }
 

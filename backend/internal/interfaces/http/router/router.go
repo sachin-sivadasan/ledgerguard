@@ -29,7 +29,9 @@ type Config struct {
 	InsightHandler                  *handler.InsightHandler
 	WebhookHandler                  *handler.WebhookHandler
 	BillingHandler                  *handler.BillingHandler
+	ReviewHandler                   *handler.ReviewHandler
 	APIKeyHandler                   *apikeyhandler.APIKeyHandler
+	QueueSyncHandler                *handler.QueueSyncHandler
 	GraphQLHandler                  http.Handler       // Internal chat GraphQL endpoint
 	ChatHandler                     http.HandlerFunc   // POST /api/v1/chat (SSE)
 	ChatModulesHandler              http.HandlerFunc   // GET /api/v1/chat/modules
@@ -193,6 +195,15 @@ func New(cfg Config) *chi.Mux {
 				// Install count routes
 				r.Get("/{appID}/install-count", cfg.AppHandler.GetInstallCount)
 				r.Post("/{appID}/refresh-install-count", cfg.AppHandler.RefreshInstallCount)
+
+				// App store slug route
+				r.Patch("/{appID}/store-slug", cfg.AppHandler.UpdateStoreSlug)
+
+				// Review routes
+				if cfg.ReviewHandler != nil {
+					r.Get("/{appID}/reviews", cfg.ReviewHandler.List)
+					r.Post("/{appID}/reviews/scrape", cfg.ReviewHandler.Scrape)
+				}
 			})
 		}
 
@@ -216,6 +227,15 @@ func New(cfg Config) *chi.Mux {
 				r.Use(cfg.AuthMW)
 				r.Post("/", cfg.SyncHandler.SyncAllApps)
 				r.Post("/{appID}", cfg.SyncHandler.SyncApp)
+
+				// Queue-based sync routes (alongside existing sync — zero breakage)
+				if cfg.QueueSyncHandler != nil {
+					r.Post("/enqueue/{appID}", cfg.QueueSyncHandler.EnqueueSync)
+					r.Get("/jobs", cfg.QueueSyncHandler.ListJobs)
+					r.Get("/jobs/{jobID}", cfg.QueueSyncHandler.GetJobStatus)
+					r.Get("/jobs/{jobID}/progress", cfg.QueueSyncHandler.GetJobProgress)
+					r.Post("/jobs/{jobID}/cancel", cfg.QueueSyncHandler.CancelJob)
+				}
 			})
 		}
 

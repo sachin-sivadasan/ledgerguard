@@ -458,3 +458,75 @@ Use Razorpay Subscriptions as the primary payment provider. Key choices:
 - Clean separation from Stripe code (future migration path preserved)
 - No vendor lock-in at domain layer — only infrastructure layer knows about Razorpay
 - Will need to add GST/tax handling before going live in India
+
+---
+
+### ADR-021: Snapshot Sync as Separate Job Type
+**Date:** 2026-04-21
+**Status:** Accepted
+
+**Context:**
+In the queue-based sync system design, historical snapshot backfill (`LedgerService.BackfillHistoricalSnapshots()`) was initially embedded inside `transaction_sync`. This meant snapshot computation had no independent progress visibility — it was hidden as a silent sub-step of transaction processing. During plan review, we identified three problems:
+1. **No progress visibility** — frontend shows "transactions: 1200/1200 done" but snapshot backfill (iterating 12 months) runs invisibly afterward
+2. **No independent rerun** — if a metrics bug is fixed, you'd have to re-fetch all transactions just to recompute snapshots
+3. **Mixed responsibilities** — `transaction_sync` processor was doing two distinct things: fetching transactions + rebuilding ledger, then backfilling snapshots
+
+**Decision:**
+Extract snapshot backfill into a separate `snapshot_sync` job type. Full sync now dispatches 6 children (not 5):
+- **Wave 1 (independent):** `transaction_sync`, `event_sync`, `review_sync`
+- **Wave 2 (depends on transaction_sync):** `snapshot_sync`, `status_sync`, `store_sync`
+
+`snapshot_sync` calls `LedgerService.BackfillHistoricalSnapshots()` with progress reporting: "month 3/12". It depends on `transaction_sync` because it needs rebuilt subscriptions and transactions to compute monthly metrics.
+
+**Consequences:**
+- Granular progress: frontend shows "Snapshots: 7/12 months" as a separate progress bar
+- Independent recompute: can re-run `snapshot_sync` alone after a metrics formula change without re-fetching transactions
+- Cleaner processors: each processor has a single responsibility
+- One additional child job per full sync (6 instead of 5) — negligible overhead
+- `transaction_sync` is now faster (no snapshot backfill step)
+
+---
+
+### ADR-022: Redis Queue-Based Async Sync System
+**Date:** 2026-04-21
+**Status:** Accepted
+
+**Context:**
+The synchronous `POST /api/v1/sync/{appID}` endpoint blocks the HTTP request for the entire sync duration (transaction fetch, ledger rebuild, snapshot backfill, status enrichment, brand fetch, review scrape). This prevents showing granular progress in the Flutter frontend, can time out for large apps, and doesn't scale for many concurrent syncs.
+
+**Decision:**
+Implement an async, queue-based sync system using Redis + PostgreSQL:
+- **Redis LPUSH/BRPOP queues** for job distribution (two queues: regular + full_sync)
+- **PostgreSQL `sync_jobs` table** for durable job tracking and status
+- **Worker pools** with configurable concurrency (default 3 regular + 1 full sync)
+- **Distributed locks** (SETNX) prevent duplicate processing per app+type
+- **Dual-write progress** (Redis 2s for fast polling, DB 30s for durability)
+- **Recovery service** re-enqueues stuck jobs on startup and periodically (10min)
+- **Feature flag** `QUEUE_ENABLED=false` keeps the system fully disabled by default
+- **Existing sync endpoints untouched** — new endpoints live alongside at `/api/v1/sync/enqueue/`
+
+**Consequences:**
+- Frontend can poll `/sync/jobs/{jobID}/progress` for granular, real-time progress
+- Full sync orchestrates 6 child jobs in 2 waves (parallel where possible)
+- Requires Redis in production (adds operational complexity)
+- Feature-flagged — zero impact when disabled, no Redis dependency
+- Cooperative cancellation via Redis flag checked between major steps
+- Recovery handles Redis flush and worker crashes gracefully
+
+---
+
+### ADR-023: Cooperative Cancellation over Hard Kill
+**Date:** 2026-04-21
+**Status:** Accepted
+
+**Context:**
+When a user cancels a running sync job, we need to decide between hard kill (context cancel) and cooperative cancellation (flag check).
+
+**Decision:**
+Use cooperative cancellation: set a Redis flag (`lg:sync:cancel:{jobID}`), and each processor checks `IsCancelled()` between major steps. The worker does not forcefully terminate the goroutine.
+
+**Consequences:**
+- Clean shutdown — processors finish their current atomic step before stopping
+- No partial writes or corrupted state from mid-operation cancellation
+- Slightly delayed cancellation (up to the time between checkpoint checks)
+- Simpler error handling — no need to distinguish "cancelled" from "crashed"

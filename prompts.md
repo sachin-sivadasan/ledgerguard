@@ -1575,3 +1575,17 @@
 - Flutter analyze: 0 errors
 
 ---
+
+### [2026-04-21] Queue-Based Async Sync System
+**Original:**
+> Implement the following plan: Queue-Based Sync System — Implementation Plan (5 phases A-E)
+
+**Improved:**
+> Implement a complete async, queue-based sync system per `docs/developer/QUEUE_SYNC_IMPLEMENTATION_PLAN.md` (v3). Five phases: (A) Foundation — Redis client, migrations, entities, repo interfaces/impls, config. (B) Queue core — enqueue/dequeue, distributed locks, dual-write progress, recovery. (C) Worker framework — processor interface, registry, context, worker pool. (D) 7 processors — transaction, snapshot, event, status, store, review, full_sync orchestrator. (E) HTTP layer — QueueSyncService, QueueSyncHandler with 5 endpoints, router + main.go wiring. Each phase must compile before proceeding. Feature-flagged via QUEUE_ENABLED.
+
+**Result:**
+- Implemented all 5 phases (29 new files, 4 modified)
+- All existing tests pass
+- Commit: `38bf1c2`
+
+---

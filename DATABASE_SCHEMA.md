@@ -17,7 +17,13 @@ users
   │               │
   │               ├──< daily_metrics_snapshot
   │               │
-  │               └──< daily_insight
+  │               ├──< app_reviews
+  │               │
+  │               ├──< daily_insight
+  │               │
+  │               ├──< sync_jobs (self-referencing via parent_job_id)
+  │               │
+  │               └──< app_events
   │
   ├──< device_tokens
   │
@@ -510,6 +516,11 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000027_add_install_count_to_apps | Add install_count to apps table for Partner API data | ✓ Implemented |
 | 000028_add_ai_provider_to_user_preferences | Add ai_provider column for per-user AI provider selection | Planned |
 | 000029_create_shops_table | Create shops table for Shopify store brand data (logos) | ✓ Implemented |
+| 000030_create_billing_subscriptions_table | Create billing_subscriptions for Razorpay B2B billing | ✓ Implemented |
+| 000031_add_app_store_slug | Add app_store_slug column to apps table | ✓ Implemented |
+| 000032_create_app_reviews_table | Create app_reviews table for scraped Shopify reviews | ✓ Implemented |
+| 000033_create_sync_jobs_table | Create sync_jobs table for async queue-based sync tracking | ✓ Implemented |
+| 000034_create_app_events_table | Create app_events table for Shopify lifecycle events | ✓ Implemented |
 
 ---
 
@@ -520,6 +531,31 @@ CREATE TRIGGER notification_preferences_updated_at
 3. **Soft Delete:** Implemented for subscriptions via `deleted_at` column; use `tracking_enabled` for apps
 4. **Retention:** Transactions kept for 12 months; snapshots kept permanently
 5. **Timezone:** All timestamps in UTC (TIMESTAMPTZ)
+
+---
+
+## app_reviews (Migration 000032)
+
+Scraped reviews from the Shopify App Store. Linked to apps via `app_id`. Deduped via `source_review_id` (hash of author+date+body).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| app_id | UUID | FK → apps(id) ON DELETE CASCADE |
+| source_review_id | TEXT | Dedup key (SHA-256 hash) |
+| author | TEXT | Reviewer name |
+| rating | INT | 1-5, CHECK constraint |
+| body | TEXT | Review text |
+| review_date | TIMESTAMP | When the review was posted |
+| location | TEXT | Reviewer country |
+| time_using | TEXT | e.g. "4 months using the app" |
+| source | TEXT | Default "shopify_app_store" |
+| scraped_at | TIMESTAMP | When scraped |
+| created_at | TIMESTAMP | |
+| updated_at | TIMESTAMP | |
+
+**Constraints:** UNIQUE(app_id, source_review_id)
+**Indexes:** app_id, (app_id, review_date DESC)
 
 ---
 
@@ -545,3 +581,50 @@ Tracks LedgerSpear B2B subscriptions managed via Razorpay.
 | updated_at | TIMESTAMPTZ | |
 
 **Indexes:** user_id, razorpay_subscription_id, status
+
+---
+
+## sync_jobs (Migration 000033)
+
+Async sync job tracking for the queue-based sync system. Each job represents a unit of work (e.g., transaction fetch, snapshot backfill). Full sync creates a parent job with 6 children.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| app_id | UUID | NOT NULL |
+| user_id | UUID | NOT NULL |
+| partner_account_id | UUID | NOT NULL |
+| job_type | VARCHAR(50) | full_sync, transaction_sync, snapshot_sync, event_sync, status_sync, store_sync, review_sync |
+| parent_job_id | UUID | FK → sync_jobs(id), NULL for top-level |
+| status | VARCHAR(30) | pending, processing, completed, failed, cancelled, partial_failure |
+| priority | INT | 0=normal, 1=high |
+| total_items | INT | Total items to process |
+| completed_items | INT | Items processed so far |
+| entity_type | VARCHAR(50) | transaction, store, review, event, snapshot, subscription |
+| error_message | TEXT | Error details if failed |
+| worker_id | VARCHAR(100) | Which worker is processing |
+| started_at | TIMESTAMPTZ | When processing began |
+| completed_at | TIMESTAMPTZ | When finished |
+| created_at | TIMESTAMPTZ | |
+| updated_at | TIMESTAMPTZ | |
+
+**Indexes:** app_id, status, parent_job_id, (app_id, job_type, status), created_at
+
+---
+
+## app_events (Migration 000034)
+
+Shopify app lifecycle events (install, uninstall, subscription changes) fetched from Partner API. Used for subscription status enrichment.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| app_id | UUID | NOT NULL |
+| shopify_shop_gid | VARCHAR(255) | NOT NULL |
+| event_type | VARCHAR(100) | RELATIONSHIP_INSTALLED, SUBSCRIPTION_CHARGE_CANCELED, etc. |
+| occurred_at | TIMESTAMPTZ | NOT NULL |
+| raw_data | JSONB | Full event payload |
+| created_at | TIMESTAMPTZ | |
+
+**Constraints:** UNIQUE(app_id, shopify_shop_gid, event_type, occurred_at)
+**Indexes:** app_id, shopify_shop_gid, (app_id, shopify_shop_gid), occurred_at

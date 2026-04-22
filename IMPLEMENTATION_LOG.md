@@ -1816,3 +1816,118 @@ Integrated Razorpay Subscriptions for LedgerSpear B2B SaaS billing (Starter $249
 - `backend/internal/infrastructure/config/config.go` — added RazorpayConfig
 - `backend/internal/interfaces/http/router/router.go` — billing + webhook routes
 - `backend/cmd/server/main.go` — wired billing components
+
+---
+
+## [2026-03-24] Shopify App Store Review Scraper
+
+**Summary:**
+Added backend infrastructure for scraping Shopify App Store reviews. Includes a new `app_reviews` table, HTML scraper using goquery, REST API endpoints for listing and triggering scrapes, and automatic review scraping during sync when an app has an `app_store_slug` configured.
+
+**Implemented:**
+
+1. **Domain Layer:**
+   - `entity.AppReview` — review entity with rating, body, author, location, time_using
+   - `repository.AppReviewRepository` — interface: UpsertBatch, FindByAppID, CountByAppID
+   - Added `AppStoreSlug` field to `entity.App`
+
+2. **Infrastructure Layer:**
+   - `PostgresAppReviewRepository` — Postgres implementation with idempotent upsert
+   - `ShopifyAppStoreClient` — HTML scraper using goquery CSS selectors
+     - Parses `div[data-merchant-review]` blocks
+     - Extracts rating from aria-label, date, body, author (from span title), location, time_using
+     - Pagination via `a[rel="next"]` detection
+     - 1-second rate limiting between pages
+     - SHA-256 dedup key from author+date+body prefix
+
+3. **Application Layer:**
+   - `SyncService.WithReviewScraper()` — optional review scraping during sync (2 pages)
+   - `ReviewScraper` interface for testability
+
+4. **Interfaces Layer:**
+   - `ReviewHandler.List` — `GET /api/v1/apps/{appID}/reviews?page=1&per_page=20`
+   - `ReviewHandler.Scrape` — `POST /api/v1/apps/{appID}/reviews/scrape`
+   - `AppHandler.UpdateStoreSlug` — `PATCH /api/v1/apps/{appID}/store-slug`
+
+5. **Migrations:**
+   - `000031_add_app_store_slug` — adds `app_store_slug TEXT` to apps
+   - `000032_create_app_reviews_table` — creates app_reviews with unique constraint on (app_id, source_review_id)
+
+**New Files:**
+- `backend/internal/domain/entity/app_review.go`
+- `backend/internal/domain/repository/app_review_repository.go`
+- `backend/internal/infrastructure/persistence/app_review_repository.go`
+- `backend/internal/infrastructure/external/shopify_appstore_client.go`
+- `backend/internal/interfaces/http/handler/review.go`
+- `backend/migrations/000031_add_app_store_slug.up.sql` + down
+- `backend/migrations/000032_create_app_reviews_table.up.sql` + down
+
+**Files Modified:**
+- `backend/internal/domain/entity/app.go` — added AppStoreSlug field
+- `backend/internal/infrastructure/persistence/app_repository.go` — updated all queries for app_store_slug
+- `backend/internal/interfaces/http/handler/app.go` — added UpdateStoreSlug handler, included slug in ListApps
+- `backend/internal/application/service/sync_service.go` — added WithReviewScraper, scrapeAndStoreReviews
+- `backend/internal/interfaces/http/router/router.go` — registered review + store-slug routes
+- `backend/cmd/server/main.go` — wired review handler, repo, and scraper
+
+---
+
+## [2026-04-21] Queue-Based Async Sync System
+
+**Commit:** `38bf1c2` feat: implement queue-based async sync system with Redis
+
+**Summary:**
+Replaced the blocking synchronous sync (`POST /api/v1/sync/{appID}`) with an async, queue-based system using Redis queues + PostgreSQL `sync_jobs` table. The old sync endpoints remain untouched — the new queue system runs alongside with zero breakage. Feature-flagged via `QUEUE_ENABLED`.
+
+**Architecture:**
+- **Redis queues** (LPUSH/BRPOP): two queues — `lg:sync:queue` (regular) and `lg:sync:queue:full` (full sync)
+- **Worker pools**: configurable pool sizes (default: 3 regular, 1 full sync)
+- **Distributed locks**: SETNX with 2h TTL, heartbeat every 10min, lock extension every 1h
+- **Dual-write progress**: Redis HSET every 2s (fast polling), PostgreSQL every 30s (durable)
+- **Recovery service**: startup recovery + periodic 10min check for stuck jobs
+- **7 processors**: transaction, snapshot, event, status, store, review, full_sync (orchestrator)
+- **Full sync orchestration**: Wave 1 (transaction + event + review in parallel) → Wave 2 (snapshot + status + store after transaction completes)
+
+**New Endpoints:**
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/sync/enqueue/{appID}?type=full&priority=normal` | Enqueue sync → 202 with job_id |
+| GET | `/api/v1/sync/jobs/{jobID}` | Job status from DB |
+| GET | `/api/v1/sync/jobs/{jobID}/progress` | Progress with Redis overlay + children |
+| GET | `/api/v1/sync/jobs?app_id={appID}&status=&job_type=&limit=&offset=` | Paginated job history |
+| POST | `/api/v1/sync/jobs/{jobID}/cancel` | Cooperative cancellation |
+
+**New Files (29):**
+- `backend/internal/infrastructure/queue/client.go` — Redis client factory
+- `backend/internal/infrastructure/queue/queue.go` — Enqueue/Dequeue
+- `backend/internal/infrastructure/queue/lock.go` — Distributed locks + heartbeats
+- `backend/internal/infrastructure/queue/progress.go` — Dual-write progress tracker
+- `backend/internal/infrastructure/queue/recovery.go` — Startup + periodic recovery
+- `backend/internal/infrastructure/queue/processor.go` — SyncProcessor interface + registry
+- `backend/internal/infrastructure/queue/processor_context.go` — Shared preamble
+- `backend/internal/infrastructure/queue/worker.go` — WorkerPool
+- `backend/internal/infrastructure/queue/processors/transaction_processor.go`
+- `backend/internal/infrastructure/queue/processors/snapshot_processor.go`
+- `backend/internal/infrastructure/queue/processors/event_processor.go`
+- `backend/internal/infrastructure/queue/processors/status_processor.go`
+- `backend/internal/infrastructure/queue/processors/store_processor.go`
+- `backend/internal/infrastructure/queue/processors/review_processor.go`
+- `backend/internal/infrastructure/queue/processors/full_sync_processor.go`
+- `backend/internal/domain/entity/sync_job.go` — SyncJob entity
+- `backend/internal/domain/entity/app_event.go` — AppEvent entity
+- `backend/internal/domain/repository/sync_job_repository.go` — Interface
+- `backend/internal/domain/repository/app_event_repository.go` — Interface
+- `backend/internal/infrastructure/persistence/sync_job_repository.go` — PostgreSQL impl
+- `backend/internal/infrastructure/persistence/app_event_repository.go` — PostgreSQL impl
+- `backend/internal/application/service/queue_sync_service.go` — Application service
+- `backend/internal/interfaces/http/handler/queue_sync.go` — HTTP handler
+- `backend/migrations/000033_create_sync_jobs_table.up.sql` + down
+- `backend/migrations/000034_create_app_events_table.up.sql` + down
+
+**Files Modified:**
+- `backend/internal/infrastructure/config/config.go` — Added RedisConfig + QueueConfig
+- `backend/internal/interfaces/http/router/router.go` — Added QueueSyncHandler + 5 routes
+- `backend/cmd/server/main.go` — Full wiring: Redis, repos, processors, worker pools, recovery, handler
+- `backend/go.mod` / `go.sum` — Added redis/go-redis/v9, alicebob/miniredis/v2
+
+**Tests:** All existing tests pass. Queue-specific tests pending.

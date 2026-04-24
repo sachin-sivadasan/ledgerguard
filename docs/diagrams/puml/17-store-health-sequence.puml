@@ -1,0 +1,60 @@
+@startuml
+title 17. Store Health & Brand Data
+
+skinparam sequenceArrowThickness 2
+
+participant "Flutter App" as App
+participant "StoreHealthHandler" as SH
+participant "SubscriptionRepo" as SR
+participant "TransactionRepo" as TR
+participant "ShopRepo" as Shop
+database "PostgreSQL" as DB
+
+== API Query ==
+
+App -> SH: GET /api/v1/apps/{appId}/stores/{domain}/health
+activate SH
+
+SH -> SH: Auth + app ownership check
+
+SH -> SR: FindByDomainAndApp(\n  domain, appID)
+SR -> DB: SELECT FROM subscriptions
+DB --> SR: subscription
+SR --> SH: subscription
+
+SH -> TR: FindByDomainAndApp(\n  domain, appID, 12-month)
+TR -> DB: SELECT FROM transactions
+DB --> TR: transactions[]
+TR --> SH: transactions[]
+
+SH -> Shop: FindByDomain(domain)
+Shop -> DB: SELECT FROM shops
+DB --> Shop: shop (logo, name, country)
+Shop --> SH: shop
+
+SH -> SH: Combine:\n  subscription state\n  + earnings summary\n  + brand data\n  + transaction timeline
+
+SH --> App: JSON StoreHealth
+deactivate SH
+
+== During Sync: Brand Fetch ==
+
+participant "SyncService" as Sync
+participant "StorefrontClient" as SF
+participant "Shopify\nStorefront API" as API
+
+Sync -> SR: FindByAppID(appID)
+SR --> Sync: subscriptions (unique domains)
+
+Sync -> Shop: FindByDomains(domains)
+Shop --> Sync: existing shops
+
+loop For each new domain
+  Sync -> SF: FetchBrand(domain)
+  SF -> API: GET {domain}/\nExtract meta tags
+  API --> SF: brand data
+  SF --> Sync: Shop entity
+  Sync -> Shop: Upsert(shop)
+end
+
+@enduml

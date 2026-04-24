@@ -1,0 +1,52 @@
+@startuml
+title 15. Revenue Share Fee Calculation
+
+skinparam activityArrowThickness 2
+
+start
+
+:Input: Transaction\n(grossAmountCents, tier);
+
+:Look up RevenueShareTier;
+
+switch (Tier?)
+case (SMALL_DEV_0)
+  :Fee rate = 0%;
+  note right: First $1M lifetime\n(majority of indie devs)
+case (SMALL_DEV_15)
+  :Fee rate = 15%;
+  note right: After $1M threshold
+case (DEFAULT_20)
+  :Fee rate = 20%;
+  note right: Legacy default tier
+case (LARGE_DEV_15)
+  :Fee rate = 15%;
+  note right: Large developer program
+endswitch
+
+:Calculate FeeBreakdown:
+  shopifyFeeCents = gross × rate
+  netAmountCents = gross - fee;
+
+:VerifyTransaction():
+  Compare expected fee vs
+  actual fee from Shopify;
+
+if (Fee matches?) then (yes)
+  :Mark as VERIFIED;
+else (no)
+  :Mark as DISCREPANCY
+  Log difference amount;
+endif
+
+:CalculateFeeSummary():
+  Total gross, total fees,
+  total net across all txs;
+
+:CalculateTierSavings():
+  Compare current tier fees vs
+  DEFAULT_20 fees to show savings;
+
+stop
+
+@enduml

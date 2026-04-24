@@ -1,0 +1,37 @@
+@startuml
+title 13. Revenue API Flow
+
+skinparam sequenceArrowThickness 2
+
+actor "Flutter App" as App
+participant "RevenueHandler" as RH
+participant "RevenueMetricsService" as RMS
+participant "TransactionRepo" as TR
+participant "SnapshotRepo" as SR
+database "PostgreSQL" as DB
+
+App -> RH: GET /api/v1/revenue/{appId}\n?period=monthly&year=2025
+activate RH
+
+RH -> RH: Auth check\n(Firebase middleware)
+RH -> RH: Resolve appID\n(GID → UUID)
+
+RH -> RMS: GetMonthlyRevenue(\n  appID, year)
+activate RMS
+
+RMS -> TR: FindByAppIDAndRange(\n  appID, jan-dec)
+TR -> DB: SELECT FROM transactions\nWHERE app_id = ?\nAND date BETWEEN ...
+DB --> TR: transactions[]
+TR --> RMS: transactions[]
+
+RMS -> RMS: Group by month
+RMS -> RMS: Separate by ChargeType:\n  RECURRING\n  USAGE\n  ONE_TIME\n  REFUND
+RMS -> RMS: Calculate monthly totals
+
+RMS --> RH: RevenueTimeline[]
+deactivate RMS
+
+RH --> App: JSON {\n  months: [{month, recurring,\n    usage, oneTime, refund,\n    total}]\n}
+deactivate RH
+
+@enduml

@@ -5,11 +5,11 @@ import Footer from '@/components/Footer';
 import DeploymentFlowVisualization from '@/components/DeploymentFlowVisualization';
 
 export const metadata: Metadata = {
-  title: 'Deployment Setup - LedgerGuard',
-  description: 'Interactive visualization of Hetzner Cloud deployment architecture for LedgerGuard',
+  title: 'Deployment Setup - LedgerSpear',
+  description: 'Interactive visualization of Hetzner Cloud deployment architecture for LedgerSpear',
   openGraph: {
-    title: 'Deployment Setup - LedgerGuard',
-    description: 'Interactive visualization of Hetzner Cloud deployment architecture for LedgerGuard',
+    title: 'Deployment Setup - LedgerSpear',
+    description: 'Interactive visualization of Hetzner Cloud deployment architecture for LedgerSpear',
     type: 'website',
   },
 };
@@ -34,7 +34,7 @@ export default function DeploymentPage() {
           </h1>
           <p className="text-gray-400 text-base mb-8 max-w-2xl">
             Explore the production architecture and CI/CD pipeline for deploying
-            LedgerGuard to Hetzner Cloud infrastructure.
+            LedgerSpear to Hetzner Cloud infrastructure.
           </p>
 
           {/* Flow Diagram Component */}
@@ -138,7 +138,7 @@ export default function DeploymentPage() {
               <PipelineStep
                 step={6}
                 title="Restart Services"
-                description="systemctl restart ledgerguard services"
+                description="systemctl restart ledgerspear services"
                 icon="🔄"
               />
               <PipelineStep
@@ -226,7 +226,7 @@ export default function DeploymentPage() {
               <ConfigBlock
                 title="Caddyfile"
                 language="caddyfile"
-                code={`api.ledgerguard.com {
+                code={`api.ledgerspear.com {
     reverse_proxy localhost:8080
     encode gzip
     log {
@@ -234,13 +234,13 @@ export default function DeploymentPage() {
     }
 }
 
-ledgerguard.com {
+ledgerspear.com {
     reverse_proxy localhost:3000
     encode gzip
 }
 
-app.ledgerguard.com {
-    root * /var/www/ledgerguard-app
+app.ledgerspear.com {
+    root * /var/www/ledgerspear-app
     file_server
     try_files {path} /index.html
 }`}
@@ -249,14 +249,14 @@ app.ledgerguard.com {
                 title="systemd Service"
                 language="ini"
                 code={`[Unit]
-Description=LedgerGuard API Server
+Description=LedgerSpear API Server
 After=network.target postgresql.service
 
 [Service]
 Type=simple
-User=ledgerguard
-WorkingDirectory=/opt/ledgerguard/backend
-ExecStart=/opt/ledgerguard/backend/server -config config.yaml
+User=ledgerspear
+WorkingDirectory=/opt/ledgerspear/backend
+ExecStart=/opt/ledgerspear/backend/server -config config.yaml
 Restart=always
 RestartSec=5
 
@@ -267,10 +267,10 @@ WantedBy=multi-user.target`}
                 title="Backup Script"
                 language="bash"
                 code={`#!/bin/bash
-# /opt/ledgerguard/scripts/backup.sh
+# /opt/ledgerspear/scripts/backup.sh
 DATE=$(date +%Y%m%d)
-pg_dump ledgerguard | gzip > /backups/ledgerguard_$DATE.gz
-rclone sync /backups hetzner-storage:ledgerguard-backups
+pg_dump ledgerspear | gzip > /backups/ledgerspear_$DATE.gz
+rclone sync /backups hetzner-storage:ledgerspear-backups
 find /backups -mtime +7 -delete`}
               />
             </div>
@@ -299,7 +299,7 @@ find /backups -mtime +7 -delete`}
                   'Update system packages',
                   'Install Go, PostgreSQL, Node.js',
                   'Install Caddy',
-                  'Create ledgerguard user',
+                  'Create ledgerspear user',
                   'Clone repository',
                 ]}
               />
@@ -332,7 +332,7 @@ find /backups -mtime +7 -delete`}
               Production-Ready in Minutes
             </h3>
             <p className="text-gray-400 mb-6 max-w-lg mx-auto">
-              Deploy LedgerGuard to Hetzner Cloud with automatic SSL,
+              Deploy LedgerSpear to Hetzner Cloud with automatic SSL,
               CI/CD pipeline, and cost-effective infrastructure starting at $15/month.
             </p>
             <Link

@@ -18,9 +18,19 @@ type TransactionFetcher interface {
 	FetchTransactions(ctx context.Context, accessToken string, appID uuid.UUID, from, to time.Time) ([]*entity.Transaction, error)
 }
 
+// ShopBrandFetcher interface for fetching shop brand data
+type ShopBrandFetcher interface {
+	FetchBrand(ctx context.Context, myshopifyDomain string) (*entity.Shop, error)
+}
+
 // EventFetcher interface for fetching app lifecycle events
 type EventFetcher interface {
 	FetchAppEvents(ctx context.Context, organizationID, accessToken string, appGID string, shopGID string) ([]external.AppEvent, error)
+}
+
+// ReviewScraper interface for scraping app reviews
+type ReviewScraper interface {
+	ScrapeReviews(ctx context.Context, slug string, maxPages int) ([]external.ScrapedReview, error)
 }
 
 // Decryptor interface for decrypting tokens
@@ -48,14 +58,18 @@ type SyncResult struct {
 
 // SyncService handles synchronization of transactions from Partner API
 type SyncService struct {
-	fetcher      TransactionFetcher
-	eventFetcher EventFetcher
-	txRepo       repository.TransactionRepository
-	subRepo      repository.SubscriptionRepository
-	appRepo      repository.AppRepository
-	partnerRepo  repository.PartnerAccountRepository
-	decryptor    Decryptor
-	ledger       LedgerRebuilder
+	fetcher        TransactionFetcher
+	eventFetcher   EventFetcher
+	brandFetcher   ShopBrandFetcher
+	reviewScraper  ReviewScraper
+	txRepo         repository.TransactionRepository
+	subRepo        repository.SubscriptionRepository
+	shopRepo       repository.ShopRepository
+	reviewRepo     repository.AppReviewRepository
+	appRepo        repository.AppRepository
+	partnerRepo    repository.PartnerAccountRepository
+	decryptor      Decryptor
+	ledger         LedgerRebuilder
 }
 
 func NewSyncService(
@@ -86,6 +100,30 @@ func (s *SyncService) WithEventFetcher(fetcher EventFetcher) *SyncService {
 func (s *SyncService) WithSubscriptionRepo(repo repository.SubscriptionRepository) *SyncService {
 	s.subRepo = repo
 	return s
+}
+
+// WithShopBrandFetcher adds a brand fetcher and shop repo for logo fetching during sync
+func (s *SyncService) WithShopBrandFetcher(fetcher ShopBrandFetcher, shopRepo repository.ShopRepository) *SyncService {
+	s.brandFetcher = fetcher
+	s.shopRepo = shopRepo
+	return s
+}
+
+// WithReviewScraper adds a review scraper for fetching app store reviews during sync
+func (s *SyncService) WithReviewScraper(scraper ReviewScraper, reviewRepo repository.AppReviewRepository) *SyncService {
+	s.reviewScraper = scraper
+	s.reviewRepo = reviewRepo
+	return s
+}
+
+// TriggerSync starts a background sync for a newly-selected app (fire-and-forget).
+// Used as a fallback when queue-based sync is not enabled.
+func (s *SyncService) TriggerSync(ctx context.Context, appID, userID, partnerAccountID uuid.UUID) error {
+	go func() {
+		bgCtx := context.Background()
+		_, _ = s.SyncApp(bgCtx, appID)
+	}()
+	return nil
 }
 
 // SyncApp synchronizes transactions for a single app
@@ -168,6 +206,18 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 		if s.eventFetcher != nil && s.subRepo != nil {
 			_ = s.enrichSubscriptionStatus(fetchCtx, app, partnerAccount, string(accessToken))
 			// Ignore enrichment errors - status defaults to ACTIVE
+		}
+
+		// Fetch shop brand data for new domains (if configured)
+		if s.brandFetcher != nil && s.shopRepo != nil && s.subRepo != nil {
+			_ = s.fetchShopBrands(ctx, appID)
+			// Ignore brand fetch errors - logos are not critical
+		}
+
+		// Scrape app store reviews (if configured and slug is set)
+		if s.reviewScraper != nil && s.reviewRepo != nil && app.AppStoreSlug != "" {
+			_ = s.scrapeAndStoreReviews(ctx, app)
+			// Ignore review scrape errors - reviews are not critical
 		}
 	}
 
@@ -262,6 +312,97 @@ func (s *SyncService) enrichSubscriptionStatus(ctx context.Context, app *entity.
 			if err := s.subRepo.Upsert(ctx, sub); err != nil {
 				continue // Log but don't fail
 			}
+		}
+	}
+
+	return nil
+}
+
+// scrapeAndStoreReviews scrapes recent reviews from the Shopify App Store and stores them
+func (s *SyncService) scrapeAndStoreReviews(ctx context.Context, app *entity.App) error {
+	// During sync, scrape only 2 pages (~20 reviews) to stay fast
+	scraped, err := s.reviewScraper.ScrapeReviews(ctx, app.AppStoreSlug, 2)
+	if err != nil {
+		return fmt.Errorf("failed to scrape reviews for %s: %w", app.AppStoreSlug, err)
+	}
+
+	if len(scraped) == 0 {
+		return nil
+	}
+
+	now := time.Now().UTC()
+	var reviews []*entity.AppReview
+	for _, sr := range scraped {
+		if sr.Rating == 0 || sr.Date.IsZero() {
+			continue
+		}
+		reviews = append(reviews, &entity.AppReview{
+			ID:             uuid.New(),
+			AppID:          app.ID,
+			SourceReviewID: sr.SourceReviewID(),
+			Author:         sr.Author,
+			Rating:         sr.Rating,
+			Body:           sr.Body,
+			ReviewDate:     sr.Date,
+			Location:       sr.Location,
+			TimeUsing:      sr.TimeUsing,
+			Source:         "shopify_app_store",
+			ScrapedAt:      now,
+			CreatedAt:      now,
+			UpdatedAt:      now,
+		})
+	}
+
+	if len(reviews) > 0 {
+		return s.reviewRepo.UpsertBatch(ctx, reviews)
+	}
+	return nil
+}
+
+// fetchShopBrands fetches brand data for shop domains not yet in the shops table
+func (s *SyncService) fetchShopBrands(ctx context.Context, appID uuid.UUID) error {
+	subscriptions, err := s.subRepo.FindByAppID(ctx, appID)
+	if err != nil {
+		return fmt.Errorf("failed to find subscriptions: %w", err)
+	}
+
+	// Collect unique domains
+	domainSet := make(map[string]bool)
+	for _, sub := range subscriptions {
+		if sub.MyshopifyDomain != "" {
+			domainSet[sub.MyshopifyDomain] = true
+		}
+	}
+
+	if len(domainSet) == 0 {
+		return nil
+	}
+
+	domains := make([]string, 0, len(domainSet))
+	for d := range domainSet {
+		domains = append(domains, d)
+	}
+
+	// Check which domains are already in the shops table
+	existing, err := s.shopRepo.FindByDomains(ctx, domains)
+	if err != nil {
+		return fmt.Errorf("failed to find existing shops: %w", err)
+	}
+
+	// Fetch brand data only for new domains
+	for _, domain := range domains {
+		if _, found := existing[domain]; found {
+			continue
+		}
+
+		shop, err := s.brandFetcher.FetchBrand(ctx, domain)
+		if err != nil {
+			// Log but continue - brand data is not critical
+			continue
+		}
+
+		if err := s.shopRepo.Upsert(ctx, shop); err != nil {
+			continue
 		}
 	}
 

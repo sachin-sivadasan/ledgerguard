@@ -283,7 +283,7 @@ function IngestionSection({ isActive, showDetails }: { isActive: boolean; showDe
 
         {/* Sync Engine */}
         <EntityBox
-          title="LedgerGuard Sync Engine"
+          title="LedgerSpear Sync Engine"
           subtitle="Automated data sync"
           icon={<span className="text-xs">🔄</span>}
           color="blue"
@@ -748,7 +748,7 @@ export default function ArchitectureFlow() {
             <span className="px-2 py-1 bg-slate-800 rounded text-xs">Internal</span>
             <span>Architecture Documentation</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold">LedgerGuard Data Flow</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold">LedgerSpear Data Flow</h1>
           <p className="mt-2 text-slate-300 text-lg">
             How we transform Shopify Partner data into revenue intelligence
           </p>
@@ -999,7 +999,7 @@ DO UPDATE SET
       <div className="bg-white border-t border-slate-200 py-8">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <p className="text-sm text-slate-500">
-            LedgerGuard Internal Architecture • Last updated: March 2026
+            LedgerSpear Internal Architecture • Last updated: March 2026
           </p>
         </div>
       </div>

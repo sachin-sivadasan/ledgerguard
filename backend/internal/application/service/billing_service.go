@@ -72,13 +72,21 @@ func (s *BillingService) CreateCheckout(ctx context.Context, userID uuid.UUID, p
 		return nil, fmt.Errorf("find user: %w", err)
 	}
 
-	// Create Razorpay customer
-	cust, err := s.razorpayClient.CreateCustomer(ctx, external.CreateCustomerRequest{
-		Name:  user.Email, // use email as name for now
-		Email: user.Email,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create razorpay customer: %w", err)
+	// Reuse existing Razorpay customer ID if available, otherwise create one
+	var customerID string
+	existingSubs, _ := s.billingRepo.FindByUserID(ctx, userID)
+	if len(existingSubs) > 0 {
+		customerID = existingSubs[0].RazorpayCustomerID
+	}
+	if customerID == "" {
+		cust, err := s.razorpayClient.CreateCustomer(ctx, external.CreateCustomerRequest{
+			Name:  user.Email,
+			Email: user.Email,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create razorpay customer: %w", err)
+		}
+		customerID = cust.ID
 	}
 
 	// Map plan to Razorpay plan ID
@@ -90,7 +98,7 @@ func (s *BillingService) CreateCheckout(ctx context.Context, userID uuid.UUID, p
 	// Create Razorpay subscription
 	sub, err := s.razorpayClient.CreateSubscription(ctx, external.CreateSubscriptionRequest{
 		PlanID:         razorpayPlanID,
-		CustomerID:     cust.ID,
+		CustomerID:     customerID,
 		TotalCount:     120, // 10 years of monthly billing
 		CustomerNotify: 1,   // required for hosted checkout page
 	})
@@ -103,7 +111,7 @@ func (s *BillingService) CreateCheckout(ctx context.Context, userID uuid.UUID, p
 		userID,
 		sub.ID,
 		razorpayPlanID,
-		cust.ID,
+		customerID,
 		plan,
 		sub.ShortURL,
 	)

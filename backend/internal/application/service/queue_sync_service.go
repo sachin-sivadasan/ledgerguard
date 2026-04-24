@@ -91,6 +91,16 @@ func (s *QueueSyncService) EnqueueSync(ctx context.Context, appID, userID, partn
 	return job, nil
 }
 
+// TriggerSync enqueues a high-priority full_sync job for a newly-selected app.
+// Duplicate jobs are silently ignored.
+func (s *QueueSyncService) TriggerSync(ctx context.Context, appID, userID, partnerAccountID uuid.UUID) error {
+	_, err := s.EnqueueSync(ctx, appID, userID, partnerAccountID, entity.SyncJobTypeFullSync, 1)
+	if errors.Is(err, ErrDuplicateJob) {
+		return nil // already running — not an error
+	}
+	return err
+}
+
 // GetJobStatus returns a job by ID from DB
 func (s *QueueSyncService) GetJobStatus(ctx context.Context, jobID uuid.UUID) (*entity.SyncJob, error) {
 	return s.syncJobRepo.FindByID(ctx, jobID)

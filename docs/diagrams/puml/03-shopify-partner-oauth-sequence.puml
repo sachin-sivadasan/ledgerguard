@@ -1,0 +1,53 @@
+@startuml
+title 03. Shopify Partner OAuth Flow
+
+skinparam sequenceArrowThickness 2
+
+actor "Developer" as Dev
+participant "Flutter App" as App
+participant "LedgerGuard\nBackend" as LG
+participant "Shopify\nPartners" as Shopify
+participant "StateStore" as State
+database "PostgreSQL" as DB
+
+== Step 1: Initiate OAuth ==
+Dev -> App: Click "Connect Shopify"
+App -> LG: GET /oauth/authorize
+activate LG
+LG -> State: Store state with userID\n(10-min TTL, one-time use)
+LG --> App: Redirect URL
+deactivate LG
+App -> Dev: Redirect to Shopify
+
+== Step 2: User Authorizes ==
+Dev -> Shopify: Approve scopes\n(read_financials, read_apps)
+Shopify --> Dev: Redirect to callback\nwith code + state
+
+== Step 3: Token Exchange ==
+Dev -> LG: GET /oauth/callback?code=xxx&state=yyy
+activate LG
+
+LG -> State: Validate + consume state\n(CSRF protection)
+State --> LG: userID (or reject)
+
+LG -> Shopify: POST /access_token\n(code, client_id, client_secret)
+Shopify --> LG: access_token
+
+LG -> Shopify: POST GraphQL\nquery { currentUser { organizations } }
+Shopify --> LG: organization_id
+
+LG -> LG: Encrypt token\n(AES-256-GCM)
+
+LG -> DB: INSERT partner_accounts\n(user_id, partner_id,\nencrypted_access_token)
+
+LG --> Dev: Success redirect
+deactivate LG
+
+== Alternative: Manual Token ==
+Dev -> App: Enter Partner API token
+App -> LG: POST /api/v1/integrations/token
+LG -> LG: Validate token\n(test API call)
+LG -> LG: Encrypt (AES-256-GCM)
+LG -> DB: INSERT partner_accounts
+
+@enduml

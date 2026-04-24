@@ -10,7 +10,7 @@ export default function FinalCTA() {
           required.
         </p>
         <a
-          href="#"
+          href="https://ledgerguard-c7557.web.app"
           className="mt-8 inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-blue-600 bg-white rounded-lg hover:bg-blue-50 transition-colors"
         >
           Connect Shopify Partner

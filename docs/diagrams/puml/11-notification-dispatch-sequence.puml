@@ -1,0 +1,61 @@
+@startuml
+title 11. Notification Dispatch
+
+skinparam sequenceArrowThickness 2
+
+participant "Sync/Scheduler" as Trigger
+participant "NotificationService" as NS
+participant "NotifPrefsRepo" as Prefs
+participant "DeviceTokenRepo" as DT
+participant "Firebase FCM" as FCM
+participant "Slack Webhook" as Slack
+
+== Critical Alert (Risk State Change) ==
+
+Trigger -> NS: SendCriticalAlert(\n  userID, alertType, data)
+activate NS
+
+NS -> Prefs: FindByUserID(userID)
+Prefs --> NS: preferences
+
+alt Critical alerts enabled
+  NS -> DT: FindByUserID(userID)
+  DT --> NS: deviceTokens[]
+
+  NS -> FCM: SendMulticast(\n  tokens, title, body)
+  FCM --> NS: results
+
+  opt Slack configured (Pro)
+    NS -> Slack: SendNotification(\n  webhookURL, message)
+    Slack --> NS: OK
+  end
+end
+
+NS --> Trigger: OK
+deactivate NS
+
+== Daily Summary Digest ==
+
+Trigger -> NS: SendDailySummary(\n  userID, metricsSnapshot)
+activate NS
+
+NS -> Prefs: FindByUserID(userID)
+Prefs --> NS: preferences
+
+alt Daily summary enabled
+  NS -> NS: Format summary\n(MRR, risk changes, etc.)
+
+  NS -> DT: FindByUserID(userID)
+  DT --> NS: deviceTokens[]
+
+  NS -> FCM: SendMulticast(\n  tokens, title, body)
+
+  opt Slack configured (Pro)
+    NS -> Slack: SendNotification(\n  webhookURL, summary)
+  end
+end
+
+NS --> Trigger: OK
+deactivate NS
+
+@enduml

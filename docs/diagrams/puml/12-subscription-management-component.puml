@@ -1,0 +1,56 @@
+@startuml
+title 12. Subscription Management
+
+skinparam componentStyle rectangle
+skinparam componentArrowThickness 2
+
+package "Interfaces Layer" {
+  [SubscriptionHandler] as SH
+  note right of SH
+    Endpoints:
+    GET /apps/{appID}/subscriptions
+    GET /apps/{appID}/subscriptions/summary
+    GET /apps/{appID}/subscriptions/price-stats
+    GET /apps/{appID}/subscriptions/{id}
+    GET /subscriptions/{id}
+    GET /subscriptions/{id}/history
+    GET /subscriptions/{id}/risk-timeline
+  end note
+}
+
+package "Application Layer" {
+  [SubscriptionDetailService] as DS
+}
+
+package "Domain Layer" {
+  [Subscription Entity] as Sub
+  [SubscriptionRepository\n(interface)] as SR
+}
+
+package "Infrastructure Layer" {
+  [PostgresSubscriptionRepo] as PSR
+  [PostgresShopRepo] as Shop
+  database "subscriptions" as SubDB
+  database "shops" as ShopDB
+}
+
+SH --> SR : FindWithFilters(appID, filters)
+SH --> Shop : FindByDomains(domains)\n(batch logo enrichment)
+SH --> DS : GetSubscriptionDetail(id)
+DS --> SR : FindByID(id)
+
+SR <|.. PSR : implements
+PSR --> SubDB
+Shop --> ShopDB
+
+note bottom of PSR
+  SubscriptionFilters:
+  - RiskStates[]
+  - PriceMinCents / PriceMaxCents
+  - BillingInterval
+  - SearchTerm
+  - SortBy / SortOrder
+  - Page / PageSize
+end note
+
+@enduml

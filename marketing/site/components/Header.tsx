@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Header() {
   return (
@@ -6,22 +7,8 @@ export default function Header() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-            </div>
-            <span className="text-xl font-bold text-slate-900">LedgerGuard</span>
+            <Image src="/logo.png" alt="LedgerSpear" width={32} height={32} className="rounded-lg" />
+            <span className="text-xl font-bold text-slate-900">LedgerSpear</span>
           </Link>
           <nav className="hidden md:flex items-center gap-8">
             <a
@@ -36,9 +23,15 @@ export default function Header() {
             >
               Pricing
             </a>
+            <Link
+              href="/about"
+              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+            >
+              About
+            </Link>
           </nav>
           <a
-            href="#"
+            href="https://ledgerguard-c7557.web.app"
             className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Get Started

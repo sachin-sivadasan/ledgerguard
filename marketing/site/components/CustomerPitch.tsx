@@ -74,7 +74,7 @@ function PitchHero() {
                   <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
                 </div>
-                <span className="text-xs text-slate-500">LedgerGuard Dashboard</span>
+                <span className="text-xs text-slate-500">LedgerSpear Dashboard</span>
               </div>
 
               {/* KPI Cards */}
@@ -628,7 +628,7 @@ function ComparisonTable() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">
-            Why App Developers Switch to LedgerGuard
+            Why App Developers Switch to LedgerSpear
           </h2>
         </div>
 
@@ -733,33 +733,33 @@ function SocialProof() {
 function PricingPreview() {
   const tiers = [
     {
-      name: "Free",
-      price: "$0",
+      name: "Starter",
+      price: "$249",
       period: "/month",
-      description: "Get started with the basics",
+      description: "For growing app businesses",
       features: [
         "1 Shopify app",
-        "Core KPIs (MRR, Churn, Renewal Rate)",
-        "7-day transaction history",
-        "Email alerts",
+        "Renewal Success Rate",
+        "Revenue at Risk alerts",
+        "90-day transaction history",
+        "Email notifications",
       ],
-      cta: "Start Free",
+      cta: "Get Started",
       featured: false,
     },
     {
       name: "Pro",
-      price: "$49",
+      price: "$499",
       period: "/month",
       description: "For serious app developers",
       features: [
         "Unlimited apps",
-        "All KPIs + historical trends",
-        "12-month transaction history",
         "AI Daily Revenue Brief",
-        "Revenue API access",
+        "12-month transaction history",
         "Slack integration",
+        "Priority support",
       ],
-      cta: "Go Pro",
+      cta: "Start Free Trial",
       featured: true,
     },
   ];
@@ -769,7 +769,7 @@ function PricingPreview() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">
-            Start Free. Scale When Ready.
+            Simple, Transparent Pricing
           </h2>
           <p className="mt-4 text-lg text-slate-600">
             No credit card required to get started.

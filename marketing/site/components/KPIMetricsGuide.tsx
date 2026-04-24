@@ -1206,7 +1206,7 @@ const KPIMetricsGuide: React.FC = () => {
           {' '}Metrics Guide
         </h2>
         <p style={{ color: '#9ca3af', fontSize: '14px' }}>
-          Understand how LedgerGuard calculates your revenue metrics
+          Understand how LedgerSpear calculates your revenue metrics
         </p>
       </div>
 
@@ -1447,7 +1447,7 @@ const KPIMetricsGuide: React.FC = () => {
         textAlign: 'center',
       }}>
         <p style={{ color: '#a5b4fc', fontSize: '13px', margin: 0 }}>
-          <strong>LedgerGuard</strong> syncs your Shopify Partner API transactions daily,
+          <strong>LedgerSpear</strong> syncs your Shopify Partner API transactions daily,
           rebuilds your ledger deterministically, and calculates these KPIs automatically.
         </p>
       </div>

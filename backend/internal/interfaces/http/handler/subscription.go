@@ -22,6 +22,7 @@ type SubscriptionHandler struct {
 	subscriptionRepo repository.SubscriptionRepository
 	partnerRepo      repository.PartnerAccountRepository
 	appRepo          repository.AppRepository
+	shopRepo         repository.ShopRepository
 	detailService    *service.SubscriptionDetailService
 }
 
@@ -35,6 +36,11 @@ func NewSubscriptionHandler(
 		partnerRepo:      partnerRepo,
 		appRepo:          appRepo,
 	}
+}
+
+// SetShopRepo sets the shop repository for logo enrichment (optional dependency)
+func (h *SubscriptionHandler) SetShopRepo(shopRepo repository.ShopRepository) {
+	h.shopRepo = shopRepo
 }
 
 // SetDetailService sets the subscription detail service (optional dependency)
@@ -138,10 +144,38 @@ func (h *SubscriptionHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Batch-fetch shop logos if shop repo is available
+	var shopMap map[string]*entity.Shop
+	if h.shopRepo != nil && len(result.Subscriptions) > 0 {
+		domains := make([]string, 0, len(result.Subscriptions))
+		seen := make(map[string]bool)
+		for _, sub := range result.Subscriptions {
+			if sub.MyshopifyDomain != "" && !seen[sub.MyshopifyDomain] {
+				domains = append(domains, sub.MyshopifyDomain)
+				seen[sub.MyshopifyDomain] = true
+			}
+		}
+		shopMap, _ = h.shopRepo.FindByDomains(r.Context(), domains)
+	}
+
 	// Build response
 	subResponses := make([]map[string]interface{}, len(result.Subscriptions))
 	for i, sub := range result.Subscriptions {
-		subResponses[i] = subscriptionToJSON(sub)
+		resp := subscriptionToJSON(sub)
+		if shopMap != nil {
+			if shop, ok := shopMap[sub.MyshopifyDomain]; ok {
+				if shop.ShopName != "" {
+					resp["shop_name"] = shop.ShopName
+				}
+				if shop.LogoURL != "" {
+					resp["shop_logo_url"] = shop.LogoURL
+				}
+				if shop.SquareLogoURL != "" {
+					resp["shop_square_logo_url"] = shop.SquareLogoURL
+				}
+			}
+		}
+		subResponses[i] = resp
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -303,9 +337,25 @@ func (h *SubscriptionHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	resp := subscriptionToJSON(subscription)
+	if h.shopRepo != nil && subscription.MyshopifyDomain != "" {
+		shop, err := h.shopRepo.FindByDomain(r.Context(), subscription.MyshopifyDomain)
+		if err == nil && shop != nil {
+			if shop.ShopName != "" {
+				resp["shop_name"] = shop.ShopName
+			}
+			if shop.LogoURL != "" {
+				resp["shop_logo_url"] = shop.LogoURL
+			}
+			if shop.SquareLogoURL != "" {
+				resp["shop_square_logo_url"] = shop.SquareLogoURL
+			}
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"subscription": subscriptionToJSON(subscription),
+		"subscription": resp,
 	})
 }
 

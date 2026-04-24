@@ -1,0 +1,78 @@
+@startuml
+title 06. Ledger Rebuild Engine
+
+skinparam activityArrowThickness 2
+
+start
+
+:Fetch transactions for appID\n(12-month window from txRepo);
+
+:Group transactions by\nmyshopify_domain;
+
+partition "For Each Domain" {
+  :Sort transactions by date\n(oldest first);
+
+  :Filter RECURRING transactions;
+
+  if (Has recurring transactions?) then (yes)
+    :Get most recent recurring tx;
+
+    if (BillingInterval from tx?) then (yes)
+      :Use tx billing interval\n(ANNUAL or MONTHLY);
+    else (no)
+      :Detect from pattern\n(avg days between charges);
+      if (avg > 180 days?) then (yes)
+        :Set ANNUAL;
+      else (no)
+        :Set MONTHLY;
+      endif
+    endif
+
+    :Set base price\n(GrossAmountCents or NetAmountCents);
+
+    if (Has Shopify subscription GID?) then (yes)
+      :Use real GID;
+    else (no)
+      :Generate synthetic\nlg_sub_{SHA1(domain)};
+    endif
+
+    :Create Subscription entity;
+    :UpdateFromRecurringCharge(date, amount);
+    :ClassifyRisk(now);
+
+    note right
+      SAFE: ≤30 days past due
+      ONE_CYCLE_MISSED: 31-60
+      TWO_CYCLES_MISSED: 61-90
+      CHURNED: >90
+    end note
+
+  else (no)
+    :Skip domain\n(no subscription);
+  endif
+}
+
+:Sort subscriptions by domain\n(deterministic output);
+
+:Delete existing subscriptions\nfor appID;
+
+:Upsert all rebuilt subscriptions;
+
+:Accumulate MRR\n(ACTIVE subscriptions only);
+
+:Count by risk state;
+
+:Sum usage revenue\n(USAGE transactions only);
+
+if (SnapshotRepo configured?) then (yes)
+  :ComputeAllMetrics();
+  :Upsert DailyMetricsSnapshot;
+else (no)
+  :Skip snapshot;
+endif
+
+:Return LedgerRebuildResult;
+
+stop
+
+@enduml

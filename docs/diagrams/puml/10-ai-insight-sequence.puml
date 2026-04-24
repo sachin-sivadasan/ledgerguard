@@ -1,0 +1,38 @@
+@startuml
+title 10. AI Insight Generation
+
+skinparam sequenceArrowThickness 2
+
+participant "Scheduler\n(daily)" as Sched
+participant "AIInsightService" as AIS
+participant "SnapshotRepo" as SR
+participant "OpenAI\nGPT-4o-mini" as OAI
+participant "InsightRepo" as IR
+database "PostgreSQL" as DB
+
+Sched -> AIS: GenerateInsight(appID, date)
+activate AIS
+
+AIS -> SR: FindByAppIDAndDate(appID, date)
+SR -> DB: SELECT FROM daily_metrics_snapshots
+DB --> SR: snapshot
+SR --> AIS: DailyMetricsSnapshot
+
+AIS -> AIS: SummarizeMetrics(snapshot)\nBuild structured JSON prompt
+
+AIS -> OAI: ChatCompletion(\n  model: gpt-4o-mini,\n  prompt: metrics JSON,\n  max_tokens: 200)
+OAI --> AIS: 80-120 word summary
+
+AIS -> IR: Upsert(DailyInsight)
+IR -> DB: INSERT INTO daily_insights\nON CONFLICT (app_id, date)\nDO UPDATE SET summary = ...
+DB --> IR: OK
+
+AIS --> Sched: DailyInsight
+deactivate AIS
+
+note right of AIS
+  **Pro tier only**
+  Skipped if user.plan_tier != PRO
+end note
+
+@enduml

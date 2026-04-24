@@ -5,10 +5,10 @@ import Footer from '@/components/Footer';
 import HetznerInfrastructureVisualization from '@/components/HetznerInfrastructureVisualization';
 
 export const metadata: Metadata = {
-  title: 'How Hetzner Works - LedgerGuard',
+  title: 'How Hetzner Works - LedgerSpear',
   description: 'Interactive visualization of Hetzner infrastructure — from end-user experience to data center operations, network architecture, and server lifecycle.',
   openGraph: {
-    title: 'How Hetzner Works - LedgerGuard',
+    title: 'How Hetzner Works - LedgerSpear',
     description: 'Interactive visualization of Hetzner infrastructure — from end-user experience to data center operations, network architecture, and server lifecycle.',
     type: 'website',
   },
@@ -352,7 +352,7 @@ export default function HetznerInfrastructurePage() {
               Why We Deploy on Hetzner
             </h3>
             <p className="text-gray-400 mb-6 max-w-lg mx-auto">
-              LedgerGuard runs on Hetzner Cloud — production-grade infrastructure
+              LedgerSpear runs on Hetzner Cloud — production-grade infrastructure
               at a fraction of hyperscaler costs. See our deployment setup.
             </p>
             <Link

@@ -23,8 +23,8 @@ func NewPostgresAppRepository(pool *pgxpool.Pool) *PostgresAppRepository {
 
 func (r *PostgresAppRepository) Create(ctx context.Context, app *entity.App) error {
 	query := `
-		INSERT INTO apps (id, partner_account_id, partner_app_id, name, tracking_enabled, revenue_share_tier, install_count, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO apps (id, partner_account_id, partner_app_id, name, tracking_enabled, revenue_share_tier, install_count, app_store_slug, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -35,6 +35,7 @@ func (r *PostgresAppRepository) Create(ctx context.Context, app *entity.App) err
 		app.TrackingEnabled,
 		string(app.RevenueShareTier),
 		app.InstallCount,
+		app.AppStoreSlug,
 		app.CreatedAt,
 		app.UpdatedAt,
 	)
@@ -46,6 +47,7 @@ func (r *PostgresAppRepository) FindByID(ctx context.Context, id uuid.UUID) (*en
 	query := `
 		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled,
 		       COALESCE(revenue_share_tier, 'DEFAULT_20'), COALESCE(install_count, 0),
+		       COALESCE(app_store_slug, ''),
 		       created_at, COALESCE(updated_at, created_at)
 		FROM apps
 		WHERE id = $1
@@ -61,6 +63,7 @@ func (r *PostgresAppRepository) FindByID(ctx context.Context, id uuid.UUID) (*en
 		&app.TrackingEnabled,
 		&tierStr,
 		&app.InstallCount,
+		&app.AppStoreSlug,
 		&app.CreatedAt,
 		&app.UpdatedAt,
 	)
@@ -80,6 +83,7 @@ func (r *PostgresAppRepository) FindByPartnerAccountID(ctx context.Context, part
 	query := `
 		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled,
 		       COALESCE(revenue_share_tier, 'DEFAULT_20'), COALESCE(install_count, 0),
+		       COALESCE(app_store_slug, ''),
 		       created_at, COALESCE(updated_at, created_at)
 		FROM apps
 		WHERE partner_account_id = $1
@@ -104,6 +108,7 @@ func (r *PostgresAppRepository) FindByPartnerAccountID(ctx context.Context, part
 			&app.TrackingEnabled,
 			&tierStr,
 			&app.InstallCount,
+			&app.AppStoreSlug,
 			&app.CreatedAt,
 			&app.UpdatedAt,
 		)
@@ -121,6 +126,7 @@ func (r *PostgresAppRepository) FindByPartnerAppID(ctx context.Context, partnerA
 	query := `
 		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled,
 		       COALESCE(revenue_share_tier, 'DEFAULT_20'), COALESCE(install_count, 0),
+		       COALESCE(app_store_slug, ''),
 		       created_at, COALESCE(updated_at, created_at)
 		FROM apps
 		WHERE partner_account_id = $1 AND partner_app_id = $2
@@ -136,6 +142,7 @@ func (r *PostgresAppRepository) FindByPartnerAppID(ctx context.Context, partnerA
 		&app.TrackingEnabled,
 		&tierStr,
 		&app.InstallCount,
+		&app.AppStoreSlug,
 		&app.CreatedAt,
 		&app.UpdatedAt,
 	)
@@ -154,7 +161,7 @@ func (r *PostgresAppRepository) FindByPartnerAppID(ctx context.Context, partnerA
 func (r *PostgresAppRepository) Update(ctx context.Context, app *entity.App) error {
 	query := `
 		UPDATE apps
-		SET name = $2, tracking_enabled = $3, revenue_share_tier = $4, install_count = $5, updated_at = $6
+		SET name = $2, tracking_enabled = $3, revenue_share_tier = $4, install_count = $5, app_store_slug = $6, updated_at = $7
 		WHERE id = $1
 	`
 
@@ -164,6 +171,7 @@ func (r *PostgresAppRepository) Update(ctx context.Context, app *entity.App) err
 		app.TrackingEnabled,
 		string(app.RevenueShareTier),
 		app.InstallCount,
+		app.AppStoreSlug,
 		app.UpdatedAt,
 	)
 	if err != nil {
@@ -198,6 +206,7 @@ func (r *PostgresAppRepository) FindAllByPartnerAppID(ctx context.Context, partn
 	query := `
 		SELECT id, partner_account_id, partner_app_id, name, tracking_enabled,
 		       COALESCE(revenue_share_tier, 'DEFAULT_20'), COALESCE(install_count, 0),
+		       COALESCE(app_store_slug, ''),
 		       created_at, COALESCE(updated_at, created_at)
 		FROM apps
 		WHERE partner_app_id = $1
@@ -222,6 +231,7 @@ func (r *PostgresAppRepository) FindAllByPartnerAppID(ctx context.Context, partn
 			&app.TrackingEnabled,
 			&tierStr,
 			&app.InstallCount,
+			&app.AppStoreSlug,
 			&app.CreatedAt,
 			&app.UpdatedAt,
 		)

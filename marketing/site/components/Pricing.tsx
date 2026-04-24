@@ -1,7 +1,7 @@
 const tiers = [
   {
     name: "Starter",
-    price: "$149",
+    price: "$249",
     period: "/month",
     description: "For growing app businesses",
     features: [
@@ -16,7 +16,7 @@ const tiers = [
   },
   {
     name: "Pro",
-    price: "$299",
+    price: "$499",
     period: "/month",
     description: "For serious app developers",
     features: [
@@ -119,7 +119,7 @@ export default function Pricing() {
                 ))}
               </ul>
               <a
-                href="#"
+                href="https://ledgerguard-c7557.web.app"
                 className={`mt-8 block w-full py-3 px-4 text-center font-semibold rounded-lg transition-colors ${
                   tier.featured
                     ? "bg-blue-600 text-white hover:bg-blue-700"

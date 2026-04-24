@@ -15,6 +15,7 @@ type App struct {
 	TrackingEnabled  bool
 	RevenueShareTier valueobject.RevenueShareTier // Shopify revenue share tier
 	InstallCount     int                          // Number of shops with app installed
+	AppStoreSlug     string                       // Shopify app store slug (e.g. "whatsapp-button-chat")
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }

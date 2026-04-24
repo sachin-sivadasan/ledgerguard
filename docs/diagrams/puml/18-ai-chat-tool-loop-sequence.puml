@@ -1,0 +1,54 @@
+@startuml
+title 18a. AI Chat Tool Loop
+
+skinparam sequenceArrowThickness 2
+
+actor "User" as User
+participant "Flutter Chat UI" as UI
+participant "Chat Handler\n(WebSocket)" as CH
+participant "Module Registry" as MR
+participant "AI Provider\n(OpenAI)" as AI
+participant "GraphQL\nExecutor" as GQL
+database "PostgreSQL" as DB
+
+User -> UI: "What's my MRR?"
+UI -> CH: WS: {type: "message",\ncontent: "What's my MRR?"}
+activate CH
+
+CH -> MR: BuildSystemPrompt()
+MR --> CH: system prompt\n(all module descriptions)
+
+CH -> MR: AllTools()
+MR --> CH: tool definitions[]
+
+CH -> AI: ChatCompletion(\n  systemPrompt,\n  messages,\n  tools)
+AI --> CH: tool_call:\n  metrics__get_current
+
+loop Tool Loop (max 5 iterations)
+  CH -> UI: WS: {type: "tool_call",\ntool: "metrics__get_current"}
+
+  CH -> MR: RouteToolCall(\n  "metrics__get_current", args)
+  MR -> MR: Parse module__tool\n(double underscore split)
+  MR -> GQL: Execute GraphQL query
+  GQL -> DB: SELECT FROM\ndaily_metrics_snapshots
+  DB --> GQL: data
+  GQL --> MR: tool result
+  MR --> CH: ToolResult JSON
+
+  CH -> AI: ChatCompletion(\n  messages + tool_result)
+
+  alt AI returns text response
+    AI --> CH: "Your MRR is $4,250..."
+  else AI returns more tool calls
+    AI --> CH: tool_call: next_tool
+  end
+end
+
+CH -> CH: Extract state\n(metrics, risk, etc.)
+
+CH -> UI: WS: {type: "message",\ncontent: "Your MRR is $4,250",\nstate: {...},\nsuggestions: [...]}
+deactivate CH
+
+UI -> User: Display response\n+ data cards
+
+@enduml

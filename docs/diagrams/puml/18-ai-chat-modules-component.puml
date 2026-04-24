@@ -1,0 +1,80 @@
+@startuml
+title 18b. AI Chat Module Architecture
+
+skinparam componentStyle rectangle
+skinparam componentArrowThickness 2
+
+package "Chat System" {
+  [Chat Handler\n(WebSocket)] as CH
+  [Module Registry] as MR
+  [AIClient Interface] as AIC
+  [AIProviderRegistry] as APR
+  [GraphQL Executor] as GQL
+}
+
+package "AI Providers" {
+  [OpenAI Client\n(gpt-4o)] as OAI
+  [Claude Client\n(future)] as Claude
+}
+
+package "Chat Modules" {
+  [risk\n3 tools] as Risk
+  [subscriptions\n4 tools] as Subs
+  [metrics\n3 tools] as Metrics
+  [store_health\n2 tools] as SH
+  [earnings\n2 tools] as Earn
+  [apps\n3 tools] as Apps
+}
+
+package "GraphQL Layer" {
+  [Schema\n(schema.graphql)] as Schema
+  [Resolvers] as Resolvers
+}
+
+package "Domain Services" {
+  [RiskEngine] as RE
+  [MetricsEngine] as ME
+  [LedgerService] as LS
+}
+
+CH --> MR : Register modules\nRoute tool calls
+CH --> APR : Select provider\n(per user preference)
+
+APR --> OAI
+APR --> Claude
+
+AIC <|.. OAI : implements
+AIC <|.. Claude : implements
+
+MR --> Risk
+MR --> Subs
+MR --> Metrics
+MR --> SH
+MR --> Earn
+MR --> Apps
+
+Risk --> GQL
+Subs --> GQL
+Metrics --> GQL
+
+GQL --> Schema
+Schema --> Resolvers
+
+Resolvers --> RE
+Resolvers --> ME
+Resolvers --> LS
+
+note bottom of MR
+  **Tool Naming:**
+  module__tool_name
+  (double underscore)
+  OpenAI-compliant
+end note
+
+note bottom of CH
+  **Protocol:**
+  WebSocket (gorilla)
+  Max 5 tool iterations
+end note
+
+@enduml

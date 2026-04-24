@@ -97,6 +97,8 @@ class Subscription extends Equatable {
   final DateTime createdAt;
   final DateTime? expectedNextCharge;
   final DateTime? lastChargeDate;
+  final String? shopLogoUrl;
+  final String? shopSquareLogoUrl;
 
   const Subscription({
     required this.id,
@@ -111,6 +113,8 @@ class Subscription extends Equatable {
     required this.createdAt,
     this.expectedNextCharge,
     this.lastChargeDate,
+    this.shopLogoUrl,
+    this.shopSquareLogoUrl,
   });
 
   /// Display name for the subscription (shop name or domain)
@@ -158,6 +162,8 @@ class Subscription extends Equatable {
       lastChargeDate: json['last_charge_date'] != null
           ? DateTime.parse(json['last_charge_date'] as String)
           : null,
+      shopLogoUrl: json['shop_logo_url'] as String?,
+      shopSquareLogoUrl: json['shop_square_logo_url'] as String?,
     );
   }
 
@@ -175,6 +181,8 @@ class Subscription extends Equatable {
         createdAt,
         expectedNextCharge,
         lastChargeDate,
+        shopLogoUrl,
+        shopSquareLogoUrl,
       ];
 }
 

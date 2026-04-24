@@ -1,0 +1,48 @@
+@startuml
+title 09. Daily Snapshot Upsert Flow
+
+skinparam sequenceArrowThickness 2
+
+participant "LedgerService" as Ledger
+participant "MetricsEngine" as Metrics
+participant "SnapshotRepository" as Repo
+database "PostgreSQL" as DB
+
+== During Sync (Current Day) ==
+
+Ledger -> Metrics: ComputeAllMetrics(\n  appID, subs, txs, now)
+activate Metrics
+
+Metrics -> Metrics: CalculateActiveMRR()
+Metrics -> Metrics: CalculateRevenueAtRisk()
+Metrics -> Metrics: CalculateUsageRevenue()
+Metrics -> Metrics: CalculateTotalRevenue()
+Metrics -> Metrics: CalculateRenewalSuccessRate()
+Metrics -> Metrics: Count by risk state
+
+Metrics --> Ledger: DailyMetricsSnapshot
+deactivate Metrics
+
+Ledger -> Repo: Upsert(snapshot)
+Repo -> DB: INSERT INTO daily_metrics_snapshots\n  (app_id, date, ...)\nON CONFLICT (app_id, date)\n  DO UPDATE SET ...
+DB --> Repo: OK
+Repo --> Ledger: OK
+
+== Historical Backfill (Monthly) ==
+
+Ledger -> Ledger: Find date range\nfrom transactions
+
+loop For each month in range
+  Ledger -> Ledger: Filter txs up to\nend-of-month
+  Ledger -> Ledger: Rebuild subscriptions\nfrom filtered txs
+  Ledger -> Ledger: Filter txs for\ncurrent month only
+
+  Ledger -> Metrics: ComputeAllMetrics(\n  appID, subs, monthTxs, date)
+  Metrics --> Ledger: DailyMetricsSnapshot
+
+  Ledger -> Repo: Upsert(snapshot)
+  Repo -> DB: INSERT ON CONFLICT UPDATE
+  DB --> Repo: OK
+end
+
+@enduml

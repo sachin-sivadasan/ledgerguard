@@ -5,10 +5,10 @@ import Footer from '@/components/Footer';
 import GCPStagingVisualization from '@/components/GCPStagingVisualization';
 
 export const metadata: Metadata = {
-  title: 'GCP Staging Architecture - LedgerGuard',
+  title: 'GCP Staging Architecture - LedgerSpear',
   description: 'Interactive visualization of the dual-environment architecture — Hetzner production + GCP staging with Cloud Run, Cloud SQL, and automated CI/CD.',
   openGraph: {
-    title: 'GCP Staging Architecture - LedgerGuard',
+    title: 'GCP Staging Architecture - LedgerSpear',
     description: 'Interactive visualization of the dual-environment architecture — Hetzner production + GCP staging with Cloud Run, Cloud SQL, and automated CI/CD.',
     type: 'website',
   },

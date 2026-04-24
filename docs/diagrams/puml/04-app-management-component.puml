@@ -1,0 +1,54 @@
+@startuml
+title 04. App Management & Selection
+
+skinparam componentStyle rectangle
+skinparam componentArrowThickness 2
+
+package "Interfaces Layer" {
+  [AppHandler] as AH
+  note right of AH
+    GET /api/v1/apps
+    GET /api/v1/apps/{id}
+    POST /api/v1/apps/{id}/tracking
+  end note
+}
+
+package "Domain Layer" {
+  [App Entity] as App
+  note right of App
+    partner_app_id (Shopify GID)
+    name
+    tracking_enabled
+    revenue_share_tier
+    install_count
+    app_store_slug
+  end note
+
+  [AppRepository\n(interface)] as AR
+}
+
+package "Infrastructure Layer" {
+  [PostgresAppRepo] as PAR
+  database "apps" as AppDB
+}
+
+package "External" {
+  [Shopify Partner API] as SPA
+}
+
+AH --> AR : FindByPartnerAccountID()
+AH --> AR : Upsert() (tracking toggle)
+AR <|.. PAR : implements
+PAR --> AppDB
+
+SPA --> AH : FetchApps()\n(during sync)
+
+note bottom of App
+  **Revenue Share Tiers:**
+  SMALL_DEV_0 = 0% (default)
+  SMALL_DEV_15 = 15%
+  DEFAULT_20 = 20%
+  LARGE_DEV_15 = 15%
+end note
+
+@enduml

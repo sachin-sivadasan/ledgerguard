@@ -1,0 +1,83 @@
+@startuml
+title 19. Razorpay Billing Flow
+
+skinparam sequenceArrowThickness 2
+
+actor "User" as User
+participant "Flutter App" as App
+participant "BillingHandler" as BH
+participant "BillingService" as BS
+participant "RazorpayClient" as RZP
+participant "BillingSubRepo" as BR
+database "PostgreSQL" as DB
+
+== Checkout Flow ==
+
+User -> App: Select plan\n(Starter $249/mo or Pro $499/mo)
+App -> BH: POST /api/v1/billing/checkout\n{plan: "STARTER"}
+activate BH
+
+BH -> BS: CreateCheckout(userID, plan)
+activate BS
+
+BS -> RZP: CreateCustomer(email, name)
+RZP --> BS: customer_id
+
+BS -> RZP: CreateSubscription(\n  plan_id, customer_id,\n  customer_notify=1)
+RZP --> BS: subscription {\n  id, short_url,\n  status: CREATED\n}
+
+BS -> BR: Upsert(BillingSubscription)
+BR -> DB: INSERT INTO billing_subscriptions
+DB --> BR: OK
+
+BS --> BH: {checkout_url: short_url}
+deactivate BS
+
+BH --> App: {checkout_url}
+deactivate BH
+
+App -> User: Open Razorpay\nhosted checkout page
+
+== Webhook: Payment Success ==
+
+participant "Razorpay" as RZPW
+
+RZPW -> BH: POST /webhooks/razorpay\nX-Razorpay-Signature: {hmac}
+activate BH
+
+BH -> BH: VerifyWebhookSignature\n(HMAC-SHA256)
+
+BH -> BS: HandleWebhook(event)
+activate BS
+
+alt subscription.activated
+  BS -> RZP: FetchSubscription(sub_id)
+  RZP --> BS: subscription details
+  BS -> BS: ProcessSubscription()\n  status = ACTIVE\n  user.plan_tier = STARTER/PRO
+  BS -> BR: Upsert(BillingSubscription)
+  BS -> DB: UPDATE users SET plan_tier
+
+else subscription.halted
+  BS -> BS: status = HALTED
+  BS -> BR: Upsert(BillingSubscription)
+
+else subscription.cancelled
+  BS -> BS: status = CANCELLED\n  user.plan_tier = FREE
+  BS -> BR: Upsert(BillingSubscription)
+  BS -> DB: UPDATE users SET plan_tier
+end
+
+BS --> BH: OK
+deactivate BS
+
+BH --> RZPW: 200 OK
+deactivate BH
+
+note right of BH
+  **Always returns 200**
+  to prevent Razorpay
+  retry storms.
+  Errors logged internally.
+end note
+
+@enduml

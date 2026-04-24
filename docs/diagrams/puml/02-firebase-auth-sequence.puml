@@ -1,0 +1,51 @@
+@startuml
+title 02. Firebase Authentication Flow
+
+skinparam sequenceArrowThickness 2
+
+actor "User" as User
+participant "Flutter App" as App
+participant "Firebase Auth" as FBAuth
+participant "AuthMiddleware" as MW
+participant "Firebase Admin SDK" as Admin
+participant "UserRepository" as Repo
+database "PostgreSQL" as DB
+
+== Login ==
+User -> App: Sign in (Google / Email)
+App -> FBAuth: signInWithGoogle()\nor signInWithEmail()
+FBAuth --> App: Firebase ID Token
+
+== API Request ==
+App -> MW: GET /api/v1/me\nAuthorization: Bearer {idToken}
+activate MW
+
+MW -> MW: extractBearerToken()
+MW -> Admin: VerifyIDToken(token)
+Admin --> MW: claims {UID, Email}
+
+MW -> Repo: FindByFirebaseUID(uid)
+Repo -> DB: SELECT * FROM users\nWHERE firebase_uid = ?
+
+alt User exists
+  DB --> Repo: user record
+  Repo --> MW: user
+else First-time user
+  DB --> Repo: not found
+  Repo --> MW: ErrUserNotFound
+  MW -> Repo: Create(NewUser(uid, email))
+  Repo -> DB: INSERT INTO users
+  DB --> Repo: OK
+  Repo --> MW: user
+end
+
+MW -> MW: context.WithValue(user)
+MW --> App: Handler processes request
+deactivate MW
+
+== WebSocket (AI Chat) ==
+App -> MW: WS /api/v1/chat?token={idToken}
+MW -> Admin: VerifyIDToken(token)
+note right: Token passed as\nquery parameter for\nWebSocket connections
+
+@enduml

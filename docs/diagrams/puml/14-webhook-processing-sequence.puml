@@ -1,0 +1,61 @@
+@startuml
+title 14. Webhook Processing
+
+skinparam sequenceArrowThickness 2
+
+participant "Shopify" as Shop
+participant "WebhookHandler" as WH
+participant "WebhookService" as WS
+participant "SubscriptionRepo" as SR
+participant "AuditLogRepo" as AR
+database "PostgreSQL" as DB
+
+== App Uninstalled ==
+
+Shop -> WH: POST /webhooks/shopify/app_uninstalled\nX-Shopify-Hmac-Sha256: {hmac}
+activate WH
+
+WH -> WH: Validate HMAC signature
+WH -> WH: Parse webhook payload
+
+WH -> WS: ProcessAppUninstalled(\n  shopDomain, appGID)
+activate WS
+
+WS -> SR: FindByDomainAndApp(\n  domain, appID)
+SR -> DB: SELECT FROM subscriptions
+DB --> SR: subscription
+SR --> WS: subscription
+
+WS -> WS: subscription.Status = "UNINSTALLED"
+WS -> WS: subscription.RiskState = CHURNED
+
+WS -> SR: Upsert(subscription)
+SR -> DB: UPDATE subscriptions SET ...
+DB --> SR: OK
+
+WS -> AR: Create(auditLog)
+note right: Log: APP_UNINSTALLED\nresource: subscription
+
+WS --> WH: OK
+deactivate WS
+
+WH --> Shop: 200 OK
+deactivate WH
+
+== Billing Failure ==
+
+Shop -> WH: POST /webhooks/shopify/billing_failure
+WH -> WH: Validate HMAC
+WH -> WS: ProcessBillingFailure(\n  shopDomain, appGID)
+WS -> SR: Find + update status\nto FROZEN
+WS --> WH: OK
+WH --> Shop: 200 OK
+
+note right of WH
+  **No Firebase Auth**
+  Webhooks validated via
+  HMAC-SHA256 signature
+  (shared secret)
+end note
+
+@enduml

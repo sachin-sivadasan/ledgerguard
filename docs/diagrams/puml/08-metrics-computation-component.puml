@@ -1,0 +1,49 @@
+@startuml
+title 08. Metrics Computation Pipeline
+
+skinparam componentStyle rectangle
+skinparam componentArrowThickness 2
+
+package "Domain Layer" {
+  [MetricsEngine] as ME
+  [Subscription Entity] as Sub
+  [Transaction Entity] as Tx
+  [DailyMetricsSnapshot] as Snap
+}
+
+package "Application Layer" {
+  [MetricsAggregationService] as Agg
+}
+
+package "Interfaces Layer" {
+  [MetricsHandler] as MH
+}
+
+package "Infrastructure Layer" {
+  [SnapshotRepository] as SR
+  database "PostgreSQL\ndaily_metrics_snapshots" as DB
+}
+
+Sub --> ME : subscriptions[]
+Tx --> ME : transactions[]
+
+ME --> Snap : ComputeAllMetrics()
+
+note right of ME
+  **KPI Formulas:**
+  Active MRR = Σ(SAFE sub.MRRCents)
+  Revenue at Risk = Σ(at-risk sub.MRRCents)
+  Usage Revenue = Σ(USAGE tx.AmountCents)
+  Total Revenue = REC + USE + ONE - REF
+  Renewal Rate = SAFE / total subs
+end note
+
+Snap --> SR : Upsert()
+SR --> DB : INSERT ON CONFLICT UPDATE
+
+MH --> Agg : BuildMetrics(appID, range)
+Agg --> SR : FindByAppIDAndRange()
+SR --> Agg : snapshots[]
+Agg --> MH : aggregated response
+
+@enduml

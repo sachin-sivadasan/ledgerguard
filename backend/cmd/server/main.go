@@ -274,10 +274,14 @@ func run() error {
 		syncHandler = handler.NewSyncHandler(syncService, partnerRepo, appRepo)
 		log.Println("Sync handler initialized")
 
-		// Initialize and start scheduler
-		syncScheduler = scheduler.NewSyncScheduler(syncService, partnerRepo)
-		syncScheduler.Start(ctx)
-		log.Println("Sync scheduler started (12-hour interval)")
+		// Initialize and start scheduler (skip if queue-based sync is enabled)
+		if !cfg.Queue.Enabled {
+			syncScheduler = scheduler.NewSyncScheduler(syncService, partnerRepo)
+			syncScheduler.Start(ctx)
+			log.Println("Sync scheduler started (12-hour interval)")
+		} else {
+			log.Println("Sync scheduler skipped — queue-based sync is enabled")
+		}
 	}
 
 	// Initialize subscription handler
@@ -415,6 +419,7 @@ func run() error {
 
 	// Initialize queue-based sync system (optional — requires Redis + Queue enabled)
 	var queueSyncHandler *handler.QueueSyncHandler
+	var queueSyncService *appservice.QueueSyncService
 	var regularWorkerPool *queue.WorkerPool
 	var fullSyncWorkerPool *queue.WorkerPool
 	var recoveryService *queue.RecoveryService
@@ -488,7 +493,7 @@ func run() error {
 		recoveryService.StartPeriodicRecovery(ctx)
 
 		// Create queue sync service and handler
-		queueSyncService := appservice.NewQueueSyncService(
+		queueSyncService = appservice.NewQueueSyncService(
 			syncJobRepo, appRepo, partnerRepo, redisClient, lockManager, progressTracker,
 		)
 		queueSyncHandler = handler.NewQueueSyncHandler(queueSyncService, partnerRepo, appRepo)
@@ -557,6 +562,17 @@ func run() error {
 		internalKeyMiddleware := middleware.NewInternalKeyMiddleware(cfg.Server.InternalKey)
 		internalMW = internalKeyMiddleware.Authenticate
 		log.Println("Internal key middleware initialized")
+	}
+
+	// Wire auto-sync trigger on app selection
+	if appHandler != nil {
+		if queueSyncService != nil {
+			appHandler.SetSyncTrigger(queueSyncService)
+			log.Println("Auto-sync trigger wired (queue mode)")
+		} else if syncService != nil {
+			appHandler.SetSyncTrigger(syncService)
+			log.Println("Auto-sync trigger wired (direct mode)")
+		}
 	}
 
 	// Build router config

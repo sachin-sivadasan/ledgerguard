@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -46,7 +47,7 @@ func (h *BillingHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) 
 	result, err := h.billingService.CreateCheckout(r.Context(), user.ID, plan)
 	if err != nil {
 		log.Printf("billing: checkout error for user %s: %v", user.ID, err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to create checkout")
+		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("failed to create checkout: %v", err))
 		return
 	}
 
@@ -85,9 +86,7 @@ func (h *BillingHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	signature := r.Header.Get("X-Razorpay-Signature")
 
 	if err := h.billingService.HandleWebhookEvent(r.Context(), body, signature); err != nil {
-		log.Printf("billing webhook: signature verification failed: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		log.Printf("billing webhook: processing failed: %v", err)
 	}
 
 	// Always return 200 to prevent Razorpay retries

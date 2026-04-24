@@ -289,7 +289,7 @@ export default function DeploymentFlowVisualization() {
 function StepDescription({ flow, step }: { flow: FlowType; step: number }) {
   const descriptions: Record<FlowType, string[]> = {
     architecture: [
-      '🌐 DNS resolves ledgerguard.com to Hetzner VPS IP address',
+      '🌐 DNS resolves ledgerspear.com to Hetzner VPS IP address',
       '🔒 Caddy receives HTTPS request and terminates SSL/TLS',
       '⚡ API requests route to Go backend on port 8080',
       '📄 Marketing requests route to Next.js on port 3000',
@@ -303,7 +303,7 @@ function StepDescription({ flow, step }: { flow: FlowType; step: number }) {
       '🚀 Application is live with zero-downtime deployment!',
     ],
     request: [
-      '👤 User makes HTTPS request to api.ledgerguard.com',
+      '👤 User makes HTTPS request to api.ledgerspear.com',
       '🔒 Caddy validates SSL certificate and decrypts request',
       '🎯 Router matches URL pattern to appropriate service',
       '🖥️ Backend service processes request and queries DB',

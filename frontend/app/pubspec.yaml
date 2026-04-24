@@ -47,6 +47,9 @@ dependencies:
   # Charts
   fl_chart: ^0.69.2
 
+  # Image Caching
+  cached_network_image: ^3.3.1
+
   # Icons
   cupertino_icons: ^1.0.8
 

@@ -5,10 +5,10 @@ import Footer from '@/components/Footer';
 import VoiceAssistantVisualization from '@/components/VoiceAssistantVisualization';
 
 export const metadata: Metadata = {
-  title: 'Voice AI Assistant - LedgerGuard',
+  title: 'Voice AI Assistant - LedgerSpear',
   description: 'Interactive visualization of the voice-enabled AI assistant for hands-free navigation and queries',
   openGraph: {
-    title: 'Voice AI Assistant - LedgerGuard',
+    title: 'Voice AI Assistant - LedgerSpear',
     description: 'Interactive visualization of the voice-enabled AI assistant for hands-free navigation and queries',
     type: 'website',
   },
@@ -42,7 +42,7 @@ export default function VoiceAssistantPage() {
             </span>
           </div>
           <p className="text-gray-400 text-base mb-8 max-w-2xl">
-            Explore how LedgerGuard&apos;s voice-enabled AI assistant will provide hands-free
+            Explore how LedgerSpear&apos;s voice-enabled AI assistant will provide hands-free
             access to subscription data, risk queries, and smart navigation.
           </p>
 
@@ -137,7 +137,7 @@ export default function VoiceAssistantPage() {
                 href="/"
                 className="inline-block px-6 py-3 bg-gradient-to-r from-purple-500 to-cyan-500 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
               >
-                Learn More About LedgerGuard
+                Learn More About LedgerSpear
               </Link>
             </div>
           </div>

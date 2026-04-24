@@ -1931,3 +1931,27 @@ Replaced the blocking synchronous sync (`POST /api/v1/sync/{appID}`) with an asy
 - `backend/go.mod` / `go.sum` — Added redis/go-redis/v9, alicebob/miniredis/v2
 
 **Tests:** All existing tests pass. Queue-specific tests pending.
+
+---
+
+## [2026-04-23] Auto-Trigger Sync on App Selection + Scheduler Disable
+
+**Summary:**
+After a user selects an app during onboarding, a `full_sync` is now automatically triggered so the dashboard populates within minutes instead of waiting for the 12h scheduler. Also committed the existing change that disables the `SyncScheduler` when `cfg.Queue.Enabled=true`.
+
+**Implemented:**
+
+1. **`SyncTrigger` interface** — Defined in `handler/app.go` with a single `TriggerSync(ctx, appID, userID, partnerAccountID)` method
+2. **`QueueSyncService.TriggerSync()`** — Enqueues a `full_sync` job with priority=1 (high); silently swallows duplicate-job errors
+3. **`SyncService.TriggerSync()`** — Fire-and-forget goroutine calling `SyncApp()` for non-queue mode
+4. **`SelectApp` integration** — Calls `syncTrigger.TriggerSync()` after `appRepo.Create()` succeeds; adds `sync_triggered` to JSON response
+5. **`main.go` wiring** — `SetSyncTrigger` with `queueSyncService` (preferred) or `syncService` (fallback)
+6. **Scheduler disable** — `SyncScheduler` is skipped when `cfg.Queue.Enabled=true` (already in main.go, now committed)
+
+**Files Modified:**
+- `backend/internal/interfaces/http/handler/app.go` — SyncTrigger interface, field, setter, SelectApp call
+- `backend/internal/application/service/queue_sync_service.go` — TriggerSync method
+- `backend/internal/application/service/sync_service.go` — TriggerSync method
+- `backend/cmd/server/main.go` — Hoisted queueSyncService var, SetSyncTrigger wiring
+
+**Tests:** All existing tests pass (`go test ./...`).

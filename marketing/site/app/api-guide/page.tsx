@@ -5,11 +5,11 @@ import Footer from '@/components/Footer';
 import APIIntegrationGuide from '@/components/APIIntegrationGuide';
 
 export const metadata: Metadata = {
-  title: 'API Integration Guide - LedgerGuard',
-  description: 'Learn how to integrate LedgerGuard API into your Shopify app for real-time subscription status',
+  title: 'API Integration Guide - LedgerSpear',
+  description: 'Learn how to integrate LedgerSpear API into your Shopify app for real-time subscription status',
   openGraph: {
-    title: 'API Integration Guide - LedgerGuard',
-    description: 'Learn how to integrate LedgerGuard API into your Shopify app for real-time subscription status',
+    title: 'API Integration Guide - LedgerSpear',
+    description: 'Learn how to integrate LedgerSpear API into your Shopify app for real-time subscription status',
     type: 'website',
   },
 };

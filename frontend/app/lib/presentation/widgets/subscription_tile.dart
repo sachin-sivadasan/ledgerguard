@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/subscription.dart';
@@ -36,25 +37,8 @@ class SubscriptionTile extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  // Store avatar
-                  Container(
-                    width: avatarSize,
-                    height: avatarSize,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(isCompact ? 8 : 10),
-                    ),
-                    child: Center(
-                      child: Text(
-                        _getInitials(subscription.displayName),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.blue,
-                              fontWeight: FontWeight.bold,
-                              fontSize: isCompact ? 13 : null,
-                            ),
-                      ),
-                    ),
-                  ),
+                  // Store avatar (logo with letter fallback)
+                  _buildAvatar(context, avatarSize, isCompact),
                   SizedBox(width: isCompact ? 10 : 16),
                   // Store and plan info
                   Expanded(
@@ -104,6 +88,48 @@ class SubscriptionTile extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildAvatar(BuildContext context, double size, bool isCompact) {
+    final logoUrl = subscription.shopSquareLogoUrl ?? subscription.shopLogoUrl;
+    final borderRadius = BorderRadius.circular(isCompact ? 8 : 10);
+
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: borderRadius,
+        child: CachedNetworkImage(
+          imageUrl: logoUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => _buildInitialsAvatar(context, size, isCompact),
+          errorWidget: (context, url, error) => _buildInitialsAvatar(context, size, isCompact),
+        ),
+      );
+    }
+
+    return _buildInitialsAvatar(context, size, isCompact);
+  }
+
+  Widget _buildInitialsAvatar(BuildContext context, double size, bool isCompact) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(isCompact ? 8 : 10),
+      ),
+      child: Center(
+        child: Text(
+          _getInitials(subscription.displayName),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.blue,
+                fontWeight: FontWeight.bold,
+                fontSize: isCompact ? 13 : null,
+              ),
+        ),
+      ),
     );
   }
 

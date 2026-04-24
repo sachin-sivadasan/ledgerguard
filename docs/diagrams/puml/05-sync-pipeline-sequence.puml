@@ -1,0 +1,63 @@
+@startuml
+title 05. Transaction Sync Pipeline
+
+skinparam sequenceArrowThickness 2
+skinparam maxMessageSize 200
+
+participant "HTTP Handler" as Handler
+participant "SyncService" as Sync
+participant "Decryptor" as Crypto
+participant "PartnerClient" as Partner
+participant "EarningsCalc" as Earnings
+participant "TransactionRepo" as TxRepo
+participant "LedgerService" as Ledger
+participant "EventFetcher" as Events
+participant "BrandFetcher" as Brand
+participant "ReviewScraper" as Reviews
+
+Handler -> Sync: SyncApp(appID)
+activate Sync
+
+Sync -> Sync: appRepo.FindByID()
+Sync -> Sync: partnerRepo.FindByID()
+Sync -> Crypto: Decrypt(encryptedToken)
+Crypto --> Sync: accessToken
+
+note right of Sync: 12-month window\nfrom = now - 1 year
+
+Sync -> Partner: FetchTransactions(token, appID, from, to)
+Partner --> Sync: transactions[]
+
+Sync -> Earnings: ProcessTransactions(txs, now)
+note right of Earnings: Set earnings status:\nPENDING (7-day hold)\nAVAILABLE\nPAID_OUT
+
+Sync -> TxRepo: UpsertBatch(transactions)
+note right of TxRepo: Idempotent upsert\n(ON CONFLICT DO UPDATE)
+
+Sync -> Ledger: RebuildFromTransactions(appID, now)
+activate Ledger
+Ledger --> Sync: LedgerRebuildResult
+deactivate Ledger
+
+Sync -> Ledger: BackfillHistoricalSnapshots(appID, allTxs)
+note right of Ledger: Monthly snapshots\nfor historical data
+
+opt EventFetcher configured
+  Sync -> Events: enrichSubscriptionStatus()
+  note right of Events: Fetch app lifecycle events\nUpdate ACTIVE/CANCELLED/UNINSTALLED
+end
+
+opt BrandFetcher configured
+  Sync -> Brand: fetchShopBrands()
+  note right of Brand: Storefront API\nLogos for new domains only
+end
+
+opt ReviewScraper configured
+  Sync -> Reviews: scrapeAndStoreReviews()
+  note right of Reviews: 2 pages (~20 reviews)\nDedup on source_review_id
+end
+
+Sync --> Handler: SyncResult
+deactivate Sync
+
+@enduml

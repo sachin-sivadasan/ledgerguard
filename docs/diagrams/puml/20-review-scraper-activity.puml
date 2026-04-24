@@ -1,0 +1,54 @@
+@startuml
+title 20. App Store Review Scraper
+
+skinparam activityArrowThickness 2
+
+start
+
+if (app.AppStoreSlug set?) then (yes)
+else (no)
+  :Skip scraping;
+  stop
+endif
+
+:Determine max pages;
+note right
+  During sync: 2 pages (~20 reviews)
+  Manual trigger: configurable
+end note
+
+partition "For Each Page" {
+  :Build URL:\napps.shopify.com/\n{slug}/reviews?page={n};
+
+  :HTTP GET page HTML;
+
+  :Parse review elements\nfrom HTML DOM;
+
+  partition "For Each Review" {
+    :Extract fields:\n- author\n- rating (1-5)\n- body\n- date\n- location\n- time_using;
+
+    if (Rating > 0 and\nDate valid?) then (yes)
+      :Generate source_review_id\n(SHA hash of author+date+body);
+      :Create AppReview entity;
+    else (no)
+      :Skip invalid review;
+    endif
+  }
+}
+
+:Collect all valid reviews;
+
+if (Reviews found?) then (yes)
+  :UpsertBatch(reviews);
+  note right
+    ON CONFLICT (source_review_id)
+    DO UPDATE SET body, rating, ...
+    (deduplication)
+  end note
+else (no)
+  :No reviews to store;
+endif
+
+stop
+
+@enduml

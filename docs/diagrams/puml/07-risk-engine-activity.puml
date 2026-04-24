@@ -1,0 +1,59 @@
+@startuml
+title 07. Risk Engine – Classification Logic
+
+skinparam activityArrowThickness 2
+
+start
+
+:Input: Subscription + now (time);
+
+if (Status is CANCELLED\nor EXPIRED?) then (yes)
+  #salmon:Return **CHURNED**;
+  stop
+else (no)
+endif
+
+if (Status is FROZEN?) then (yes)
+  #orange:Return **ONE_CYCLE_MISSED**;
+  stop
+else (no)
+endif
+
+if (Status is PENDING?) then (yes)
+  #lightgreen:Return **SAFE**;
+  stop
+else (no)
+endif
+
+if (Status is ACTIVE and\nnow ≤ expectedNextCharge?) then (yes)
+  #lightgreen:Return **SAFE**;
+  stop
+else (no)
+endif
+
+if (ExpectedNextChargeDate\nis null?) then (yes)
+  #lightgreen:Return **SAFE**\n(cannot classify);
+  stop
+else (no)
+endif
+
+:Calculate daysPastDue =\n(now - expectedNextCharge) / 24h;
+
+if (daysPastDue ≤ 0) then (yes)
+  #lightgreen:Return **SAFE**;
+  stop
+elseif (daysPastDue ≤ 30) then (yes)
+  #lightgreen:Return **SAFE**\n(grace period);
+  stop
+elseif (daysPastDue ≤ 60) then (yes)
+  #orange:Return **ONE_CYCLE_MISSED**;
+  stop
+elseif (daysPastDue ≤ 90) then (yes)
+  #OrangeRed:Return **TWO_CYCLES_MISSED**;
+  stop
+else (> 90)
+  #salmon:Return **CHURNED**;
+  stop
+endif
+
+@enduml

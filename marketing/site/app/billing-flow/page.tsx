@@ -5,11 +5,11 @@ import Footer from '@/components/Footer';
 import BillingFlowVisualization from '@/components/BillingFlowVisualization';
 
 export const metadata: Metadata = {
-  title: 'Billing System Flow - LedgerGuard',
-  description: 'Interactive visualization of LedgerGuard billing lifecycle, Stripe payment flow, webhooks, feature gating, and plan management',
+  title: 'Billing System Flow - LedgerSpear',
+  description: 'Interactive visualization of LedgerSpear billing lifecycle, Stripe payment flow, webhooks, feature gating, and plan management',
   openGraph: {
-    title: 'Billing System Flow - LedgerGuard',
-    description: 'Interactive visualization of LedgerGuard billing lifecycle, Stripe payment flow, webhooks, feature gating, and plan management',
+    title: 'Billing System Flow - LedgerSpear',
+    description: 'Interactive visualization of LedgerSpear billing lifecycle, Stripe payment flow, webhooks, feature gating, and plan management',
     type: 'website',
   },
   robots: { index: false, follow: false },
@@ -34,7 +34,7 @@ export default function BillingFlowPage() {
             Billing System Flow
           </h1>
           <p className="text-gray-400 text-base mb-8 max-w-xl">
-            How LedgerGuard handles subscriptions, payments, and feature access
+            How LedgerSpear handles subscriptions, payments, and feature access
             using Stripe — from trial to paid to renewal.
           </p>
 
@@ -157,7 +157,7 @@ export default function BillingFlowPage() {
               Revenue Intelligence for Shopify Developers
             </h3>
             <p className="text-gray-400 mb-6 max-w-lg mx-auto">
-              LedgerGuard tracks your app revenue, predicts churn, and gives you
+              LedgerSpear tracks your app revenue, predicts churn, and gives you
               real-time billing insights — powered by Stripe.
             </p>
             <Link

@@ -73,7 +73,7 @@ Public-facing marketing site for LedgerGuard, a Revenue Intelligence Platform fo
 **Tiers:**
 
 #### Starter Tier
-- Price: $149/month
+- Price: $249/month
 - Features:
   - 1 Shopify app
   - Renewal Success Rate
@@ -83,7 +83,7 @@ Public-facing marketing site for LedgerGuard, a Revenue Intelligence Platform fo
 - CTA: "Get Started"
 
 #### Pro Tier
-- Price: $299/month
+- Price: $499/month
 - Features:
   - Unlimited apps
   - AI Daily Revenue Brief
@@ -147,3 +147,71 @@ Public-facing marketing site for LedgerGuard, a Revenue Intelligence Platform fo
 
 ## No Authentication
 This is a public marketing site. Authentication happens in the main app (separate frontend).
+
+---
+
+## Deployment
+
+### Production: Vercel (Primary)
+
+**Why Vercel:** Zero-config Next.js hosting, free tier, automatic SSL, instant deploys.
+
+#### Initial Setup
+
+```bash
+# 1. Go to marketing site directory
+cd marketing/site
+
+# 2. Deploy with npx (no global install needed)
+npx vercel
+
+# Interactive prompts:
+# - Log in → GitHub/GitLab/Email
+# - Set up and deploy? → Yes
+# - Which scope? → Your account
+# - Link to existing project? → No
+# - Project name? → ledgerspear
+# - Directory with code? → ./
+# - Override settings? → No
+
+# 3. Add custom domain
+npx vercel domains add ledgerspear.com
+```
+
+#### DNS Configuration (GoDaddy)
+
+**Important:** CNAME records cannot be used on the root domain (`@`). Use an A record for root.
+
+| Type | Name | Value |
+|------|------|-------|
+| **A** | **@** | `76.76.21.21` |
+| **CNAME** | **www** | `cname.vercel-dns.com` |
+
+Vercel handles SSL (Let's Encrypt) automatically after DNS propagation (~5-30 min).
+
+#### Subsequent Deploys
+
+```bash
+# Preview deploy (creates unique URL)
+cd marketing/site && npx vercel
+
+# Production deploy (updates ledgerspear.com)
+cd marketing/site && npx vercel --prod
+```
+
+#### CI/CD (Optional — GitHub Integration)
+Connect the repo in Vercel Dashboard → Settings → Git:
+- **Framework Preset:** Next.js
+- **Root Directory:** `marketing/site`
+- **Build Command:** `npm run build`
+- **Output Directory:** `.next`
+
+Pushes to `main` auto-deploy to production. PRs get preview URLs.
+
+### Future: Hetzner VPS (Post-Verification)
+
+Once Hetzner verification completes, the site can optionally move to self-hosted:
+- Caddy reverse proxy with auto-SSL
+- Systemd service running `npm start` on port 3000
+- Deploy via `./scripts/deploy.sh marketing`
+- See `/deploy/Caddyfile` and `/deploy/ledgerspear-marketing.service` for config

@@ -1,0 +1,57 @@
+@startuml
+title 16. Earnings Timeline & Availability
+
+skinparam sequenceArrowThickness 2
+
+participant "SyncService" as Sync
+participant "EarningsCalculator" as EC
+participant "TransactionRepo" as TR
+participant "Flutter App" as App
+participant "EarningsHandler" as EH
+database "PostgreSQL" as DB
+
+== During Sync: Process Earnings ==
+
+Sync -> EC: ProcessTransactions(txs, now)
+activate EC
+
+loop For each transaction
+  EC -> EC: CalculateAvailableDate(tx)
+
+  alt ChargeType = REFUND
+    EC -> EC: availableDate = transactionDate\n(immediate)
+  else All other types
+    EC -> EC: availableDate = transactionDate + 7 days
+  end
+
+  EC -> EC: Determine EarningsStatus:
+
+  alt now < availableDate
+    EC -> EC: status = PENDING
+  else now >= availableDate
+    EC -> EC: status = AVAILABLE
+  end
+
+  EC -> EC: tx.SetEarningsTracking(\n  status, availableDate)
+end
+
+EC --> Sync: processed transactions
+deactivate EC
+
+Sync -> TR: UpsertBatch(transactions)
+TR -> DB: UPDATE earnings_status,\navailable_date
+
+== API Query ==
+
+App -> EH: GET /api/v1/earnings/{appId}\n?year=2025&month=3
+EH -> TR: FindByAppIDAndRange(\n  appID, from, to)
+TR -> DB: SELECT with\nearnings_status
+DB --> TR: transactions[]
+TR --> EH: transactions[]
+
+EH -> EC: SummarizeEarnings(txs)
+EC --> EH: {\n  pendingCents,\n  availableCents,\n  paidOutCents,\n  totalCents\n}
+
+EH --> App: JSON earnings timeline
+
+@enduml

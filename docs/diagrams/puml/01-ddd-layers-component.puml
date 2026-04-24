@@ -1,0 +1,80 @@
+@startuml
+title 01. DDD Layer Architecture
+
+skinparam componentStyle rectangle
+skinparam componentArrowThickness 2
+
+package "Interfaces Layer" #LightBlue {
+  [HTTP Handlers] as Handlers
+  [Auth Middleware] as Auth
+  [Router (Chi v5)] as Router
+}
+
+package "Application Layer" #LightGreen {
+  [SyncService] as Sync
+  [BillingService] as Billing
+  [MetricsAggregationService] as MetAgg
+  [NotificationService] as Notif
+  [AIInsightService] as AI
+  [WebhookService] as Webhook
+}
+
+package "Domain Layer" #LightYellow {
+  [Entities] as Entities
+  note right of Entities
+    User, Subscription,
+    Transaction, App,
+    DailyMetricsSnapshot,
+    BillingSubscription, ...
+  end note
+  [Domain Services] as DomSvc
+  note right of DomSvc
+    RiskEngine, MetricsEngine,
+    LedgerService,
+    EarningsCalculator,
+    FeeVerificationService
+  end note
+  [Value Objects] as VO
+  note right of VO
+    ChargeType, RiskState,
+    BillingInterval, PlanTier,
+    RevenueShareTier, Role
+  end note
+  [Repository Interfaces\n(Ports)] as Ports
+}
+
+package "Infrastructure Layer" #LightCoral {
+  [PostgreSQL Repos\n(Adapters)] as PGRepo
+  [Firebase Auth] as FBAuth
+  [Shopify Partner Client] as ShopClient
+  [Razorpay Client] as RZP
+  [OpenAI Client] as OAI
+  database "PostgreSQL" as DB
+}
+
+Router --> Handlers
+Handlers --> Auth
+Handlers --> Sync
+Handlers --> Billing
+Handlers --> MetAgg
+
+Sync --> DomSvc
+Billing --> Entities
+MetAgg --> Ports
+
+DomSvc --> Entities
+DomSvc --> VO
+DomSvc --> Ports
+
+Ports <|.. PGRepo : implements
+PGRepo --> DB
+Auth --> FBAuth
+Sync --> ShopClient
+
+note bottom of Entities
+  **Dependency Rule:**
+  Domain has ZERO external deps.
+  Outer layers depend on inner.
+end note
+
+@enduml

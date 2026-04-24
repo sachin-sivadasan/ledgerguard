@@ -195,7 +195,7 @@ const DataFlowVisualization: React.FC<DataFlowProps> = ({ animationProgress, sel
           </div>
         </div>
 
-        {/* LedgerGuard */}
+        {/* LedgerSpear */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -217,7 +217,7 @@ const DataFlowVisualization: React.FC<DataFlowProps> = ({ animationProgress, sel
           }}>
             🛡️
           </div>
-          <div style={{ color: '#6366f1', fontSize: '12px', fontWeight: 'bold', marginTop: '8px' }}>LedgerGuard</div>
+          <div style={{ color: '#6366f1', fontSize: '12px', fontWeight: 'bold', marginTop: '8px' }}>LedgerSpear</div>
           <div style={{ color: '#6b7280', fontSize: '10px' }}>
             {processingPhase ? 'Processing...' : 'API'}
           </div>
@@ -394,7 +394,7 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({ language, pattern, requestTyp
   const singleSnippets: Record<IntegrationPattern, Record<CodeLanguage, string>> = {
     checkout: {
       javascript: `// Check subscription status during checkout
-const status = await ledgerguard.getStatus({
+const status = await ledgerspear.getStatus({
   domain: shop.myshopifyDomain
 });
 
@@ -407,15 +407,15 @@ if (status.risk_state === 'SAFE') {
 }`,
       curl: `# Single lookup by domain
 curl -X GET \\
-  "https://api.ledgerguard.io/v1/subscription/status?domain=store.myshopify.com" \\
+  "https://api.ledgerspear.io/v1/subscription/status?domain=store.myshopify.com" \\
   -H "Authorization: Bearer lgk_live_xxxx"
 
 # Single lookup by Shopify GID
 curl -X GET \\
-  "https://api.ledgerguard.io/v1/subscription/gid://shopify/AppSubscription/123/status" \\
+  "https://api.ledgerspear.io/v1/subscription/gid://shopify/AppSubscription/123/status" \\
   -H "Authorization: Bearer lgk_live_xxxx"`,
       python: `# Check subscription status during checkout
-status = ledgerguard.subscriptions.get_by_domain(
+status = ledgerspear.subscriptions.get_by_domain(
     domain=shop.myshopify_domain
 )
 
@@ -428,7 +428,7 @@ else:
     },
     dashboard: {
       javascript: `// Single lookup for a specific store
-const status = await ledgerguard.getStatus({
+const status = await ledgerspear.getStatus({
   gid: subscription.shopify_gid
 });
 
@@ -437,10 +437,10 @@ console.log(status.mrr_cents);  // 4900
 console.log(status.days_past_due); // 5`,
       curl: `# Single lookup by Shopify GID
 curl -X GET \\
-  "https://api.ledgerguard.io/v1/subscription/gid://shopify/AppSubscription/123/status" \\
+  "https://api.ledgerspear.io/v1/subscription/gid://shopify/AppSubscription/123/status" \\
   -H "Authorization: Bearer lgk_live_xxxx"`,
       python: `# Single lookup for a specific store
-status = ledgerguard.subscriptions.get_by_gid(
+status = ledgerspear.subscriptions.get_by_gid(
     gid=subscription.shopify_gid
 )
 
@@ -450,7 +450,7 @@ print(status.days_past_due)  # 5`,
     },
     alerting: {
       javascript: `// Check single subscription status
-const status = await ledgerguard.getStatus({
+const status = await ledgerspear.getStatus({
   domain: store.myshopifyDomain
 });
 
@@ -459,10 +459,10 @@ if (status.risk_state !== previousState) {
 }`,
       curl: `# Check single subscription for alerting
 curl -X GET \\
-  "https://api.ledgerguard.io/v1/subscription/status?domain=store.myshopify.com" \\
+  "https://api.ledgerspear.io/v1/subscription/status?domain=store.myshopify.com" \\
   -H "Authorization: Bearer lgk_live_xxxx"`,
       python: `# Check single subscription status
-status = ledgerguard.subscriptions.get_by_domain(
+status = ledgerspear.subscriptions.get_by_domain(
     domain=store.myshopify_domain
 )
 
@@ -473,7 +473,7 @@ if status.risk_state != previous_state:
       javascript: `// Middleware for feature gating (single lookup)
 async function checkSubscription(req, res, next) {
   const domain = req.headers['x-shopify-shop-domain'];
-  const status = await ledgerguard.getStatus({ domain });
+  const status = await ledgerspear.getStatus({ domain });
 
   if (status.risk_state === 'CHURNED') {
     return res.status(402).json({
@@ -487,12 +487,12 @@ async function checkSubscription(req, res, next) {
 }`,
       curl: `# Check before allowing feature access
 curl -X GET \\
-  "https://api.ledgerguard.io/v1/subscription/status?domain=store.myshopify.com" \\
+  "https://api.ledgerspear.io/v1/subscription/status?domain=store.myshopify.com" \\
   -H "Authorization: Bearer lgk_live_xxxx"`,
       python: `# Middleware for feature gating (single lookup)
 async def check_subscription(request):
     domain = request.headers.get("x-shopify-shop-domain")
-    status = ledgerguard.subscriptions.get_by_domain(domain=domain)
+    status = ledgerspear.subscriptions.get_by_domain(domain=domain)
 
     if status.risk_state == "CHURNED":
         raise HTTPException(status_code=402, detail="Subscription expired")
@@ -508,7 +508,7 @@ async def check_subscription(request):
 const domains = ['store1.myshopify.com', 'store2.myshopify.com'];
 const gids = await getGidsForDomains(domains);
 
-const statuses = await ledgerguard.batch({ ids: gids });
+const statuses = await ledgerspear.batch({ ids: gids });
 
 for (const status of statuses.results) {
   if (status.risk_state === 'SAFE') {
@@ -517,7 +517,7 @@ for (const status of statuses.results) {
 }`,
       curl: `# Batch lookup (up to 100 IDs)
 curl -X POST \\
-  "https://api.ledgerguard.io/v1/subscriptions/status/batch" \\
+  "https://api.ledgerspear.io/v1/subscriptions/status/batch" \\
   -H "Authorization: Bearer lgk_live_xxxx" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -530,7 +530,7 @@ curl -X POST \\
       python: `# Batch lookup for multiple stores
 gids = [s.shopify_gid for s in stores]
 
-statuses = ledgerguard.subscriptions.get_batch(ids=gids)
+statuses = ledgerspear.subscriptions.get_batch(ids=gids)
 
 for status in statuses.results:
     if status.risk_state == "SAFE":
@@ -542,7 +542,7 @@ for status in statuses.results:
 const subscriptions = await db.subscriptions.findAll();
 const gids = subscriptions.map(s => s.shopify_gid);
 
-const statuses = await ledgerguard.batch({ ids: gids });
+const statuses = await ledgerspear.batch({ ids: gids });
 
 // Group by risk state
 const byRisk = {
@@ -555,7 +555,7 @@ const byRisk = {
 };`,
       curl: `# Batch lookup for dashboard (up to 100 IDs)
 curl -X POST \\
-  "https://api.ledgerguard.io/v1/subscriptions/status/batch" \\
+  "https://api.ledgerspear.io/v1/subscriptions/status/batch" \\
   -H "Authorization: Bearer lgk_live_xxxx" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -577,7 +577,7 @@ curl -X POST \\
 subscriptions = db.subscriptions.find_all()
 gids = [s.shopify_gid for s in subscriptions]
 
-statuses = ledgerguard.subscriptions.get_batch(ids=gids)
+statuses = ledgerspear.subscriptions.get_batch(ids=gids)
 
 # Group by risk state
 by_risk = {
@@ -591,7 +591,7 @@ by_risk = {
 const previous = await cache.get('subscription_states');
 const allGids = await db.subscriptions.getAllGids();
 
-const current = await ledgerguard.batch({ ids: allGids });
+const current = await ledgerspear.batch({ ids: allGids });
 
 for (const sub of current.results) {
   const prev = previous[sub.shopify_gid];
@@ -606,7 +606,7 @@ for (const sub of current.results) {
 }`,
       curl: `# Batch lookup for alerting system
 curl -X POST \\
-  "https://api.ledgerguard.io/v1/subscriptions/status/batch" \\
+  "https://api.ledgerspear.io/v1/subscriptions/status/batch" \\
   -H "Authorization: Bearer lgk_live_xxxx" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -623,7 +623,7 @@ curl -X POST \\
 previous = cache.get("subscription_states")
 all_gids = db.subscriptions.get_all_gids()
 
-current = ledgerguard.subscriptions.get_batch(ids=all_gids)
+current = ledgerspear.subscriptions.get_batch(ids=all_gids)
 
 for sub in current.results:
     prev = previous.get(sub.shopify_gid)
@@ -639,7 +639,7 @@ for sub in current.results:
 const allStores = await db.stores.findAll();
 const gids = allStores.map(s => s.shopify_gid);
 
-const statuses = await ledgerguard.batch({ ids: gids });
+const statuses = await ledgerspear.batch({ ids: gids });
 
 // Cache results for fast middleware lookups
 for (const status of statuses.results) {
@@ -651,7 +651,7 @@ for (const status of statuses.results) {
 }`,
       curl: `# Batch pre-load for feature gating
 curl -X POST \\
-  "https://api.ledgerguard.io/v1/subscriptions/status/batch" \\
+  "https://api.ledgerspear.io/v1/subscriptions/status/batch" \\
   -H "Authorization: Bearer lgk_live_xxxx" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -666,7 +666,7 @@ curl -X POST \\
 all_stores = db.stores.find_all()
 gids = [s.shopify_gid for s in all_stores]
 
-statuses = ledgerguard.subscriptions.get_batch(ids=gids)
+statuses = ledgerspear.subscriptions.get_batch(ids=gids)
 
 # Cache results for fast middleware lookups
 for status in statuses.results:
@@ -866,7 +866,7 @@ const APIIntegrationGuide: React.FC = () => {
           fontWeight: 'bold',
           marginBottom: '8px',
         }}>
-          <span style={{ color: '#6366f1' }}>LedgerGuard</span>
+          <span style={{ color: '#6366f1' }}>LedgerSpear</span>
           {' '}API Integration
         </h2>
         <p style={{ color: '#9ca3af', fontSize: '14px' }}>

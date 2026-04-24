@@ -17,6 +17,7 @@ type StoreHealthHandler struct {
 	transactionRepo  repository.TransactionRepository
 	partnerRepo      repository.PartnerAccountRepository
 	appRepo          repository.AppRepository
+	shopRepo         repository.ShopRepository
 }
 
 // NewStoreHealthHandler creates a new StoreHealthHandler
@@ -32,6 +33,11 @@ func NewStoreHealthHandler(
 		partnerRepo:      partnerRepo,
 		appRepo:          appRepo,
 	}
+}
+
+// SetShopRepo sets the shop repository for logo enrichment (optional dependency)
+func (h *StoreHealthHandler) SetShopRepo(shopRepo repository.ShopRepository) {
+	h.shopRepo = shopRepo
 }
 
 // StoreHealthResponse represents the store health API response
@@ -55,6 +61,8 @@ type SubscriptionResponse struct {
 	CreatedAt            time.Time  `json:"created_at"`
 	LastChargeDate       *time.Time `json:"last_charge_date,omitempty"`
 	ExpectedNextCharge   *time.Time `json:"expected_next_charge,omitempty"`
+	ShopLogoURL          string     `json:"shop_logo_url,omitempty"`
+	ShopSquareLogoURL    string     `json:"shop_square_logo_url,omitempty"`
 }
 
 // TransactionResponse represents transaction data in response
@@ -140,8 +148,22 @@ func (h *StoreHealthHandler) GetStoreHealth(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Build response
+	subResp := subscriptionToResponse(subscription)
+
+	// Enrich with shop data (logo, name)
+	if h.shopRepo != nil && domain != "" {
+		shop, shopErr := h.shopRepo.FindByDomain(r.Context(), domain)
+		if shopErr == nil && shop != nil {
+			if shop.ShopName != "" {
+				subResp.ShopName = shop.ShopName
+			}
+			subResp.ShopLogoURL = shop.LogoURL
+			subResp.ShopSquareLogoURL = shop.SquareLogoURL
+		}
+	}
+
 	response := StoreHealthResponse{
-		Subscription: subscriptionToResponse(subscription),
+		Subscription: subResp,
 		Transactions: transactionsToResponse(transactions),
 		Earnings:     earningsToResponse(earnings),
 	}

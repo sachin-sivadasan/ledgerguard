@@ -5,11 +5,11 @@ import Footer from '@/components/Footer';
 import KPIMetricsGuide from '@/components/KPIMetricsGuide';
 
 export const metadata: Metadata = {
-  title: 'KPI Metrics Guide | LedgerGuard',
-  description: 'Interactive guide showing how LedgerGuard calculates revenue KPIs for Shopify app developers.',
+  title: 'KPI Metrics Guide | LedgerSpear',
+  description: 'Interactive guide showing how LedgerSpear calculates revenue KPIs for Shopify app developers.',
   openGraph: {
-    title: 'KPI Metrics Guide | LedgerGuard',
-    description: 'Interactive guide showing how LedgerGuard calculates revenue KPIs for Shopify app developers.',
+    title: 'KPI Metrics Guide | LedgerSpear',
+    description: 'Interactive guide showing how LedgerSpear calculates revenue KPIs for Shopify app developers.',
     type: 'website',
   },
 };

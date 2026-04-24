@@ -1,0 +1,1 @@
+ALTER TABLE apps ADD COLUMN app_store_slug TEXT NOT NULL DEFAULT '';

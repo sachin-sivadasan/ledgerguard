@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_shops_domain;
+DROP TABLE IF EXISTS shops;

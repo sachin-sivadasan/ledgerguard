@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -110,13 +111,7 @@ class SubscriptionDetailPage extends StatelessWidget {
   }
 
   Widget _buildStoreCard(BuildContext context, Subscription subscription) {
-    final storeName = subscription.myshopifyDomain
-        .replaceAll('.myshopify.com', '')
-        .split(RegExp(r'[-_]'))
-        .map((word) => word.isNotEmpty
-            ? '${word[0].toUpperCase()}${word.substring(1)}'
-            : '')
-        .join(' ');
+    final storeName = subscription.displayName;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -133,24 +128,8 @@ class SubscriptionDetailPage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Store avatar
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Center(
-              child: Text(
-                _getInitials(subscription.myshopifyDomain),
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.blue,
-                      fontSize: 22,
-                    ),
-              ),
-            ),
-          ),
+          // Store avatar (logo with letter fallback)
+          _buildDetailAvatar(context, subscription),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -349,6 +328,48 @@ class SubscriptionDetailPage extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildDetailAvatar(BuildContext context, Subscription subscription) {
+    final logoUrl = subscription.shopSquareLogoUrl ?? subscription.shopLogoUrl;
+    const size = 64.0;
+    final borderRadius = BorderRadius.circular(14);
+
+    Widget initialsWidget() {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.blue.withOpacity(0.1),
+          borderRadius: borderRadius,
+        ),
+        child: Center(
+          child: Text(
+            _getInitials(subscription.myshopifyDomain),
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: Colors.blue,
+                  fontSize: 22,
+                ),
+          ),
+        ),
+      );
+    }
+
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: borderRadius,
+        child: CachedNetworkImage(
+          imageUrl: logoUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => initialsWidget(),
+          errorWidget: (context, url, error) => initialsWidget(),
+        ),
+      );
+    }
+
+    return initialsWidget();
   }
 
   String _getInitials(String domain) {

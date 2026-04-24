@@ -5,10 +5,10 @@ import Footer from '@/components/Footer';
 import ShopifyMoneyFlow from '@/components/ShopifyMoneyFlow';
 
 export const metadata: Metadata = {
-  title: 'App Revenue Flow - LedgerGuard',
+  title: 'App Revenue Flow - LedgerSpear',
   description: 'Interactive visualization of how app revenue flows from merchants to developers in the Shopify ecosystem',
   openGraph: {
-    title: 'App Revenue Flow - LedgerGuard',
+    title: 'App Revenue Flow - LedgerSpear',
     description: 'Interactive visualization of how app revenue flows from merchants to developers in the Shopify ecosystem',
     type: 'website',
   },
@@ -96,7 +96,7 @@ export default function MoneyFlowPage() {
           {/* CTA Section */}
           <div className="mt-12 text-center p-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl border border-blue-500/30">
             <h3 className="text-white text-2xl font-bold mb-3">
-              Track Your App Revenue with LedgerGuard
+              Track Your App Revenue with LedgerSpear
             </h3>
             <p className="text-gray-400 mb-6 max-w-lg mx-auto">
               Get real-time insights into your Shopify app revenue, predict churn risk,

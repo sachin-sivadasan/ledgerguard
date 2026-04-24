@@ -3,8 +3,10 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -21,11 +23,22 @@ type PartnerClient interface {
 	FetchInstallCount(ctx context.Context, organizationID, accessToken, partnerAppID string) (int, error)
 }
 
+// SyncTrigger triggers an initial sync for a newly-selected app (fire-and-forget)
+type SyncTrigger interface {
+	TriggerSync(ctx context.Context, appID, userID, partnerAccountID uuid.UUID) error
+}
+
 type AppHandler struct {
 	partnerClient PartnerClient
 	partnerRepo   repository.PartnerAccountRepository
 	appRepo       repository.AppRepository
 	decryptor     Encryptor
+	syncTrigger   SyncTrigger
+}
+
+// SetSyncTrigger sets the sync trigger for auto-syncing on app selection
+func (h *AppHandler) SetSyncTrigger(st SyncTrigger) {
+	h.syncTrigger = st
 }
 
 func NewAppHandler(
@@ -145,6 +158,16 @@ func (h *AppHandler) SelectApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Trigger initial sync (fire-and-forget — don't block the response)
+	syncTriggered := false
+	if h.syncTrigger != nil {
+		if err := h.syncTrigger.TriggerSync(r.Context(), app.ID, user.ID, partnerAccount.ID); err != nil {
+			log.Printf("WARNING: auto-sync trigger failed for app %s: %v", app.ID, err)
+		} else {
+			syncTriggered = true
+		}
+	}
+
 	// Extract numeric ID for use with other endpoints
 	appID := extractNumericAppID(app.PartnerAppID)
 
@@ -155,6 +178,7 @@ func (h *AppHandler) SelectApp(w http.ResponseWriter, r *http.Request) {
 		"id":                 appID,
 		"name":               app.Name,
 		"revenue_share_tier": app.RevenueShareTier.String(),
+		"sync_triggered":     syncTriggered,
 	})
 }
 
@@ -194,6 +218,7 @@ func (h *AppHandler) ListApps(w http.ResponseWriter, r *http.Request) {
 			"tracking_enabled":   app.TrackingEnabled,
 			"revenue_share_tier": app.RevenueShareTier.String(),
 			"install_count":      app.InstallCount,
+			"app_store_slug":     app.AppStoreSlug,
 			"created_at":         app.CreatedAt,
 			"updated_at":         app.UpdatedAt,
 		}
@@ -426,5 +451,70 @@ func (h *AppHandler) GetInstallCount(w http.ResponseWriter, r *http.Request) {
 		"app_id":        extractNumericAppID(app.PartnerAppID),
 		"name":          app.Name,
 		"install_count": app.InstallCount,
+	})
+}
+
+type updateStoreSlugRequest struct {
+	AppStoreSlug string `json:"app_store_slug"`
+}
+
+// UpdateStoreSlug updates the app store slug for an app
+// PATCH /api/v1/apps/{appID}/store-slug
+func (h *AppHandler) UpdateStoreSlug(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	appIDStr := chi.URLParam(r, "appID")
+	if appIDStr == "" {
+		writeJSONError(w, http.StatusBadRequest, "app_id is required")
+		return
+	}
+
+	var req updateStoreSlugRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Find app (same pattern as UpdateAppTier)
+	var app *entity.App
+	var err error
+
+	appID, uuidErr := uuid.Parse(appIDStr)
+	if uuidErr == nil {
+		app, err = h.appRepo.FindByID(r.Context(), appID)
+	} else {
+		partnerAccount, paErr := h.partnerRepo.FindByUserID(r.Context(), user.ID)
+		if paErr != nil {
+			writeJSONError(w, http.StatusNotFound, "partner account not found")
+			return
+		}
+		partnerAppID := appIDStr
+		if !strings.HasPrefix(partnerAppID, "gid://") {
+			partnerAppID = "gid://partners/App/" + appIDStr
+		}
+		app, err = h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, partnerAppID)
+	}
+
+	if err != nil || app == nil {
+		writeJSONError(w, http.StatusNotFound, "app not found")
+		return
+	}
+
+	app.AppStoreSlug = req.AppStoreSlug
+	app.UpdatedAt = time.Now().UTC()
+
+	if err := h.appRepo.Update(r.Context(), app); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to update app")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message":        "App store slug updated",
+		"app_store_slug": app.AppStoreSlug,
 	})
 }

@@ -5,10 +5,10 @@ import Footer from '@/components/Footer';
 import AffiliateFlowVisualization from '@/components/AffiliateFlowVisualization';
 
 export const metadata: Metadata = {
-  title: 'Affiliate Program Flows - LedgerGuard',
+  title: 'Affiliate Program Flows - LedgerSpear',
   description: 'Interactive visualization of affiliate and referral program models for SaaS and Shopify apps',
   openGraph: {
-    title: 'Affiliate Program Flows - LedgerGuard',
+    title: 'Affiliate Program Flows - LedgerSpear',
     description: 'Interactive visualization of affiliate and referral program models for SaaS and Shopify apps',
     type: 'website',
   },
@@ -204,7 +204,7 @@ export default function AffiliateProgramPage() {
             </h3>
             <p className="text-gray-400 mb-6 max-w-lg mx-auto">
               Track your Shopify app revenue and understand which growth channels work best.
-              LedgerGuard helps you monitor affiliate-driven signups and their lifetime value.
+              LedgerSpear helps you monitor affiliate-driven signups and their lifetime value.
             </p>
             <Link
               href="/"

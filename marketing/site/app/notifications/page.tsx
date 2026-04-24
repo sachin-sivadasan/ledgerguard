@@ -5,10 +5,10 @@ import Footer from '@/components/Footer';
 import NotificationFlowVisualization from '@/components/NotificationFlowVisualization';
 
 export const metadata: Metadata = {
-  title: 'Notification Engine Flow - LedgerGuard',
+  title: 'Notification Engine Flow - LedgerSpear',
   description: 'Interactive visualization of the push notification system for risk alerts and daily summaries',
   openGraph: {
-    title: 'Notification Engine Flow - LedgerGuard',
+    title: 'Notification Engine Flow - LedgerSpear',
     description: 'Interactive visualization of the push notification system for risk alerts and daily summaries',
     type: 'website',
   },
@@ -33,7 +33,7 @@ export default function NotificationsPage() {
             Notification Engine Flow
           </h1>
           <p className="text-gray-400 text-base mb-8 max-w-2xl">
-            Explore how LedgerGuard&apos;s notification engine delivers real-time alerts when subscription
+            Explore how LedgerSpear&apos;s notification engine delivers real-time alerts when subscription
             risk states change, and scheduled daily summaries with key metrics.
           </p>
 

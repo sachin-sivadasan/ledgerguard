@@ -159,8 +159,8 @@ func TestBillingHandler_HandleWebhook_InvalidSignature(t *testing.T) {
 
 	h.HandleWebhook(rec, req)
 
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("status = %d, want 400", rec.Code)
+	if rec.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200 (always 200 to prevent Razorpay retries)", rec.Code)
 	}
 }
 

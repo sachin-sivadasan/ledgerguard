@@ -530,3 +530,20 @@ Use cooperative cancellation: set a Redis flag (`lg:sync:cancel:{jobID}`), and e
 - No partial writes or corrupted state from mid-operation cancellation
 - Slightly delayed cancellation (up to the time between checkpoint checks)
 - Simpler error handling — no need to distinguish "cancelled" from "crashed"
+
+### ADR-024: SyncTrigger Interface for Auto-Sync on App Selection
+**Date:** 2026-04-23
+**Status:** Accepted
+
+**Context:**
+After onboarding (OAuth → app selection), no sync runs automatically. The user sees an empty dashboard until the 12h scheduler fires or they manually trigger a sync. This creates a poor first experience.
+
+**Decision:**
+Define a `SyncTrigger` interface in the handler layer with a single `TriggerSync(ctx, appID, userID, partnerAccountID)` method. Both `QueueSyncService` (enqueue with priority=1) and `SyncService` (fire-and-forget goroutine) implement it. The handler uses setter injection (`SetSyncTrigger`) to avoid constructor changes. Duplicate job errors from the queue are silently swallowed (already running = not an error).
+
+**Consequences:**
+- New users see data within minutes of selecting an app
+- Fire-and-forget: `SelectApp` returns immediately, sync runs in background
+- Interface in handler layer keeps domain clean (no circular dependency)
+- Setter injection follows existing pattern (`SetShopRepo`)
+- Queue mode gets a high-priority job; direct mode starts a background goroutine

@@ -27,6 +27,13 @@ Postponed ideas and features for later implementation.
 | GCP staging custom domain | P4 | Map staging.ledgerspear.com to Cloud Run URL |
 | Marketing site on GCP staging | P4 | Deploy Next.js marketing to Cloud Run for staging |
 | Smart shop logo fetch (active-first) | P2 | During sync, only fetch brand data for stores with ≥2 months of recurring transactions (confirmed active). Deprioritize one-time/trial stores. Avoids wasting Storefront API calls on churned/inactive domains. Current implementation fetches all domains equally. |
+| Dashboard: Recent Events card (re-introduce) | P3 | The "Recent Events" card was replaced by "This Week Activity" summary table. Consider re-introducing it as a Row 4 or an expandable section below the activity summary for drill-down into individual events. |
+| Dedicated Setup Wizard (fallback) | P3 | Separate `/setup` route with step-by-step flow (Connect Partner → Select App → First Sync). Redirect from dashboard until complete. Fallback if inline checklist isn't sufficient for user onboarding. |
+| Flutter frontend consuming real reviews API | P2 | Replace mock reviews in Flutter with real `/api/v1/apps/{appID}/reviews` API data |
+| AI-based sentiment analysis for reviews | P3 | Beyond simple rating threshold — use LLM to classify sentiment, extract themes |
+| Review reply/response functionality | P3 | Allow responding to reviews from within LedgerGuard |
+| Multi-source review scraping | P4 | Google Play, App Store (iOS), beyond Shopify |
+| Webhook notification on new negative reviews | P2 | Detect new 1-2 star reviews and push notification to user |
 
 ---
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/analytics_provider.dart';
+import '../../theme/app_breakpoints.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
@@ -22,44 +23,65 @@ class ForecastingTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Summary card
-          Row(
-            children: [
-              Expanded(
-                child: LgCard(
+          LgResponsive(
+            mobile: Column(
+              children: [
+                LgCard(
                   title: 'Next Month Expected MRR',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('\$${forecast.first.expected.toStringAsFixed(0)}',
-                          style: theme.textTheme.headlineSmall),
+                      Text('\$${forecast.first.expected.toStringAsFixed(0)}', style: theme.textTheme.headlineSmall),
                       const SizedBox(height: LgSpacing.s100),
-                      Text(
-                        'Range: \$${forecast.first.pessimistic.toStringAsFixed(0)} – \$${forecast.first.optimistic.toStringAsFixed(0)}',
-                        style: theme.textTheme.bodySmall,
-                      ),
+                      Text('Range: \$${forecast.first.pessimistic.toStringAsFixed(0)} – \$${forecast.first.optimistic.toStringAsFixed(0)}', style: theme.textTheme.bodySmall),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              Expanded(
-                child: LgCard(
+                const SizedBox(height: LgSpacing.s400),
+                LgCard(
                   title: '12-Month Projected MRR',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('\$${forecast.last.expected.toStringAsFixed(0)}',
-                          style: theme.textTheme.headlineSmall),
+                      Text('\$${forecast.last.expected.toStringAsFixed(0)}', style: theme.textTheme.headlineSmall),
                       const SizedBox(height: LgSpacing.s100),
-                      Text(
-                        'Range: \$${forecast.last.pessimistic.toStringAsFixed(0)} – \$${forecast.last.optimistic.toStringAsFixed(0)}',
-                        style: theme.textTheme.bodySmall,
-                      ),
+                      Text('Range: \$${forecast.last.pessimistic.toStringAsFixed(0)} – \$${forecast.last.optimistic.toStringAsFixed(0)}', style: theme.textTheme.bodySmall),
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
+            desktop: Row(
+              children: [
+                Expanded(
+                  child: LgCard(
+                    title: 'Next Month Expected MRR',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('\$${forecast.first.expected.toStringAsFixed(0)}', style: theme.textTheme.headlineSmall),
+                        const SizedBox(height: LgSpacing.s100),
+                        Text('Range: \$${forecast.first.pessimistic.toStringAsFixed(0)} – \$${forecast.first.optimistic.toStringAsFixed(0)}', style: theme.textTheme.bodySmall),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: LgSpacing.s400),
+                Expanded(
+                  child: LgCard(
+                    title: '12-Month Projected MRR',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('\$${forecast.last.expected.toStringAsFixed(0)}', style: theme.textTheme.headlineSmall),
+                        const SizedBox(height: LgSpacing.s100),
+                        Text('Range: \$${forecast.last.pessimistic.toStringAsFixed(0)} – \$${forecast.last.optimistic.toStringAsFixed(0)}', style: theme.textTheme.bodySmall),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: LgSpacing.s600),
 

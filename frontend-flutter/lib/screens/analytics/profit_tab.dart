@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/analytics_provider.dart';
+import '../../theme/app_breakpoints.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
@@ -20,26 +21,21 @@ class ProfitTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Summary
-          Row(
-            children: [
-              Expanded(
-                child: LgCard(
-                  title: 'Average Profit Margin',
-                  child: Text('${provider.avgProfitMargin.toStringAsFixed(1)}%',
-                      style: theme.textTheme.headlineSmall),
-                ),
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              Expanded(
-                child: LgCard(
-                  title: 'This Month Net Profit',
-                  child: Text(
-                    '\$${(expenses.last.netProfitCents / 100).toStringAsFixed(0)}',
-                    style: theme.textTheme.headlineSmall,
-                  ),
-                ),
-              ),
-            ],
+          LgResponsive(
+            mobile: Column(
+              children: [
+                LgCard(title: 'Average Profit Margin', child: Text('${provider.avgProfitMargin.toStringAsFixed(1)}%', style: theme.textTheme.headlineSmall)),
+                const SizedBox(height: LgSpacing.s400),
+                LgCard(title: 'This Month Net Profit', child: Text('\$${(expenses.last.netProfitCents / 100).toStringAsFixed(0)}', style: theme.textTheme.headlineSmall)),
+              ],
+            ),
+            desktop: Row(
+              children: [
+                Expanded(child: LgCard(title: 'Average Profit Margin', child: Text('${provider.avgProfitMargin.toStringAsFixed(1)}%', style: theme.textTheme.headlineSmall))),
+                const SizedBox(width: LgSpacing.s400),
+                Expanded(child: LgCard(title: 'This Month Net Profit', child: Text('\$${(expenses.last.netProfitCents / 100).toStringAsFixed(0)}', style: theme.textTheme.headlineSmall))),
+              ],
+            ),
           ),
           const SizedBox(height: LgSpacing.s600),
 
@@ -112,40 +108,49 @@ class ProfitTab extends StatelessWidget {
           // Expense table
           LgCard(
             title: 'Expense Details',
-            child: Table(
-              columnWidths: const {
-                0: FlexColumnWidth(1),
-                1: FlexColumnWidth(1),
-                2: FlexColumnWidth(1),
-                3: FlexColumnWidth(1),
-                4: FlexColumnWidth(1),
-                5: FlexColumnWidth(1),
-              },
-              children: [
-                TableRow(
-                  decoration: BoxDecoration(color: LgColors.surfaceSecondary),
-                  children: ['Month', 'Gross', 'Shopify Cut', 'Infra', 'Fees', 'Net Profit']
-                      .map((h) => Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Text(h, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: LgColors.textSecondary)),
-                          ))
-                      .toList(),
-                ),
-                ...expenses.map((e) => TableRow(
-                      children: [
-                        _Cell(e.month),
-                        _Cell('\$${(e.grossRevenueCents / 100).toStringAsFixed(0)}'),
-                        _Cell('\$${(e.shopifyCutCents / 100).toStringAsFixed(0)}'),
-                        _Cell('\$${(e.infraCostCents / 100).toStringAsFixed(0)}'),
-                        _Cell('\$${(e.paymentFeesCents / 100).toStringAsFixed(0)}'),
-                        _Cell('\$${(e.netProfitCents / 100).toStringAsFixed(0)}'),
-                      ],
-                    )),
-              ],
-            ),
+            child: LgBreakpoints.isMobile(context)
+                ? SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: _buildExpenseTable(expenses),
+                  )
+                : _buildExpenseTable(expenses),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildExpenseTable(List expenses) {
+    return Table(
+      columnWidths: const {
+        0: FlexColumnWidth(1),
+        1: FlexColumnWidth(1),
+        2: FlexColumnWidth(1),
+        3: FlexColumnWidth(1),
+        4: FlexColumnWidth(1),
+        5: FlexColumnWidth(1),
+      },
+      children: [
+        TableRow(
+          decoration: BoxDecoration(color: LgColors.surfaceSecondary),
+          children: ['Month', 'Gross', 'Shopify Cut', 'Infra', 'Fees', 'Net Profit']
+              .map((h) => Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(h, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: LgColors.textSecondary)),
+                  ))
+              .toList(),
+        ),
+        ...expenses.map((e) => TableRow(
+              children: [
+                _Cell(e.month),
+                _Cell('\$${(e.grossRevenueCents / 100).toStringAsFixed(0)}'),
+                _Cell('\$${(e.shopifyCutCents / 100).toStringAsFixed(0)}'),
+                _Cell('\$${(e.infraCostCents / 100).toStringAsFixed(0)}'),
+                _Cell('\$${(e.paymentFeesCents / 100).toStringAsFixed(0)}'),
+                _Cell('\$${(e.netProfitCents / 100).toStringAsFixed(0)}'),
+              ],
+            )),
+      ],
     );
   }
 }

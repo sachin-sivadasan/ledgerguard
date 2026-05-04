@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/analytics_provider.dart';
+import '../../theme/app_breakpoints.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
@@ -22,15 +23,25 @@ class RevenueTab extends StatelessWidget {
           // Revenue mix
           LgCard(
             title: 'Revenue Breakdown',
-            child: Row(
-              children: [
-                _MixBar('Recurring', mix.recurringCents / 100, mix.recurringPct, LgColors.success),
-                const SizedBox(width: LgSpacing.s400),
-                _MixBar('Usage', mix.usageCents / 100, mix.usagePct, LgColors.info),
-                const SizedBox(width: LgSpacing.s400),
-                _MixBar('One-Time', mix.oneTimeCents / 100, mix.oneTimePct, LgColors.warning),
-              ],
-            ),
+            child: LgBreakpoints.isMobile(context)
+                ? Column(
+                    children: [
+                      _MixBar('Recurring', mix.recurringCents / 100, mix.recurringPct, LgColors.success),
+                      const SizedBox(height: LgSpacing.s400),
+                      _MixBar('Usage', mix.usageCents / 100, mix.usagePct, LgColors.info),
+                      const SizedBox(height: LgSpacing.s400),
+                      _MixBar('One-Time', mix.oneTimeCents / 100, mix.oneTimePct, LgColors.warning),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      _MixBar('Recurring', mix.recurringCents / 100, mix.recurringPct, LgColors.success),
+                      const SizedBox(width: LgSpacing.s400),
+                      _MixBar('Usage', mix.usageCents / 100, mix.usagePct, LgColors.info),
+                      const SizedBox(width: LgSpacing.s400),
+                      _MixBar('One-Time', mix.oneTimeCents / 100, mix.oneTimePct, LgColors.warning),
+                    ],
+                  ),
           ),
           const SizedBox(height: LgSpacing.s600),
 
@@ -121,25 +132,26 @@ class _MixBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: LgSpacing.s100),
-          Text('\$${amount.toStringAsFixed(0)}',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: color)),
-          const SizedBox(height: LgSpacing.s100),
-          LinearProgressIndicator(
-            value: pct / 100,
-            backgroundColor: color.withValues(alpha: 0.15),
-            color: color,
-          ),
-          const SizedBox(height: LgSpacing.s100),
-          Text('${pct.toStringAsFixed(1)}%', style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: LgSpacing.s100),
+        Text('\$${amount.toStringAsFixed(0)}',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: color)),
+        const SizedBox(height: LgSpacing.s100),
+        LinearProgressIndicator(
+          value: pct / 100,
+          backgroundColor: color.withValues(alpha: 0.15),
+          color: color,
+        ),
+        const SizedBox(height: LgSpacing.s100),
+        Text('${pct.toStringAsFixed(1)}%', style: Theme.of(context).textTheme.bodySmall),
+      ],
     );
+    // When inside a Row parent, Expanded is needed; in Column, it's not
+    if (LgBreakpoints.isMobile(context)) return content;
+    return Expanded(child: content);
   }
 }
 

@@ -41,6 +41,7 @@ class AppShell extends StatelessWidget {
 
   // ─── Mobile: BottomNavigationBar ──────────────────────────────────
   Widget _buildMobileScaffold(BuildContext context) {
+
     final currentIndex = navigationShell.currentIndex;
     // Map current branch to bottom nav index
     int bottomIndex;
@@ -54,7 +55,7 @@ class AppShell extends StatelessWidget {
     }
 
     return Scaffold(
-      body: navigationShell,
+      body: SafeArea(child: navigationShell),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: bottomIndex,
         type: BottomNavigationBarType.fixed,
@@ -139,7 +140,7 @@ class AppShell extends StatelessWidget {
         title: const Text('LedgerGuard'),
         backgroundColor: LgColors.surface,
       ),
-      body: navigationShell,
+      body: SafeArea(child: navigationShell),
     );
   }
 

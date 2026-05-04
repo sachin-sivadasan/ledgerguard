@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_breakpoints.dart';
 
 class LgSearchField extends StatelessWidget {
   final String hintText;
@@ -14,8 +15,9 @@ class LgSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = LgBreakpoints.isMobile(context);
     return SizedBox(
-      width: 300,
+      width: isMobile ? double.infinity : 300,
       child: TextField(
         controller: TextEditingController(text: value)
           ..selection =

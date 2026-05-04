@@ -1,5 +1,8 @@
 # 05. Transaction Sync Engine
 
+> **Note:** This document describes the **synchronous** sync flow (`POST /api/v1/sync` and `/api/v1/sync/{appID}`).
+> The **queue-based async system** ([doc 31](31-queue-based-sync-system.md)) wraps these same domain services via processors but returns HTTP 202 immediately and processes in the background. Both sync modes coexist; `SyncScheduler` is disabled when `cfg.Queue.Enabled=true`. Auto-sync on app selection also uses this service as a fallback when queue is disabled.
+
 ## What It Does
 Orchestrates the synchronization of financial transactions from Shopify Partner API into LedgerGuard. Fetches a rolling 12-month window of transactions, processes earnings tracking, stores them idempotently, and triggers the ledger rebuild pipeline. After the core sync, it runs three optional enrichment phases: subscription status enrichment from app lifecycle events, shop brand data fetching from Shopify Storefront API, and app review scraping from the Shopify App Store.
 

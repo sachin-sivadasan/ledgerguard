@@ -76,17 +76,27 @@ It helps developers:
 ### 5.3 Sync Engine
 
 **Schedule:**
-- 12-hour batch sync (00:00, 12:00 UTC)
-- On-demand sync via API/UI
+- Queue mode (`QUEUE_ENABLED=true`): On-demand via API/UI, auto-trigger on app selection
+- Legacy mode: 12-hour batch sync (00:00, 12:00 UTC) + on-demand via API/UI
 
 **Behavior:**
 - Recalculate full 12-month rolling window every sync
 - Idempotent: same input → same output
-- Background historical backfill on first connection
+- Auto-trigger `full_sync` on app selection (onboarding first experience)
+
+**Queue-Based Async Processing (Primary):**
+- Redis-backed job queue with worker pools
+- Immediate HTTP 202 response with job ID (non-blocking)
+- `full_sync` orchestrator decomposes into 6 child jobs (transactions, events, reviews, snapshots, status, stores)
+- Live progress tracking (Redis overlay + periodic DB flush)
+- Cooperative cancellation, recovery on crash
 
 **Data Fetched:**
 - `transactions` (Partner API) - all app earnings
 - `appSubscription` events
+- `app lifecycle events` (install/uninstall/charge)
+- `shop brand data` (Storefront API)
+- `app store reviews` (HTML scraping)
 - Pagination handled automatically
 
 ### 5.4 Ledger Engine
@@ -279,9 +289,16 @@ CREATE TABLE daily_metrics_snapshot (
 - `POST /api/v1/integrations/shopify/token` - Manual token (ADMIN)
 - `GET /api/v1/integrations/shopify/apps` - List connected apps
 
-### Sync
-- `POST /api/v1/sync` - Trigger manual sync
-- `GET /api/v1/sync/status` - Sync status
+### Sync (Legacy — Synchronous)
+- `POST /api/v1/sync` - Trigger manual sync (all apps)
+- `POST /api/v1/sync/{appID}` - Sync single app
+
+### Sync (Queue — Async)
+- `POST /api/v1/sync/enqueue/{appID}?type=full&priority=normal` - Enqueue sync job → 202
+- `GET /api/v1/sync/jobs/{jobID}` - Job status
+- `GET /api/v1/sync/jobs/{jobID}/progress` - Live progress (DB + Redis overlay)
+- `GET /api/v1/sync/jobs?app_id={appID}` - Job history (paginated)
+- `POST /api/v1/sync/jobs/{jobID}/cancel` - Cooperative cancellation
 
 ### Dashboard
 - `GET /api/v1/dashboard/kpis` - Current KPIs

@@ -9,6 +9,7 @@ System_Ext(firebase, "Firebase Auth", "Authentication")
 System_Ext(shopify, "Shopify Partners", "OAuth & Partner API")
 System_Ext(openai, "OpenAI API", "AI insights")
 ContainerDb_Ext(postgres, "PostgreSQL", "Data storage")
+ContainerDb_Ext(redis_ext, "Redis", "Job queue, progress, locks")
 
 Container_Boundary(api, "API Server (Go 1.22+)") {
 
@@ -95,7 +96,18 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(partner_client, "ShopifyPartnerClient", "External Adapter", "Partner API GraphQL")
     Component(crypto, "AESEncryptor", "pkg/crypto", "AES-256-GCM encryption")
     Component(openai_client, "OpenAIClient", "External Adapter", "AI insight generation")
-    Component(sync_scheduler, "SyncScheduler", "Scheduler", "12-hour background sync")
+    Component(sync_scheduler, "SyncScheduler", "Scheduler", "12-hour background sync (disabled when queue enabled)")
+
+    ' Queue-Based Sync System
+    Component(queue_sync_handler, "QueueSyncHandler", "HTTP Handler", "POST /sync/enqueue, GET /sync/jobs")
+    Component(queue_sync_service, "QueueSyncService", "App Service", "Enqueue, progress, cancel, TriggerSync")
+    Component(worker_pool, "WorkerPool", "Infrastructure", "3 regular + 1 full_sync workers")
+    Component(processor_registry, "ProcessorRegistry", "Infrastructure", "Maps job types to processors")
+    Component(full_sync_proc, "FullSyncProcessor", "Processor", "Orchestrator — dispatches child jobs in waves")
+    Component(tx_proc, "TransactionProcessor", "Processor", "transaction_sync — fetch + rebuild")
+    Component(recovery_service, "RecoveryService", "Infrastructure", "Heartbeat monitoring + orphan recovery")
+    Component(sync_trigger, "SyncTrigger", "Interface", "Auto-trigger full_sync on app selection")
+    Component(sync_job_repo, "SyncJobRepository", "Repository", "sync_jobs CRUD")
 }
 
 ' AI Chat Module
@@ -205,6 +217,24 @@ Rel(webhook_service, sub_event_repo_if, "Log events")
 Rel(apikey_handler, apikey_repo_if, "CRUD API keys")
 Rel(user_prefs_handler, user_prefs_repo_if, "CRUD preferences")
 Rel(sync_scheduler, sync_service, "Trigger periodic sync")
+
+' Queue-based sync relationships
+Rel(router, queue_sync_handler, "/api/v1/sync/enqueue, /sync/jobs")
+Rel(queue_sync_handler, queue_sync_service, "Enqueue/query jobs")
+Rel(queue_sync_service, sync_job_repo, "CRUD sync_jobs")
+Rel(worker_pool, processor_registry, "Dispatch to processors")
+Rel(processor_registry, full_sync_proc, "full_sync")
+Rel(processor_registry, tx_proc, "transaction_sync")
+Rel(tx_proc, sync_service, "Reuses SyncApp logic")
+Rel(full_sync_proc, queue_sync_service, "Enqueue child jobs")
+Rel(recovery_service, sync_job_repo, "Re-enqueue stuck jobs")
+Rel(app_handler, sync_trigger, "Auto-trigger on SelectApp")
+Rel(sync_trigger, queue_sync_service, "Enqueue (queue mode)")
+Rel(sync_trigger, sync_service, "SyncApp (direct mode)")
+Rel(queue_sync_service, redis_ext, "Enqueue/progress/locks")
+Rel(worker_pool, redis_ext, "BRPOP jobs")
+Rel(recovery_service, redis_ext, "Check heartbeats")
+Rel(sync_job_repo, postgres, "SQL")
 
 ' Revenue API relationships
 ' AI Chat relationships

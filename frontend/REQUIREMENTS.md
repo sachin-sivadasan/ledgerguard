@@ -196,3 +196,32 @@ AI-powered Revenue Intelligence Assistant accessible via dashboard menu.
 
 ### Tests
 - [x] ChatBloc: simple response, tool call streaming, error handling, clear, data state
+
+---
+
+## Sync Progress & Job Management
+
+### Auto-Sync on App Selection
+- After selecting an app during onboarding, a `full_sync` is auto-triggered
+- Show progress indicator: "Syncing your app data..."
+- Poll `GET /api/v1/sync/jobs/{jobID}/progress` every 3-5 seconds
+- On completion, refresh dashboard data
+
+### Sync Status Indicator (Dashboard)
+- Show active sync badge when any job is `processing` for the selected app
+- Display job type being processed (e.g., "Syncing transactions...")
+- Progress bar: `completed_items / total_items`
+
+### Sync Jobs History (Future)
+- List recent sync jobs for selected app
+- Columns: job_type, status, started_at, completed_at, error_message
+- Filter by status
+- Cancel button for pending/processing jobs
+
+### API Endpoints Used
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/sync/enqueue/{appID}?type=full_sync` | Trigger sync |
+| GET | `/api/v1/sync/jobs/{jobID}/progress` | Poll progress |
+| GET | `/api/v1/sync/jobs?app_id={appID}` | Job history |
+| POST | `/api/v1/sync/jobs/{jobID}/cancel` | Cancel job |

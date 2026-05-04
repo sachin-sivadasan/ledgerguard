@@ -960,3 +960,68 @@ flutter test --watch
 | FBLOC-003 | Error event | ChatError with previous messages | ✓ |
 | FBLOC-004 | Clear chat | Resets to ChatInitial | ✓ |
 | FBLOC-005 | Response with data state | Risk/metrics state populated on message | ✓ |
+
+---
+
+### 11. Queue-Based Sync System
+
+#### 11.1 Enqueue Operations
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| Q-001 | POST /sync/enqueue/{appID}?type=full_sync | 202, job_id returned | ✓ |
+| Q-002 | Enqueue with duplicate active job | 409 ErrDuplicateJob | ✓ |
+| Q-003 | Enqueue with invalid appID | 404, not found | ✓ |
+| Q-004 | Enqueue without auth | 401, unauthorized | ✓ |
+| Q-005 | Enqueue with non-owned appID | 403, forbidden | ✓ |
+| Q-006 | Redis enqueue failure | DB job marked failed | ✓ |
+
+#### 11.2 Job Progress & Status
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| Q-010 | GET /sync/jobs/{jobID} | 200, status from DB | ✓ |
+| Q-011 | GET /sync/jobs/{jobID}/progress | 200, DB + Redis overlay | ✓ |
+| Q-012 | Progress for completed job | DB values only (no Redis overlay) | ✓ |
+| Q-013 | Progress for full_sync with children | Includes child job progress | ✓ |
+| Q-014 | List jobs with filters | Pagination, status/type filters work | ✓ |
+
+#### 11.3 Worker Processing
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| Q-020 | Worker dequeues and processes job | Status: pending → processing → completed | ✓ |
+| Q-021 | Worker acquires lock | SETNX succeeds, heartbeat renews | ✓ |
+| Q-022 | Worker releases lock on completion | DEL lock key | ✓ |
+| Q-023 | Worker handles processing error | Job marked failed with error_message | ✓ |
+| Q-024 | Progress tracker dual-writes | Redis updated every 2s, DB every 30s | ✓ |
+
+#### 11.4 Full Sync Orchestration
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| Q-030 | full_sync dispatches Wave 1 | transaction_sync, event_sync, review_sync enqueued | ✓ |
+| Q-031 | full_sync waits for transaction_sync | Polls until complete before Wave 2 | ✓ |
+| Q-032 | full_sync dispatches Wave 2 | snapshot_sync, status_sync, store_sync enqueued | ✓ |
+| Q-033 | All children complete | Parent marked completed | ✓ |
+| Q-034 | Some children fail | Parent marked partial_failure | ✓ |
+| Q-035 | Cancellation propagates to children | All non-terminal children cancelled | ✓ |
+
+#### 11.5 Auto-Sync on App Selection
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| Q-040 | SelectApp triggers sync (queue mode) | full_sync job enqueued with priority=1 | Pending |
+| Q-041 | SelectApp triggers sync (direct mode) | SyncApp called in goroutine | Pending |
+| Q-042 | SelectApp with sync trigger failure | Warning logged, response still 201 | Pending |
+| Q-043 | SelectApp with duplicate job | Silently swallowed, sync_triggered=true | Pending |
+
+#### 11.6 Cancellation
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| Q-050 | Cancel pending job | Status → cancelled | ✓ |
+| Q-051 | Cancel processing job | Redis flag set, worker exits cleanly | ✓ |
+| Q-052 | Cancel terminal job | Error: already in terminal state | ✓ |
+| Q-053 | Cancel full_sync cancels children | All non-terminal children cancelled | ✓ |
+
+#### 11.7 Recovery
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| Q-060 | Startup recovery with stuck jobs | Orphaned processing jobs re-enqueued | ✓ |
+| Q-061 | Periodic recovery | 10-min check finds stale heartbeats | ✓ |
+| Q-062 | Heartbeat expiry detection | Job recovered when TTL expires | ✓ |

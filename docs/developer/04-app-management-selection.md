@@ -146,6 +146,29 @@ The default revenue share tier (`SMALL_DEV_0` = 0% commission) is hardcoded in `
 | `DEFAULT_20` | 20% | Standard Shopify rate above $1M |
 | `PREMIUM_15` | 15% | Reduced rate for certain premium partners |
 
+## Auto-Sync on App Selection
+
+When an app is selected via `POST /api/v1/apps/select`, after `appRepo.Create()` succeeds:
+
+- **Queue mode (`cfg.Queue.Enabled=true`):** A `full_sync` job is enqueued with `priority=1` (highest) via `QueueSyncService.TriggerSync()`
+- **Direct mode (`cfg.Queue.Enabled=false`):** `SyncService.TriggerSync()` calls `SyncApp(appID)` as a fire-and-forget goroutine
+
+This ensures new users see data within minutes of onboarding instead of waiting for the 12h scheduler or a manual sync.
+
+The response includes `"sync_triggered": true/false` to indicate whether the auto-sync was initiated.
+
+### SyncTrigger Interface
+
+```go
+type SyncTrigger interface {
+    TriggerSync(ctx context.Context, appID, userID, partnerAccountID uuid.UUID) error
+}
+```
+
+Wired in `main.go` via setter injection (`AppHandler.SetSyncTrigger()`). Duplicate-job errors from the queue are silently swallowed.
+
+See [31-queue-based-sync-system.md](31-queue-based-sync-system.md) for full queue system details.
+
 ## Extension Points
 - **New app discovery method** — The current `FetchApps` extracts apps from transaction history. An alternative could query the Partner API's app listing directly. Implement in `ShopifyPartnerClient` and wire to the handler.
 - **Tracking toggle** — The `TrackingEnabled` field exists on the entity but there is no dedicated toggle endpoint. Add a `POST /api/v1/apps/{id}/tracking` handler that calls `appRepo.Update()` to flip the flag.

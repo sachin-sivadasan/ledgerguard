@@ -181,7 +181,7 @@ Shopify --> API: List of apps
 
 API --> App: 200 OK\n{ "apps": [{"id": "gid://...", "name": "App One"}, ...] }
 
-== Select App ==
+== Select App (with Auto-Sync) ==
 
 User -> App: Click "Track this app"
 App -> API: POST /api/v1/apps/select\n{ "partner_app_id": "gid://...", "name": "App One" }
@@ -198,7 +198,16 @@ else App not tracked
     DB --> API: Not found
     API -> DB: INSERT INTO apps\n(partner_account_id, partner_app_id, name)
     DB --> API: Success
-    API --> App: 201 Created\n{ "id": "uuid", "name": "App One" }
+
+    note right of API: Auto-trigger sync (fire-and-forget)
+    alt Queue mode (cfg.Queue.Enabled=true)
+        API -> DB: INSERT sync_jobs (type=full_sync, priority=1)
+        API -> API: LPUSH to Redis queue
+    else Direct mode
+        API -> API: go SyncApp(appID) in background
+    end
+
+    API --> App: 201 Created\n{ "id": "uuid", "name": "App One",\n"sync_triggered": true }
 end
 
 == List Tracked Apps ==
@@ -909,5 +918,106 @@ Chat -> Chat: Generate suggestive replies\n(3 follow-up questions)
 Chat --> App: { type: "message",\ncontent: "Here are 5 stores...",\nstate: { subscriptions: [...] },\nsuggestions: [\n  "What's the total revenue at risk?",\n  "Show me their payment history",\n  "Which plans are most affected?"\n] }
 
 App --> User: Display message + data panel\n(subscription table on right)
+
+' ==========================================
+' 15. Queue-Based Sync Flow
+' ==========================================
+newpage Queue-Based Sync Flow
+
+actor User
+participant "Client App" as App
+participant "API Server" as API
+participant "QueueSyncService" as QSvc
+participant "Redis" as Redis
+participant "WorkerPool" as Worker
+database "PostgreSQL" as DB
+
+== Enqueue Sync Job ==
+
+User -> App: Click "Sync"
+App -> API: POST /api/v1/sync/enqueue/{appID}\n?type=full_sync\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware (verify user)
+API -> QSvc: EnqueueSync(appID, userID, type, priority)
+
+QSvc -> DB: Check for duplicate active job
+alt Duplicate exists
+    DB --> QSvc: Existing active job
+    QSvc --> API: 409 ErrDuplicateJob
+    API --> App: 409 Conflict
+else No duplicate
+    DB --> QSvc: null
+    QSvc -> DB: INSERT sync_jobs\n(status='pending', priority=N)
+    QSvc -> Redis: LPUSH :queue:full {payload}
+    QSvc --> API: job
+    API --> App: 202 Accepted\n{ "job_id": "uuid" }
+end
+
+== Worker Processing ==
+
+Worker -> Redis: BRPOP :queue:full (blocking)
+Redis --> Worker: jobPayload
+
+Worker -> DB: UPDATE sync_jobs\nSET status='processing'
+Worker -> Redis: SETNX lock (acquire)
+Worker -> Worker: Start heartbeat (10s renew)
+
+note right of Worker: Execute domain logic\n(fetch transactions,\nrebuild ledger, etc.)
+
+loop Progress updates
+    Worker -> Redis: HSET progress:{jobID}\ncompleted=N (every ~2s)
+    Worker -> DB: UPDATE completed_items\n(every ~30s)
+end
+
+Worker -> Redis: DEL lock
+Worker -> DB: UPDATE sync_jobs\nSET status='completed'
+
+== Progress Polling ==
+
+App -> API: GET /sync/jobs/{jobID}/progress
+API -> DB: SELECT status, items
+API -> Redis: HGETALL progress:{jobID}
+API --> App: 200 { status, progress }
+
+' ==========================================
+' 16. Full Sync Orchestration
+' ==========================================
+newpage Full Sync Orchestration
+
+participant "FullSyncProcessor" as FSP
+participant "Redis" as Redis
+database "PostgreSQL" as DB
+
+note over FSP
+  Orchestrator — dispatches
+  6 child jobs in 2 waves
+end note
+
+== Wave 1 — Independent ==
+
+FSP -> Redis: LPUSH transaction_sync
+FSP -> Redis: LPUSH event_sync
+FSP -> Redis: LPUSH review_sync
+
+loop poll transaction_sync (5s)
+  FSP -> DB: FindByID(txSyncJobID)
+  note right: Wait before Wave 2
+end
+
+== Wave 2 — Dependent ==
+
+FSP -> Redis: LPUSH snapshot_sync
+FSP -> Redis: LPUSH status_sync
+FSP -> Redis: LPUSH store_sync
+
+loop poll all children (5s)
+  FSP -> DB: FindByParentJobID(parentID)
+end
+
+alt All children completed
+  FSP -> DB: UPDATE parent status='completed'
+else Some children failed
+  FSP -> DB: UPDATE parent status='partial_failure'
+end
 
 @enduml

@@ -181,37 +181,52 @@ Client ← JSON Response ← Usecase ← Domain Models
 
 ## 4. Sync Strategy
 
+### Dual Sync Modes
+
+**Queue-Based Async (Primary — Redis + Worker Pools)**
+- Enabled via `cfg.Queue.Enabled=true`
+- Job metadata in PostgreSQL (permanent audit trail)
+- Live progress in Redis hashes (ephemeral, high-frequency)
+- Worker pools: configurable regular (default 3) + full_sync (default 1)
+- Auto-trigger on app selection (`POST /api/v1/apps/select` → priority=1 full_sync)
+- Returns HTTP 202 immediately with job ID
+- `full_sync` creates parent + 6 child jobs in two waves:
+  - Wave 1 (independent): transaction_sync, event_sync, review_sync
+  - Wave 2 (dependent on transaction_sync): snapshot_sync, status_sync, store_sync
+- SyncScheduler disabled when queue enabled
+
+**Synchronous (Legacy — still active)**
+- `POST /api/v1/sync` and `/api/v1/sync/{appID}` unchanged
+- Returns when sync completes (blocking)
+- No job tracking, single-threaded per app
+- SyncScheduler runs every 12h when queue disabled
+
 ### Schedule
 | Event | Timing |
 |-------|--------|
-| Scheduled Sync | Every 12 hours (00:00, 12:00 UTC) |
-| On-Demand Sync | User-triggered via UI/API |
-| Initial Backfill | On first connection (background) |
+| Queue Sync | On-demand (API, frontend, auto-trigger on app selection) |
+| Scheduled Sync (Legacy) | Every 12 hours (if queue disabled) |
+| Auto-Trigger | On app selection during onboarding |
 
 ### Behavior
 - **Window:** 12-month rolling
 - **Method:** Full recalculation (not incremental)
 - **Idempotency:** Same transactions → Same ledger state
-- **Concurrency:** One sync per workspace at a time (mutex)
+- **Concurrency:** Distributed lock per appID+jobType (Redis SETNX)
 
-### Sync States
+### Job State Machine
 ```
-IDLE → SYNCING → PROCESSING → COMPLETE
-                     ↓
-                  FAILED (retry with backoff)
+pending → processing → completed
+                    → failed
+                    → cancelled (cooperative)
+                    → partial_failure (full_sync with child failures)
 ```
 
-### Backfill Strategy
-```go
-// First sync: fetch all historical data
-if workspace.LastSyncAt.IsZero() {
-    fetchAllTransactions(ctx, workspace, 12*months)
-} else {
-    fetchTransactionsSince(ctx, workspace, lastSyncAt)
-}
-// Always rebuild full 12-month ledger
-rebuildLedger(ctx, workspace, 12*months)
-```
+### Recovery & Reliability
+- Workers renew Redis heartbeat every 10s (lock with TTL)
+- Startup recovery: re-enqueue jobs stuck in `processing` with stale heartbeat
+- Periodic recovery: every 10 minutes, check for orphaned jobs
+- Duplicate detection: reject enqueue if active job exists for same appID+type
 
 ---
 

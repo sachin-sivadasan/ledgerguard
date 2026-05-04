@@ -226,6 +226,69 @@ entity "api_usage_status" as api_usage_status {
   last_synced_at : TIMESTAMPTZ
 }
 
+entity "sync_jobs" as sync_jobs {
+  *id : UUID <<PK>>
+  --
+  *app_id : UUID <<FK>>
+  *user_id : UUID <<FK>>
+  *partner_account_id : UUID <<FK>>
+  parent_job_id : UUID <<FK, self-ref>>
+  *job_type : VARCHAR(50) <<CHECK: full_sync, transaction_sync, snapshot_sync, event_sync, status_sync, store_sync, review_sync>>
+  *status : VARCHAR(30) <<CHECK: pending, processing, completed, failed, cancelled, partial_failure>>
+  priority : INT <<DEFAULT: 5>>
+  total_items : INT
+  completed_items : INT
+  entity_type : VARCHAR(50)
+  error_message : TEXT
+  worker_id : VARCHAR(100)
+  started_at : TIMESTAMPTZ
+  completed_at : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "app_events" as app_events {
+  *id : UUID <<PK>>
+  --
+  *app_id : UUID <<FK>>
+  *shopify_event_gid : VARCHAR(255) <<UNIQUE>>
+  *event_type : VARCHAR(100)
+  shop_gid : VARCHAR(255)
+  shop_domain : VARCHAR(255)
+  *occurred_at : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+}
+
+entity "shops" as shops {
+  *id : UUID <<PK>>
+  --
+  *myshopify_domain : VARCHAR(255) <<UNIQUE>>
+  shop_name : VARCHAR(255)
+  logo_url : TEXT
+  industry : VARCHAR(100)
+  city : VARCHAR(100)
+  country : VARCHAR(100)
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "app_reviews" as app_reviews {
+  *id : UUID <<PK>>
+  --
+  *app_id : UUID <<FK>>
+  *source_review_id : VARCHAR(255) <<UNIQUE>>
+  author : VARCHAR(255)
+  *rating : INT
+  body : TEXT
+  *review_date : TIMESTAMPTZ
+  location : VARCHAR(255)
+  time_using : VARCHAR(100)
+  source : VARCHAR(50) <<DEFAULT: shopify_app_store>>
+  scraped_at : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
 ' Core Relationships
 users ||--o{ partner_accounts : "has"
 users ||--o{ device_tokens : "registers"
@@ -240,6 +303,11 @@ apps ||--o{ daily_insight : "insights"
 subscriptions ||--o{ subscription_events : "logs"
 api_keys ||--o{ api_audit_log : "audits"
 user_preferences }o--o| apps : "default_app"
+apps ||--o{ sync_jobs : "tracks"
+sync_jobs ||--o{ sync_jobs : "parent_job_id"
+users ||--o{ sync_jobs : "triggers"
+apps ||--o{ app_events : "records"
+apps ||--o{ app_reviews : "has"
 
 ' CQRS Read Model (denormalized, populated from subscriptions/transactions)
 apps ..> api_subscription_status : "populates"

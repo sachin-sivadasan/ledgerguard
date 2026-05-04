@@ -76,49 +76,60 @@ class StoreListScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: LgSpacing.s400),
-          Wrap(
-            spacing: LgSpacing.s400,
-            runSpacing: LgSpacing.s400,
-            children: stores.map((store) {
-              return SizedBox(
-                width: 350,
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => context.go('/stores/${store.id}'),
-                    child: LgCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                store.shopDomain.replaceAll('.myshopify.com', ''),
-                                style: theme.textTheme.titleSmall,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              // Mobile: 1 col, Tablet: 2 col, Desktop: 3 col
+              final cols = width < 600 ? 1 : (width < 900 ? 2 : 3);
+              final spacing = LgSpacing.s400;
+              final totalSpacing = spacing * (cols - 1);
+              final cardWidth = cols == 1 ? width : (width - totalSpacing) / cols;
+
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: stores.map((store) {
+                  return SizedBox(
+                    width: cardWidth,
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => context.go('/stores/${store.id}'),
+                        child: LgCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      store.shopDomain.replaceAll('.myshopify.com', ''),
+                                      style: theme.textTheme.titleSmall,
+                                    ),
+                                  ),
+                                  LgRiskBadge(riskState: store.riskState),
+                                ],
                               ),
-                            ),
-                            LgRiskBadge(riskState: store.riskState),
-                          ],
+                              const SizedBox(height: LgSpacing.s300),
+                              Row(
+                                children: [
+                                  _Stat('Health', '${store.healthScore}%', _healthColor(store.healthScore)),
+                                  const SizedBox(width: LgSpacing.s600),
+                                  _Stat('LTV', store.ltvFormatted, LgColors.textPrimary),
+                                  const SizedBox(width: LgSpacing.s600),
+                                  _Stat('Apps', '${store.installedAppIds.length}', LgColors.textPrimary),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: LgSpacing.s300),
-                        Row(
-                          children: [
-                            _Stat('Health', '${store.healthScore}%', _healthColor(store.healthScore)),
-                            const SizedBox(width: LgSpacing.s600),
-                            _Stat('LTV', store.ltvFormatted, LgColors.textPrimary),
-                            const SizedBox(width: LgSpacing.s600),
-                            _Stat('Apps', '${store.installedAppIds.length}', LgColors.textPrimary),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-                ),
+                  );
+                }).toList(),
               );
-            }).toList(),
+            },
           ),
         ],
       ),

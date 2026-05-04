@@ -1,0 +1,121 @@
+@startuml
+title 31. Queue-Based Async Sync System
+
+skinparam sequenceArrowThickness 2
+skinparam maxMessageSize 200
+
+participant "Client" as Client
+participant "QueueSyncHandler" as Handler
+participant "QueueSyncService" as QSvc
+participant "PostgreSQL\n(sync_jobs)" as DB
+participant "Redis\n(queue + progress)" as Redis
+participant "WorkerPool" as Worker
+participant "Processor" as Proc
+participant "Domain Services" as Domain
+
+== Enqueue Flow ==
+
+Client -> Handler: POST /sync/enqueue/{appID}?type=full_sync
+activate Handler
+Handler -> QSvc: EnqueueSync(appID, userID, type, priority)
+activate QSvc
+QSvc -> DB: FindActiveByAppIDAndType() — duplicate check
+DB --> QSvc: nil (no duplicate)
+QSvc -> DB: INSERT sync_jobs (status=pending)
+QSvc -> Redis: LPUSH :queue:full {jobPayload}
+QSvc --> Handler: job (with ID)
+deactivate QSvc
+Handler --> Client: 202 Accepted { job_id }
+deactivate Handler
+
+== Worker Processing ==
+
+Worker -> Redis: BRPOP :queue:full (blocking)
+Redis --> Worker: jobPayload
+activate Worker
+
+Worker -> Proc: Process(ctx, payload)
+activate Proc
+
+Proc -> DB: UPDATE status='processing', started_at=now
+Proc -> Redis: SETNX lock:appID:full_sync (acquire lock)
+Proc -> Proc: Start heartbeat goroutine
+
+note right of Proc: Execute domain logic\n(delegates to existing services)
+
+Proc -> Domain: FetchTransactions / RebuildLedger / etc.
+activate Domain
+Domain --> Proc: results
+deactivate Domain
+
+loop every ~2s
+  Proc -> Redis: HSET progress:{jobID} completed=N, message="..."
+end
+
+loop every ~30s
+  Proc -> DB: UPDATE sync_jobs SET completed_items=N
+end
+
+Proc -> Redis: DEL lock:appID:full_sync
+Proc -> DB: UPDATE status='completed', completed_at=now
+Proc --> Worker: done
+deactivate Proc
+deactivate Worker
+
+== Full Sync Orchestration ==
+
+participant "FullSyncProcessor" as FSP
+
+Worker -> FSP: Process(ctx, full_sync_payload)
+activate FSP
+
+note right of FSP: Wave 1 — Independent
+
+FSP -> Redis: LPUSH :queue {transaction_sync}
+FSP -> Redis: LPUSH :queue {event_sync}
+FSP -> Redis: LPUSH :queue {review_sync}
+
+loop poll until transaction_sync completes (5s)
+  FSP -> DB: FindByID(txSyncJobID)
+end
+
+note right of FSP: Wave 2 — Dependent\n(after transaction_sync)
+
+FSP -> Redis: LPUSH :queue {snapshot_sync}
+FSP -> Redis: LPUSH :queue {status_sync}
+FSP -> Redis: LPUSH :queue {store_sync}
+
+loop poll all children until done (5s)
+  FSP -> DB: FindByParentJobID(parentID)
+end
+
+FSP -> DB: UPDATE parent status='completed'
+deactivate FSP
+
+== Auto-Sync on App Selection ==
+
+participant "AppHandler" as AppH
+
+Client -> AppH: POST /apps/select { partner_app_id, name }
+activate AppH
+AppH -> DB: appRepo.Create(app)
+AppH -> QSvc: TriggerSync(appID, userID, partnerAccountID)
+activate QSvc
+QSvc -> DB: INSERT sync_jobs (priority=1, type=full_sync)
+QSvc -> Redis: LPUSH :queue:full {payload}
+QSvc --> AppH: nil (success)
+deactivate QSvc
+AppH --> Client: 201 Created { sync_triggered: true }
+deactivate AppH
+
+== Recovery ==
+
+participant "RecoveryService" as Recovery
+
+note over Recovery: On startup + every 10 min
+
+Recovery -> DB: Find jobs WHERE status='processing'\nAND heartbeat expired
+Recovery -> Redis: Re-enqueue orphaned jobs
+Recovery -> DB: UPDATE stuck jobs status='pending'
+
+@enduml

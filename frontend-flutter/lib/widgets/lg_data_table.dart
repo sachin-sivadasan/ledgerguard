@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_breakpoints.dart';
 import '../theme/app_colors.dart';
 
 class LgColumn {
@@ -21,9 +22,8 @@ class LgDataTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: DataTable(
+    final isMobile = LgBreakpoints.isMobile(context);
+    final table = DataTable(
         headingRowColor: WidgetStateProperty.all(LgColors.surfaceSecondary),
         headingTextStyle: const TextStyle(
             fontSize: 12,
@@ -34,14 +34,25 @@ class LgDataTable extends StatelessWidget {
         columnSpacing: 24,
         horizontalMargin: 16,
         showCheckboxColumn: showCheckboxColumn,
-        columns: columns
-            .map((c) => DataColumn(
-                  label: Text(c.title),
-                  numeric: c.numeric,
-                ))
-            .toList(),
-        rows: rows,
-      ),
+      columns: columns
+          .map((c) => DataColumn(
+                label: Text(c.title),
+                numeric: c.numeric,
+              ))
+          .toList(),
+      rows: rows,
+    );
+
+    if (isMobile) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: table,
+      );
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      child: table,
     );
   }
 }

@@ -7,6 +7,7 @@ import '../../providers/apps_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../theme/app_breakpoints.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_page.dart';
@@ -38,89 +39,28 @@ class InsightsScreen extends StatelessWidget {
     return LgPage(
       title: 'AI Insights',
       subtitle: 'Daily briefs and revenue chat',
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Briefs
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Daily Briefs', style: theme.textTheme.titleMedium),
-                const SizedBox(height: LgSpacing.s300),
-                ...provider.insights.map((insight) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: LgSpacing.s300),
-                    child: LgCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                _severityIcon(insight.severity),
-                                size: 16,
-                                color: _severityColor(insight.severity),
-                              ),
-                              const SizedBox(width: LgSpacing.s200),
-                              Expanded(child: Text(insight.title, style: theme.textTheme.titleSmall)),
-                              Text(dateFmt.format(insight.date), style: theme.textTheme.bodySmall),
-                            ],
-                          ),
-                          const SizedBox(height: LgSpacing.s200),
-                          Text(insight.summary, style: theme.textTheme.bodyMedium),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              ],
+      child: LgResponsive(
+        mobile: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _BriefsSection(provider: provider, theme: theme, dateFmt: dateFmt, severityIcon: _severityIcon, severityColor: _severityColor),
+            const SizedBox(height: LgSpacing.s600),
+            _ChatSection(provider: provider),
+          ],
+        ),
+        desktop: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _BriefsSection(provider: provider, theme: theme, dateFmt: dateFmt, severityIcon: _severityIcon, severityColor: _severityColor),
             ),
-          ),
-          const SizedBox(width: LgSpacing.s600),
-
-          // Chat
-          SizedBox(
-            width: 400,
-            child: LgCard(
-              title: 'Ask about your revenue',
-              child: SizedBox(
-                height: 400,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: ListView(
-                        children: provider.messages.map((msg) {
-                          return Align(
-                            alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: LgSpacing.s200),
-                              padding: const EdgeInsets.all(LgSpacing.s300),
-                              constraints: const BoxConstraints(maxWidth: 320),
-                              decoration: BoxDecoration(
-                                color: msg.isUser ? LgColors.primary : LgColors.surfaceSecondary,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                msg.text,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: msg.isUser ? Colors.white : LgColors.textPrimary,
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    const SizedBox(height: LgSpacing.s200),
-                    _ChatInput(onSend: provider.sendMessage),
-                  ],
-                ),
-              ),
+            const SizedBox(width: LgSpacing.s600),
+            SizedBox(
+              width: 400,
+              child: _ChatSection(provider: provider),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -136,6 +76,101 @@ class InsightsScreen extends StatelessWidget {
         InsightSeverity.warning => LgColors.warning,
         InsightSeverity.critical => LgColors.critical,
       };
+}
+
+class _BriefsSection extends StatelessWidget {
+  final InsightsProvider provider;
+  final ThemeData theme;
+  final DateFormat dateFmt;
+  final IconData Function(InsightSeverity) severityIcon;
+  final Color Function(InsightSeverity) severityColor;
+
+  const _BriefsSection({
+    required this.provider,
+    required this.theme,
+    required this.dateFmt,
+    required this.severityIcon,
+    required this.severityColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Daily Briefs', style: theme.textTheme.titleMedium),
+        const SizedBox(height: LgSpacing.s300),
+        ...provider.insights.map((insight) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: LgSpacing.s300),
+            child: LgCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(severityIcon(insight.severity), size: 16, color: severityColor(insight.severity)),
+                      const SizedBox(width: LgSpacing.s200),
+                      Expanded(child: Text(insight.title, style: theme.textTheme.titleSmall)),
+                      Text(dateFmt.format(insight.date), style: theme.textTheme.bodySmall),
+                    ],
+                  ),
+                  const SizedBox(height: LgSpacing.s200),
+                  Text(insight.summary, style: theme.textTheme.bodyMedium),
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class _ChatSection extends StatelessWidget {
+  final InsightsProvider provider;
+  const _ChatSection({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    return LgCard(
+      title: 'Ask about your revenue',
+      child: SizedBox(
+        height: 400,
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                children: provider.messages.map((msg) {
+                  return Align(
+                    alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: LgSpacing.s200),
+                      padding: const EdgeInsets.all(LgSpacing.s300),
+                      constraints: const BoxConstraints(maxWidth: 320),
+                      decoration: BoxDecoration(
+                        color: msg.isUser ? LgColors.primary : LgColors.surfaceSecondary,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        msg.text,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: msg.isUser ? Colors.white : LgColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: LgSpacing.s200),
+            _ChatInput(onSend: provider.sendMessage),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _ChatInput extends StatefulWidget {

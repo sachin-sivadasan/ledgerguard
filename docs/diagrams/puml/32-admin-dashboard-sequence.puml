@@ -1,0 +1,102 @@
+@startuml 32-admin-dashboard-sequence
+!theme plain
+
+title Admin Dashboard API + Mixpanel Event Flow
+
+' ==========================================
+' 1. Admin Dashboard API Flow
+' ==========================================
+newpage Admin Dashboard API Flow
+
+actor "Admin User" as Admin
+participant "Frontend" as FE
+participant "AuthMW" as Auth
+participant "AdminMW" as Role
+participant "AdminHandler" as AH
+participant "PostgresAdminRepo" as Repo
+database "PostgreSQL" as DB
+
+Admin -> FE: View admin dashboard
+FE -> Auth: GET /api/v1/admin/users\nAuthorization: Bearer <token>
+Auth -> Auth: Verify Firebase token
+Auth -> Role: Pass to AdminMW
+Role -> Role: Check role = ADMIN or OWNER
+
+alt Authorized
+    Role -> AH: ListUsers()
+    AH -> Repo: ListUsers(ctx)
+    Repo -> DB: SELECT u.*, COUNT(apps)\nFROM users LEFT JOIN ...
+    DB --> Repo: rows
+    Repo --> AH: []AdminUserRow
+    AH --> FE: 200 { users: [...], total: N }
+else Unauthorized
+    Role --> FE: 403 Forbidden
+end
+
+FE -> Auth: GET /api/v1/admin/onboarding
+Auth -> Role: Pass through
+Role -> AH: OnboardingFunnel()
+AH -> Repo: GetOnboardingFunnel(ctx)
+Repo -> DB: SELECT COUNT(*) ...\n(4 aggregate queries)
+DB --> Repo: funnel counts
+Repo --> AH: OnboardingFunnel
+AH --> FE: 200 { total_users, partner_connected, ... }
+
+FE -> Auth: GET /api/v1/admin/sync?limit=10
+Auth -> Role: Pass through
+Role -> AH: ListSyncJobs()
+AH -> Repo: ListSyncJobs(ctx, 10)
+Repo -> DB: SELECT sj.* FROM sync_jobs\nJOIN apps JOIN users\nORDER BY created_at DESC\nLIMIT 10
+DB --> Repo: rows
+Repo --> AH: []AdminSyncJobRow
+AH --> FE: 200 { jobs: [...], total: N }
+
+' ==========================================
+' 2. Mixpanel Event Tracking Flow
+' ==========================================
+newpage Mixpanel Event Tracking Flow
+
+actor User
+participant "AuthMiddleware" as AuthMW2
+participant "AppHandler" as AppH
+participant "QueueSyncService" as QSS
+participant "BillingService" as BS
+participant "EventTracker" as ET
+participant "MixpanelClient" as MP
+participant "Mixpanel API" as MixAPI
+
+== User Signup ==
+User -> AuthMW2: First request with Firebase token
+AuthMW2 -> AuthMW2: User not found → Create
+AuthMW2 -> ET: Track("user_signup", {email, role})
+ET -> MP: async goroutine
+MP -> MixAPI: POST /track\n[{event: "user_signup", ...}]
+MixAPI --> MP: 200 OK
+AuthMW2 -> ET: SetUserProperties({$email, role, plan_tier})
+ET -> MP: async goroutine
+MP -> MixAPI: POST /engage\n[{$set: {...}}]
+
+== App Selection ==
+User -> AppH: POST /apps/select\n{partner_app_id, name}
+AppH -> AppH: Create app in DB
+AppH -> ET: Track("app_selected", {app_name, app_id})
+ET -> MP: async goroutine
+MP -> MixAPI: POST /track
+
+== Sync Started ==
+AppH -> QSS: TriggerSync(appID, userID, partnerAccountID)
+QSS -> QSS: Create job + enqueue Redis
+QSS -> ET: Track("sync_started", {job_type, app_id})
+ET -> MP: async goroutine
+MP -> MixAPI: POST /track
+
+== Billing Events ==
+User -> BS: CreateCheckout(plan)
+BS -> BS: Create Razorpay subscription
+BS -> ET: Track("billing_subscription_created", {plan, amount})
+ET -> MP: async goroutine
+MP -> MixAPI: POST /track
+
+note over BS, ET: billing_activated, billing_cancelled,\nbilling_payment_failed follow\nthe same pattern via webhook handlers
+
+@enduml

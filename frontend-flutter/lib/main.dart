@@ -15,11 +15,18 @@ import 'providers/store_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'providers/transaction_provider.dart';
 import 'providers/webhook_provider.dart';
+import 'services/mixpanel_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final mixpanel = MixpanelService();
+  await mixpanel.init();
+
   runApp(
     MultiProvider(
       providers: [
+        Provider<MixpanelService>.value(value: mixpanel),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),

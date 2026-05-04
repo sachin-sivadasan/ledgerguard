@@ -57,6 +57,12 @@
 | [19](19-razorpay-billing.md) | Razorpay Billing | [Sequence](../diagrams/puml/19-razorpay-billing-sequence.puml) | ADR-020 |
 | [20](20-app-store-review-scraper.md) | App Store Review Scraper | [Activity](../diagrams/puml/20-review-scraper-activity.puml) | — |
 
+### Platform Operations
+
+| # | Feature | Diagram | Key ADRs |
+|---|---------|---------|----------|
+| [32](32-admin-dashboard-mixpanel.md) | Admin Dashboard API + Mixpanel Tracking | [Sequence](../diagrams/puml/32-admin-dashboard-sequence.puml) | ADR-025 |
+
 ---
 
 ## Frontend Features (21–28)

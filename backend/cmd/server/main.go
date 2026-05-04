@@ -15,6 +15,7 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/scheduler"
 	appservice "github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/cache"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/config"
@@ -149,6 +150,7 @@ func run() error {
 	var reviewRepo *persistence.PostgresAppReviewRepository
 	var syncJobRepo *persistence.PostgresSyncJobRepository
 	var appEventRepo *persistence.PostgresAppEventRepository
+	var adminRepo repository.AdminRepository
 
 	if db != nil {
 		userRepo = persistence.NewPostgresUserRepository(db.Pool)
@@ -162,6 +164,17 @@ func run() error {
 		reviewRepo = persistence.NewPostgresAppReviewRepository(db.Pool)
 		syncJobRepo = persistence.NewPostgresSyncJobRepository(db.Pool)
 		appEventRepo = persistence.NewPostgresAppEventRepository(db.Pool)
+		adminRepo = persistence.NewPostgresAdminRepository(db.Pool)
+	}
+
+	// Initialize event tracker (Mixpanel or Noop)
+	var tracker domainservice.EventTracker
+	if cfg.Mixpanel.Token != "" {
+		tracker = external.NewMixpanelClient(cfg.Mixpanel.Token)
+		log.Println("Mixpanel event tracker initialized")
+	} else {
+		tracker = external.NewNoopTracker()
+		log.Println("Event tracker: noop (MIXPANEL_TOKEN not set)")
 	}
 
 	// Initialize OAuth state store (10 minute TTL)
@@ -215,6 +228,7 @@ func run() error {
 	var appHandler *handler.AppHandler
 	if partnerRepo != nil && appRepo != nil && encryptor != nil {
 		appHandler = handler.NewAppHandler(partnerClient, partnerRepo, appRepo, encryptor)
+		appHandler.SetTracker(tracker)
 		log.Println("App handler initialized with Partner client")
 	}
 
@@ -229,6 +243,9 @@ func run() error {
 		// Fallback to handler without aggregator (will use mock data)
 		metricsHandler = handler.NewMetricsHandler(nil, appRepo, partnerRepo)
 		log.Println("Metrics handler initialized (without aggregator)")
+	}
+	if metricsHandler != nil {
+		metricsHandler.SetTracker(tracker)
 	}
 
 	// Initialize sync service and handler
@@ -405,6 +422,7 @@ func run() error {
 			cfg.Razorpay.StarterPlanID,
 			cfg.Razorpay.ProPlanID,
 		)
+		billingService.SetTracker(tracker)
 		billingHandler = handler.NewBillingHandler(billingService)
 		log.Println("Razorpay billing handler initialized")
 	}
@@ -415,6 +433,13 @@ func run() error {
 	if reviewRepo != nil && appRepo != nil && partnerRepo != nil {
 		reviewHandler = handler.NewReviewHandler(reviewRepo, appRepo, partnerRepo, appStoreScraper)
 		log.Println("Review handler initialized")
+	}
+
+	// Initialize admin handler
+	var adminHandler *handler.AdminHandler
+	if adminRepo != nil {
+		adminHandler = handler.NewAdminHandler(adminRepo)
+		log.Println("Admin handler initialized")
 	}
 
 	// Initialize queue-based sync system (optional — requires Redis + Queue enabled)
@@ -496,6 +521,7 @@ func run() error {
 		queueSyncService = appservice.NewQueueSyncService(
 			syncJobRepo, appRepo, partnerRepo, redisClient, lockManager, progressTracker,
 		)
+		queueSyncService.SetTracker(tracker)
 		queueSyncHandler = handler.NewQueueSyncHandler(queueSyncService, partnerRepo, appRepo)
 		log.Println("Queue-based sync system initialized")
 	}
@@ -549,6 +575,7 @@ func run() error {
 	var authMW func(http.Handler) http.Handler
 	if firebaseAuth != nil && userRepo != nil {
 		authMiddleware := middleware.NewAuthMiddleware(firebaseAuth, userRepo)
+		authMiddleware.SetTracker(tracker)
 		authMW = authMiddleware.Authenticate
 		log.Println("Auth middleware initialized")
 	}
@@ -596,6 +623,7 @@ func run() error {
 		BillingHandler:                  billingHandler,
 		ReviewHandler:                   reviewHandler,
 		QueueSyncHandler:                queueSyncHandler,
+		AdminHandler:                    adminHandler,
 		APIKeyHandler:                   apiKeyHandler,
 		GraphQLHandler:                  graphqlHandler,
 		AuthMW:                          authMW,

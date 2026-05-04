@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
@@ -34,11 +35,17 @@ type AppHandler struct {
 	appRepo       repository.AppRepository
 	decryptor     Encryptor
 	syncTrigger   SyncTrigger
+	tracker       domainservice.EventTracker
 }
 
 // SetSyncTrigger sets the sync trigger for auto-syncing on app selection
 func (h *AppHandler) SetSyncTrigger(st SyncTrigger) {
 	h.syncTrigger = st
+}
+
+// SetTracker sets the event tracker for analytics.
+func (h *AppHandler) SetTracker(t domainservice.EventTracker) {
+	h.tracker = t
 }
 
 func NewAppHandler(
@@ -156,6 +163,14 @@ func (h *AppHandler) SelectApp(w http.ResponseWriter, r *http.Request) {
 	if err := h.appRepo.Create(r.Context(), app); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to save app")
 		return
+	}
+
+	// Track app selection event
+	if h.tracker != nil {
+		h.tracker.Track(r.Context(), user.ID.String(), "app_selected", domainservice.EventProperties{
+			"app_name": app.Name,
+			"app_id":   app.PartnerAppID,
+		})
 	}
 
 	// Trigger initial sync (fire-and-forget — don't block the response)

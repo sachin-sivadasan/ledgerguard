@@ -32,6 +32,7 @@ type Config struct {
 	ReviewHandler                   *handler.ReviewHandler
 	APIKeyHandler                   *apikeyhandler.APIKeyHandler
 	QueueSyncHandler                *handler.QueueSyncHandler
+	AdminHandler                    *handler.AdminHandler
 	GraphQLHandler                  http.Handler       // Internal chat GraphQL endpoint
 	ChatHandler                     http.HandlerFunc   // POST /api/v1/chat (SSE)
 	ChatModulesHandler              http.HandlerFunc   // GET /api/v1/chat/modules
@@ -257,6 +258,18 @@ func New(cfg Config) *chi.Mux {
 				r.Get("/", cfg.APIKeyHandler.List)
 				r.Post("/", cfg.APIKeyHandler.Create)
 				r.Delete("/{id}", cfg.APIKeyHandler.Revoke)
+			})
+		}
+
+		// Admin dashboard routes (requires auth + admin role)
+		if cfg.AdminHandler != nil && cfg.AuthMW != nil && cfg.AdminMW != nil {
+			r.Route("/admin", func(r chi.Router) {
+				r.Use(cfg.AuthMW)
+				r.Use(cfg.AdminMW)
+				r.Get("/users", cfg.AdminHandler.ListUsers)
+				r.Get("/onboarding", cfg.AdminHandler.OnboardingFunnel)
+				r.Get("/sync", cfg.AdminHandler.ListSyncJobs)
+				r.Get("/billing", cfg.AdminHandler.ListBilling)
 			})
 		}
 

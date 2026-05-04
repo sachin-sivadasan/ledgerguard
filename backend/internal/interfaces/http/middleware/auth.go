@@ -22,6 +22,7 @@ const userContextKey contextKey = "user"
 type AuthMiddleware struct {
 	tokenVerifier service.AuthTokenVerifier
 	userRepo      repository.UserRepository
+	tracker       service.EventTracker
 }
 
 func NewAuthMiddleware(tokenVerifier service.AuthTokenVerifier, userRepo repository.UserRepository) *AuthMiddleware {
@@ -29,6 +30,11 @@ func NewAuthMiddleware(tokenVerifier service.AuthTokenVerifier, userRepo reposit
 		tokenVerifier: tokenVerifier,
 		userRepo:      userRepo,
 	}
+}
+
+// SetTracker sets the event tracker for lifecycle events.
+func (m *AuthMiddleware) SetTracker(t service.EventTracker) {
+	m.tracker = t
 }
 
 func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
@@ -53,6 +59,17 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 				if err := m.userRepo.Create(r.Context(), user); err != nil {
 					writeError(w, http.StatusInternalServerError, "failed to create user")
 					return
+				}
+				if m.tracker != nil {
+					m.tracker.Track(r.Context(), user.ID.String(), "user_signup", service.EventProperties{
+						"email": user.Email,
+						"role":  string(user.Role),
+					})
+					m.tracker.SetUserProperties(r.Context(), user.ID.String(), service.EventProperties{
+						"$email":    user.Email,
+						"role":      string(user.Role),
+						"plan_tier": string(user.PlanTier),
+					})
 				}
 			} else {
 				writeError(w, http.StatusInternalServerError, "failed to lookup user")

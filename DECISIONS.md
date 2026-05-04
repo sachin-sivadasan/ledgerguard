@@ -547,3 +547,23 @@ Define a `SyncTrigger` interface in the handler layer with a single `TriggerSync
 - Interface in handler layer keeps domain clean (no circular dependency)
 - Setter injection follows existing pattern (`SetShopRepo`)
 - Queue mode gets a high-priority job; direct mode starts a background goroutine
+
+---
+
+### ADR-025: EventTracker Interface for Mixpanel Analytics
+**Date:** 2026-05-04
+**Status:** Accepted
+
+**Context:**
+The platform lacks visibility into user lifecycle events (signup funnel, sync health, billing conversions). Data exists in audit tables but is not pushed to any external analytics tool. We need server-side event tracking that works with Mixpanel but doesn't couple the domain layer to a specific vendor.
+
+**Decision:**
+Define an `EventTracker` interface in the domain service layer with `Track()` and `SetUserProperties()` methods. Provide two implementations: `MixpanelClient` (uses Mixpanel HTTP API directly with fire-and-forget goroutines) and `NoopTracker` (silent no-op when `MIXPANEL_TOKEN` is empty). No external SDK dependency — just `net/http` + JSON. Services receive the tracker via setter injection (`SetTracker`), following the existing `SetShopRepo`/`SetSyncTrigger` pattern.
+
+**Consequences:**
+- Domain layer has zero vendor dependency (interface only)
+- Fire-and-forget: analytics calls never block request handling
+- NoopTracker enables clean dev/test without external services
+- No new Go dependencies — uses stdlib `net/http` and `encoding/json`
+- Setter injection avoids constructor signature changes in existing services
+- Adding new events is trivial: one `tracker.Track()` call at the trigger point

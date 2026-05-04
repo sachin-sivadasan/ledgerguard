@@ -1020,4 +1020,55 @@ else Some children failed
   FSP -> DB: UPDATE parent status='partial_failure'
 end
 
+' ==========================================
+' 17. Admin Dashboard + Mixpanel Event Flow
+' ==========================================
+newpage Admin Dashboard + Mixpanel Event Flow
+
+actor "Admin" as AdminUser
+participant "Frontend" as AdminFE
+participant "AuthMW" as AdminAuth
+participant "AdminMW" as AdminRole
+participant "AdminHandler" as AH
+participant "AdminRepo" as AR
+database "PostgreSQL" as AdminDB
+participant "EventTracker" as ET
+participant "MixpanelClient" as MP
+participant "Mixpanel API" as MixAPI
+
+== Admin Dashboard Queries ==
+
+AdminUser -> AdminFE: View dashboard
+AdminFE -> AdminAuth: GET /api/v1/admin/users\nBearer token
+AdminAuth -> AdminAuth: Verify token
+AdminAuth -> AdminRole: RequireRoles(ADMIN, OWNER)
+AdminRole -> AH: ListUsers()
+AH -> AR: ListUsers(ctx)
+AR -> AdminDB: SELECT u.*, COUNT(apps)\nFROM users LEFT JOIN ...
+AdminDB --> AR: rows
+AR --> AH: []AdminUserRow
+AH --> AdminFE: 200 { users, total }
+
+AdminFE -> AdminAuth: GET /api/v1/admin/onboarding
+AdminAuth -> AdminRole: Pass
+AdminRole -> AH: OnboardingFunnel()
+AH -> AR: GetOnboardingFunnel(ctx)
+AR -> AdminDB: Aggregate counts
+AdminDB --> AR: funnel
+AR --> AH: OnboardingFunnel
+AH --> AdminFE: 200 { total_users, ... }
+
+== Mixpanel Event Pipeline (Background) ==
+
+note over ET, MixAPI: Events are fire-and-forget\n(async goroutine, never blocks request)
+
+AdminAuth -> ET: Track("user_signup",\n{email, role})
+ET -> MP: goroutine
+MP -> MixAPI: POST /track\njson payload
+MixAPI --> MP: 200
+
+ET -> MP: SetUserProperties\n({$email, role, plan_tier})
+MP -> MixAPI: POST /engage
+MixAPI --> MP: 200
+
 @enduml

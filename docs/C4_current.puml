@@ -8,6 +8,7 @@ Person(developer, "Shopify App Developer", "Uses LedgerGuard")
 System_Ext(firebase, "Firebase Auth", "Authentication")
 System_Ext(shopify, "Shopify Partners", "OAuth & Partner API")
 System_Ext(openai, "OpenAI API", "AI insights")
+System_Ext(mixpanel, "Mixpanel", "Analytics event tracking")
 ContainerDb_Ext(postgres, "PostgreSQL", "Data storage")
 ContainerDb_Ext(redis_ext, "Redis", "Job queue, progress, locks")
 
@@ -35,6 +36,7 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(revenue_handler, "RevenueHandler", "HTTP Handler", "Earnings timeline")
     Component(store_health_handler, "StoreHealthHandler", "HTTP Handler", "Store health checks")
     Component(apikey_handler, "APIKeyHandler", "HTTP Handler", "API key management")
+    Component(admin_handler, "AdminHandler", "HTTP Handler", "Admin dashboard (users, onboarding, sync, billing)")
 
     ' Application Layer - IMPLEMENTED
     Component(sync_service, "SyncService", "App Service", "Transaction sync orchestration")
@@ -48,6 +50,7 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(ledger_service, "LedgerService", "Domain Service", "Rebuild subscriptions from transactions")
     Component(risk_engine, "RiskEngine", "Domain Service", "Risk state classification")
     Component(metrics_engine, "MetricsEngine", "Domain Service", "MRR, usage revenue calculations")
+    Component(event_tracker_if, "EventTracker", "Domain Interface", "Track lifecycle events (analytics)")
 
     ' Domain Layer - IMPLEMENTED
     Component(user_entity, "User", "Entity", "id, firebase_uid, email, role, plan_tier")
@@ -77,6 +80,7 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(apikey_repo_if, "APIKeyRepository", "Interface", "API key persistence contract")
     Component(user_prefs_repo_if, "UserPreferencesRepository", "Interface", "User preferences contract")
     Component(sub_event_repo_if, "SubscriptionEventRepository", "Interface", "Subscription events contract")
+    Component(admin_repo_if, "AdminRepository", "Interface", "Cross-tenant admin queries contract")
 
     ' Infrastructure Layer - IMPLEMENTED
     Component(config, "Config", "Infrastructure", "YAML + env config loader")
@@ -96,6 +100,9 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(partner_client, "ShopifyPartnerClient", "External Adapter", "Partner API GraphQL")
     Component(crypto, "AESEncryptor", "pkg/crypto", "AES-256-GCM encryption")
     Component(openai_client, "OpenAIClient", "External Adapter", "AI insight generation")
+    Component(admin_repo, "PostgresAdminRepository", "Repository", "Cross-tenant admin queries")
+    Component(mixpanel_client, "MixpanelClient", "External Adapter", "Fire-and-forget event tracking")
+    Component(noop_tracker, "NoopTracker", "External Adapter", "Silent no-op (dev/test)")
     Component(sync_scheduler, "SyncScheduler", "Scheduler", "12-hour background sync (disabled when queue enabled)")
 
     ' Queue-Based Sync System
@@ -286,6 +293,15 @@ Rel(audit_repo, postgres, "SQL")
 Rel(apikey_repo, postgres, "SQL")
 Rel(user_prefs_repo, postgres, "SQL")
 Rel(sub_event_repo, postgres, "SQL")
+Rel(admin_handler, admin_repo_if, "Cross-tenant queries")
+Rel(admin_repo, postgres, "SQL")
+Rel(admin_repo, admin_repo_if, "Implements")
+Rel(mixpanel_client, mixpanel, "HTTP API")
+Rel(mixpanel_client, event_tracker_if, "Implements")
+Rel(noop_tracker, event_tracker_if, "Implements")
+Rel(auth_mw, event_tracker_if, "user_signup")
+Rel(app_handler, event_tracker_if, "app_selected")
+Rel(queue_sync_service, event_tracker_if, "sync_started")
 
 SHOW_LEGEND()
 @enduml

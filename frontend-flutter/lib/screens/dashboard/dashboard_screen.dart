@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../mock_data/mock_apps.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/dashboard_provider.dart';
+import '../../services/mixpanel_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
@@ -11,8 +12,21 @@ import '../../widgets/lg_metric_card.dart';
 import '../../widgets/lg_onboarding_checklist.dart';
 import '../../widgets/lg_page.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MixpanelService>().trackDashboardViewed();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

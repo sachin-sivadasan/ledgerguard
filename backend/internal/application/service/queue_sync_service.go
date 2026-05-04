@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue"
 )
 
@@ -33,6 +34,12 @@ type QueueSyncService struct {
 	redisClient *redis.Client
 	lockManager *queue.LockManager
 	progress    *queue.ProgressTracker
+	tracker     domainservice.EventTracker
+}
+
+// SetTracker sets the event tracker for sync lifecycle events.
+func (s *QueueSyncService) SetTracker(t domainservice.EventTracker) {
+	s.tracker = t
 }
 
 // NewQueueSyncService creates a new queue sync service
@@ -86,6 +93,14 @@ func (s *QueueSyncService) EnqueueSync(ctx context.Context, appID, userID, partn
 		// Mark the DB row as failed if Redis enqueue fails
 		_ = s.syncJobRepo.MarkFailed(ctx, job.ID, fmt.Sprintf("enqueue failed: %v", err))
 		return nil, fmt.Errorf("failed to enqueue sync job: %w", err)
+	}
+
+	if s.tracker != nil {
+		s.tracker.Track(ctx, userID.String(), "sync_started", domainservice.EventProperties{
+			"job_type": jobType,
+			"app_id":   appID.String(),
+			"job_id":   job.ID.String(),
+		})
 	}
 
 	return job, nil

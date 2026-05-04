@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../services/mixpanel_service.dart';
+
 class AuthUser {
   final String email;
   final String name;
@@ -8,6 +10,11 @@ class AuthUser {
 }
 
 class AuthProvider extends ChangeNotifier {
+  MixpanelService? _mixpanel;
+
+  /// Inject Mixpanel after Provider tree is built.
+  void setMixpanel(MixpanelService mixpanel) => _mixpanel = mixpanel;
+
   AuthUser? _user;
   bool _isLoading = false;
   String? _error;
@@ -42,6 +49,8 @@ class AuthProvider extends ChangeNotifier {
 
     _user = AuthUser(email: email, name: email.split('@').first);
     _isLoading = false;
+    _mixpanel?.trackLogin('email');
+    _mixpanel?.identify(email, email: email);
     notifyListeners();
   }
 
@@ -75,6 +84,8 @@ class AuthProvider extends ChangeNotifier {
 
     _user = AuthUser(email: email, name: name.trim());
     _isLoading = false;
+    _mixpanel?.trackSignup('email');
+    _mixpanel?.identify(email, email: email);
     notifyListeners();
   }
 
@@ -98,6 +109,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void signOut() {
+    _mixpanel?.trackLogout();
+    _mixpanel?.reset();
     _user = null;
     _error = null;
     notifyListeners();

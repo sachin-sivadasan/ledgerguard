@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
+import 'services/mixpanel_service.dart';
 import 'screens/analytics/analytics_screen.dart';
 import 'screens/api_keys/api_keys_screen.dart';
 import 'screens/apps/apps_screen.dart';
@@ -38,7 +39,8 @@ class _AppState extends State<App> {
   @override
   void initState() {
     super.initState();
-    final authProvider = context.read<AuthProvider>();
+    final authProvider = context.read<AuthProvider>()
+      ..setMixpanel(context.read<MixpanelService>());
     _router = GoRouter(
       initialLocation: '/',
       refreshListenable: authProvider,

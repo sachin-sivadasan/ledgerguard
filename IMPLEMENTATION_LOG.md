@@ -1955,3 +1955,56 @@ After a user selects an app during onboarding, a `full_sync` is now automaticall
 - `backend/cmd/server/main.go` — Hoisted queueSyncService var, SetSyncTrigger wiring
 
 **Tests:** All existing tests pass (`go test ./...`).
+
+---
+
+## [2026-05-04] Admin Dashboard API + Mixpanel Event Tracking
+
+**Summary:**
+Added 4 read-only admin API endpoints for cross-tenant visibility (users, onboarding funnel, sync jobs, billing) and integrated Mixpanel server-side event tracking at key lifecycle points (signup, app selection, sync, billing). Uses a domain-level `EventTracker` interface with `MixpanelClient` and `NoopTracker` implementations.
+
+**Implemented:**
+
+1. **AdminRepository interface + DTOs** — `AdminUserRow`, `OnboardingFunnel`, `AdminSyncJobRow`, `AdminBillingRow` types and `AdminRepository` interface in domain layer
+2. **PostgresAdminRepository** — SQL queries joining existing tables (`users`, `partner_accounts`, `apps`, `sync_jobs`, `billing_subscriptions`) with no new migrations
+3. **AdminHandler** — 4 HTTP handlers: `ListUsers`, `OnboardingFunnel`, `ListSyncJobs`, `ListBilling`
+4. **EventTracker interface** — Domain service interface with `Track()` and `SetUserProperties()` methods
+5. **MixpanelClient** — Fire-and-forget HTTP client using Mixpanel `/track` and `/engage` endpoints (no SDK dependency)
+6. **NoopTracker** — Silent no-op for dev/test when `MIXPANEL_TOKEN` is empty
+7. **Tracker integration** — Wired into `AuthMiddleware` (user_signup), `AppHandler` (app_selected), `QueueSyncService` (sync_started), `BillingService` (billing lifecycle events), `MetricsHandler` (dashboard_viewed)
+8. **Router + config** — Admin routes under `/api/v1/admin` with `AuthMW + AdminMW`, `MixpanelConfig` in config
+9. **Flutter client-side Mixpanel** — `MixpanelService` in `frontend-flutter/` wrapping `mixpanel_flutter` SDK. Tracks login, signup, logout, dashboard_viewed. Token via `--dart-define=MIXPANEL_TOKEN=...`, no-op when empty.
+
+**New Files:**
+- `backend/internal/domain/repository/admin_repository.go`
+- `backend/internal/infrastructure/persistence/admin_repository.go`
+- `backend/internal/interfaces/http/handler/admin.go`
+- `backend/internal/interfaces/http/handler/admin_test.go`
+- `backend/internal/domain/service/event_tracker.go`
+- `backend/internal/infrastructure/external/mixpanel_client.go`
+- `backend/internal/infrastructure/external/noop_tracker.go`
+- `backend/internal/infrastructure/external/event_tracker_test.go`
+- `frontend-flutter/lib/services/mixpanel_service.dart`
+- `docs/developer/32-admin-dashboard-mixpanel.md`
+- `docs/diagrams/puml/32-admin-dashboard-sequence.puml`
+- `docs/diagrams/admin-analytics-flow.excalidraw`
+
+**Files Modified:**
+- `backend/internal/infrastructure/config/config.go` — Added `MixpanelConfig` struct and `MIXPANEL_TOKEN` env override
+- `backend/internal/interfaces/http/router/router.go` — Added `AdminHandler` to Config, wired `/api/v1/admin` routes
+- `backend/cmd/server/main.go` — Wired admin repo, admin handler, event tracker, and setter injection
+- `backend/internal/interfaces/http/middleware/auth.go` — Added tracker field and `user_signup` event
+- `backend/internal/interfaces/http/handler/app.go` — Added tracker field and `app_selected` event
+- `backend/internal/application/service/queue_sync_service.go` — Added tracker field and `sync_started` event
+- `backend/internal/application/service/billing_service.go` — Added tracker field and billing lifecycle events
+- `backend/internal/interfaces/http/handler/metrics.go` — Added tracker field and `dashboard_viewed` event
+- `frontend-flutter/lib/main.dart` — MixpanelService init + Provider registration
+- `frontend-flutter/lib/app.dart` — Wires MixpanelService into AuthProvider
+- `frontend-flutter/lib/providers/auth_provider.dart` — Tracks login, signup, logout, identify/reset
+- `frontend-flutter/lib/screens/dashboard/dashboard_screen.dart` — Tracks dashboard_viewed
+- `frontend-flutter/pubspec.yaml` — Added `mixpanel_flutter: ^2.3.1`
+- `docs/developer/00-index.md` — Added entry #32
+- `DECISIONS.md` — Added ADR-025
+- `IMPLEMENTATION_LOG.md` — This entry
+
+**Tests:** 13 new tests (8 admin handler + 5 event tracker). All existing tests pass (`go test ./...`). Flutter: `flutter analyze` — no issues.

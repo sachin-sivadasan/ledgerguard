@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
 )
@@ -22,6 +23,12 @@ type BillingService struct {
 	webhookSecret   string
 	starterPlanID   string
 	proPlanID       string
+	tracker         domainservice.EventTracker
+}
+
+// SetTracker sets the event tracker for billing lifecycle events.
+func (s *BillingService) SetTracker(t domainservice.EventTracker) {
+	s.tracker = t
 }
 
 // NewBillingService creates a new BillingService.
@@ -117,6 +124,13 @@ func (s *BillingService) CreateCheckout(ctx context.Context, userID uuid.UUID, p
 	)
 	if err := s.billingRepo.Create(ctx, bs); err != nil {
 		return nil, fmt.Errorf("save billing subscription: %w", err)
+	}
+
+	if s.tracker != nil {
+		s.tracker.Track(ctx, userID.String(), "billing_subscription_created", domainservice.EventProperties{
+			"plan":   string(plan),
+			"amount": bs.AmountCents,
+		})
 	}
 
 	return &CheckoutResult{
@@ -215,6 +229,12 @@ func (s *BillingService) handleActivated(ctx context.Context, bs *entity.Billing
 		return
 	}
 
+	if s.tracker != nil {
+		s.tracker.Track(ctx, bs.UserID.String(), "billing_activated", domainservice.EventProperties{
+			"plan": string(bs.Plan),
+		})
+	}
+
 	// Update user's plan tier
 	s.updateUserPlanTier(ctx, bs.UserID, bs.MapToPlanTier())
 }
@@ -240,6 +260,12 @@ func (s *BillingService) handleHalted(ctx context.Context, bs *entity.BillingSub
 	if err := s.billingRepo.Update(ctx, bs); err != nil {
 		log.Printf("billing webhook: failed to update subscription %s to halted: %v", bs.ID, err)
 	}
+
+	if s.tracker != nil {
+		s.tracker.Track(ctx, bs.UserID.String(), "billing_payment_failed", domainservice.EventProperties{
+			"plan": string(bs.Plan),
+		})
+	}
 }
 
 func (s *BillingService) handleCancelled(ctx context.Context, bs *entity.BillingSubscription) {
@@ -247,6 +273,12 @@ func (s *BillingService) handleCancelled(ctx context.Context, bs *entity.Billing
 	if err := s.billingRepo.Update(ctx, bs); err != nil {
 		log.Printf("billing webhook: failed to update subscription %s to cancelled: %v", bs.ID, err)
 		return
+	}
+
+	if s.tracker != nil {
+		s.tracker.Track(ctx, bs.UserID.String(), "billing_cancelled", domainservice.EventProperties{
+			"plan": string(bs.Plan),
+		})
 	}
 
 	// Downgrade user to free tier

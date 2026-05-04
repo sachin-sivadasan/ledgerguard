@@ -18,6 +18,11 @@ type Config struct {
 	Razorpay   RazorpayConfig   `yaml:"razorpay"`
 	Redis      RedisConfig      `yaml:"redis"`
 	Queue      QueueConfig      `yaml:"queue"`
+	Mixpanel   MixpanelConfig   `yaml:"mixpanel"`
+}
+
+type MixpanelConfig struct {
+	Token string `yaml:"token"`
 }
 
 type RedisConfig struct {
@@ -234,6 +239,11 @@ func applyEnvOverrides(cfg *Config) {
 		if db, err := strconv.Atoi(v); err == nil {
 			cfg.Redis.DB = db
 		}
+	}
+
+	// Mixpanel
+	if v := os.Getenv("MIXPANEL_TOKEN"); v != "" {
+		cfg.Mixpanel.Token = v
 	}
 
 	// Queue

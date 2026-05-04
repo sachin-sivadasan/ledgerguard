@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
@@ -26,6 +27,12 @@ type MetricsHandler struct {
 	aggregator  MetricsAggregator
 	appRepo     repository.AppRepository
 	partnerRepo repository.PartnerAccountRepository
+	tracker     domainservice.EventTracker
+}
+
+// SetTracker sets the event tracker for dashboard view events.
+func (h *MetricsHandler) SetTracker(t domainservice.EventTracker) {
+	h.tracker = t
 }
 
 func NewMetricsHandler(
@@ -58,6 +65,13 @@ func (h *MetricsHandler) GetLatestMetrics(w http.ResponseWriter, r *http.Request
 
 	// Construct full GID for internal use
 	fullAppGID := appGIDPrefix + appID
+
+	// Track dashboard view
+	if h.tracker != nil {
+		h.tracker.Track(r.Context(), user.ID.String(), "dashboard_viewed", domainservice.EventProperties{
+			"app_id": appID,
+		})
+	}
 
 	// TODO: Calculate real metrics from transactions using fullAppGID
 	// For now, return sample metrics based on app ID

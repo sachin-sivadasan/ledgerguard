@@ -79,6 +79,7 @@ Source: `ledgerguard-flutter/` (Provider + mock data prototype). ASCII diagrams 
 | [26](26-flutter-analytics-suite.md) | Flutter Analytics Suite | AnalyticsProvider | AnalyticsScreen (5 tabs) |
 | [27](27-flutter-ai-insights-chat.md) | Flutter AI Insights & Chat | InsightsProvider | ChatScreen |
 | [28](28-flutter-settings-workspace.md) | Flutter Settings & Workspace | SettingsProvider, ApiKeyProvider | SettingsScreen |
+| [33](33-multi-platform-responsive-adaptation.md) | Multi-Platform Responsive Adaptation | LgBreakpoints | All screens |
 
 ---
 

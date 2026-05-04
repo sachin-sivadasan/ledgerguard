@@ -594,6 +594,35 @@ Created a public-facing marketing landing page for LedgerGuard using Next.js 14+
 
 ---
 
+## [2026-05-04] Multi-Platform Responsive Adaptation (frontend-flutter)
+
+**Commits:** 21 incremental commits
+
+**Summary:**
+Enabled Android, iOS, and macOS platform support for the `frontend-flutter/` Provider-based prototype, and made all 13 screens responsive across mobile (<600px), tablet (600–900px), and desktop (>900px) breakpoints.
+
+**Implemented:**
+
+1. **Documentation:** PlantUML navigation flow, Excalidraw architecture diagram, developer doc #33
+2. **Platform Scaffolding:** Android, iOS, macOS directories via `flutter create`
+3. **Responsive Foundation:**
+   - `LgBreakpoints` utility with `LgDeviceType` enum and `LgResponsive` widget
+   - `LgPage` adaptive padding (12/16/24px)
+   - `LgMetricCard` removed forced `Expanded` wrapper
+   - `LgMetricGrid` responsive Wrap-based grid (2/3/4 columns)
+   - `LgDataTable` horizontal scroll on mobile
+4. **Navigation:** Three-tier adaptive nav (BottomNav + More sheet / Drawer / NavigationRail)
+5. **Screen Adaptations:** All 13 screens adapted with `LgResponsive`, `LgMetricGrid`, `LayoutBuilder`
+6. **Polish:** SafeArea wrappers, adaptive search field, ScrollBehavior for desktop drag
+
+**Key Files:**
+- `lib/theme/app_breakpoints.dart` — LgBreakpoints, LgResponsive
+- `lib/widgets/lg_metric_grid.dart` — Responsive metric card grid
+- `lib/shell/app_shell.dart` — Three-tier navigation
+- `docs/developer/33-multi-platform-responsive-adaptation.md`
+
+---
+
 ## Related Logs
 
 - **Frontend (Flutter):** See [`frontend/IMPLEMENTATION_LOG.md`](frontend/IMPLEMENTATION_LOG.md)

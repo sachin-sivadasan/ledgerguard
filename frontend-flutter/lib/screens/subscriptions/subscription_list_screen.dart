@@ -10,6 +10,7 @@ import '../../theme/app_spacing.dart';
 import '../../widgets/lg_data_table.dart';
 import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_metric_card.dart';
+import '../../widgets/lg_metric_grid.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_risk_badge.dart';
 import '../../widgets/lg_search_field.dart';
@@ -72,31 +73,12 @@ class SubscriptionListScreen extends StatelessWidget {
           ],
 
           // KPI summary
-          Row(
+          LgMetricGrid(
             children: [
-              LgMetricCard(
-                label: 'Active',
-                value: '${provider.activeCount}',
-                icon: Icons.check_circle_outline,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: 'At Risk',
-                value: '${provider.atRiskCount}',
-                icon: Icons.warning_amber,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: 'Churned',
-                value: '${provider.churnedCount}',
-                icon: Icons.cancel_outlined,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: 'Avg Price',
-                value: provider.avgPrice,
-                icon: Icons.attach_money,
-              ),
+              LgMetricCard(label: 'Active', value: '${provider.activeCount}', icon: Icons.check_circle_outline),
+              LgMetricCard(label: 'At Risk', value: '${provider.atRiskCount}', icon: Icons.warning_amber),
+              LgMetricCard(label: 'Churned', value: '${provider.churnedCount}', icon: Icons.cancel_outlined),
+              LgMetricCard(label: 'Avg Price', value: provider.avgPrice, icon: Icons.attach_money),
             ],
           ),
           const SizedBox(height: LgSpacing.s400),

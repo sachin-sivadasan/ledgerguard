@@ -1,0 +1,60 @@
+@startuml Mobile Navigation Flow
+!theme plain
+title LedgerGuard – Responsive Navigation
+
+state "Screen Width Check" as check
+state "Mobile (<600px)" as mobile {
+  state "BottomNavigationBar" as bnb
+  state "5 Primary Tabs" as tabs {
+    state "Dashboard" as t1
+    state "Subscriptions" as t2
+    state "Stores" as t3
+    state "Analytics" as t4
+    state "More" as t5
+  }
+  state "More Sheet" as sheet {
+    state "Transactions" as m1
+    state "Events" as m2
+    state "Webhooks" as m3
+    state "Risk" as m4
+    state "Earnings" as m5
+    state "Apps" as m6
+    state "API Keys" as m7
+    state "AI Insights" as m8
+    state "Settings" as m9
+  }
+
+  bnb --> tabs
+  t5 --> sheet : showModalBottomSheet
+  sheet --> bnb : goBranch(index)
+}
+
+state "Tablet (600–900px)" as tablet {
+  state "AppBar + Drawer" as drawer
+  state "13 Drawer Items" as drawerItems
+  drawer --> drawerItems
+}
+
+state "Desktop (>900px)" as desktop {
+  state "NavigationRail (100px)" as rail
+  state "13 Rail Items" as railItems
+  rail --> railItems
+}
+
+[*] --> check
+check --> mobile : width < 600
+check --> tablet : 600 ≤ width < 900
+check --> desktop : width ≥ 900
+
+note right of mobile
+  Detail screens (e.g. /subscriptions/:id)
+  stack on top via GoRouter.
+  StatefulShellRoute branches unchanged.
+end note
+
+note right of desktop
+  Current behavior preserved.
+  13 branches via StatefulShellRoute.indexedStack.
+end note
+
+@enduml

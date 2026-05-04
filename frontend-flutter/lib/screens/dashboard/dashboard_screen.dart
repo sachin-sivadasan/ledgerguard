@@ -7,8 +7,10 @@ import '../../providers/dashboard_provider.dart';
 import '../../services/mixpanel_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../theme/app_breakpoints.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_metric_card.dart';
+import '../../widgets/lg_metric_grid.dart';
 import '../../widgets/lg_onboarding_checklist.dart';
 import '../../widgets/lg_page.dart';
 
@@ -44,31 +46,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             const LgOnboardingChecklist(),
             const SizedBox(height: LgSpacing.s600),
-            Row(
+            LgMetricGrid(
               children: [
-                LgMetricCard(
-                  label: 'Monthly Recurring Revenue',
-                  value: '\$0',
-                  icon: Icons.attach_money,
-                ),
-                const SizedBox(width: LgSpacing.s400),
-                LgMetricCard(
-                  label: 'Renewal Rate',
-                  value: '0%',
-                  icon: Icons.autorenew,
-                ),
-                const SizedBox(width: LgSpacing.s400),
-                LgMetricCard(
-                  label: 'Revenue at Risk',
-                  value: '\$0',
-                  icon: Icons.warning_amber,
-                ),
-                const SizedBox(width: LgSpacing.s400),
-                LgMetricCard(
-                  label: 'Usage Revenue',
-                  value: '\$0',
-                  icon: Icons.trending_up,
-                ),
+                LgMetricCard(label: 'Monthly Recurring Revenue', value: '\$0', icon: Icons.attach_money),
+                LgMetricCard(label: 'Renewal Rate', value: '0%', icon: Icons.autorenew),
+                LgMetricCard(label: 'Revenue at Risk', value: '\$0', icon: Icons.warning_amber),
+                LgMetricCard(label: 'Usage Revenue', value: '\$0', icon: Icons.trending_up),
               ],
             ),
           ],
@@ -137,90 +120,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: LgSpacing.s400),
 
           // KPI cards
-          Row(
+          LgMetricGrid(
             children: [
-              LgMetricCard(
-                label: 'Monthly Recurring Revenue',
-                value: dp.mrrFormatted,
-                trend: '+4.2%',
-                trendPositive: true,
-                icon: Icons.attach_money,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: 'Renewal Rate',
-                value: '${dp.renewalRate.toStringAsFixed(1)}%',
-                trend: '+1.3%',
-                trendPositive: true,
-                icon: Icons.autorenew,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: 'Revenue at Risk',
-                value: dp.revenueAtRiskFormatted,
-                trend: '-\$120',
-                trendPositive: true,
-                icon: Icons.warning_amber,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: 'Usage Revenue',
-                value: dp.usageRevenueFormatted,
-                trend: '+18%',
-                trendPositive: true,
-                icon: Icons.trending_up,
-              ),
+              LgMetricCard(label: 'Monthly Recurring Revenue', value: dp.mrrFormatted, trend: '+4.2%', trendPositive: true, icon: Icons.attach_money),
+              LgMetricCard(label: 'Renewal Rate', value: '${dp.renewalRate.toStringAsFixed(1)}%', trend: '+1.3%', trendPositive: true, icon: Icons.autorenew),
+              LgMetricCard(label: 'Revenue at Risk', value: dp.revenueAtRiskFormatted, trend: '-\$120', trendPositive: true, icon: Icons.warning_amber),
+              LgMetricCard(label: 'Usage Revenue', value: dp.usageRevenueFormatted, trend: '+18%', trendPositive: true, icon: Icons.trending_up),
             ],
           ),
           const SizedBox(height: LgSpacing.s600),
 
           // MRR trend + Risk distribution
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 2,
-                child: LgCard(
+          LgResponsive(
+            mobile: Column(
+              children: [
+                LgCard(
                   title: 'MRR Trend (12 months)',
-                  child: SizedBox(
-                    height: 250,
-                    child: _MrrChart(snapshots: dp.mrrTrend),
-                  ),
+                  child: SizedBox(height: 200, child: _MrrChart(snapshots: dp.mrrTrend)),
                 ),
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              Expanded(
-                child: LgCard(
+                const SizedBox(height: LgSpacing.s400),
+                LgCard(
                   title: 'Risk Distribution',
-                  child: SizedBox(
-                    height: 250,
-                    child: _RiskDonut(dist: dp.riskDistribution),
+                  child: SizedBox(height: 200, child: _RiskDonut(dist: dp.riskDistribution)),
+                ),
+              ],
+            ),
+            desktop: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: LgCard(
+                    title: 'MRR Trend (12 months)',
+                    child: SizedBox(height: 250, child: _MrrChart(snapshots: dp.mrrTrend)),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: LgSpacing.s400),
+                Expanded(
+                  child: LgCard(
+                    title: 'Risk Distribution',
+                    child: SizedBox(height: 250, child: _RiskDonut(dist: dp.riskDistribution)),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: LgSpacing.s600),
 
           // Bottom row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _ForecastCard(dp: dp, theme: theme),
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              Expanded(
-                child: _RevenueMixCard(dp: dp),
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              Expanded(
-                child: _WeeklyActivityCard(
-                  title: dp.activityTitle,
-                  activity: dp.activity,
-                ),
-              ),
-            ],
+          LgResponsive(
+            mobile: Column(
+              children: [
+                _ForecastCard(dp: dp, theme: theme),
+                const SizedBox(height: LgSpacing.s400),
+                _RevenueMixCard(dp: dp),
+                const SizedBox(height: LgSpacing.s400),
+                _WeeklyActivityCard(title: dp.activityTitle, activity: dp.activity),
+              ],
+            ),
+            desktop: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _ForecastCard(dp: dp, theme: theme)),
+                const SizedBox(width: LgSpacing.s400),
+                Expanded(child: _RevenueMixCard(dp: dp)),
+                const SizedBox(width: LgSpacing.s400),
+                Expanded(child: _WeeklyActivityCard(title: dp.activityTitle, activity: dp.activity)),
+              ],
+            ),
           ),
         ],
       ),

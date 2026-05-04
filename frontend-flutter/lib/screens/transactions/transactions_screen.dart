@@ -8,6 +8,7 @@ import '../../providers/apps_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../theme/app_breakpoints.dart';
 import '../../widgets/lg_badge.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_data_table.dart';
@@ -69,23 +70,32 @@ class TransactionsScreen extends StatelessWidget {
 
           // Summary
           LgCard(
-            child: Row(
-              children: [
-                Text('Gross Total: ', style: theme.textTheme.bodySmall),
-                Text('\$${(provider.totalGrossCents / 100).toStringAsFixed(2)}',
-                    style: theme.textTheme.titleSmall),
-                const SizedBox(width: LgSpacing.s600),
-                Text('Net Total: ', style: theme.textTheme.bodySmall),
-                Text('\$${(provider.totalNetCents / 100).toStringAsFixed(2)}',
-                    style: theme.textTheme.titleSmall),
-                const SizedBox(width: LgSpacing.s600),
-                Text('Shopify Cut: ', style: theme.textTheme.bodySmall),
-                Text(
-                  '\$${((provider.totalGrossCents - provider.totalNetCents) / 100).toStringAsFixed(2)}',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: LgColors.warning),
-                ),
-              ],
-            ),
+            child: LgBreakpoints.isMobile(context)
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SummaryRow('Gross Total', '\$${(provider.totalGrossCents / 100).toStringAsFixed(2)}', theme),
+                      const SizedBox(height: LgSpacing.s200),
+                      _SummaryRow('Net Total', '\$${(provider.totalNetCents / 100).toStringAsFixed(2)}', theme),
+                      const SizedBox(height: LgSpacing.s200),
+                      _SummaryRow('Shopify Cut', '\$${((provider.totalGrossCents - provider.totalNetCents) / 100).toStringAsFixed(2)}', theme, valueColor: LgColors.warning),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Text('Gross Total: ', style: theme.textTheme.bodySmall),
+                      Text('\$${(provider.totalGrossCents / 100).toStringAsFixed(2)}', style: theme.textTheme.titleSmall),
+                      const SizedBox(width: LgSpacing.s600),
+                      Text('Net Total: ', style: theme.textTheme.bodySmall),
+                      Text('\$${(provider.totalNetCents / 100).toStringAsFixed(2)}', style: theme.textTheme.titleSmall),
+                      const SizedBox(width: LgSpacing.s600),
+                      Text('Shopify Cut: ', style: theme.textTheme.bodySmall),
+                      Text(
+                        '\$${((provider.totalGrossCents - provider.totalNetCents) / 100).toStringAsFixed(2)}',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: LgColors.warning),
+                      ),
+                    ],
+                  ),
           ),
           const SizedBox(height: LgSpacing.s300),
 
@@ -155,6 +165,25 @@ class TransactionsScreen extends StatelessWidget {
     } catch (_) {
       return appId;
     }
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final ThemeData theme;
+  final Color? valueColor;
+  const _SummaryRow(this.label, this.value, this.theme, {this.valueColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text('$label:', style: theme.textTheme.bodySmall),
+        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: valueColor ?? LgColors.textPrimary)),
+      ],
+    );
   }
 }
 

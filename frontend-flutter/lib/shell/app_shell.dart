@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../theme/app_breakpoints.dart';
 import '../theme/app_colors.dart';
 
 class AppShell extends StatelessWidget {
@@ -23,22 +24,132 @@ class AppShell extends StatelessWidget {
     _NavItem(icon: Icons.settings_outlined, selectedIcon: Icons.settings, label: 'Settings'),
   ];
 
+  // Bottom nav shows these 4 + "More" (index 0-3 map to branch 0,1,2,7)
+  static const _bottomNavBranches = [0, 1, 2, 7]; // Dashboard, Subs, Stores, Analytics
+  static const _moreItems = [3, 4, 5, 6, 8, 9, 10, 11, 12]; // remaining branches
+
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width > 800;
+    final deviceType = LgBreakpoints.deviceType(context);
+
+    return switch (deviceType) {
+      LgDeviceType.mobile => _buildMobileScaffold(context),
+      LgDeviceType.tablet => _buildTabletScaffold(context),
+      LgDeviceType.desktop => _buildDesktopScaffold(context),
+    };
+  }
+
+  // ─── Mobile: BottomNavigationBar ──────────────────────────────────
+  Widget _buildMobileScaffold(BuildContext context) {
+    final currentIndex = navigationShell.currentIndex;
+    // Map current branch to bottom nav index
+    int bottomIndex;
+    final branchIdx = _bottomNavBranches.indexOf(currentIndex);
+    if (branchIdx >= 0) {
+      bottomIndex = branchIdx;
+    } else if (_moreItems.contains(currentIndex)) {
+      bottomIndex = 4; // "More" tab
+    } else {
+      bottomIndex = 0;
+    }
 
     return Scaffold(
-      drawer: wide ? null : _buildDrawer(context),
-      appBar: wide
-          ? null
-          : AppBar(
-              title: const Text('LedgerGuard'),
-              backgroundColor: LgColors.surface,
+      body: navigationShell,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: bottomIndex,
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: LgColors.primary,
+        unselectedItemColor: LgColors.textSecondary,
+        selectedFontSize: 11,
+        unselectedFontSize: 11,
+        onTap: (index) {
+          if (index < 4) {
+            navigationShell.goBranch(_bottomNavBranches[index]);
+          } else {
+            _showMoreSheet(context);
+          }
+        },
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(_destinations[0].icon),
+            activeIcon: Icon(_destinations[0].selectedIcon),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(_destinations[1].icon),
+            activeIcon: Icon(_destinations[1].selectedIcon),
+            label: 'Subs',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(_destinations[2].icon),
+            activeIcon: Icon(_destinations[2].selectedIcon),
+            label: 'Stores',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(_destinations[7].icon),
+            activeIcon: Icon(_destinations[7].selectedIcon),
+            label: 'Analytics',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.more_horiz,
+              color: _moreItems.contains(currentIndex) ? LgColors.primary : null,
             ),
+            label: 'More',
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMoreSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _moreItems.map((branchIndex) {
+              final dest = _destinations[branchIndex];
+              final isSelected = navigationShell.currentIndex == branchIndex;
+              return ListTile(
+                leading: Icon(
+                  isSelected ? dest.selectedIcon : dest.icon,
+                  color: isSelected ? LgColors.primary : null,
+                ),
+                title: Text(dest.label),
+                selected: isSelected,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  navigationShell.goBranch(branchIndex);
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  // ─── Tablet: AppBar + Drawer ──────────────────────────────────────
+  Widget _buildTabletScaffold(BuildContext context) {
+    return Scaffold(
+      drawer: _buildDrawer(context),
+      appBar: AppBar(
+        title: const Text('LedgerGuard'),
+        backgroundColor: LgColors.surface,
+      ),
+      body: navigationShell,
+    );
+  }
+
+  // ─── Desktop: NavigationRail ──────────────────────────────────────
+  Widget _buildDesktopScaffold(BuildContext context) {
+    return Scaffold(
       body: Row(
         children: [
-          if (wide) _buildRail(context),
-          if (wide) const VerticalDivider(width: 1),
+          _buildRail(context),
+          const VerticalDivider(width: 1),
           Expanded(child: navigationShell),
         ],
       ),

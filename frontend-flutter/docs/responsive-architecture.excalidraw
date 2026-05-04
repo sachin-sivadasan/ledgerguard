@@ -1,0 +1,46 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "type": "text",
+      "x": 100,
+      "y": 20,
+      "text": "LedgerGuard – Responsive Architecture",
+      "fontSize": 24,
+      "fontFamily": 1,
+      "id": "title"
+    },
+    {
+      "type": "text",
+      "x": 100,
+      "y": 80,
+      "text": "Breakpoint Decision Tree\n========================\n\n  Screen Width\n      │\n      ├── < 600px  →  MOBILE\n      │   ├── BottomNavigationBar (5 tabs + More sheet)\n      │   ├── LgPage padding: 12px\n      │   ├── LgMetricGrid: 2 columns\n      │   ├── LgDataTable: horizontal scroll\n      │   └── LgSearchField: full width\n      │\n      ├── 600–900px  →  TABLET\n      │   ├── AppBar + Drawer\n      │   ├── LgPage padding: 16px\n      │   ├── LgMetricGrid: 3 columns\n      │   ├── LgDataTable: normal\n      │   └── LgSearchField: 300px\n      │\n      └── > 900px  →  DESKTOP\n          ├── NavigationRail (100px)\n          ├── LgPage padding: 24px\n          ├── LgMetricGrid: 4 columns\n          ├── LgDataTable: normal\n          └── LgSearchField: 300px",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "id": "breakpoints"
+    },
+    {
+      "type": "text",
+      "x": 600,
+      "y": 80,
+      "text": "Widget Adaptation Flow\n======================\n\n  LgBreakpoints.deviceType(context)\n      │\n      ▼\n  LgResponsive(\n    mobile:  Column(children: [...]),\n    tablet:  Column(children: [...]),  // optional\n    desktop: Row(children: [...]),\n  )\n      │\n      ▼\n  Renders correct layout per breakpoint\n\n\n  LgMetricGrid(cards: [...])\n      │\n      ▼\n  Wrap(\n    children: cards.map((c) =>\n      SizedBox(\n        width: columnWidth,  // based on breakpoint\n        child: c,\n      )\n    ),\n  )",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "id": "adaptation"
+    },
+    {
+      "type": "text",
+      "x": 100,
+      "y": 520,
+      "text": "Navigation Modes\n================\n\n  ┌─────────────────────────────────────────────────────────┐\n  │ MOBILE (<600px)                                         │\n  │ ┌─────────────────────────────────────────────────────┐ │\n  │ │              Screen Content                         │ │\n  │ │                                                     │ │\n  │ └─────────────────────────────────────────────────────┘ │\n  │ ┌────┬────┬────┬────┬────┐                              │\n  │ │ 🏠 │ 📋 │ 🏪 │ 📊 │ ⋯ │  BottomNavigationBar       │\n  │ └────┴────┴────┴────┴────┘                              │\n  └─────────────────────────────────────────────────────────┘\n\n  ┌─────────────────────────────────────────────────────────┐\n  │ TABLET (600–900px)                                      │\n  │ ┌──────────┬──────────────────────────────────────────┐ │\n  │ │ [☰]      │  AppBar Title                            │ │\n  │ ├──────────┤──────────────────────────────────────────┤ │\n  │ │ Drawer   │  Screen Content                          │ │\n  │ │ (overlay)│                                          │ │\n  │ └──────────┴──────────────────────────────────────────┘ │\n  └─────────────────────────────────────────────────────────┘\n\n  ┌─────────────────────────────────────────────────────────┐\n  │ DESKTOP (>900px)                                        │\n  │ ┌────┬───────────────────────────────────────────────┐  │\n  │ │Rail│  Screen Content                               │  │\n  │ │100 │                                               │  │\n  │ │ px │                                               │  │\n  │ └────┴───────────────────────────────────────────────┘  │\n  └─────────────────────────────────────────────────────────┘",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "id": "navigation"
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff"
+  }
+}

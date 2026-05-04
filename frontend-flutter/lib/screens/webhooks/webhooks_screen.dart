@@ -11,6 +11,7 @@ import '../../widgets/lg_badge.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_metric_card.dart';
+import '../../widgets/lg_metric_grid.dart';
 import '../../widgets/lg_page.dart';
 
 class WebhooksScreen extends StatelessWidget {
@@ -45,25 +46,11 @@ class WebhooksScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // KPI cards
-          Row(
+          LgMetricGrid(
             children: [
-              LgMetricCard(
-                label: 'Webhooks Today',
-                value: '${provider.totalToday}',
-                icon: Icons.webhook,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: 'Failed Today',
-                value: '${provider.failedToday}',
-                icon: Icons.error_outline,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: '7d Success Rate',
-                value: provider.successRate7d,
-                icon: Icons.check_circle_outline,
-              ),
+              LgMetricCard(label: 'Webhooks Today', value: '${provider.totalToday}', icon: Icons.webhook),
+              LgMetricCard(label: 'Failed Today', value: '${provider.failedToday}', icon: Icons.error_outline),
+              LgMetricCard(label: '7d Success Rate', value: provider.successRate7d, icon: Icons.check_circle_outline),
             ],
           ),
           const SizedBox(height: LgSpacing.s600),

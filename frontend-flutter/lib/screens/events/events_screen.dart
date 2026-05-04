@@ -12,6 +12,7 @@ import '../../widgets/lg_badge.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_metric_card.dart';
+import '../../widgets/lg_metric_grid.dart';
 import '../../widgets/lg_page.dart';
 
 class EventsScreen extends StatelessWidget {
@@ -57,31 +58,12 @@ class EventsScreen extends StatelessWidget {
           const SizedBox(height: LgSpacing.s400),
 
           // KPI cards
-          Row(
+          LgMetricGrid(
             children: [
-              LgMetricCard(
-                label: 'Installs ${_rangeLabel(provider.timeRange)}',
-                value: '${provider.installs}',
-                icon: Icons.download,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: 'Uninstalls ${_rangeLabel(provider.timeRange)}',
-                value: '${provider.uninstalls}',
-                icon: Icons.delete_outline,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: 'Churns ${_rangeLabel(provider.timeRange)}',
-                value: '${provider.churns}',
-                icon: Icons.cancel_outlined,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: 'Billing Failures ${_rangeLabel(provider.timeRange)}',
-                value: '${provider.billingFailures}',
-                icon: Icons.error_outline,
-              ),
+              LgMetricCard(label: 'Installs ${_rangeLabel(provider.timeRange)}', value: '${provider.installs}', icon: Icons.download),
+              LgMetricCard(label: 'Uninstalls ${_rangeLabel(provider.timeRange)}', value: '${provider.uninstalls}', icon: Icons.delete_outline),
+              LgMetricCard(label: 'Churns ${_rangeLabel(provider.timeRange)}', value: '${provider.churns}', icon: Icons.cancel_outlined),
+              LgMetricCard(label: 'Billing Failures ${_rangeLabel(provider.timeRange)}', value: '${provider.billingFailures}', icon: Icons.error_outline),
             ],
           ),
           const SizedBox(height: LgSpacing.s600),

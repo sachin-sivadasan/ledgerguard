@@ -9,6 +9,7 @@ import '../../providers/events_provider.dart';
 import '../../providers/store_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../theme/app_breakpoints.dart';
 import '../../widgets/lg_badge.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_page.dart';
@@ -333,12 +334,13 @@ class _Info extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final labelWidth = LgBreakpoints.isMobile(context) ? 90.0 : 120.0;
     return Padding(
       padding: const EdgeInsets.only(bottom: LgSpacing.s200),
       child: Row(
         children: [
-          SizedBox(width: 120, child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
-          Text(value, style: Theme.of(context).textTheme.bodyMedium),
+          SizedBox(width: labelWidth, child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
+          Expanded(child: Text(value, style: Theme.of(context).textTheme.bodyMedium)),
         ],
       ),
     );

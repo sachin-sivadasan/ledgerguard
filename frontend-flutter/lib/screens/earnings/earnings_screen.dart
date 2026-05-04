@@ -9,9 +9,11 @@ import '../../providers/earnings_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_badge.dart';
+import '../../theme/app_breakpoints.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_metric_card.dart';
+import '../../widgets/lg_metric_grid.dart';
 import '../../widgets/lg_page.dart';
 
 class EarningsScreen extends StatelessWidget {
@@ -109,25 +111,11 @@ class _EarningsTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          LgMetricGrid(
             children: [
-              LgMetricCard(
-                label: 'Total Earned',
-                value: provider.totalEarned,
-                icon: Icons.account_balance_wallet,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: 'Pending',
-                value: provider.pendingAmount,
-                icon: Icons.hourglass_empty,
-              ),
-              const SizedBox(width: LgSpacing.s400),
-              LgMetricCard(
-                label: 'Available',
-                value: provider.availableAmount,
-                icon: Icons.check_circle_outline,
-              ),
+              LgMetricCard(label: 'Total Earned', value: provider.totalEarned, icon: Icons.account_balance_wallet),
+              LgMetricCard(label: 'Pending', value: provider.pendingAmount, icon: Icons.hourglass_empty),
+              LgMetricCard(label: 'Available', value: provider.availableAmount, icon: Icons.check_circle_outline),
             ],
           ),
           const SizedBox(height: LgSpacing.s600),
@@ -155,23 +143,26 @@ class _EarningsTab extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: LgSpacing.s200),
-                          Row(
-                            children: [
-                              Text('Gross: ${period.grossFormatted}',
-                                  style: theme.textTheme.bodyMedium),
-                              const SizedBox(width: LgSpacing.s400),
-                              Text('Shopify: ${period.shopifyCutFormatted}',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: LgColors.textSecondary)),
-                              const SizedBox(width: LgSpacing.s400),
-                              Text('Net: ${period.netFormatted}',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: LgColors.success)),
-                            ],
-                          ),
+                          LgBreakpoints.isMobile(context)
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Gross: ${period.grossFormatted}', style: theme.textTheme.bodyMedium),
+                                    const SizedBox(height: LgSpacing.s100),
+                                    Text('Shopify: ${period.shopifyCutFormatted}', style: TextStyle(fontSize: 13, color: LgColors.textSecondary)),
+                                    const SizedBox(height: LgSpacing.s100),
+                                    Text('Net: ${period.netFormatted}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: LgColors.success)),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Text('Gross: ${period.grossFormatted}', style: theme.textTheme.bodyMedium),
+                                    const SizedBox(width: LgSpacing.s400),
+                                    Text('Shopify: ${period.shopifyCutFormatted}', style: TextStyle(fontSize: 13, color: LgColors.textSecondary)),
+                                    const SizedBox(width: LgSpacing.s400),
+                                    Text('Net: ${period.netFormatted}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: LgColors.success)),
+                                  ],
+                                ),
                           if (period.paidOutDate != null) ...[
                             const SizedBox(height: LgSpacing.s100),
                             Text(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_breakpoints.dart';
 import '../theme/app_spacing.dart';
 
 class LgPageAction {
@@ -33,11 +34,16 @@ class LgPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final padding = switch (LgBreakpoints.deviceType(context)) {
+      LgDeviceType.mobile => LgSpacing.s300,
+      LgDeviceType.tablet => LgSpacing.s400,
+      LgDeviceType.desktop => LgSpacing.s600,
+    };
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 1200),
         child: Padding(
-          padding: const EdgeInsets.all(LgSpacing.s600),
+          padding: EdgeInsets.all(padding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

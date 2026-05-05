@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -56,7 +54,7 @@ services:
       postgres:
         condition: service_healthy
     profiles:
-      - full  # Only run with: docker-compose --profile full up
+      - full  # docker compose --profile full up
 
 volumes:
   postgres_data:

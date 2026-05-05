@@ -35,6 +35,7 @@ Postponed ideas and features for later implementation.
 | Multi-source review scraping | P4 | Google Play, App Store (iOS), beyond Shopify |
 | Webhook notification on new negative reviews | P2 | Detect new 1-2 star reviews and push notification to user |
 | Sync scheduler fallback when Redis unavailable | P3 | When `queue.enabled: true` but Redis fails to connect, fall back to direct SyncScheduler instead of running no sync at all |
+| Migration failure notification | P3 | Send notification (Slack/push) when database migrations fail on startup; currently only logged as WARNING |
 
 ---
 

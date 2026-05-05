@@ -1,0 +1,760 @@
+{
+	"info": {
+		"name": "LedgerGuard API",
+		"description": "Revenue Intelligence Platform for Shopify App Developers.\n\nSetup:\n1. Run '01 - Firebase Sign In' to get a token\n2. Token is auto-saved to {{firebaseToken}} variable\n3. All other requests use it automatically",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:8080" },
+		{ "key": "firebaseApiKey", "value": "AIzaSyAS0eqroCDyj7E87tUCVnUgwhXTNV9zv-g" },
+		{ "key": "firebaseToken", "value": "" },
+		{ "key": "appID", "value": "4599915" },
+		{ "key": "subscriptionID", "value": "" },
+		{ "key": "jobID", "value": "" },
+		{ "key": "domain", "value": "" }
+	],
+	"item": [
+		{
+			"name": "00 - Auth",
+			"item": [
+				{
+					"name": "01 - Firebase Sign In (Get Token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var json = pm.response.json();",
+									"if (json.idToken) {",
+									"    pm.collectionVariables.set('firebaseToken', json.idToken);",
+									"    console.log('Token saved! Expires in ' + json.expiresIn + 's');",
+									"}",
+									"pm.test('Sign in successful', function() {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(json.idToken).to.be.a('string');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"your-email@example.com\",\n    \"password\": \"your-password\",\n    \"returnSecureToken\": true\n}"
+						},
+						"url": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{firebaseApiKey}}"
+					}
+				},
+				{
+					"name": "02 - Get Current User (Me)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/me"
+					}
+				}
+			]
+		},
+		{
+			"name": "01 - Apps",
+			"item": [
+				{
+					"name": "List Apps",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps"
+					}
+				},
+				{
+					"name": "Get Available Apps (from Shopify)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/available"
+					}
+				},
+				{
+					"name": "Select App",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"app_id\": \"{{appID}}\"\n}"
+						},
+						"url": "{{baseUrl}}/api/v1/apps/select"
+					}
+				},
+				{
+					"name": "Update App Tier",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"tier\": \"DEFAULT_20\"\n}"
+						},
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/tier"
+					}
+				},
+				{
+					"name": "Update Store Slug",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slug\": \"my-app-slug\"\n}"
+						},
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/store-slug"
+					}
+				},
+				{
+					"name": "Get Install Count",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/install-count"
+					}
+				},
+				{
+					"name": "Refresh Install Count",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/refresh-install-count"
+					}
+				}
+			]
+		},
+		{
+			"name": "02 - Metrics",
+			"item": [
+				{
+					"name": "Get Latest Metrics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/metrics/latest"
+					}
+				},
+				{
+					"name": "Get Metrics by Period",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/apps/{{appID}}/metrics?start=2026-01-01&end=2026-05-31",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "apps", "{{appID}}", "metrics"],
+							"query": [
+								{ "key": "start", "value": "2026-01-01" },
+								{ "key": "end", "value": "2026-05-31" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Aggregate Metrics (All Apps)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/metrics/aggregate"
+					}
+				}
+			]
+		},
+		{
+			"name": "03 - Subscriptions",
+			"item": [
+				{
+					"name": "List Subscriptions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/apps/{{appID}}/subscriptions?limit=20&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "apps", "{{appID}}", "subscriptions"],
+							"query": [
+								{ "key": "limit", "value": "20" },
+								{ "key": "offset", "value": "0" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Subscription by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/subscriptions/{{subscriptionID}}"
+					}
+				},
+				{
+					"name": "Subscription Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/subscriptions/summary"
+					}
+				},
+				{
+					"name": "Subscription Price Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/subscriptions/price-stats"
+					}
+				}
+			]
+		},
+		{
+			"name": "04 - Earnings",
+			"item": [
+				{
+					"name": "Get Earnings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/apps/{{appID}}/earnings?start=2026-01-01&end=2026-05-31&mode=combined",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "apps", "{{appID}}", "earnings"],
+							"query": [
+								{ "key": "start", "value": "2026-01-01" },
+								{ "key": "end", "value": "2026-05-31" },
+								{ "key": "mode", "value": "combined" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Earnings Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/earnings/status"
+					}
+				}
+			]
+		},
+		{
+			"name": "05 - Fees",
+			"item": [
+				{
+					"name": "Get Fee Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/fees/summary"
+					}
+				},
+				{
+					"name": "Get Tier Breakdown",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/fees/breakdown"
+					}
+				},
+				{
+					"name": "List Available Tiers (Public)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/tiers"
+					}
+				}
+			]
+		},
+		{
+			"name": "06 - Store Health",
+			"item": [
+				{
+					"name": "Get Store Health",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/stores/{{domain}}/health"
+					}
+				}
+			]
+		},
+		{
+			"name": "07 - Reviews",
+			"item": [
+				{
+					"name": "List Reviews",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/reviews"
+					}
+				},
+				{
+					"name": "Scrape Reviews",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/reviews/scrape"
+					}
+				}
+			]
+		},
+		{
+			"name": "08 - Insights",
+			"item": [
+				{
+					"name": "Get Daily Insight",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/apps/{{appID}}/insights/daily"
+					}
+				}
+			]
+		},
+		{
+			"name": "09 - Sync",
+			"item": [
+				{
+					"name": "Sync All Apps (Direct)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/sync"
+					}
+				},
+				{
+					"name": "Sync Single App (Direct)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/sync/{{appID}}"
+					}
+				},
+				{
+					"name": "Enqueue Sync (Queue)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/sync/enqueue/{{appID}}"
+					}
+				},
+				{
+					"name": "List Sync Jobs",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/sync/jobs"
+					}
+				},
+				{
+					"name": "Get Job Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/sync/jobs/{{jobID}}"
+					}
+				},
+				{
+					"name": "Get Job Progress",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/sync/jobs/{{jobID}}/progress"
+					}
+				},
+				{
+					"name": "Cancel Job",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/sync/jobs/{{jobID}}/cancel"
+					}
+				}
+			]
+		},
+		{
+			"name": "10 - User Preferences",
+			"item": [
+				{
+					"name": "Get Dashboard Preferences",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/user/preferences/dashboard"
+					}
+				},
+				{
+					"name": "Save Dashboard Preferences",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"time_range\": \"last_month\",\n    \"selected_app_id\": \"{{appID}}\"\n}"
+						},
+						"url": "{{baseUrl}}/api/v1/user/preferences/dashboard"
+					}
+				},
+				{
+					"name": "Get Default App",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/user/preferences/default-app"
+					}
+				},
+				{
+					"name": "Set Default App",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"app_id\": \"{{appID}}\"\n}"
+						},
+						"url": "{{baseUrl}}/api/v1/user/preferences/default-app"
+					}
+				}
+			]
+		},
+		{
+			"name": "11 - Notifications",
+			"item": [
+				{
+					"name": "Get Notification Preferences",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/users/notification-preferences"
+					}
+				},
+				{
+					"name": "Save Notification Preferences",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"critical_alerts_enabled\": true,\n    \"daily_summary_enabled\": true,\n    \"daily_summary_time\": \"08:00\",\n    \"slack_webhook_url\": \"\"\n}"
+						},
+						"url": "{{baseUrl}}/api/v1/users/notification-preferences"
+					}
+				},
+				{
+					"name": "Register Device",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"fcm-device-token-here\",\n    \"platform\": \"web\"\n}"
+						},
+						"url": "{{baseUrl}}/api/v1/devices"
+					}
+				},
+				{
+					"name": "Unregister Device",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"fcm-device-token-here\"\n}"
+						},
+						"url": "{{baseUrl}}/api/v1/devices"
+					}
+				}
+			]
+		},
+		{
+			"name": "12 - Billing",
+			"item": [
+				{
+					"name": "Create Checkout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"plan\": \"starter\"\n}"
+						},
+						"url": "{{baseUrl}}/api/v1/billing/checkout"
+					}
+				},
+				{
+					"name": "Get Billing Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/billing/status"
+					}
+				}
+			]
+		},
+		{
+			"name": "13 - Shopify Integration",
+			"item": [
+				{
+					"name": "Get Integration Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/integrations/shopify/status"
+					}
+				},
+				{
+					"name": "Start OAuth Flow",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/integrations/shopify/oauth"
+					}
+				}
+			]
+		},
+		{
+			"name": "14 - Chat & GraphQL",
+			"item": [
+				{
+					"name": "Chat (SSE)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"message\": \"What is my MRR?\",\n    \"app_id\": \"{{appID}}\"\n}"
+						},
+						"url": "{{baseUrl}}/api/v1/chat"
+					}
+				},
+				{
+					"name": "List Chat Modules",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/chat/modules"
+					}
+				},
+				{
+					"name": "GraphQL Query",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"query\": \"{ metrics(appId: \\\"{{appID}}\\\") { mrr atRiskCount renewalRate } }\"\n}"
+						},
+						"url": "{{baseUrl}}/graphql"
+					}
+				}
+			]
+		},
+		{
+			"name": "15 - API Keys",
+			"item": [
+				{
+					"name": "List API Keys",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/api-keys"
+					}
+				},
+				{
+					"name": "Create API Key",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"My API Key\"\n}"
+						},
+						"url": "{{baseUrl}}/api/v1/api-keys"
+					}
+				},
+				{
+					"name": "Revoke API Key",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/api-keys/KEY_ID_HERE"
+					}
+				}
+			]
+		},
+		{
+			"name": "16 - Admin (Requires ADMIN role)",
+			"item": [
+				{
+					"name": "List Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/admin/users"
+					}
+				},
+				{
+					"name": "Onboarding Funnel",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/admin/onboarding"
+					}
+				},
+				{
+					"name": "List Sync Jobs",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/admin/sync"
+					}
+				},
+				{
+					"name": "List Billing",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{firebaseToken}}" }
+						],
+						"url": "{{baseUrl}}/api/v1/admin/billing"
+					}
+				}
+			]
+		},
+		{
+			"name": "17 - Health & Public",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/health"
+					}
+				}
+			]
+		}
+	]
+}

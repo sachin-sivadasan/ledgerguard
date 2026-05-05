@@ -1,0 +1,151 @@
+@startuml server-restart-sequence
+!theme plain
+title LedgerGuard — Server Startup / Restart Sequence
+skinparam responseMessageBelowArrow true
+skinparam sequenceMessageAlign center
+
+actor       "OS / Cloud Run"  as OS
+participant "main.go\n(run)"  as Main
+database    "PostgreSQL"      as DB
+participant "Migrator"        as Mig
+participant "Firebase"        as FB
+participant "Redis"           as Redis
+participant "Repositories"    as Repos
+participant "SyncScheduler"   as Sched
+participant "QueueSystem\n(Workers + Recovery)" as Queue
+participant "Shopify\nPartner API" as Shopify
+participant "NotificationScheduler" as Notif
+participant "HTTP Router\n& Server"  as HTTP
+
+== Phase 1: Configuration ==
+OS -> Main : start process
+Main -> Main : parse CLI flags\n+ CONFIG_PATH env
+Main -> Main : config.Load()\n(YAML + env overrides)
+
+== Phase 2: Database ==
+Main -> DB : NewPostgresDB(dsn)\n[pool: 25 max, 5 min]
+DB --> Main : connection pool
+
+Main -> Mig : NewMigrator(dsn, path)
+Mig -> DB : run pending migrations
+DB --> Mig : applied
+Mig --> Main : migrations done
+
+== Phase 3: External Services ==
+Main -> FB : NewFirebaseAuthService(ctx, creds)
+FB --> Main : auth client
+Main -> FB : NewFirebaseMessagingService(ctx, creds)
+FB --> Main : messaging client
+Main -> Main : NewAESEncryptor(masterKey)
+
+== Phase 4: Redis (if queue enabled) ==
+Main -> Redis : NewRedisClient(cfg.Redis)
+Redis --> Main : connected
+
+== Phase 5: Repositories ==
+Main -> Repos : initialize 11 repos\n(user, partner, app, tx, subscription,\nsnapshot, shop, billing, review,\nsyncJob, appEvent)
+
+== Phase 6: Services & Handlers ==
+Main -> Main : init Mixpanel / Noop tracker
+Main -> Main : init OAuth state store (10m TTL)
+Main -> Main : init ShopifyOAuthService
+Main -> Main : init ShopifyPartnerClient\n(with rate limiter)
+Main -> Main : init handlers:\n  health, me, oauth, manualToken,\n  app, metrics, sync, subscription,\n  storeHealth, revenue, fee, apiKey,\n  userPrefs, notifPrefs, device,\n  insight, billing, review, admin
+
+== Phase 7: Sync Service ==
+Main -> Main : NewLedgerService(txRepo, subRepo)\n  .WithSnapshotRepository()
+Main -> Main : NewSyncService(partnerClient, ...)\n  .WithSubscriptionRepo()\n  .WithShopBrandFetcher()\n  .WithReviewScraper()
+Main -> Main : NewSyncHandler()
+
+== Phase 8: Scheduled Sync (direct mode) ==
+note over Main,Sched #FFECB3
+  Only runs if queue-based sync is DISABLED
+end note
+Main -> Sched : NewSyncScheduler(syncService, partnerRepo)
+Main -> Sched : Start(ctx)
+activate Sched
+Sched -> Sched : go run(ctx)
+
+group #FFF3E0 **Immediate Initial Sync (causes TX fetch on load)**
+  Sched -> Sched : syncAll(ctx)
+  Sched -> Repos : GetAllIDs() [partner accounts]
+  Repos --> Sched : partnerAccountIDs
+  loop for each partnerAccountID
+    Sched -> Main : SyncAllApps(ctx, partnerID)
+    Main -> Shopify : **GraphQL: fetch transactions**\n(12-month window)
+    Shopify --> Main : raw transactions
+    Main -> DB : store transactions
+    Main -> Main : rebuild ledger\n+ recalculate risk\n+ compute KPIs
+    Main -> DB : upsert daily snapshot
+    Main --> Sched : sync result
+  end
+end
+note right of Sched
+  Then waits on 12h ticker
+  for subsequent syncs
+end note
+
+== Phase 9: Queue-Based Sync (if enabled) ==
+note over Main,Queue #E8F5E9
+  Only runs if queue-based sync is ENABLED
+  (replaces Phase 8 scheduler)
+end note
+Main -> Queue : register processors:\n  Transaction, Snapshot, Status,\n  Store, Event, Review, FullSync
+Main -> Queue : start RegularWorkerPool(N workers)
+Main -> Queue : start FullSyncWorkerPool(M workers)
+
+group #E8F5E9 **Recovery on Startup (re-enqueues stuck jobs)**
+  Main -> Queue : RecoverOnStartup(ctx)
+  Queue -> DB : find PROCESSING jobs\nwithout heartbeat
+  DB --> Queue : stuck jobs
+  Queue -> Redis : re-enqueue to queue
+  Queue -> DB : find PENDING jobs\n(handles Redis flush)
+  DB --> Queue : orphaned jobs
+  Queue -> Redis : re-enqueue to queue
+end
+
+Main -> Queue : StartPeriodicRecovery(ctx)\n[every 10 minutes]
+
+== Phase 10: Notification Scheduler ==
+Main -> Notif : NewNotificationScheduler()
+Main -> Notif : Start(ctx)\n[every 15 minutes]
+
+== Phase 11: AI Chat System ==
+Main -> Main : init GraphQL resolver\n  + chat modules (6):\n  apps, risk, subscriptions,\n  metrics, store_health, earnings
+Main -> Main : init AI providers\n(OpenAI)
+Main -> Main : NewChatHandler()
+
+== Phase 12: Middleware & Router ==
+Main -> Main : init AuthMiddleware\n(Firebase verify + user lookup)
+Main -> Main : init AdminMiddleware\n(role check: ADMIN|OWNER)
+Main -> Main : init InternalKeyMiddleware
+
+group Auto-Sync Trigger Wiring
+  Main -> Main : appHandler.SetSyncTrigger()\n→ syncs on app selection
+  note right
+    When user selects an app,
+    sync fires automatically
+  end note
+end
+
+Main -> HTTP : router.New(config)\n[Chi router, CORS, 40+ routes]
+
+== Phase 13: Server Listen ==
+Main -> HTTP : go ListenAndServe(:PORT)
+activate HTTP
+HTTP --> OS : **ready to accept requests**
+
+== Shutdown ==
+OS -> Main : SIGINT / SIGTERM
+Main -> Queue : Stop() worker pools
+Main -> Queue : Stop() recovery
+Main -> Sched : Stop() scheduler
+deactivate Sched
+Main -> Notif : Stop() notif scheduler
+Main -> HTTP : Shutdown(30s timeout)
+deactivate HTTP
+HTTP --> Main : drained
+Main -> DB : Close() pool
+Main --> OS : exit 0
+
+@enduml

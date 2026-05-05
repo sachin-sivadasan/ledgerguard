@@ -18,6 +18,19 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: ledgerguard-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -34,6 +47,8 @@ services:
       - DB_SSLMODE=disable
       - DB_MIGRATIONS_PATH=migrations
       - SERVER_PORT=8080
+      - REDIS_ADDR=redis:6379
+      - QUEUE_ENABLED=true
     volumes:
       - ./backend/firebase-credentials.json:/app/firebase-credentials.json:ro
       - ./backend/migrations:/app/migrations:ro
@@ -45,3 +60,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:

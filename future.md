@@ -34,6 +34,7 @@ Postponed ideas and features for later implementation.
 | Review reply/response functionality | P3 | Allow responding to reviews from within LedgerGuard |
 | Multi-source review scraping | P4 | Google Play, App Store (iOS), beyond Shopify |
 | Webhook notification on new negative reviews | P2 | Detect new 1-2 star reviews and push notification to user |
+| Sync scheduler fallback when Redis unavailable | P3 | When `queue.enabled: true` but Redis fails to connect, fall back to direct SyncScheduler instead of running no sync at all |
 
 ---
 

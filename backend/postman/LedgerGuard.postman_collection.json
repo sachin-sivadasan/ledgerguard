@@ -95,7 +95,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"app_id\": \"{{appID}}\"\n}"
+							"raw": "{\n    \"partner_app_id\": \"gid://partners/app/12345\",\n    \"name\": \"My App\"\n}"
 						},
 						"url": "{{baseUrl}}/api/v1/apps/select"
 					}

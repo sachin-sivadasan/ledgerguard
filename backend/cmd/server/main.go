@@ -133,7 +133,7 @@ func run() error {
 		redisClient, err = queue.NewRedisClient(ctx, cfg.Redis)
 		if err != nil {
 			log.Printf("WARNING: Redis not available: %v", err)
-			log.Printf("Queue-based sync will be disabled")
+			log.Printf("WARNING: Queue-based sync requires Redis — install and start Redis to enable")
 			redisClient = nil
 		}
 	}
@@ -296,8 +296,10 @@ func run() error {
 			syncScheduler = scheduler.NewSyncScheduler(syncService, partnerRepo)
 			syncScheduler.Start(ctx)
 			log.Println("Sync scheduler started (12-hour interval)")
+		} else if redisClient == nil {
+			log.Println("WARNING: Sync scheduler skipped — queue enabled but Redis unavailable; no background sync will run")
 		} else {
-			log.Println("Sync scheduler skipped — queue-based sync is enabled")
+			log.Println("Sync scheduler skipped — queue-based sync handles scheduling")
 		}
 	}
 

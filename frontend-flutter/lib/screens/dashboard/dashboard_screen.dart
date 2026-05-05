@@ -97,23 +97,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         : null,
                   ),
                 ),
-              SegmentedButton<DashboardTimeRange>(
-                segments: const [
-                  ButtonSegment(
-                      value: DashboardTimeRange.thisWeek,
-                      label: Text('This Week')),
-                  ButtonSegment(
-                      value: DashboardTimeRange.thisMonth,
-                      label: Text('This Month')),
-                  ButtonSegment(
-                      value: DashboardTimeRange.lastMonth,
-                      label: Text('Last Month')),
-                  ButtonSegment(
-                      value: DashboardTimeRange.threeMonths,
-                      label: Text('3 Months')),
-                ],
-                selected: {dp.timeRange},
-                onSelectionChanged: (s) => dp.setTimeRange(s.first),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SegmentedButton<DashboardTimeRange>(
+                  segments: [
+                    ButtonSegment(
+                        value: DashboardTimeRange.thisWeek,
+                        label: Text(LgBreakpoints.isMobile(context) ? '1W' : 'This Week')),
+                    ButtonSegment(
+                        value: DashboardTimeRange.thisMonth,
+                        label: Text(LgBreakpoints.isMobile(context) ? '1M' : 'This Month')),
+                    ButtonSegment(
+                        value: DashboardTimeRange.lastMonth,
+                        label: Text(LgBreakpoints.isMobile(context) ? 'Last' : 'Last Month')),
+                    ButtonSegment(
+                        value: DashboardTimeRange.threeMonths,
+                        label: Text(LgBreakpoints.isMobile(context) ? '3M' : '3 Months')),
+                  ],
+                  selected: {dp.timeRange},
+                  onSelectionChanged: (s) => dp.setTimeRange(s.first),
+                ),
               ),
             ],
           ),

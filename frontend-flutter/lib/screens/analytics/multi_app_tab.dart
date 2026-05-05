@@ -26,7 +26,10 @@ class MultiAppTab extends StatelessWidget {
             child: LgBreakpoints.isMobile(context)
                 ? SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    child: _buildComparisonTable(apps, mrrMap, subMap, theme),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 500),
+                      child: _buildComparisonTable(apps, mrrMap, subMap, theme),
+                    ),
                   )
                 : _buildComparisonTable(apps, mrrMap, subMap, theme),
           ),

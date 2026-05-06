@@ -191,6 +191,7 @@ func (h *AppHandler) SelectApp(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message":            "App added successfully",
 		"id":                 appID,
+		"uuid":              app.ID.String(),
 		"name":               app.Name,
 		"revenue_share_tier": app.RevenueShareTier.String(),
 		"sync_triggered":     syncTriggered,
@@ -216,6 +217,7 @@ func (h *AppHandler) ListApps(w http.ResponseWriter, r *http.Request) {
 	// Get apps
 	apps, err := h.appRepo.FindByPartnerAccountID(r.Context(), partnerAccount.ID)
 	if err != nil {
+		log.Printf("ListApps: failed to fetch apps for partner %s: %v", partnerAccount.ID, err)
 		writeJSONError(w, http.StatusInternalServerError, "failed to fetch apps")
 		return
 	}
@@ -229,6 +231,7 @@ func (h *AppHandler) ListApps(w http.ResponseWriter, r *http.Request) {
 
 		appResponses[i] = map[string]interface{}{
 			"id":                 appID,
+			"uuid":              app.ID.String(),
 			"name":               app.Name,
 			"tracking_enabled":   app.TrackingEnabled,
 			"revenue_share_tier": app.RevenueShareTier.String(),

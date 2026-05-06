@@ -58,36 +58,38 @@ WorkerPool goroutine (BRPOP loop)
   │
   ├── BRPOP from Redis queue
   ├── Deserialize SyncJobPayload
-  ├── Look up processor from ProcessorRegistry
-  │
-  ▼
-Processor.Process(ctx, payload)
-  │
-  ├── UPDATE sync_jobs SET status='processing', started_at=now
-  ├── AcquireLock(appID, jobType) — Redis SETNX with TTL
-  ├── Start heartbeat goroutine (renew lock every 10s)
-  ├── Execute domain logic (fetch, transform, store)
+  ├── AcquireLock(appID, jobType) — Redis SETNX with workerID
+  │     └── If lock fails: check holder's heartbeat → StealLock if dead, else backoff + re-enqueue
+  ├── Write initial heartbeat (prevents steal race)
+  ├── MarkStarted (WHERE status='pending' — conditional)
+  ├── Start heartbeat goroutine (renew every 10 min, extend lock every 1h)
+  ├���─ Look up processor from ProcessorRegistry
+  ├── Processor.Process(ctx, payload)
   │     └── Update Redis progress every ~2s
   │     └── Flush to DB every ~30s
-  ├── ReleaseLock + stop heartbeat
-  └── UPDATE sync_jobs SET status='completed', completed_at=now
+  │
+  ├── On success: MarkCompleted (WHERE status='processing')
+  ├── On error + ctx cancelled (shutdown): leave in 'processing' for recovery
+  ├── On error + cancelled flag: skip MarkFailed (already cancelled)
+  ├── On error (genuine): MarkFailed
+  └── Cleanup: ReleaseLockIfOwner + DeleteHeartbeat + CleanupCancellation
 ```
 
 ### Full Sync Orchestration
 ```
 full_sync_processor starts
   │
-  │  Wave 1 — Independent (enqueue immediately)
-  ├── transaction_sync  → regular queue
-  ├── event_sync        → regular queue
-  ├── review_sync       → regular queue
+  │  Wave 1 — No subscription dependency
+  ├── transaction_sync  → regular queue (fetches transactions + rebuilds ledger)
+  ├── review_sync       → regular queue (scrapes app store reviews)
   │
   │  Poll transaction_sync until complete (5s interval)
   │
-  │  Wave 2 — Dependent (enqueue after transaction_sync)
-  ├── snapshot_sync     → regular queue
-  ├── status_sync       → regular queue
-  ├── store_sync        → regular queue
+  │  Wave 2 — Depends on subscriptions from ledger rebuild
+  ├── event_sync        → regular queue (fetches events per shop GID)
+  ├── snapshot_sync     → regular queue (backfills monthly snapshots)
+  ├── status_sync       → regular queue (enriches subscription status)
+  ├── store_sync        → regular queue (fetches shop brand/logo)
   │
   │  Poll all children until all complete/fail
   └── Mark parent completed (or partial_failure)
@@ -147,23 +149,64 @@ pending → processing → completed
 
 Terminal states: `completed`, `failed`, `cancelled`, `partial_failure`.
 
+## Worker Processing Flow
+1. **BRPOP** from queue (blocking dequeue)
+2. **AcquireLock** — SETNX with workerID as value (ownership tracking)
+3. If lock fails: check heartbeat of holder → StealLock if dead, else backoff + re-enqueue
+4. **Initial heartbeat** — written immediately after lock (prevents steal race before goroutine starts)
+5. **MarkStarted** — conditional: `WHERE status='pending'` (prevents double-start)
+6. **Heartbeat goroutine** — renews heartbeat every 10 min + `ExtendLockIfOwner` every 1h
+7. **Process** — delegate to processor (returns nil on success)
+8. **State transition** — centralized in worker:
+   - Success → `MarkCompleted`
+   - Error + ctx cancelled (shutdown) → leave in `processing` (recovery re-enqueues on restart)
+   - Error + `IsCancelled` flag → skip (already cancelled by user)
+   - Error (genuine) → `MarkFailed`
+9. **Cleanup** — `ReleaseLockIfOwner` + delete heartbeat + delete cancellation flag
+
 ## Recovery
-- **Startup recovery:** On server boot, any jobs stuck in `processing` (stale heartbeat) are re-enqueued.
-- **Periodic recovery:** Every 10 minutes, check for orphaned processing jobs and re-enqueue.
-- **Heartbeat:** Workers renew a Redis key every 10s. If a worker crashes, the TTL expires and recovery picks up the job.
+- **Startup recovery:** On server boot, any jobs stuck in `processing` (no heartbeat) are re-enqueued. Pending jobs are pushed to Redis without touching locks. **Child job dedup:** if a child's parent is also being recovered, the child is skipped and marked failed — the parent will recreate it.
+- **Graceful shutdown:** Worker detects `ctx.Err() != nil` → skips MarkFailed → leaves job in `processing`. On next boot, startup recovery re-enqueues immediately (no heartbeat = stale).
+- **Periodic recovery:** Every 10 minutes, check for orphaned processing jobs. **Grace period:** skip jobs started less than 2 minutes ago. **Threshold:** jobs older than `lockTTL` (2h) with no heartbeat are re-enqueued.
+- **Conditional re-enqueue:** `MarkPendingIfProcessing` uses `WHERE status='processing'` — if a worker already completed the job, recovery does nothing.
+- **Heartbeat:** Workers renew a Redis key every 10 min (TTL 20 min). If a worker crashes, the TTL expires and recovery picks up the job.
+- **Lock cleanup:** Recovery uses `ForceReleaseLock` (unconditional DEL) since it's definitively clearing stale state from dead workers.
 
 ## Extension Points
 - **New processor:** Create a file in `processors/`, implement `SyncProcessor` interface, register in `main.go` — the worker pool picks it up automatically.
 - **New queue priority:** Add a new Redis list key and a dedicated `WorkerPool` with configurable concurrency.
 - **SyncTrigger interface:** Any service implementing `TriggerSync(ctx, appID, userID, partnerAccountID)` can be wired into `AppHandler` for auto-sync.
 
+## Multi-Node Deployment
+
+The queue system is designed for multiple server instances sharing Redis + PostgreSQL:
+
+- **Lock ownership:** Each lock stores the workerID as its Redis value. Only the owner can release/extend.
+- **Fan-out:** Any worker on any node can BRPOP from the shared queue. Redis handles fair distribution.
+- **Cross-node recovery:** Recovery on Node A can detect and clean up stale locks from crashed Node B (using `ForceReleaseLock`).
+- **No single-node assumptions:** heartbeats, locks, and queues are all in shared Redis.
+
+**Key safety guarantees:**
+- `ReleaseLockIfOwner` prevents Worker A from releasing Worker B's lock after slow processing
+- `ExtendLockIfOwner` prevents zombie goroutines from extending locks they no longer own
+- `StealLock` is atomic (Lua script) — no race window between check and acquire
+- DB status guards prevent concurrent workers from double-transitioning job state
+
 ## Gotchas
 - **Dual-write progress:** Redis is the source of truth for live progress during processing; DB is flushed every ~30s. If Redis is flushed mid-job, progress display resets but the job continues.
 - **Duplicate detection:** `EnqueueSync` rejects requests if an active job with the same `appID + jobType` already exists. The auto-sync trigger silently swallows this error.
 - **Lock contention:** Only one worker can process a given `appID + jobType` at a time. Other workers skip and re-enqueue with backoff.
+- **Lock ownership:** All lock operations (release, extend) verify the caller is the owner. Only recovery uses `ForceReleaseLock`.
+- **Heartbeat race prevention:** Initial heartbeat is written synchronously after lock acquisition (before goroutine). Without this, another worker could check `HasHeartbeat` → false → steal the lock from a live worker.
+- **Centralized MarkCompleted:** Processors must NOT call MarkCompleted themselves. Return nil for success; the worker handles state transitions.
+- **Shutdown recovery:** On Ctrl+C, jobs are NOT marked failed — they stay `processing` so startup recovery re-enqueues them. This avoids permanent data loss from transient shutdowns.
+- **Recovery child dedup:** When both parent (full_sync) and child are stale, only the parent is re-enqueued. Children are marked failed — the parent recreates them fresh.
+- **Wave ordering:** event_sync is in Wave 2 (not Wave 1) because it iterates subscriptions which are created by transaction_sync's ledger rebuild.
 - **SyncScheduler disabled:** When `cfg.Queue.Enabled=true`, the 12h scheduler does not start. Queue-based syncs must be triggered externally (API, frontend, or auto-trigger).
 - **Priority:** `priority=1` is highest (used by auto-sync on app selection). Default is `priority=5`. The queue is sorted by priority on dequeue.
 - **full_sync worker pool is separate** (1 worker by default) to prevent orchestrator jobs from blocking regular entity processors.
+- **Cancellation check:** Before marking failed, worker checks `IsCancelled` — cancelled jobs retain their cancelled status.
+- **worker_id column:** `NOT NULL DEFAULT ''` — MarkPendingIfProcessing resets to empty string, not NULL.
 
 ## Related
 - [05-transaction-sync-engine.md](05-transaction-sync-engine.md) — Synchronous sync (still active, untouched)
@@ -171,3 +214,6 @@ Terminal states: `completed`, `failed`, `cancelled`, `partial_failure`.
 - [ADR-021](../../DECISIONS.md) — Separate snapshot_sync from transaction_sync
 - [ADR-023](../../DECISIONS.md) — Cooperative cancellation over hard kill
 - [ADR-024](../../DECISIONS.md) — SyncTrigger interface for auto-sync on app selection
+- [ADR-026](../../DECISIONS.md) — Ownership-aware distributed locks (Lua scripts)
+- [ADR-027](../../DECISIONS.md) — Centralized job state transitions in worker
+- [33-queue-multi-node-deployment.puml](../diagrams/puml/33-queue-multi-node-deployment.puml) — Multi-node deployment diagram

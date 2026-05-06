@@ -34,6 +34,7 @@ Infrastructure implementations:
 | `backend/internal/infrastructure/external/slack_provider.go` | SlackNotificationProvider: Slack webhook delivery with colored attachments |
 | `backend/internal/domain/entity/notification_preferences.go` | NotificationPreferences entity: CriticalEnabled, DailySummaryEnabled, DailySummaryTime, SlackWebhookURL |
 | `backend/internal/domain/entity/device_token.go` | DeviceToken entity: UserID, DeviceToken, Platform (ios/android/web) |
+| `backend/internal/application/scheduler/notification_scheduler.go` | NotificationScheduler: 15-min tick, checks preferred hour, sends daily summaries |
 
 ## Data Flow
 
@@ -120,12 +121,12 @@ SendDailySummary(ctx, userID, appName, snapshot)
 
 Internal service methods (called by other services, not directly by HTTP):
 - `SendCriticalAlert()` — called by `WebhookService` on risk state changes
-- `SendDailySummary()` — called by the sync/snapshot pipeline after daily metrics are computed
+- `SendDailySummary()` — called by `NotificationScheduler` at the user's preferred hour (every 15-min tick)
 
 ## Extension Points
 - **New notification channels** — implement the `PushNotificationProvider` or `SlackNotifier` interface for email, SMS, Microsoft Teams, Discord, etc. The service dispatches to all configured providers.
 - **Notification types** — add methods like `SendWeeklySummary()`, `SendMilestoneAlert()`, `SendAnomalyDetection()` following the same pattern: check preferences, build content, dispatch to channels.
-- **Scheduling** — `DailySummaryTime` is stored in preferences but not yet wired to a scheduler. A cron job or background worker could use this to send summaries at the user's preferred time.
+- **Scheduling enhancements** — The `NotificationScheduler` currently checks hourly. Could add minute-level precision, timezone-aware scheduling, or weekly summary cadence.
 - **Notification history** — add a `notification_log` table to track what was sent, when, and to which channel. Currently notifications are fire-and-forget.
 - **Rate limiting** — add per-user or per-channel rate limits to prevent notification spam during rapid risk state changes.
 - **Multicast** — `FirebaseMessagingService` has a `SendMulticast()` method that sends to multiple tokens in a single API call. Currently unused; the service loops and sends individually.
@@ -136,5 +137,5 @@ Internal service methods (called by other services, not directly by HTTP):
 - **Device token ownership transfer.** If a device token already exists for a different user (e.g., user logged out and new user logged in on same device), the old registration is deleted and a new one is created. The old user loses push notifications on that device silently.
 - **Duplicate key race condition.** When creating default `NotificationPreferences`, a concurrent registration for the same user can trigger a PostgreSQL unique violation (error 23505). The service detects this by string-matching the error message, not by using a typed error. This works for PostgreSQL but may not work for other databases.
 - **UnregisterDevice checks ownership.** A user can only delete their own device tokens. If the token belongs to another user, `ErrDeviceTokenNotFound` is returned rather than a permission error, which obscures the real issue.
-- **DailySummaryTime is stored but unused.** The `DailySummaryTime` field in preferences exists in the entity and database, but no scheduler checks it. Daily summaries are triggered by the sync pipeline, not by a time-based scheduler.
+- **DailySummaryTime is now used by the NotificationScheduler.** The `NotificationScheduler` (`internal/application/scheduler/notification_scheduler.go`) runs every 15 minutes, checks the current UTC hour, and queries `FindUsersWithDailySummaryAtHour(hour)` to find users whose preferred summary time matches. It then sends daily summaries for each of their apps using the latest metrics snapshot.
 - **FCM credential file must exist at startup.** `NewFirebaseMessagingService` requires a credentials file path and fails immediately if the file is missing or invalid. There is no lazy initialization or fallback.

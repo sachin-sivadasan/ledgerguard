@@ -12,7 +12,10 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 )
 
-var ErrSyncJobNotFound = errors.New("sync job not found")
+var (
+	ErrSyncJobNotFound    = errors.New("sync job not found")
+	ErrStatusConflict     = errors.New("job status conflict: concurrent modification")
+)
 
 type PostgresSyncJobRepository struct {
 	pool *pgxpool.Pool
@@ -170,23 +173,54 @@ func (r *PostgresSyncJobRepository) UpdateProgress(ctx context.Context, id uuid.
 
 func (r *PostgresSyncJobRepository) MarkStarted(ctx context.Context, id uuid.UUID, workerID string) error {
 	now := time.Now().UTC()
-	query := `UPDATE sync_jobs SET status = 'processing', worker_id = $2, started_at = $3, updated_at = $3 WHERE id = $1`
-	_, err := r.pool.Exec(ctx, query, id, workerID, now)
-	return err
+	query := `UPDATE sync_jobs SET status = 'processing', worker_id = $2, started_at = $3, updated_at = $3 WHERE id = $1 AND status = 'pending'`
+	tag, err := r.pool.Exec(ctx, query, id, workerID, now)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrStatusConflict
+	}
+	return nil
 }
 
 func (r *PostgresSyncJobRepository) MarkCompleted(ctx context.Context, id uuid.UUID) error {
 	now := time.Now().UTC()
-	query := `UPDATE sync_jobs SET status = 'completed', completed_at = $2, updated_at = $2 WHERE id = $1`
-	_, err := r.pool.Exec(ctx, query, id, now)
-	return err
+	query := `UPDATE sync_jobs SET status = 'completed', completed_at = $2, updated_at = $2 WHERE id = $1 AND status = 'processing'`
+	tag, err := r.pool.Exec(ctx, query, id, now)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrStatusConflict
+	}
+	return nil
 }
 
 func (r *PostgresSyncJobRepository) MarkFailed(ctx context.Context, id uuid.UUID, errMsg string) error {
 	now := time.Now().UTC()
-	query := `UPDATE sync_jobs SET status = 'failed', error_message = $2, completed_at = $3, updated_at = $3 WHERE id = $1`
-	_, err := r.pool.Exec(ctx, query, id, errMsg, now)
-	return err
+	query := `UPDATE sync_jobs SET status = 'failed', error_message = $2, completed_at = $3, updated_at = $3 WHERE id = $1 AND status IN ('pending', 'processing')`
+	tag, err := r.pool.Exec(ctx, query, id, errMsg, now)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrStatusConflict
+	}
+	return nil
+}
+
+func (r *PostgresSyncJobRepository) MarkPendingIfProcessing(ctx context.Context, id uuid.UUID) error {
+	now := time.Now().UTC()
+	query := `UPDATE sync_jobs SET status = 'pending', worker_id = '', started_at = NULL, updated_at = $2 WHERE id = $1 AND status = 'processing'`
+	tag, err := r.pool.Exec(ctx, query, id, now)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrStatusConflict
+	}
+	return nil
 }
 
 func (r *PostgresSyncJobRepository) scanJob(row pgx.Row) (*entity.SyncJob, error) {

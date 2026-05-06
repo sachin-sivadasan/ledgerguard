@@ -1,0 +1,133 @@
+@startuml 35-notification-scheduler-sequence
+!theme plain
+
+title Notification Scheduler – Daily Summary Flow
+
+participant "Server\n(main.go)" as Server
+participant "NotificationScheduler" as Sched
+participant "NotifPrefsRepo" as PrefsRepo
+participant "PartnerAccountRepo" as PartnerRepo
+participant "AppRepo" as AppRepo
+participant "SnapshotRepo" as SnapRepo
+participant "NotificationService" as NotifSvc
+participant "Firebase\nMessaging" as FCM
+participant "Slack" as Slack
+database "PostgreSQL" as DB
+
+== Startup ==
+
+Server -> Sched: Start(ctx)
+Sched -> Sched: Launch goroutine
+Sched -> Sched: checkAndSend() — immediate first check
+
+note over Sched
+  Ticker fires every **15 minutes**
+  but only acts **once per hour**
+  (deduped via lastCheckedHour)
+end note
+
+== Periodic Tick ==
+
+Sched -> Sched: Timer fires (15-min interval)
+Sched -> Sched: currentHour = time.Now().UTC().Hour()
+
+alt currentHour == lastCheckedHour
+  Sched -> Sched: Skip (already checked this hour)
+else New hour
+  Sched -> Sched: lastCheckedHour = currentHour
+  Sched -> Sched: log "Checking for daily summary\nnotifications at hour N UTC"
+
+  == Find Eligible Users ==
+
+  Sched -> PrefsRepo: FindUsersWithDailySummaryAtHour(currentHour)
+  PrefsRepo -> DB: SELECT user_id\nFROM notification_preferences\nWHERE daily_summary_enabled = true\nAND EXTRACT(HOUR FROM daily_summary_time) = $1
+  DB --> PrefsRepo: []userID
+  PrefsRepo --> Sched: []userID
+
+  alt No users at this hour
+    Sched -> Sched: Return (nothing to send)
+  else Users found
+    Sched -> Sched: log "Found N users for\ndaily summary at hour H"
+
+    == Send to Each User ==
+
+    loop For each userID
+
+      == Resolve User's Apps ==
+
+      Sched -> PartnerRepo: FindByUserID(userID)
+      PartnerRepo -> DB: SELECT * FROM partner_accounts\nWHERE user_id = $1
+      DB --> PartnerRepo: partnerAccount
+      PartnerRepo --> Sched: partnerAccount
+
+      alt No partner account
+        Sched -> Sched: log "No partner account"\nSkip user
+      else Partner account found
+        Sched -> AppRepo: FindByPartnerAccountID(partnerAccountID)
+        AppRepo -> DB: SELECT * FROM apps\nWHERE partner_account_id = $1
+        DB --> AppRepo: []app
+        AppRepo --> Sched: []app
+
+        == Send Summary per App ==
+
+        loop For each app
+
+          Sched -> SnapRepo: FindLatestByAppID(appID)
+          SnapRepo -> DB: SELECT * FROM daily_metrics_snapshot\nWHERE app_id = $1\nORDER BY date DESC LIMIT 1
+          DB --> SnapRepo: snapshot
+          SnapRepo --> Sched: snapshot
+
+          alt No snapshot
+            Sched -> Sched: log error, continue
+          else Snapshot found
+            Sched -> NotifSvc: SendDailySummary(\nuserID, appName, snapshot)
+
+            == NotificationService ==
+
+            NotifSvc -> PrefsRepo: FindByUserID(userID)
+            PrefsRepo -> DB: SELECT * FROM notification_preferences\nWHERE user_id = $1
+            DB --> PrefsRepo: prefs
+            PrefsRepo --> NotifSvc: prefs
+
+            alt daily_summary_enabled = false
+              NotifSvc --> Sched: nil (skipped)
+            else Enabled
+              NotifSvc -> NotifSvc: Build notification:\ntitle = "📊 Daily Summary: {appName}"\nbody = "MRR: $X | At Risk: $Y\n| Renewal Rate: Z%"
+
+              alt Slack webhook configured
+                NotifSvc -> Slack: POST webhook\n{ title, body, color: "#17a2b8" }
+                Slack --> NotifSvc: 200 OK
+              end
+
+              NotifSvc -> DB: SELECT * FROM device_tokens\nWHERE user_id = $1
+              DB --> NotifSvc: []deviceToken
+
+              loop For each device token
+                NotifSvc -> FCM: sendNotification(\ntoken, platform, title, body)
+                note right of FCM
+                  iOS: APNS with sound + badge
+                  Android: high priority +
+                  FLUTTER_NOTIFICATION_CLICK
+                end note
+                FCM --> NotifSvc: Success/Failure
+              end
+
+              NotifSvc --> Sched: nil (or last error)
+              Sched -> Sched: log "Sent daily summary\nfor {appName} to {userID}"
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+== Graceful Shutdown ==
+
+Server -> Sched: Stop()
+Sched -> Sched: close(stopCh)
+note over Sched: Goroutine exits on\nnext select iteration
+Sched -> Sched: close(doneCh)
+Sched --> Server: Stopped
+
+@enduml

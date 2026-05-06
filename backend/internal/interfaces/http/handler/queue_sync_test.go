@@ -120,6 +120,16 @@ func (m *mockSyncJobRepoForHandler) MarkFailed(_ context.Context, id uuid.UUID, 
 	}
 	return nil
 }
+func (m *mockSyncJobRepoForHandler) MarkPendingIfProcessing(_ context.Context, id uuid.UUID) error {
+	if j, ok := m.jobs[id]; ok {
+		if j.Status == entity.SyncJobStatusProcessing {
+			j.Status = entity.SyncJobStatusPending
+			j.WorkerID = ""
+			j.StartedAt = nil
+		}
+	}
+	return nil
+}
 
 type mockAppRepoForQueueSync struct {
 	apps map[uuid.UUID]*entity.App

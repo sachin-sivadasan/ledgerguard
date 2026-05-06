@@ -51,7 +51,7 @@ func (p *ReviewProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 
 	if app.AppStoreSlug == "" {
 		p.progress.ForceUpdate(ctx, payload.JobID, queue.Progress{Message: "No app store slug configured"})
-		return p.syncJobRepo.MarkCompleted(ctx, payload.JobID)
+		return nil
 	}
 
 	p.progress.Update(ctx, payload.JobID, queue.Progress{Message: "Scraping app store reviews..."})
@@ -67,7 +67,7 @@ func (p *ReviewProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 
 	if len(scraped) == 0 {
 		p.progress.ForceUpdate(ctx, payload.JobID, queue.Progress{Message: "No reviews found"})
-		return p.syncJobRepo.MarkCompleted(ctx, payload.JobID)
+		return nil
 	}
 
 	now := time.Now().UTC()
@@ -105,6 +105,6 @@ func (p *ReviewProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 		Message:   fmt.Sprintf("Stored %d reviews", len(reviews)),
 	})
 
-	log.Printf("ReviewProcessor: stored %d reviews for app %s", len(reviews), payload.AppID)
-	return p.syncJobRepo.MarkCompleted(ctx, payload.JobID)
+	log.Printf("[queue] ReviewProcessor: stored %d reviews for app %s (job %s)", len(reviews), payload.AppID, payload.JobID)
+	return nil
 }

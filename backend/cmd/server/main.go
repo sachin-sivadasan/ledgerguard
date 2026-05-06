@@ -441,6 +441,9 @@ func run() error {
 	var adminHandler *handler.AdminHandler
 	if adminRepo != nil {
 		adminHandler = handler.NewAdminHandler(adminRepo)
+		if notificationScheduler != nil {
+			adminHandler.WithNotificationScheduler(notificationScheduler)
+		}
 		log.Println("Admin handler initialized")
 	}
 
@@ -501,7 +504,12 @@ func run() error {
 			syncJobRepo, redisClient, lockManager, progressTracker,
 		))
 
-		// Start worker pools
+		// Recovery MUST run before workers start to clear stale locks
+		recoveryService = queue.NewRecoveryService(syncJobRepo, redisClient, lockManager, 10*time.Minute)
+		recoveryService.RecoverOnStartup(ctx)
+		recoveryService.StartPeriodicRecovery(ctx)
+
+		// Start worker pools (after recovery clears stale locks)
 		regularWorkerPool = queue.NewWorkerPool(
 			"regular", queue.RegularQueueKey, cfg.Queue.NumWorkers,
 			redisClient, syncJobRepo, lockManager, progressTracker, processorRegistry,
@@ -513,11 +521,6 @@ func run() error {
 			redisClient, syncJobRepo, lockManager, progressTracker, processorRegistry,
 		)
 		fullSyncWorkerPool.Start(ctx)
-
-		// Start recovery
-		recoveryService = queue.NewRecoveryService(syncJobRepo, redisClient, lockManager, 10*time.Minute)
-		recoveryService.RecoverOnStartup(ctx)
-		recoveryService.StartPeriodicRecovery(ctx)
 
 		// Create queue sync service and handler
 		queueSyncService = appservice.NewQueueSyncService(
@@ -679,12 +682,10 @@ func run() error {
 	// Stop schedulers gracefully
 	if syncScheduler != nil {
 		syncScheduler.Stop()
-		log.Println("Sync scheduler stopped")
 	}
 
 	if notificationScheduler != nil {
 		notificationScheduler.Stop()
-		log.Println("Notification scheduler stopped")
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)

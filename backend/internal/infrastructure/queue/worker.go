@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 )
 
@@ -62,7 +61,7 @@ func (wp *WorkerPool) Start(ctx context.Context) {
 		go wp.workerLoop(ctx, workerID)
 	}
 
-	log.Printf("Worker pool %q started with %d workers on queue %s", wp.name, wp.numWorkers, wp.queueKey)
+	log.Printf("[queue] Worker pool %q started with %d workers on queue %s", wp.name, wp.numWorkers, wp.queueKey)
 }
 
 // Stop gracefully shuts down all workers
@@ -71,7 +70,7 @@ func (wp *WorkerPool) Stop() {
 		wp.cancel()
 	}
 	wp.wg.Wait()
-	log.Printf("Worker pool %q stopped", wp.name)
+	log.Printf("[queue] Worker pool %q stopped", wp.name)
 }
 
 func (wp *WorkerPool) workerLoop(ctx context.Context, workerID string) {
@@ -105,49 +104,61 @@ func (wp *WorkerPool) workerLoop(ctx context.Context, workerID string) {
 func (wp *WorkerPool) processJob(ctx context.Context, workerID string, payload *SyncJobPayload) {
 	jobID := payload.JobID
 
-	// Mark job as started
-	if err := wp.syncJobRepo.MarkStarted(ctx, jobID, workerID); err != nil {
-		log.Printf("[%s] failed to mark job %s started: %v", workerID, jobID, err)
-		return
-	}
-
-	// Acquire lock for the app+type combo
+	// Bug 2 fix: Acquire lock BEFORE MarkStarted to avoid bouncing processing→pending
 	locked, err := wp.lockManager.AcquireLock(ctx, payload.AppID, payload.JobType, workerID)
 	if err != nil {
 		log.Printf("[%s] failed to acquire lock for job %s: %v", workerID, jobID, err)
-		_ = wp.syncJobRepo.MarkFailed(ctx, jobID, fmt.Sprintf("lock error: %v", err))
+		// Job is still pending — re-enqueue with backoff
+		wp.reEnqueueWithBackoff(ctx, workerID, jobID, payload)
 		return
 	}
 	if !locked {
 		// Check if the lock holder is dead (no heartbeat) — if so, we can steal
-		existingJob, _ := wp.syncJobRepo.FindActiveByAppIDAndType(ctx, payload.AppID, payload.JobType)
-		if existingJob != nil && existingJob.ID != jobID {
-			hasHB, _ := wp.lockManager.HasHeartbeat(ctx, existingJob.ID)
-			if !hasHB {
-				// Steal the lock
-				_ = wp.lockManager.ReleaseLock(ctx, payload.AppID, payload.JobType)
-				locked, _ = wp.lockManager.AcquireLock(ctx, payload.AppID, payload.JobType, workerID)
+		existingHolder, _ := wp.lockManager.GetLockHolder(ctx, payload.AppID, payload.JobType)
+		if existingHolder != "" {
+			existingJob, _ := wp.syncJobRepo.FindActiveByAppIDAndType(ctx, payload.AppID, payload.JobType)
+			if existingJob != nil && existingJob.ID != jobID {
+				hasHB, _ := wp.lockManager.HasHeartbeat(ctx, existingJob.ID)
+				if !hasHB {
+					// Bug 4 fix: Atomic steal instead of separate release+acquire
+					locked, _ = wp.lockManager.StealLock(ctx, payload.AppID, payload.JobType, existingHolder, workerID)
+				}
 			}
 		}
 		if !locked {
-			log.Printf("[%s] could not acquire lock for job %s, re-enqueuing", workerID, jobID)
-			_ = wp.syncJobRepo.UpdateStatus(ctx, jobID, entity.SyncJobStatusPending)
-			_ = Enqueue(ctx, wp.client, payload)
+			log.Printf("[%s] could not acquire lock for job %s, re-enqueuing with 5s backoff", workerID, jobID)
+			wp.reEnqueueWithBackoff(ctx, workerID, jobID, payload)
 			return
 		}
 	}
 
-	// Start heartbeat goroutine
+	// Write initial heartbeat immediately after lock acquisition.
+	// This prevents the steal-lock race: another worker checking HasHeartbeat
+	// between our lock acquisition and the heartbeat goroutine starting.
+	_ = wp.lockManager.Heartbeat(ctx, jobID)
+
+	// Now mark job as started (after lock acquired)
+	if err := wp.syncJobRepo.MarkStarted(ctx, jobID, workerID); err != nil {
+		log.Printf("[%s] failed to mark job %s started: %v", workerID, jobID, err)
+		// Release the lock we just acquired
+		_, _ = wp.lockManager.ReleaseLockIfOwner(ctx, payload.AppID, payload.JobType, workerID)
+		_ = wp.lockManager.DeleteHeartbeat(ctx, jobID)
+		return
+	}
+
+	// Start heartbeat goroutine (continues renewing the heartbeat we just wrote)
 	heartbeatCtx, cancelHeartbeat := context.WithCancel(ctx)
-	go wp.heartbeatLoop(heartbeatCtx, jobID, payload.AppID, payload.JobType)
+	go wp.heartbeatLoop(heartbeatCtx, jobID, payload.AppID, payload.JobType, workerID)
 
 	// Look up processor
 	processor, err := wp.registry.Get(payload.JobType)
 	if err != nil {
 		cancelHeartbeat()
 		log.Printf("[%s] no processor for job type %q: %v", workerID, payload.JobType, err)
-		_ = wp.syncJobRepo.MarkFailed(ctx, jobID, err.Error())
-		wp.cleanup(ctx, jobID, payload)
+		failCtx, failCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		_ = wp.syncJobRepo.MarkFailed(failCtx, jobID, err.Error())
+		wp.cleanup(failCtx, jobID, payload, workerID)
+		failCancel()
 		return
 	}
 
@@ -157,18 +168,54 @@ func (wp *WorkerPool) processJob(ctx context.Context, workerID string, payload *
 	// Stop heartbeat
 	cancelHeartbeat()
 
-	// Handle result
+	// Use a background context for final state transitions and cleanup.
+	// The parent ctx may be cancelled (server shutdown), but we MUST still
+	// persist the final job state and release locks to avoid stuck jobs.
+	cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cleanupCancel()
+
+	// Bug 3 fix: Centralized state transitions — worker handles MarkCompleted/MarkFailed
 	if err != nil {
-		log.Printf("[%s] job %s failed: %v", workerID, jobID, err)
-		_ = wp.syncJobRepo.MarkFailed(ctx, jobID, err.Error())
+		if ctx.Err() != nil {
+			// Server shutdown interrupted this job. Leave in 'processing' state
+			// so recovery re-enqueues it on next startup (no heartbeat = stale).
+			log.Printf("[queue] job %s (%s) interrupted by shutdown — will recover on restart", jobID, payload.JobType)
+			wp.cleanup(cleanupCtx, jobID, payload, workerID)
+			return
+		}
+		// Bug 13 fix: Check if job was cancelled — don't overwrite with "failed"
+		if cancelled, _ := wp.lockManager.IsCancelled(cleanupCtx, jobID); cancelled {
+			log.Printf("[%s] job %s was cancelled, skipping MarkFailed", workerID, jobID)
+		} else {
+			log.Printf("[%s] job %s failed: %v", workerID, jobID, err)
+			_ = wp.syncJobRepo.MarkFailed(cleanupCtx, jobID, err.Error())
+		}
+	} else {
+		_ = wp.syncJobRepo.MarkCompleted(cleanupCtx, jobID)
 	}
-	// Note: successful processors call MarkCompleted themselves
 
 	// Cleanup
-	wp.cleanup(ctx, jobID, payload)
+	wp.cleanup(cleanupCtx, jobID, payload, workerID)
 }
 
-func (wp *WorkerPool) heartbeatLoop(ctx context.Context, jobID, appID uuid.UUID, syncType string) {
+// reEnqueueWithBackoff re-enqueues a job after a backoff delay
+func (wp *WorkerPool) reEnqueueWithBackoff(ctx context.Context, workerID string, jobID uuid.UUID, payload *SyncJobPayload) {
+	select {
+	case <-time.After(5 * time.Second):
+	case <-ctx.Done():
+		// Bug 7 fix: On ctx cancel during backoff, best-effort enqueue before returning
+		if err := Enqueue(context.Background(), wp.client, payload); err != nil {
+			log.Printf("[%s] failed to re-enqueue job %s on shutdown: %v", workerID, jobID, err)
+		}
+		return
+	}
+	// Bug 7 fix: Log enqueue errors
+	if err := Enqueue(ctx, wp.client, payload); err != nil {
+		log.Printf("[%s] failed to re-enqueue job %s: %v", workerID, jobID, err)
+	}
+}
+
+func (wp *WorkerPool) heartbeatLoop(ctx context.Context, jobID, appID uuid.UUID, syncType, workerID string) {
 	hbTicker := time.NewTicker(wp.lockManager.HeartbeatInterval())
 	lockTicker := time.NewTicker(wp.lockManager.LockExtensionInterval())
 	defer hbTicker.Stop()
@@ -184,13 +231,15 @@ func (wp *WorkerPool) heartbeatLoop(ctx context.Context, jobID, appID uuid.UUID,
 		case <-hbTicker.C:
 			_ = wp.lockManager.Heartbeat(ctx, jobID)
 		case <-lockTicker.C:
-			_ = wp.lockManager.ExtendLock(ctx, appID, syncType)
+			// Bug 12 fix: Ownership-aware lock extension
+			_, _ = wp.lockManager.ExtendLockIfOwner(ctx, appID, syncType, workerID)
 		}
 	}
 }
 
-func (wp *WorkerPool) cleanup(ctx context.Context, jobID uuid.UUID, payload *SyncJobPayload) {
-	_ = wp.lockManager.ReleaseLock(ctx, payload.AppID, payload.JobType)
+func (wp *WorkerPool) cleanup(ctx context.Context, jobID uuid.UUID, payload *SyncJobPayload, workerID string) {
+	// Bug 1 fix: Ownership-aware lock release
+	_, _ = wp.lockManager.ReleaseLockIfOwner(ctx, payload.AppID, payload.JobType, workerID)
 	_ = wp.lockManager.DeleteHeartbeat(ctx, jobID)
 	_ = wp.lockManager.CleanupCancellation(ctx, jobID)
 	wp.progress.Cleanup(ctx, jobID)

@@ -48,16 +48,75 @@ func (lm *LockManager) AcquireLock(ctx context.Context, appID uuid.UUID, syncTyp
 	return ok, nil
 }
 
-// ReleaseLock releases a distributed lock
-func (lm *LockManager) ReleaseLock(ctx context.Context, appID uuid.UUID, syncType string) error {
+// ReleaseLockIfOwner releases a lock only if the current value matches ownerID (Lua atomic)
+func (lm *LockManager) ReleaseLockIfOwner(ctx context.Context, appID uuid.UUID, syncType, ownerID string) (bool, error) {
+	key := lockKey(appID, syncType)
+	script := redis.NewScript(`
+		if redis.call("GET", KEYS[1]) == ARGV[1] then
+			return redis.call("DEL", KEYS[1])
+		end
+		return 0
+	`)
+	result, err := script.Run(ctx, lm.client, []string{key}, ownerID).Int()
+	if err != nil {
+		return false, fmt.Errorf("failed to release lock %s: %w", key, err)
+	}
+	return result == 1, nil
+}
+
+// ExtendLockIfOwner extends the lock TTL only if the current value matches ownerID (Lua atomic)
+func (lm *LockManager) ExtendLockIfOwner(ctx context.Context, appID uuid.UUID, syncType, ownerID string) (bool, error) {
+	key := lockKey(appID, syncType)
+	script := redis.NewScript(`
+		if redis.call("GET", KEYS[1]) == ARGV[1] then
+			return redis.call("PEXPIRE", KEYS[1], ARGV[2])
+		end
+		return 0
+	`)
+	ttlMs := int(lockTTL.Milliseconds())
+	result, err := script.Run(ctx, lm.client, []string{key}, ownerID, ttlMs).Int()
+	if err != nil {
+		return false, fmt.Errorf("failed to extend lock %s: %w", key, err)
+	}
+	return result == 1, nil
+}
+
+// StealLock atomically steals a lock if the current holder matches expectedHolder (Lua atomic)
+func (lm *LockManager) StealLock(ctx context.Context, appID uuid.UUID, syncType, expectedHolder, newHolder string) (bool, error) {
+	key := lockKey(appID, syncType)
+	script := redis.NewScript(`
+		local current = redis.call("GET", KEYS[1])
+		if current == ARGV[1] then
+			redis.call("DEL", KEYS[1])
+			return redis.call("SET", KEYS[1], ARGV[2], "NX", "PX", ARGV[3]) and 1 or 0
+		end
+		return 0
+	`)
+	ttlMs := int(lockTTL.Milliseconds())
+	result, err := script.Run(ctx, lm.client, []string{key}, expectedHolder, newHolder, ttlMs).Int()
+	if err != nil {
+		return false, fmt.Errorf("failed to steal lock %s: %w", key, err)
+	}
+	return result == 1, nil
+}
+
+// ForceReleaseLock unconditionally releases a distributed lock (for recovery use only)
+func (lm *LockManager) ForceReleaseLock(ctx context.Context, appID uuid.UUID, syncType string) error {
 	key := lockKey(appID, syncType)
 	return lm.client.Del(ctx, key).Err()
 }
 
-// ExtendLock extends the lock TTL
-func (lm *LockManager) ExtendLock(ctx context.Context, appID uuid.UUID, syncType string) error {
+// GetLockHolder returns the current holder of a lock (empty string if not held)
+func (lm *LockManager) GetLockHolder(ctx context.Context, appID uuid.UUID, syncType string) (string, error) {
 	key := lockKey(appID, syncType)
-	return lm.client.Expire(ctx, key, lockTTL).Err()
+	val, err := lm.client.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return val, nil
 }
 
 // Heartbeat writes a heartbeat for a running job

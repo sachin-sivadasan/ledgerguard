@@ -44,18 +44,18 @@ func (p *FullSyncProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 		return fmt.Errorf("failed to find parent job: %w", err)
 	}
 
+	totalChildren := 6
 	p.progress.Update(ctx, payload.JobID, queue.Progress{
-		Total:   6,
-		Message: "Starting full sync — Wave 1...",
+		Total:   totalChildren,
+		Message: "Starting full sync — Wave 1 (transactions, reviews)...",
 	})
 
-	// Wave 1: transaction_sync, event_sync, review_sync (parallel)
+	// Wave 1: transaction_sync, review_sync (no dependency on subscriptions)
 	wave1Types := []struct {
 		jobType    string
 		entityType string
 	}{
 		{entity.SyncJobTypeTransactionSync, "transaction"},
-		{entity.SyncJobTypeEventSync, "event"},
 		{entity.SyncJobTypeReviewSync, "review"},
 	}
 
@@ -85,22 +85,28 @@ func (p *FullSyncProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 		wave1JobIDs = append(wave1JobIDs, childJob.ID.String())
 	}
 
+	// Bug 8 fix: Guard against empty wave1JobIDs (all enqueues failed)
+	if len(wave1JobIDs) == 0 {
+		return fmt.Errorf("failed to enqueue any wave 1 jobs")
+	}
+
 	// Wait for transaction_sync to complete (needed before Wave 2)
 	if err := p.waitForChildren(ctx, payload, []string{wave1JobIDs[0]}, "Waiting for transaction sync..."); err != nil {
 		return err
 	}
 
 	p.progress.Update(ctx, payload.JobID, queue.Progress{
-		Total:     6,
+		Total:     totalChildren,
 		Completed: 1,
-		Message:   "Transaction sync done — starting Wave 2...",
+		Message:   "Transaction sync done — starting Wave 2 (events, snapshots, status, stores)...",
 	})
 
-	// Wave 2: snapshot_sync, status_sync, store_sync (depend on transactions)
+	// Wave 2: depends on subscriptions from ledger rebuild (transaction_sync)
 	wave2Types := []struct {
 		jobType    string
 		entityType string
 	}{
+		{entity.SyncJobTypeEventSync, "event"},
 		{entity.SyncJobTypeSnapshotSync, "snapshot"},
 		{entity.SyncJobTypeStatusSync, "subscription"},
 		{entity.SyncJobTypeStoreSync, "store"},
@@ -158,17 +164,18 @@ func (p *FullSyncProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 			Completed: 6,
 			Message:   "Full sync completed with some failures",
 		})
+		// Use UpdateStatus directly for partial_failure — worker won't call MarkCompleted for this case
 		return p.syncJobRepo.UpdateStatus(ctx, payload.JobID, entity.SyncJobStatusPartialFailure)
 	}
 
 	p.progress.ForceUpdate(ctx, payload.JobID, queue.Progress{
-		Total:     6,
-		Completed: 6,
+		Total:     totalChildren,
+		Completed: totalChildren,
 		Message:   "Full sync complete",
 	})
 
 	log.Printf("FullSyncProcessor: completed for app %s", payload.AppID)
-	return p.syncJobRepo.MarkCompleted(ctx, payload.JobID)
+	return nil
 }
 
 // waitForChildren polls until all specified children are in a terminal state

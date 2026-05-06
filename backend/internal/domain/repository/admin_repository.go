@@ -62,4 +62,5 @@ type AdminRepository interface {
 	GetOnboardingFunnel(ctx context.Context) (*OnboardingFunnel, error)
 	ListSyncJobs(ctx context.Context, limit int) ([]AdminSyncJobRow, error)
 	ListBillingSubscriptions(ctx context.Context) ([]AdminBillingRow, error)
+	ResetAppData(ctx context.Context, appID uuid.UUID) (map[string]int64, error)
 }

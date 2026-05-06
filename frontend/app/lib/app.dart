@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/di/injection.dart';
+import 'core/services/push_notification_service.dart';
 import 'core/services/snackbar_service.dart';
 import 'core/theme/app_theme.dart';
 import 'domain/repositories/auth_repository.dart';
@@ -84,6 +85,9 @@ class _LedgerGuardAppState extends State<LedgerGuardApp> {
       if (token != null) {
         _roleBloc.add(FetchRoleRequested(authToken: token));
       }
+
+      // Initialize push notifications (registers FCM token with backend)
+      PushNotificationService(authRepository: _authRepository).initialize();
     } else if (state is Unauthenticated) {
       // Clear role on sign out
       _roleBloc.add(const ClearRoleRequested());

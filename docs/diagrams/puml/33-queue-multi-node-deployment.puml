@@ -1,0 +1,89 @@
+@startuml
+title 33. Queue System — Multi-Node Deployment
+
+skinparam sequenceArrowThickness 2
+skinparam maxMessageSize 200
+
+box "Node A" #LightBlue
+participant "Worker A1" as WA1
+participant "Worker A2" as WA2
+participant "Recovery A" as RA
+end box
+
+box "Node B" #LightGreen
+participant "Worker B1" as WB1
+participant "Worker B2" as WB2
+participant "Recovery B" as RB
+end box
+
+database "PostgreSQL\n(sync_jobs)" as DB
+database "Redis\n(queues + locks)" as Redis
+
+== Lock Contention Between Nodes ==
+
+note over WA1, WB1: Both nodes compete for the same job via BRPOP
+
+WA1 -> Redis: BRPOP :queue (gets job for app-X)
+activate WA1
+WA1 -> Redis: SETNX lock:app-X:tx_sync = "node-a-worker-1"
+Redis --> WA1: OK (acquired)
+WA1 -> DB: MarkStarted (WHERE status='pending')
+WA1 -> Redis: SET heartbeat:{jobID}
+
+WB1 -> Redis: BRPOP :queue (gets DIFFERENT job for app-X)
+activate WB1
+WB1 -> Redis: SETNX lock:app-X:tx_sync = "node-b-worker-1"
+Redis --> WB1: FAIL (lock held by node-a-worker-1)
+
+note right of WB1: Check heartbeat of lock holder
+
+WB1 -> Redis: EXISTS heartbeat:{active-job-ID}
+Redis --> WB1: 1 (alive — heartbeat present)
+WB1 -> WB1: Backoff 5s → re-enqueue job
+WB1 -> Redis: LPUSH :queue {job}
+deactivate WB1
+
+== Crash Recovery Across Nodes ==
+
+note over WA1: Node A crashes!\n(lock + heartbeat orphaned)
+destroy WA1
+
+note over RB: Recovery B runs periodic check (10 min interval)
+
+RB -> DB: FindByStatus('processing')
+DB --> RB: job on app-X (no heartbeat, started > 2 min)
+RB -> Redis: EXISTS heartbeat:{jobID}
+Redis --> RB: 0 (expired — Node A crashed)
+RB -> Redis: DEL lock:app-X:tx_sync (ForceReleaseLock)
+RB -> DB: MarkPendingIfProcessing (conditional)
+RB -> Redis: LPUSH :queue {job}
+note right of RB: Job now available for any worker on any node
+
+== Lock Steal (Dead Worker Detection) ==
+
+WB2 -> Redis: BRPOP :queue (picks up re-enqueued job)
+activate WB2
+WB2 -> Redis: SETNX lock:app-X:tx_sync = "node-b-worker-2"
+Redis --> WB2: OK (lock was released by recovery)
+WB2 -> DB: MarkStarted
+WB2 -> Redis: SET heartbeat:{jobID}
+WB2 -> WB2: Process job successfully
+WB2 -> Redis: Lua: DEL lock IF value=="node-b-worker-2"
+WB2 -> DB: MarkCompleted (WHERE status='processing')
+deactivate WB2
+
+== Ownership-Aware Lock Operations ==
+
+note over WA2, WB2
+  All lock operations use Lua scripts for atomicity:
+  • ReleaseLockIfOwner: DEL only if value matches workerID
+  • ExtendLockIfOwner: PEXPIRE only if value matches workerID
+  • StealLock: check holder → DEL → SET NX (single script)
+
+  This prevents:
+  • Worker A releasing Worker B's lock after slow processing
+  • Stale heartbeat extensions from zombied goroutines
+  • Race conditions in lock steal between nodes
+end note
+
+@enduml

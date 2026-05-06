@@ -104,6 +104,14 @@ func (m *mockSyncJobRepo) MarkFailed(_ context.Context, id uuid.UUID, errMsg str
 	}
 	return nil
 }
+func (m *mockSyncJobRepo) MarkPendingIfProcessing(_ context.Context, id uuid.UUID) error {
+	if j, ok := m.jobs[id]; ok {
+		if j.Status == entity.SyncJobStatusProcessing {
+			j.Status = entity.SyncJobStatusPending
+		}
+	}
+	return nil
+}
 
 // --- AppRepo ---
 
@@ -462,9 +470,6 @@ func TestTransactionProcessor_Success(t *testing.T) {
 	if !ledger.rebuildCalled {
 		t.Error("Expected ledger rebuild to be called")
 	}
-	if syncJobRepo.jobs[payload.JobID].Status != entity.SyncJobStatusCompleted {
-		t.Errorf("Expected completed, got %s", syncJobRepo.jobs[payload.JobID].Status)
-	}
 }
 
 func TestTransactionProcessor_FetchError(t *testing.T) {
@@ -535,9 +540,6 @@ func TestSnapshotProcessor_Success(t *testing.T) {
 	if !ledger.backfillCalled {
 		t.Error("Expected backfill to be called")
 	}
-	if syncJobRepo.jobs[payload.JobID].Status != entity.SyncJobStatusCompleted {
-		t.Errorf("Expected completed, got %s", syncJobRepo.jobs[payload.JobID].Status)
-	}
 }
 
 func TestSnapshotProcessor_NoTransactions(t *testing.T) {
@@ -556,11 +558,7 @@ func TestSnapshotProcessor_NoTransactions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Process failed: %v", err)
 	}
-
-	// Should still mark completed
-	if syncJobRepo.jobs[payload.JobID].Status != entity.SyncJobStatusCompleted {
-		t.Errorf("Expected completed, got %s", syncJobRepo.jobs[payload.JobID].Status)
-	}
+	// Processor returns nil on success — worker handles MarkCompleted
 }
 
 // ==================== EventProcessor Tests ====================
@@ -605,9 +603,6 @@ func TestEventProcessor_Success(t *testing.T) {
 	// 2 subs * 1 event each = 2 events
 	if len(appEventRepo.upserted) != 2 {
 		t.Errorf("Expected 2 events, got %d", len(appEventRepo.upserted))
-	}
-	if syncJobRepo.jobs[payload.JobID].Status != entity.SyncJobStatusCompleted {
-		t.Errorf("Expected completed, got %s", syncJobRepo.jobs[payload.JobID].Status)
 	}
 }
 
@@ -780,10 +775,7 @@ func TestStoreProcessor_NoDomains(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Process failed: %v", err)
 	}
-
-	if syncJobRepo.jobs[payload.JobID].Status != entity.SyncJobStatusCompleted {
-		t.Errorf("Expected completed, got %s", syncJobRepo.jobs[payload.JobID].Status)
-	}
+	// Processor returns nil — worker handles MarkCompleted
 }
 
 // ==================== ReviewProcessor Tests ====================
@@ -825,9 +817,6 @@ func TestReviewProcessor_Success(t *testing.T) {
 	if len(reviewRepo.upserted) != 2 {
 		t.Errorf("Expected 2 reviews, got %d", len(reviewRepo.upserted))
 	}
-	if syncJobRepo.jobs[payload.JobID].Status != entity.SyncJobStatusCompleted {
-		t.Errorf("Expected completed, got %s", syncJobRepo.jobs[payload.JobID].Status)
-	}
 }
 
 func TestReviewProcessor_NoSlug(t *testing.T) {
@@ -848,10 +837,7 @@ func TestReviewProcessor_NoSlug(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Process failed: %v", err)
 	}
-
-	if syncJobRepo.jobs[payload.JobID].Status != entity.SyncJobStatusCompleted {
-		t.Errorf("Expected completed (no slug), got %s", syncJobRepo.jobs[payload.JobID].Status)
-	}
+	// Processor returns nil — worker handles MarkCompleted
 }
 
 func TestReviewProcessor_ScrapeError(t *testing.T) {
@@ -926,7 +912,7 @@ func TestFullSyncProcessor_CreatesChildJobs(t *testing.T) {
 		t.Fatalf("Process failed: %v", err)
 	}
 
-	// Should have created 6 child jobs (3 wave1 + 3 wave2)
+	// Should have created 6 child jobs (2 wave1 + 4 wave2)
 	childCount := 0
 	for _, j := range syncJobRepo.jobs {
 		if j.ParentJobID != nil {
@@ -934,8 +920,8 @@ func TestFullSyncProcessor_CreatesChildJobs(t *testing.T) {
 		}
 	}
 
-	// At minimum wave1 (3 children) should be created
-	if childCount < 3 {
-		t.Errorf("Expected at least 3 child jobs, got %d", childCount)
+	// At minimum wave1 (2 children) should be created
+	if childCount < 2 {
+		t.Errorf("Expected at least 2 child jobs, got %d", childCount)
 	}
 }

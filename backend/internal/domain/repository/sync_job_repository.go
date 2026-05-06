@@ -41,4 +41,7 @@ type SyncJobRepository interface {
 
 	// MarkFailed sets status=failed, error_message, completed_at
 	MarkFailed(ctx context.Context, id uuid.UUID, errMsg string) error
+
+	// MarkPendingIfProcessing atomically sets status=pending only if currently processing
+	MarkPendingIfProcessing(ctx context.Context, id uuid.UUID) error
 }

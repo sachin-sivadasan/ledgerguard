@@ -52,7 +52,8 @@ func (p *SnapshotProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 	p.progress.Update(ctx, payload.JobID, queue.Progress{Message: "Loading transactions for snapshots..."})
 
 	now := time.Now().UTC()
-	from := now.AddDate(-1, 0, 0)
+	// DEV LIMIT: 1-month window for faster testing (revert to AddDate(-1, 0, 0) for production)
+	from := now.AddDate(0, -1, 0)
 
 	transactions, err := p.txRepo.FindByAppID(ctx, payload.AppID, from, now)
 	if err != nil {
@@ -65,7 +66,7 @@ func (p *SnapshotProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 
 	if len(transactions) == 0 {
 		p.progress.ForceUpdate(ctx, payload.JobID, queue.Progress{Message: "No transactions for snapshots"})
-		return p.syncJobRepo.MarkCompleted(ctx, payload.JobID)
+		return nil
 	}
 
 	p.progress.Update(ctx, payload.JobID, queue.Progress{
@@ -84,6 +85,6 @@ func (p *SnapshotProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 		Message:   fmt.Sprintf("Backfilled %d snapshots", snapshotCount),
 	})
 
-	log.Printf("SnapshotProcessor: backfilled %d snapshots for app %s", snapshotCount, payload.AppID)
-	return p.syncJobRepo.MarkCompleted(ctx, payload.JobID)
+	log.Printf("[queue] SnapshotProcessor: backfilled %d snapshots for app %s (job %s)", snapshotCount, payload.AppID, payload.JobID)
+	return nil
 }

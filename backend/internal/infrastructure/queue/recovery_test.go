@@ -41,6 +41,18 @@ func (m *extendedMockRepo) UpdateStatus(_ context.Context, id uuid.UUID, status 
 	return nil
 }
 
+func (m *extendedMockRepo) MarkPendingIfProcessing(_ context.Context, id uuid.UUID) error {
+	if j, ok := m.jobs[id]; ok {
+		if j.Status == entity.SyncJobStatusProcessing {
+			j.Status = entity.SyncJobStatusPending
+			j.WorkerID = ""
+			j.StartedAt = nil
+			m.statusHist = append(m.statusHist, entity.SyncJobStatusPending)
+		}
+	}
+	return nil
+}
+
 func TestRecoverOnStartup_ReEnqueuesPendingJobs(t *testing.T) {
 	_, client := setupMiniredis(t)
 	ctx := context.Background()

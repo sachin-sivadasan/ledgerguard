@@ -2,8 +2,10 @@ package persistence
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 )
@@ -199,4 +201,44 @@ func (r *PostgresAdminRepository) ListBillingSubscriptions(ctx context.Context) 
 	}
 
 	return result, rows.Err()
+}
+
+// ResetAppData deletes all sync artifacts for an app in FK-safe order.
+func (r *PostgresAdminRepository) ResetAppData(ctx context.Context, appID uuid.UUID) (map[string]int64, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	tables := []string{
+		"sync_jobs",
+		"app_events",
+		"app_reviews",
+		"daily_metrics_snapshot",
+		"subscriptions",
+		"transactions",
+	}
+
+	deleted := make(map[string]int64, len(tables))
+	for _, table := range tables {
+		tag, err := tx.Exec(ctx, fmt.Sprintf("DELETE FROM %s WHERE app_id = $1", table), appID)
+		if err != nil {
+			return nil, fmt.Errorf("delete from %s: %w", table, err)
+		}
+		deleted[table] = tag.RowsAffected()
+	}
+
+	// shops table is a global cache (no app_id) — clear all
+	tag, err := tx.Exec(ctx, "DELETE FROM shops")
+	if err != nil {
+		return nil, fmt.Errorf("delete from shops: %w", err)
+	}
+	deleted["shops"] = tag.RowsAffected()
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit tx: %w", err)
+	}
+
+	return deleted, nil
 }

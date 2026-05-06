@@ -567,3 +567,82 @@ Define an `EventTracker` interface in the domain service layer with `Track()` an
 - No new Go dependencies — uses stdlib `net/http` and `encoding/json`
 - Setter injection avoids constructor signature changes in existing services
 - Adding new events is trivial: one `tracker.Track()` call at the trigger point
+
+---
+
+### ADR-026: Ownership-Aware Distributed Locks via Lua Scripts
+**Date:** 2026-05-05
+**Status:** Accepted
+
+**Context:**
+The queue system used simple `DEL` for lock release and `EXPIRE` for lock extension, without verifying who holds the lock. In a multi-node deployment, Worker A could release Worker B's lock after slow processing. Lock steal was also non-atomic (separate release + acquire = race window). Recovery could release locks belonging to active workers on other nodes.
+
+**Decision:**
+All lock operations now use Lua scripts for atomicity:
+- `ReleaseLockIfOwner`: Only DEL if Redis value matches the requesting workerID
+- `ExtendLockIfOwner`: Only PEXPIRE if value matches ownerID
+- `StealLock`: Atomic check-current-holder → DEL → SET NX in a single script
+- `ForceReleaseLock`: Unconditional DEL retained for recovery (legitimately clearing stale locks from crashed nodes)
+- `GetLockHolder`: Read current lock value for diagnostics
+
+**Consequences:**
+- Eliminates lock-release-without-ownership bugs across all multi-node scenarios
+- Lock steal is now race-free (single Lua script = atomic Redis operation)
+- Recovery can only force-release; workers always use ownership-aware release
+- Minor performance overhead from Lua eval (negligible for lock operations at this frequency)
+
+---
+
+### ADR-027: Centralized Job State Transitions in Worker
+**Date:** 2026-05-05
+**Status:** Accepted
+
+**Context:**
+All 7 processors called `MarkCompleted` themselves after successful processing. If the DB write for `MarkCompleted` failed (network blip, timeout), the worker would then call `MarkFailed` — marking a successfully-processed job as failed. Additionally, `MarkStarted` was called before lock acquisition, causing jobs to bounce processing→pending on lock failure. Cancelled jobs were being overwritten to "failed" status.
+
+**Decision:**
+Centralize all job state transitions in the worker:
+1. Lock acquired BEFORE `MarkStarted` (avoids processing→pending bounce)
+2. Worker calls `MarkCompleted` on processor success (nil return)
+3. Worker calls `MarkFailed` on processor failure (non-nil return)
+4. Before `MarkFailed`, check `IsCancelled` — skip if already cancelled
+5. Processors return nil on success instead of calling MarkCompleted
+6. DB status guards: `MarkStarted` requires `status='pending'`, `MarkCompleted` requires `status='processing'`, `MarkFailed` requires `status IN ('pending','processing')`
+
+**Consequences:**
+- Single point of control for state machine transitions
+- DB failures on completion don't corrupt job state
+- Cancelled jobs are never misclassified as "failed"
+- Processors are simpler (no repo dependency for status changes)
+- Status guard prevents concurrent workers from double-transitioning a job
+
+### ADR-028: Graceful Shutdown Recovery (Leave Processing, Don't Fail)
+**Date:** 2026-05-05
+**Status:** Accepted
+
+**Context:**
+On Ctrl+C, `processor.Process(ctx, payload)` returns `context.Canceled`. The worker was marking these jobs `failed` — a terminal state that recovery ignores. Jobs interrupted by shutdown never restarted.
+
+**Decision:**
+When `ctx.Err() != nil` (shutdown signal), skip `MarkFailed`. Leave the job in `processing` state with heartbeat deleted and lock released. On next boot, `RecoverOnStartup` finds it (no heartbeat = stale) and re-enqueues immediately.
+
+**Consequences:**
+- Graceful shutdown → instant recovery on next boot
+- No data loss from transient restarts/deployments
+- Initial heartbeat written synchronously after lock (prevents steal race during the window)
+- Recovery skips child jobs if parent is also recovered (parent recreates them fresh)
+
+### ADR-029: event_sync in Wave 2 (Subscription Dependency)
+**Date:** 2026-05-05
+**Status:** Accepted
+
+**Context:**
+`EventProcessor` iterates subscriptions to get shop GIDs and calls `FetchAppEvents` per shop. Subscriptions are only created during `transaction_sync` (ledger rebuild). Running event_sync in Wave 1 (parallel with transaction_sync) always produces 0 events.
+
+**Decision:**
+Move event_sync from Wave 1 to Wave 2. Wave 1 = [transaction_sync, review_sync]. Wave 2 = [event_sync, snapshot_sync, status_sync, store_sync].
+
+**Consequences:**
+- event_sync correctly finds subscriptions after ledger rebuild
+- Wave 1 is smaller (2 jobs) but transaction_sync dominates runtime anyway
+- Future: can move event_sync back to Wave 1 by removing subscription dependency (fetch all events without shop filter)

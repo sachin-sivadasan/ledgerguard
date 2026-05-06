@@ -77,7 +77,7 @@ func (p *StoreProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 
 	if len(domains) == 0 {
 		p.progress.ForceUpdate(ctx, payload.JobID, queue.Progress{Message: "No domains to fetch brands for"})
-		return p.syncJobRepo.MarkCompleted(ctx, payload.JobID)
+		return nil
 	}
 
 	// Check which domains already exist
@@ -128,6 +128,6 @@ func (p *StoreProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 		Message:   fmt.Sprintf("Fetched %d shop brands", fetched),
 	})
 
-	log.Printf("StoreProcessor: fetched %d brands for app %s", fetched, payload.AppID)
-	return p.syncJobRepo.MarkCompleted(ctx, payload.JobID)
+	log.Printf("[queue] StoreProcessor: fetched %d brands for app %s (job %s)", fetched, payload.AppID, payload.JobID)
+	return nil
 }

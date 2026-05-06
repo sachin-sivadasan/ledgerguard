@@ -72,6 +72,7 @@ func (h *NotificationPreferencesHandler) SaveNotificationPreferences(w http.Resp
 		CriticalEnabled:     req.CriticalAlertsEnabled,
 		DailySummaryEnabled: req.DailySummaryEnabled,
 		DailySummaryTime:    summaryTime,
+		SlackWebhookURL:     req.SlackWebhookURL,
 		CreatedAt:           now,
 		UpdatedAt:           now,
 	}
@@ -89,7 +90,8 @@ func (h *NotificationPreferencesHandler) SaveNotificationPreferences(w http.Resp
 type NotificationPreferencesRequest struct {
 	CriticalAlertsEnabled bool   `json:"critical_alerts_enabled"`
 	DailySummaryEnabled   bool   `json:"daily_summary_enabled"`
-	DailySummaryTime      string `json:"daily_summary_time"` // HH:MM format
+	DailySummaryTime      string `json:"daily_summary_time"`    // HH:MM format
+	SlackWebhookURL       string `json:"slack_webhook_url"`
 }
 
 // NotificationPreferencesResponse represents the response for notification preferences
@@ -97,6 +99,7 @@ type NotificationPreferencesResponse struct {
 	CriticalAlertsEnabled bool   `json:"critical_alerts_enabled"`
 	DailySummaryEnabled   bool   `json:"daily_summary_enabled"`
 	DailySummaryTime      string `json:"daily_summary_time"` // HH:MM format
+	SlackWebhookURL       string `json:"slack_webhook_url"`
 }
 
 func toNotificationPreferencesResponse(prefs *entity.NotificationPreferences) NotificationPreferencesResponse {
@@ -104,6 +107,7 @@ func toNotificationPreferencesResponse(prefs *entity.NotificationPreferences) No
 		CriticalAlertsEnabled: prefs.CriticalEnabled,
 		DailySummaryEnabled:   prefs.DailySummaryEnabled,
 		DailySummaryTime:      prefs.DailySummaryTime.Format("15:04"),
+		SlackWebhookURL:       prefs.SlackWebhookURL,
 	}
 }
 

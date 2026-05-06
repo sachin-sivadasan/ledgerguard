@@ -88,20 +88,21 @@ func (s *NotificationScheduler) checkAndSend(ctx context.Context) {
 	}
 
 	s.lastCheckedHour = currentHour
-	log.Printf("Checking for daily summary notifications at hour %d UTC", currentHour)
+	log.Printf("[notif] Checking for daily summary at hour %d UTC", currentHour)
 
 	// Find users who have daily summary enabled at this hour
 	userIDs, err := s.prefsRepo.FindUsersWithDailySummaryAtHour(ctx, currentHour)
 	if err != nil {
-		log.Printf("Failed to find users for daily summary: %v", err)
+		log.Printf("[notif] Failed to query users for daily summary: %v", err)
 		return
 	}
 
 	if len(userIDs) == 0 {
+		log.Printf("[notif] No users with daily summary at hour %d UTC", currentHour)
 		return
 	}
 
-	log.Printf("Found %d users for daily summary at hour %d", len(userIDs), currentHour)
+	log.Printf("[notif] Found %d users for daily summary at hour %d UTC", len(userIDs), currentHour)
 
 	// Send daily summary to each user
 	for _, userID := range userIDs {
@@ -113,31 +114,30 @@ func (s *NotificationScheduler) sendDailySummaryToUser(ctx context.Context, user
 	// Get partner account for this user
 	partnerAccount, err := s.partnerRepo.FindByUserID(ctx, userID)
 	if err != nil || partnerAccount == nil {
-		log.Printf("No partner account found for user %s", userID)
+		log.Printf("[notif] No partner account for user %s, skipping", userID)
 		return
 	}
 
 	// Get apps for the partner account
 	apps, err := s.appRepo.FindByPartnerAccountID(ctx, partnerAccount.ID)
 	if err != nil {
-		log.Printf("Failed to find apps for partner account %s: %v", partnerAccount.ID, err)
+		log.Printf("[notif] Failed to find apps for user %s: %v", userID, err)
 		return
 	}
 
-	// Send daily summary for each app
+	log.Printf("[notif] User %s has %d apps, sending summaries", userID, len(apps))
+
 	for _, app := range apps {
-		// Get latest snapshot for the app
 		snapshot, err := s.snapshotRepo.FindLatestByAppID(ctx, app.ID)
 		if err != nil {
-			log.Printf("Failed to get latest snapshot for app %s: %v", app.Name, err)
+			log.Printf("[notif] No snapshot for app %s (%s), skipping: %v", app.Name, app.ID, err)
 			continue
 		}
 
-		// Send daily summary notification
 		if err := s.notificationSvc.SendDailySummary(ctx, userID, app.Name, snapshot); err != nil {
-			log.Printf("Failed to send daily summary for app %s to user %s: %v", app.Name, userID, err)
+			log.Printf("[notif] Failed to send summary for app %s to user %s: %v", app.Name, userID, err)
 		} else {
-			log.Printf("Sent daily summary for app %s to user %s", app.Name, userID)
+			log.Printf("[notif] Sent daily summary for app %s to user %s (MRR: %d cents)", app.Name, userID, snapshot.ActiveMRRCents)
 		}
 	}
 }
@@ -152,4 +152,28 @@ func (s *NotificationScheduler) RunOnce(ctx context.Context) {
 	// Reset last checked hour to force a check
 	s.lastCheckedHour = -1
 	s.checkAndSend(ctx)
+}
+
+// RunForHour triggers daily summary for a specific UTC hour (admin/testing).
+// Returns the number of users notified.
+func (s *NotificationScheduler) RunForHour(ctx context.Context, hour int) int {
+	log.Printf("[notif] Admin trigger: running daily summary for hour %d UTC", hour)
+
+	userIDs, err := s.prefsRepo.FindUsersWithDailySummaryAtHour(ctx, hour)
+	if err != nil {
+		log.Printf("[notif] Admin trigger: failed to query users: %v", err)
+		return 0
+	}
+
+	if len(userIDs) == 0 {
+		log.Printf("[notif] Admin trigger: no users with daily summary at hour %d", hour)
+		return 0
+	}
+
+	log.Printf("[notif] Admin trigger: sending to %d users", len(userIDs))
+	for _, userID := range userIDs {
+		s.sendDailySummaryToUser(ctx, userID)
+	}
+
+	return len(userIDs)
 }

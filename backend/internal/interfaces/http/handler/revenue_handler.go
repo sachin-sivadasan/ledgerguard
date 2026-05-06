@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -62,6 +63,7 @@ func (h *RevenueHandler) GetEarningsStatus(w http.ResponseWriter, r *http.Reques
 	// Get earnings status
 	status, err := h.revenueService.GetEarningsStatus(ctx, app.ID)
 	if err != nil {
+		log.Printf("GetEarningsStatus: failed for app %s: %v", app.ID, err)
 		writeJSONErrorResponse(w, http.StatusInternalServerError, "failed to fetch earnings status")
 		return
 	}
@@ -131,6 +133,7 @@ func (h *RevenueHandler) GetEarnings(w http.ResponseWriter, r *http.Request) {
 			writeJSONErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		log.Printf("GetEarnings: failed for app %s: %v", app.ID, err)
 		writeJSONErrorResponse(w, http.StatusInternalServerError, "failed to fetch earnings")
 		return
 	}

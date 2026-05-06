@@ -65,6 +65,14 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 		return fmt.Errorf("failed to find subscriptions: %w", err)
 	}
 
+	// DEV LIMIT: cap to first 10 subscriptions for faster testing (revert for production)
+	if len(subscriptions) > 10 {
+		log.Printf("[queue] EventProcessor: limiting from %d to 10 subscriptions (dev mode) (job %s)", len(subscriptions), payload.JobID)
+		subscriptions = subscriptions[:10]
+	}
+
+	log.Printf("[queue] EventProcessor: processing %d subscriptions for app %s (job %s)", len(subscriptions), payload.AppID, payload.JobID)
+
 	p.progress.Update(ctx, payload.JobID, queue.Progress{
 		Total:   len(subscriptions),
 		Message: fmt.Sprintf("Fetching events for %d shops...", len(subscriptions)),
@@ -76,6 +84,7 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 
 	for _, sub := range subscriptions {
 		if sub.ShopifyShopGID == "" {
+			log.Printf("[queue] EventProcessor: skipping subscription %s — no ShopifyShopGID (job %s)", sub.ID, payload.JobID)
 			completed++
 			continue
 		}
@@ -84,10 +93,15 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 			return fmt.Errorf("job cancelled")
 		}
 
+		if (completed+1)%100 == 0 || completed+1 == len(subscriptions) {
+			log.Printf("[queue] EventProcessor: fetching events (%d/%d) (job %s)", completed+1, len(subscriptions), payload.JobID)
+		}
+
 		events, err := p.eventFetcher.FetchAppEvents(fetchCtx, pCtx.OrganizationID, pCtx.AccessToken, pCtx.App.PartnerAppID, sub.ShopifyShopGID)
 		if err != nil {
+			log.Printf("[queue] EventProcessor: error fetching events for shop %s: %v (job %s)", sub.ShopifyShopGID, err, payload.JobID)
 			completed++
-			continue // Log but continue
+			continue
 		}
 
 		for _, ev := range events {
@@ -116,7 +130,7 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 		Message:   fmt.Sprintf("Stored %d events", len(allEvents)),
 	})
 
-	log.Printf("EventProcessor: stored %d events for app %s", len(allEvents), payload.AppID)
+	log.Printf("[queue] EventProcessor: stored %d events for app %s (job %s)", len(allEvents), payload.AppID, payload.JobID)
 	_ = uuid.New() // suppress unused import if needed
-	return p.syncJobRepo.MarkCompleted(ctx, payload.JobID)
+	return nil
 }

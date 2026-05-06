@@ -34,14 +34,17 @@ Worker -> Redis: BRPOP :queue:full (blocking)
 Redis --> Worker: jobPayload
 activate Worker
 
+note right of Worker: 1. Acquire lock BEFORE marking started\n2. Lock → MarkStarted → heartbeat → process
+
+Worker -> Redis: SETNX lock:appID:type workerID (acquire lock)
+Worker -> Redis: SET heartbeat:{jobID} (immediate — prevents steal race)
+Worker -> DB: UPDATE status='processing' WHERE status='pending'
+Worker -> Worker: Start heartbeat goroutine (ownership-aware)
+
 Worker -> Proc: Process(ctx, payload)
 activate Proc
 
-Proc -> DB: UPDATE status='processing', started_at=now
-Proc -> Redis: SETNX lock:appID:full_sync (acquire lock)
-Proc -> Proc: Start heartbeat goroutine
-
-note right of Proc: Execute domain logic\n(delegates to existing services)
+note right of Proc: Execute domain logic\n(returns nil on success, error on failure)
 
 Proc -> Domain: FetchTransactions / RebuildLedger / etc.
 activate Domain
@@ -52,14 +55,21 @@ loop every ~2s
   Proc -> Redis: HSET progress:{jobID} completed=N, message="..."
 end
 
-loop every ~30s
-  Proc -> DB: UPDATE sync_jobs SET completed_items=N
+Proc --> Worker: nil (success) or error
+deactivate Proc
+
+alt success (nil returned)
+  Worker -> DB: UPDATE status='completed' WHERE status='processing'
+else shutdown (ctx cancelled)
+  note right of Worker: Leave in 'processing'\nRecovery re-enqueues on restart
+else failure (error returned)
+  Worker -> DB: UPDATE status='failed' WHERE status IN ('pending','processing')
 end
 
-Proc -> Redis: DEL lock:appID:full_sync
-Proc -> DB: UPDATE status='completed', completed_at=now
-Proc --> Worker: done
-deactivate Proc
+note right of Worker: Cleanup: ownership-aware lock release
+
+Worker -> Redis: Lua: DEL lock IF value==workerID
+Worker -> Redis: DEL heartbeat:{jobID}
 deactivate Worker
 
 == Full Sync Orchestration ==
@@ -69,18 +79,18 @@ participant "FullSyncProcessor" as FSP
 Worker -> FSP: Process(ctx, full_sync_payload)
 activate FSP
 
-note right of FSP: Wave 1 — Independent
+note right of FSP: Wave 1 — No subscription dependency
 
 FSP -> Redis: LPUSH :queue {transaction_sync}
-FSP -> Redis: LPUSH :queue {event_sync}
 FSP -> Redis: LPUSH :queue {review_sync}
 
 loop poll until transaction_sync completes (5s)
   FSP -> DB: FindByID(txSyncJobID)
 end
 
-note right of FSP: Wave 2 — Dependent\n(after transaction_sync)
+note right of FSP: Wave 2 — Depends on subscriptions\n(from ledger rebuild)
 
+FSP -> Redis: LPUSH :queue {event_sync}
 FSP -> Redis: LPUSH :queue {snapshot_sync}
 FSP -> Redis: LPUSH :queue {status_sync}
 FSP -> Redis: LPUSH :queue {store_sync}
@@ -89,7 +99,7 @@ loop poll all children until done (5s)
   FSP -> DB: FindByParentJobID(parentID)
 end
 
-FSP -> DB: UPDATE parent status='completed'
+FSP --> Worker: nil (or UpdateStatus partial_failure)
 deactivate FSP
 
 == Auto-Sync on App Selection ==
@@ -108,14 +118,32 @@ deactivate QSvc
 AppH --> Client: 201 Created { sync_triggered: true }
 deactivate AppH
 
-== Recovery ==
+== Recovery (Startup) ==
 
 participant "RecoveryService" as Recovery
 
-note over Recovery: On startup + every 10 min
+note over Recovery: Runs on every server boot
 
-Recovery -> DB: Find jobs WHERE status='processing'\nAND heartbeat expired
-Recovery -> Redis: Re-enqueue orphaned jobs
-Recovery -> DB: UPDATE stuck jobs status='pending'
+Recovery -> DB: Find jobs WHERE status='processing'
+Recovery -> Redis: HasHeartbeat(jobID)?
+
+alt no heartbeat (stale)
+  alt child job with parent also stale
+    Recovery -> DB: MarkFailed("parent recovered")\n(parent will recreate it)
+  else standalone or parent job
+    Recovery -> Redis: ForceReleaseLock (stale locks)
+    Recovery -> DB: MarkPendingIfProcessing (conditional)
+    Recovery -> Redis: Re-enqueue to queue
+  end
+end
+
+note over Recovery: Pending jobs: re-enqueue to Redis only\n(no lock release — they don't hold locks)
+
+== Recovery (Periodic — every 10 min) ==
+
+note over Recovery: Grace: skip started < 2 min ago\nThreshold: started > 2h (lockTTL) AND no heartbeat
+
+Recovery -> DB: Find processing jobs > 2h old
+Recovery -> Redis: HasHeartbeat? → if no → re-enqueue
 
 @enduml

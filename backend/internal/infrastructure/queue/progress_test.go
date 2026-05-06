@@ -43,9 +43,10 @@ func (m *mockSyncJobRepo) UpdateProgress(_ context.Context, id uuid.UUID, total,
 	m.progressUpdates[id] = [2]int{total, completed}
 	return nil
 }
-func (m *mockSyncJobRepo) MarkStarted(_ context.Context, _ uuid.UUID, _ string) error { return nil }
+func (m *mockSyncJobRepo) MarkStarted(_ context.Context, _ uuid.UUID, _ string) error  { return nil }
 func (m *mockSyncJobRepo) MarkCompleted(_ context.Context, _ uuid.UUID) error          { return nil }
 func (m *mockSyncJobRepo) MarkFailed(_ context.Context, _ uuid.UUID, _ string) error   { return nil }
+func (m *mockSyncJobRepo) MarkPendingIfProcessing(_ context.Context, _ uuid.UUID) error { return nil }
 
 func TestProgressTrackerUpdate(t *testing.T) {
 	_, client := setupMiniredis(t)

@@ -270,6 +270,8 @@ func New(cfg Config) *chi.Mux {
 				r.Get("/onboarding", cfg.AdminHandler.OnboardingFunnel)
 				r.Get("/sync", cfg.AdminHandler.ListSyncJobs)
 				r.Get("/billing", cfg.AdminHandler.ListBilling)
+				r.Delete("/apps/{appID}/data", cfg.AdminHandler.ResetAppData)
+				r.Post("/notifications/daily-summary", cfg.AdminHandler.TriggerDailySummary)
 			})
 		}
 

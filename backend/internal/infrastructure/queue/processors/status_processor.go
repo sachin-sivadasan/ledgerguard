@@ -61,6 +61,14 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 		return fmt.Errorf("failed to find subscriptions: %w", err)
 	}
 
+	// DEV LIMIT: cap to first 10 subscriptions for faster testing (revert for production)
+	if len(subscriptions) > 10 {
+		log.Printf("[queue] StatusProcessor: limiting from %d to 10 subscriptions (dev mode) (job %s)", len(subscriptions), payload.JobID)
+		subscriptions = subscriptions[:10]
+	}
+
+	log.Printf("[queue] StatusProcessor: processing %d subscriptions for app %s (job %s)", len(subscriptions), payload.AppID, payload.JobID)
+
 	fetchCtx := external.WithOrganizationID(ctx, pCtx.OrganizationID)
 
 	p.progress.Update(ctx, payload.JobID, queue.Progress{
@@ -71,6 +79,7 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 	updated := 0
 	for i, sub := range subscriptions {
 		if sub.ShopifyShopGID == "" {
+			log.Printf("[queue] StatusProcessor: skipping subscription %s — no ShopifyShopGID (job %s)", sub.ID, payload.JobID)
 			continue
 		}
 
@@ -80,6 +89,7 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 
 		events, err := p.eventFetcher.FetchAppEvents(fetchCtx, pCtx.OrganizationID, pCtx.AccessToken, pCtx.App.PartnerAppID, sub.ShopifyShopGID)
 		if err != nil {
+			log.Printf("[queue] StatusProcessor: error fetching events for shop %s: %v (job %s)", sub.ShopifyShopGID, err, payload.JobID)
 			continue
 		}
 
@@ -111,6 +121,6 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 		Message:   fmt.Sprintf("Updated %d subscription statuses", updated),
 	})
 
-	log.Printf("StatusProcessor: updated %d subscriptions for app %s", updated, payload.AppID)
-	return p.syncJobRepo.MarkCompleted(ctx, payload.JobID)
+	log.Printf("[queue] StatusProcessor: updated %d subscriptions for app %s (job %s)", updated, payload.AppID, payload.JobID)
+	return nil
 }

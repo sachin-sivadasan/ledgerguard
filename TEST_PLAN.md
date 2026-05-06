@@ -1025,3 +1025,37 @@ flutter test --watch
 | Q-060 | Startup recovery with stuck jobs | Orphaned processing jobs re-enqueued | ✓ |
 | Q-061 | Periodic recovery | 10-min check finds stale heartbeats | ✓ |
 | Q-062 | Heartbeat expiry detection | Job recovered when TTL expires | ✓ |
+
+#### 11.8 Lock Ownership (Hardening)
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| Q-070 | ReleaseLockIfOwner with correct owner | Lock released, returns true | ✓ |
+| Q-071 | ReleaseLockIfOwner with wrong owner | Lock NOT released, returns false | ✓ |
+| Q-072 | ExtendLockIfOwner with correct owner | TTL extended, returns true | ✓ |
+| Q-073 | ExtendLockIfOwner with wrong owner | TTL NOT extended, returns false | ✓ |
+| Q-074 | StealLock with correct expected holder | Lock transferred atomically | ✓ |
+| Q-075 | StealLock with wrong expected holder | Lock NOT stolen | ✓ |
+| Q-076 | GetLockHolder returns current value | Correct workerID or empty | ✓ |
+
+#### 11.9 Status Guards (Hardening)
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| Q-080 | MarkStarted on non-pending job | Returns ErrStatusConflict | ✓ |
+| Q-081 | MarkCompleted on non-processing job | Returns ErrStatusConflict | ✓ |
+| Q-082 | MarkFailed on terminal job | Returns ErrStatusConflict | ✓ |
+| Q-083 | MarkPendingIfProcessing on processing job | Status reset to pending | ✓ |
+| Q-084 | MarkPendingIfProcessing on non-processing job | Returns ErrStatusConflict | ✓ |
+
+#### 11.10 Recovery Hardening
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| Q-090 | Grace period skips recently-started jobs | Jobs started < 2 min ago not recovered | ✓ |
+| Q-091 | Pending jobs re-enqueued without lock release | Locks untouched for pending jobs | ✓ |
+| Q-092 | Conditional status update in reEnqueueJob | Already-completed jobs not reset | ✓ |
+
+#### 11.11 Multi-Node Safety
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| Q-100 | Worker on Node A cannot release Node B's lock | Ownership check prevents cross-node release | ✓ |
+| Q-101 | Recovery on Node A cleans stale locks from crashed Node B | ForceReleaseLock removes orphaned locks | ✓ |
+| Q-102 | Cancelled job not overwritten to failed | IsCancelled check prevents misclassification | ✓ |

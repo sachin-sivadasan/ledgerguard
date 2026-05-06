@@ -120,6 +120,17 @@ func (m *workerMockRepo) ListByAppID(_ context.Context, _ uuid.UUID, _ string, _
 	return nil, 0, nil
 }
 
+func (m *workerMockRepo) MarkPendingIfProcessing(_ context.Context, id uuid.UUID) error {
+	if j, ok := m.jobs[id]; ok {
+		if j.Status == entity.SyncJobStatusProcessing {
+			j.Status = entity.SyncJobStatusPending
+			j.WorkerID = ""
+			j.StartedAt = nil
+		}
+	}
+	return nil
+}
+
 // --- Tests ---
 
 func TestWorkerPool_ProcessesJob(t *testing.T) {
@@ -134,10 +145,7 @@ func TestWorkerPool_ProcessesJob(t *testing.T) {
 	appID := uuid.New()
 	proc := &mockProcessor{
 		jobType: "transaction_sync",
-		processFunc: func(_ context.Context, payload *SyncJobPayload) error {
-			// Simulate processor marking completed
-			return repo.MarkCompleted(ctx, payload.JobID)
-		},
+		// Processor returns nil → worker will call MarkCompleted
 	}
 	registry.Register(proc)
 
@@ -333,9 +341,7 @@ func TestWorkerPool_LockConflictReEnqueues(t *testing.T) {
 
 	proc := &mockProcessor{
 		jobType: "transaction_sync",
-		processFunc: func(_ context.Context, payload *SyncJobPayload) error {
-			return repo.MarkCompleted(ctx, payload.JobID)
-		},
+		// Processor returns nil → worker will call MarkCompleted
 	}
 	registry.Register(proc)
 
@@ -406,10 +412,10 @@ func TestWorkerPool_MultipleWorkers(t *testing.T) {
 	processedCount := int32(0)
 	proc := &mockProcessor{
 		jobType: "transaction_sync",
-		processFunc: func(_ context.Context, payload *SyncJobPayload) error {
+		processFunc: func(_ context.Context, _ *SyncJobPayload) error {
 			atomic.AddInt32(&processedCount, 1)
 			time.Sleep(50 * time.Millisecond) // Simulate work
-			return repo.MarkCompleted(ctx, payload.JobID)
+			return nil
 		},
 	}
 	registry.Register(proc)
@@ -475,7 +481,7 @@ func TestWorkerPool_HeartbeatSetDuringProcessing(t *testing.T) {
 			if has {
 				atomic.StoreInt32(&heartbeatSeen, 1)
 			}
-			return repo.MarkCompleted(pctx, payload.JobID)
+			return nil
 		},
 	}
 	registry.Register(proc)
@@ -528,9 +534,7 @@ func TestWorkerPool_CleanupAfterProcessing(t *testing.T) {
 
 	proc := &mockProcessor{
 		jobType: "transaction_sync",
-		processFunc: func(_ context.Context, payload *SyncJobPayload) error {
-			return repo.MarkCompleted(ctx, payload.JobID)
-		},
+		// Processor returns nil → worker handles MarkCompleted
 	}
 	registry.Register(proc)
 

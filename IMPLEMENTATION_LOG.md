@@ -4,6 +4,61 @@ A chronological record of all features implemented with detailed summaries.
 
 ---
 
+## [2026-05-05] Queue System Hardening — Fix 14 Bugs
+
+**Commit:** fix: harden queue system with ownership-aware locks and centralized state transitions
+
+**Summary:**
+Fixed 14 bugs found during code review of the queue worker/recovery/lock system. Issues ranged from critical (locks released without ownership check) to low (cancelled jobs misclassified as failed). Added multi-node deployment safety with Lua-scripted atomic lock operations.
+
+**Implemented:**
+- `ReleaseLockIfOwner` — Lua script: only DEL if value matches ownerID
+- `ExtendLockIfOwner` — Lua script: only PEXPIRE if value matches ownerID
+- `StealLock` — atomic Lua script: check holder → DEL → SET NX
+- `ForceReleaseLock` — for recovery use (renamed from ReleaseLock)
+- `GetLockHolder` — read current lock value
+- `MarkPendingIfProcessing` — conditional status reset for recovery
+- Centralized `MarkCompleted`/`MarkFailed` in worker (removed from 7 processors)
+- Lock acquired BEFORE `MarkStarted` (fixes processing→pending bounce)
+- Cancellation check before `MarkFailed` (fixes misclassification)
+- Recovery grace period (2 min) to avoid racing with new workers
+- DB status guards on all Mark* methods (prevents concurrent modification)
+- FullSync guard: error if no wave 1 jobs enqueued
+- Re-enqueue logs errors + best-effort enqueue on shutdown
+
+**Files Modified:** 12 source files, 4 test files, 3 docs, 2 diagrams
+
+**Tests:** 30+ (all passing)
+
+---
+
+## [2026-05-05] Queue Recovery & Wave Reordering
+
+**Commits:** 7 follow-up fixes after queue hardening
+
+**Summary:**
+Fixed critical issues discovered during testing: shutdown recovery (jobs now survive Ctrl+C), lock steal race condition, duplicate job prevention during recovery, and corrected wave ordering for event_sync.
+
+**Implemented:**
+- Shutdown recovery: interrupted jobs stay `processing` (not `failed`) → recovery re-enqueues on restart
+- Heartbeat written immediately after lock acquisition (prevents steal race before goroutine starts)
+- Recovery skips child jobs when parent is also recovered (parent recreates them, prevents duplicates)
+- `MarkPendingIfProcessing` uses `worker_id = ''` (column is NOT NULL)
+- event_sync moved to Wave 2 (depends on subscriptions from transaction_sync ledger rebuild)
+- `/api/v1/apps` and Select App responses now include `uuid` field
+- Recovery logs enhanced with `[queue]` prefix, job type, and app ID
+
+**Recovery Timeline:**
+| Scenario | Time |
+|----------|------|
+| Graceful shutdown (Ctrl+C) | Instant on next boot |
+| Hard crash, restart >20 min | Instant on next boot |
+| Hard crash, restart <20 min | Up to 2 hours (lockTTL) |
+
+**New Diagram:** `docs/diagrams/puml/34-queue-job-recovery-scenarios.puml`
+
+---
+
 ## [2026-02-26] Initial Setup
 
 **Commit:** Initial commit

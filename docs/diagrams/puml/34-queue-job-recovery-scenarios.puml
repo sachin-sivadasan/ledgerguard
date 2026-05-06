@@ -1,0 +1,138 @@
+@startuml
+!theme plain
+title Queue Job Recovery — All Failure Scenarios
+
+skinparam ActivityBackgroundColor #f8f9fa
+skinparam ActivityBorderColor #343a40
+skinparam ActivityDiamondBackgroundColor #fff3cd
+skinparam NoteBackgroundColor #e8f4fd
+
+|Worker|
+start
+
+:Job dequeued from Redis;
+:AcquireLock + MarkStarted;
+:Start heartbeat goroutine\n(renews every 10 min, TTL 20 min);
+:Processor.Process(ctx, payload);
+
+|Failure Mode|
+
+if (How did the job stop?) then
+
+  |Graceful Shutdown|
+  :Server receives SIGINT (Ctrl+C);
+  note right
+    **Recovery: INSTANT on next boot**
+    ──────────────────────────────
+    Worker detects ctx.Err() != nil
+    → Skips MarkFailed
+    → Deletes heartbeat
+    → Releases lock
+    → Job stays "processing"
+
+    On next boot:
+    RecoverOnStartup() finds job
+    in "processing" with no heartbeat
+    → re-enqueues immediately
+  end note
+  :Job stays **processing**\n(heartbeat deleted, lock released);
+  :Server restarts;
+  :RecoverOnStartup → re-enqueue;
+  #palegreen:Job re-processed from scratch;
+  stop
+
+else
+  |Hard Crash|
+  if (Restart timing?) then
+
+    |Restart > 20 min after crash|
+    :Heartbeat TTL expired in Redis;
+    note right
+      **Recovery: INSTANT on boot**
+      ──────────────────────────
+      Heartbeat expired naturally
+      (Redis TTL = 20 min)
+
+      RecoverOnStartup() finds job
+      in "processing" with no heartbeat
+      → ForceReleaseLock
+      → MarkPendingIfProcessing
+      → re-enqueue
+    end note
+    :Server restarts;
+    :RecoverOnStartup → re-enqueue;
+    #palegreen:Job re-processed from scratch;
+    stop
+
+  else (Restart < 20 min after crash)
+    :Heartbeat still alive in Redis;
+    note right
+      **Recovery: up to 2 hours**
+      ──────────────────────────
+      RecoverOnStartup() sees heartbeat
+      → thinks worker is alive → skips
+
+      After 20 min: heartbeat TTL expires
+
+      Periodic recovery (every 10 min)
+      checks: startedAt > **2 hours** (lockTTL)
+      AND no heartbeat → re-enqueue
+
+      Worst case: 2 hours + 10 min
+
+      **Future improvement:** reduce
+      threshold to heartbeatTTL (20 min)
+      → worst case becomes ~30 min
+    end note
+    :Server restarts;
+    :RecoverOnStartup → skipped\n(heartbeat still alive);
+    :Wait for heartbeat TTL to expire\n(up to 20 min);
+    :Periodic recovery waits until\njob age > lockTTL (2 hours);
+    :ForceReleaseLock + re-enqueue;
+    #palegreen:Job re-processed from scratch;
+    stop
+
+  endif
+
+endif
+
+|Summary|
+
+note
+  ════════════════════════════════════════════════════
+  **Recovery Timeline Summary**
+  ════════════════════════════════════════════════════
+
+  | Scenario                      | Recovery Time    |
+  |-------------------------------|------------------|
+  | Graceful shutdown (Ctrl+C)    | Instant on boot  |
+  | Hard crash, restart > 20 min  | Instant on boot  |
+  | Hard crash, restart < 20 min  | Up to 2 hours    |
+  | User cancellation             | No recovery      |
+  |   (terminal state)            |   (by design)    |
+
+  ════════════════════════════════════════════════════
+  **Key Constants**
+  ════════════════════════════════════════════════════
+  • heartbeatTTL    = 20 min (Redis key auto-expire)
+  • heartbeatInterval = 10 min (renewal frequency)
+  • lockTTL         = 2 hours (lock expiration)
+  • recoveryGrace   = 2 min (skip newly started jobs)
+  • periodicInterval = 10 min (recovery check cycle)
+
+  ════════════════════════════════════════════════════
+  **Recovery Mechanisms**
+  ════════════════════════════════════════════════════
+  1. RecoverOnStartup — runs once on boot
+     Catches: stale processing jobs (no heartbeat)
+
+  2. Periodic recovery — runs every 10 min
+     Catches: jobs running > 20 min with no heartbeat
+     (covers: quick restart after crash, zombie workers)
+
+  3. Lock steal — worker-initiated
+     Catches: live system where lock holder died
+     (worker checks heartbeat of lock holder)
+end note
+
+@enduml

@@ -119,6 +119,6 @@ func (p *TransactionProcessor) Process(ctx context.Context, payload *queue.SyncJ
 		Message:   "Transaction sync complete",
 	})
 
-	log.Printf("TransactionProcessor: synced %d transactions for app %s", len(transactions), payload.AppID)
-	return p.syncJobRepo.MarkCompleted(ctx, payload.JobID)
+	log.Printf("[queue] TransactionProcessor: synced %d transactions for app %s (job %s)", len(transactions), payload.AppID, payload.JobID)
+	return nil
 }

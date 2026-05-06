@@ -174,3 +174,5 @@ Minimal geometric logo icon, no text, abstract spearhead as rising chart peak, d
 ```
 Logo: "LedgerSpear" clean sans-serif, deep blue on white, minimal flat professional SaaS brand, horizontal, no icon, typography only
 ```
+
+

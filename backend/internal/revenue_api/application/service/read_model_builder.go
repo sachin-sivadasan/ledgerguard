@@ -68,6 +68,7 @@ func (b *ReadModelBuilder) rebuildSubscriptionStatuses(ctx context.Context, appI
 	if err != nil {
 		return err
 	}
+	log.Printf("ReadModelBuilder: rebuilding for app %s — %d subscriptions", appID, len(subscriptions))
 
 	// Convert to status entities
 	statuses := make([]*entity.SubscriptionStatus, len(subscriptions))
@@ -76,7 +77,11 @@ func (b *ReadModelBuilder) rebuildSubscriptionStatuses(ctx context.Context, appI
 	}
 
 	// Batch upsert
-	return b.subscriptionStatusRepo.UpsertBatch(ctx, statuses)
+	if err := b.subscriptionStatusRepo.UpsertBatch(ctx, statuses); err != nil {
+		return err
+	}
+	log.Printf("ReadModelBuilder: upserted %d subscription statuses for app %s", len(statuses), appID)
+	return nil
 }
 
 // subscriptionToStatus converts a domain subscription to a status read model
@@ -133,6 +138,7 @@ func (b *ReadModelBuilder) rebuildUsageStatuses(ctx context.Context, appID uuid.
 			transactions = append(transactions, txn)
 		}
 	}
+	log.Printf("ReadModelBuilder: found %d usage transactions for app %s", len(transactions), appID)
 
 	if len(transactions) == 0 {
 		return nil
@@ -163,14 +169,26 @@ func (b *ReadModelBuilder) rebuildUsageStatuses(ctx context.Context, appID uuid.
 	}
 
 	// Batch upsert
-	return b.usageStatusRepo.UpsertBatch(ctx, statuses)
+	if err := b.usageStatusRepo.UpsertBatch(ctx, statuses); err != nil {
+		return err
+	}
+	log.Printf("ReadModelBuilder: upserted %d usage statuses for app %s", len(statuses), appID)
+	return nil
 }
 
 // transactionToUsageStatus converts a usage transaction to a status read model
 func (b *ReadModelBuilder) transactionToUsageStatus(txn *domainEntity.Transaction, sub *domainEntity.Subscription) *entity.UsageStatus {
+	// For AppUsageSale, the chargeId (stored in SubscriptionGID) is the actual
+	// Shopify usage record GID (gid://shopify/AppUsageRecord/...).
+	// Fall back to the Partner API transaction GID if chargeId is empty.
+	usageGID := txn.ShopifyGID
+	if txn.SubscriptionGID != "" {
+		usageGID = txn.SubscriptionGID
+	}
+
 	return &entity.UsageStatus{
 		ID:                     uuid.New(),
-		ShopifyGID:             txn.ShopifyGID,
+		ShopifyGID:             usageGID,
 		SubscriptionShopifyGID: sub.ShopifyGID,
 		SubscriptionID:         sub.ID,
 		Billed:                 true, // If we have a transaction, it's billed

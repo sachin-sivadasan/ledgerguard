@@ -117,6 +117,40 @@ Note: `subscription_amount_cents` and `usage_amount_cents` are only present when
 }
 ```
 
+## Read Model Population
+
+The Revenue API's read model tables (`api_subscription_status`, `api_usage_status`) are populated by `ReadModelBuilder` after every ledger rebuild. This runs as a non-fatal post-sync step in both sync paths:
+
+- **Queue path:** `TransactionProcessor` calls `ReadModelBuilder.RebuildForApp()` after ledger rebuild
+- **Direct path:** `SyncService` calls `ReadModelBuilder.RebuildForApp()` after ledger rebuild
+
+If read model population fails, the sync still succeeds — errors are logged but not propagated.
+
+**Admin rebuild endpoint:** `POST /api/v1/admin/apps/{appID}/rebuild-read-model` allows manual triggering without re-running the full sync. Requires ADMIN role.
+
+## External Revenue API (API Key Authenticated)
+
+The Revenue API provides external, API-key authenticated endpoints for querying subscription and usage status. All endpoints that accept a Shopify GID also accept a plain numeric ID (suffix match). For example, `28262727727` matches `gid://partners/AppSubscription/28262727727`.
+
+### Subscription Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/v1/subscriptions/{id}` | API Key | Get subscription by numeric ID or full GID |
+| GET | `/api/v1/subscriptions/status?domain={domain}` | API Key | Get subscription by myshopify domain |
+| POST | `/api/v1/subscriptions/batch` | API Key | Batch lookup. Body: `{"ids": ["12345", "67890"]}` — accepts numeric IDs or full GIDs |
+
+### Usage Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/v1/usages/{id}` | API Key | Get single usage by numeric ID or full GID |
+| GET | `/api/v1/usages?subscription_id={id}` | API Key | Get all usages for a subscription (numeric ID or full GID) |
+| POST | `/api/v1/usages/batch` | API Key | Batch lookup. Body: `{"ids": ["12345", "67890"]}` — accepts numeric IDs or full GIDs |
+
+### ID Format Rule
+Anywhere a GID is accepted, both formats work:
+- **Numeric:** `28262727727` (recommended — no URL encoding needed)
+- **Full GID:** `gid://partners/AppSubscription/28262727727` (requires URL encoding in path params)
+
 ## Extension Points
 - **Granularity options** — add `granularity` query param (daily, weekly, monthly, yearly) to control aggregation level. Currently the repository returns per-date records.
 - **Charge type filtering** — add a `charge_type` query param to filter to RECURRING, USAGE, ONE_TIME, or REFUND only.

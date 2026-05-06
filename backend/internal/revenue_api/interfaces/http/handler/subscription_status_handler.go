@@ -33,7 +33,6 @@ func (h *SubscriptionStatusHandler) GetByGID(w http.ResponseWriter, r *http.Requ
 		writeJSONError(w, http.StatusBadRequest, "shopify_gid is required")
 		return
 	}
-
 	status, err := h.service.GetByShopifyGID(r.Context(), apiKey.UserID, shopifyGID)
 	if err != nil {
 		switch err {

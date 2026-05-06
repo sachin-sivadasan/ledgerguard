@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 )
@@ -48,6 +49,22 @@ func (m *mockAdminRepository) ListBillingSubscriptions(_ context.Context) ([]rep
 		return nil, m.err
 	}
 	return m.billing, nil
+}
+
+func (m *mockAdminRepository) ResetAppData(_ context.Context, _ uuid.UUID) (map[string]int64, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return map[string]int64{}, nil
+}
+
+// mockReadModelRebuilder implements ReadModelRebuilder for testing.
+type mockReadModelRebuilder struct {
+	err error
+}
+
+func (m *mockReadModelRebuilder) RebuildForApp(_ context.Context, _ uuid.UUID) error {
+	return m.err
 }
 
 func TestAdminHandler_ListUsers(t *testing.T) {
@@ -264,6 +281,73 @@ func TestAdminHandler_ListBilling_Error(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	h.ListBilling(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", rec.Code)
+	}
+}
+
+func TestAdminHandler_RebuildReadModel(t *testing.T) {
+	repo := &mockAdminRepository{}
+	builder := &mockReadModelRebuilder{}
+
+	h := NewAdminHandler(repo)
+	h.SetReadModelBuilder(builder)
+
+	appID := uuid.New()
+	// Use chi URL params context
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("appID", appID.String())
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/apps/"+appID.String()+"/rebuild-read-model", nil)
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	rec := httptest.NewRecorder()
+
+	h.RebuildReadModel(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode: %v", err)
+	}
+	if resp["status"] != "ok" {
+		t.Errorf("expected status=ok, got %v", resp["status"])
+	}
+}
+
+func TestAdminHandler_RebuildReadModel_NotConfigured(t *testing.T) {
+	repo := &mockAdminRepository{}
+	h := NewAdminHandler(repo) // no builder set
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/apps/"+uuid.New().String()+"/rebuild-read-model", nil)
+	rec := httptest.NewRecorder()
+
+	h.RebuildReadModel(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d", rec.Code)
+	}
+}
+
+func TestAdminHandler_RebuildReadModel_Error(t *testing.T) {
+	repo := &mockAdminRepository{}
+	builder := &mockReadModelRebuilder{err: errors.New("rebuild failed")}
+
+	h := NewAdminHandler(repo)
+	h.SetReadModelBuilder(builder)
+
+	appID := uuid.New()
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("appID", appID.String())
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/apps/"+appID.String()+"/rebuild-read-model", nil)
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	rec := httptest.NewRecorder()
+
+	h.RebuildReadModel(rec, req)
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", rec.Code)

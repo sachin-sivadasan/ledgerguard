@@ -36,9 +36,16 @@ type Config struct {
 	GraphQLHandler                  http.Handler       // Internal chat GraphQL endpoint
 	ChatHandler                     http.HandlerFunc   // POST /api/v1/chat (SSE)
 	ChatModulesHandler              http.HandlerFunc   // GET /api/v1/chat/modules
+	// Revenue API handlers (external, API key auth)
+	SubscriptionStatusHandler       *apikeyhandler.SubscriptionStatusHandler
+	UsageStatusHandler              *apikeyhandler.UsageStatusHandler
+	RevenueAPIGraphQLHandler        http.Handler
 	AuthMW                          func(next http.Handler) http.Handler
 	AdminMW                         func(next http.Handler) http.Handler // RequireRoles(ADMIN)
 	InternalMW                      func(next http.Handler) http.Handler // Internal key authentication
+	APIKeyAuthMW                    func(next http.Handler) http.Handler // API key validation
+	APIKeyRateLimiterMW             func(next http.Handler) http.Handler // Per-key rate limiting
+	APIKeyAuditLoggerMW             func(next http.Handler) http.Handler // API audit logging
 }
 
 func New(cfg Config) *chi.Mux {
@@ -48,7 +55,7 @@ func New(cfg Config) *chi.Mux {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:*", "https://*.ledgerguard.app", "https://ledgerguard-c7557.web.app", "https://ledgerguard-c7557.firebaseapp.com"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
 		MaxAge:           300,
@@ -271,7 +278,35 @@ func New(cfg Config) *chi.Mux {
 				r.Get("/sync", cfg.AdminHandler.ListSyncJobs)
 				r.Get("/billing", cfg.AdminHandler.ListBilling)
 				r.Delete("/apps/{appID}/data", cfg.AdminHandler.ResetAppData)
+				r.Post("/apps/{appID}/rebuild-read-model", cfg.AdminHandler.RebuildReadModel)
 				r.Post("/notifications/daily-summary", cfg.AdminHandler.TriggerDailySummary)
+			})
+		}
+
+		// Revenue API public endpoints (API key auth, rate limited, audit logged)
+		if cfg.APIKeyAuthMW != nil {
+			r.Group(func(r chi.Router) {
+				r.Use(cfg.APIKeyAuthMW)
+				if cfg.APIKeyRateLimiterMW != nil {
+					r.Use(cfg.APIKeyRateLimiterMW)
+				}
+				if cfg.APIKeyAuditLoggerMW != nil {
+					r.Use(cfg.APIKeyAuditLoggerMW)
+				}
+
+				if cfg.SubscriptionStatusHandler != nil {
+					r.Get("/subscriptions/{shopify_gid}", cfg.SubscriptionStatusHandler.GetByGID)
+					r.Get("/subscriptions/status", cfg.SubscriptionStatusHandler.GetByDomain)
+					r.Post("/subscriptions/batch", cfg.SubscriptionStatusHandler.GetBatch)
+				}
+				if cfg.UsageStatusHandler != nil {
+					r.Get("/usages", cfg.UsageStatusHandler.GetBySubscription)
+					r.Get("/usages/{shopify_gid}", cfg.UsageStatusHandler.GetByGID)
+					r.Post("/usages/batch", cfg.UsageStatusHandler.GetBatch)
+				}
+				if cfg.RevenueAPIGraphQLHandler != nil {
+					r.Method("POST", "/graphql", cfg.RevenueAPIGraphQLHandler)
+				}
 			})
 		}
 

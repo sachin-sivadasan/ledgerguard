@@ -38,6 +38,8 @@ import (
 	apikeyhandler "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/handler"
 	apikeysvc "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/application/service"
 	apikeypersist "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/infrastructure/persistence"
+	revenueGraphQL "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/graphql"
+	revenueMiddleware "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/middleware"
 )
 
 func main() {
@@ -340,13 +342,53 @@ func run() error {
 		log.Println("Fee handler initialized")
 	}
 
-	// Initialize API key handler
+	// Initialize API key service and handler
 	var apiKeyHandler *apikeyhandler.APIKeyHandler
+	var apiKeySvc *apikeysvc.APIKeyService
 	if db != nil {
 		apiKeyRepo := apikeypersist.NewPostgresAPIKeyRepository(db.Pool)
-		apiKeySvc := apikeysvc.NewAPIKeyService(apiKeyRepo)
+		apiKeySvc = apikeysvc.NewAPIKeyService(apiKeyRepo)
 		apiKeyHandler = apikeyhandler.NewAPIKeyHandler(apiKeySvc)
 		log.Println("API key handler initialized")
+	}
+
+	// Initialize Revenue API handlers and middleware (external API, API key auth)
+	var subscriptionStatusHandler *apikeyhandler.SubscriptionStatusHandler
+	var usageStatusHandler *apikeyhandler.UsageStatusHandler
+	var revenueAPIGraphQLHandler *revenueGraphQL.Handler
+	var apiKeyAuthMW *revenueMiddleware.APIKeyAuth
+	var rateLimiterMW *revenueMiddleware.RateLimiter
+	var auditLoggerMW *revenueMiddleware.AuditLogger
+	var readModelBuilder *apikeysvc.ReadModelBuilder
+
+	if db != nil && apiKeySvc != nil && appRepo != nil && partnerRepo != nil {
+		subStatusRepo := apikeypersist.NewPostgresSubscriptionStatusRepository(db.Pool)
+		usageStatusRepo := apikeypersist.NewPostgresUsageStatusRepository(db.Pool)
+		auditLogRepo := apikeypersist.NewPostgresAuditLogRepository(db.Pool)
+
+		subStatusSvc := apikeysvc.NewSubscriptionStatusService(subStatusRepo, appRepo, partnerRepo)
+		usageStatusSvc := apikeysvc.NewUsageStatusService(usageStatusRepo, subStatusRepo, appRepo, partnerRepo)
+
+		subscriptionStatusHandler = apikeyhandler.NewSubscriptionStatusHandler(subStatusSvc)
+		usageStatusHandler = apikeyhandler.NewUsageStatusHandler(usageStatusSvc)
+		revenueAPIGraphQLHandler = revenueGraphQL.NewHandler(revenueGraphQL.NewResolver(subStatusSvc, usageStatusSvc))
+
+		apiKeyAuthMW = revenueMiddleware.NewAPIKeyAuth(apiKeySvc)
+		rateLimitStore := revenueMiddleware.NewInMemoryRateLimitStore()
+		rateLimiterMW = revenueMiddleware.NewRateLimiter(rateLimitStore, 60, 60)
+		auditLoggerMW = revenueMiddleware.NewAuditLogger(auditLogRepo)
+
+		// Build read model builder for populating Revenue API tables after sync
+		if subscriptionRepo != nil && txRepo != nil {
+			readModelBuilder = apikeysvc.NewReadModelBuilder(subscriptionRepo, txRepo, subStatusRepo, usageStatusRepo)
+		}
+
+		log.Println("Revenue API handlers initialized (subscriptions, usages, graphql)")
+	}
+
+	// Wire read model builder into sync service (for direct sync path)
+	if readModelBuilder != nil && syncService != nil {
+		syncService = syncService.WithReadModelBuilder(readModelBuilder)
 	}
 
 	// Initialize user preferences handler
@@ -444,6 +486,9 @@ func run() error {
 		if notificationScheduler != nil {
 			adminHandler.WithNotificationScheduler(notificationScheduler)
 		}
+		if readModelBuilder != nil {
+			adminHandler.SetReadModelBuilder(readModelBuilder)
+		}
 		log.Println("Admin handler initialized")
 	}
 
@@ -466,10 +511,14 @@ func run() error {
 				ledgerServiceForQueue = ledgerServiceForQueue.WithSnapshotRepository(snapshotRepo)
 			}
 
-			processorRegistry.Register(processors.NewTransactionProcessor(
+			txProcessor := processors.NewTransactionProcessor(
 				partnerClient, txRepo, appRepo, partnerRepo, encryptor, ledgerServiceForQueue,
 				syncJobRepo, lockManager, progressTracker,
-			))
+			)
+			if readModelBuilder != nil {
+				txProcessor.WithReadModelBuilder(readModelBuilder)
+			}
+			processorRegistry.Register(txProcessor)
 			processorRegistry.Register(processors.NewSnapshotProcessor(
 				txRepo, appRepo, partnerRepo, encryptor, ledgerServiceForQueue,
 				syncJobRepo, lockManager, progressTracker,
@@ -631,9 +680,23 @@ func run() error {
 		AdminHandler:                    adminHandler,
 		APIKeyHandler:                   apiKeyHandler,
 		GraphQLHandler:                  graphqlHandler,
+		SubscriptionStatusHandler:       subscriptionStatusHandler,
+		UsageStatusHandler:              usageStatusHandler,
+		RevenueAPIGraphQLHandler:        revenueAPIGraphQLHandler,
 		AuthMW:                          authMW,
 		AdminMW:                         adminMW,
 		InternalMW:                      internalMW,
+	}
+
+	// Wire Revenue API middleware (API key auth, rate limiting, audit logging)
+	if apiKeyAuthMW != nil {
+		routerCfg.APIKeyAuthMW = apiKeyAuthMW.Middleware
+	}
+	if rateLimiterMW != nil {
+		routerCfg.APIKeyRateLimiterMW = rateLimiterMW.Middleware
+	}
+	if auditLoggerMW != nil {
+		routerCfg.APIKeyAuditLoggerMW = auditLoggerMW.Middleware
 	}
 
 	// Wire chat handler if available

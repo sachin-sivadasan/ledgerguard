@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
@@ -46,6 +47,11 @@ func PrepareProcessorContext(
 	tokenBytes, err := decryptor.Decrypt(partnerAccount.EncryptedAccessToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt token: %w", err)
+	}
+
+	// Normalize GID casing (Shopify requires "App" not "app")
+	if strings.Contains(app.PartnerAppID, "gid://partners/app/") {
+		app.PartnerAppID = strings.Replace(app.PartnerAppID, "gid://partners/app/", "gid://partners/App/", 1)
 	}
 
 	return &ProcessorContext{

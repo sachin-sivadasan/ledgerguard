@@ -56,20 +56,26 @@ type SyncResult struct {
 	Error            error
 }
 
+// ReadModelRebuilder rebuilds the Revenue API read model after sync
+type ReadModelRebuilder interface {
+	RebuildForApp(ctx context.Context, appID uuid.UUID) error
+}
+
 // SyncService handles synchronization of transactions from Partner API
 type SyncService struct {
-	fetcher        TransactionFetcher
-	eventFetcher   EventFetcher
-	brandFetcher   ShopBrandFetcher
-	reviewScraper  ReviewScraper
-	txRepo         repository.TransactionRepository
-	subRepo        repository.SubscriptionRepository
-	shopRepo       repository.ShopRepository
-	reviewRepo     repository.AppReviewRepository
-	appRepo        repository.AppRepository
-	partnerRepo    repository.PartnerAccountRepository
-	decryptor      Decryptor
-	ledger         LedgerRebuilder
+	fetcher          TransactionFetcher
+	eventFetcher     EventFetcher
+	brandFetcher     ShopBrandFetcher
+	reviewScraper    ReviewScraper
+	txRepo           repository.TransactionRepository
+	subRepo          repository.SubscriptionRepository
+	shopRepo         repository.ShopRepository
+	reviewRepo       repository.AppReviewRepository
+	appRepo          repository.AppRepository
+	partnerRepo      repository.PartnerAccountRepository
+	decryptor        Decryptor
+	ledger           LedgerRebuilder
+	readModelBuilder ReadModelRebuilder
 }
 
 func NewSyncService(
@@ -113,6 +119,12 @@ func (s *SyncService) WithShopBrandFetcher(fetcher ShopBrandFetcher, shopRepo re
 func (s *SyncService) WithReviewScraper(scraper ReviewScraper, reviewRepo repository.AppReviewRepository) *SyncService {
 	s.reviewScraper = scraper
 	s.reviewRepo = reviewRepo
+	return s
+}
+
+// WithReadModelBuilder adds a read model builder for Revenue API
+func (s *SyncService) WithReadModelBuilder(builder ReadModelRebuilder) *SyncService {
+	s.readModelBuilder = builder
 	return s
 }
 
@@ -218,6 +230,12 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 		if s.reviewScraper != nil && s.reviewRepo != nil && app.AppStoreSlug != "" {
 			_ = s.scrapeAndStoreReviews(ctx, app)
 			// Ignore review scrape errors - reviews are not critical
+		}
+
+		// Rebuild Revenue API read model
+		if s.readModelBuilder != nil {
+			_ = s.readModelBuilder.RebuildForApp(ctx, appID)
+			// Non-fatal — don't fail the sync for read model issues
 		}
 	}
 

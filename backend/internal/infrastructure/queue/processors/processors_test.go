@@ -421,7 +421,7 @@ func setupProcessorContext(t *testing.T) (uuid.UUID, uuid.UUID, uuid.UUID, *mock
 	partnerID := uuid.New()
 
 	appRepo := &mockAppRepo{apps: map[uuid.UUID]*entity.App{
-		appID: {ID: appID, PartnerAccountID: partnerID, Name: "Test App", PartnerAppID: "gid://partners/app/123"},
+		appID: {ID: appID, PartnerAccountID: partnerID, Name: "Test App", PartnerAppID: "gid://partners/App/123"},
 	}}
 	partnerRepo := &mockPartnerRepo{accounts: map[uuid.UUID]*entity.PartnerAccount{
 		partnerID: {ID: partnerID, UserID: userID, PartnerID: "org-123", EncryptedAccessToken: []byte("enc")},

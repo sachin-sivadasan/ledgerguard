@@ -31,8 +31,8 @@ func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscriptio
 			id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at, deleted_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+			created_at, updated_at, deleted_at, stable_domain_key
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 		ON CONFLICT (shopify_gid) DO UPDATE SET
 			shopify_shop_gid = EXCLUDED.shopify_shop_gid,
 			shop_name = EXCLUDED.shop_name,
@@ -45,7 +45,8 @@ func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscriptio
 			expected_next_charge_date = EXCLUDED.expected_next_charge_date,
 			risk_state = EXCLUDED.risk_state,
 			updated_at = EXCLUDED.updated_at,
-			deleted_at = EXCLUDED.deleted_at
+			deleted_at = EXCLUDED.deleted_at,
+			stable_domain_key = EXCLUDED.stable_domain_key
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -66,6 +67,7 @@ func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscriptio
 		subscription.CreatedAt,
 		subscription.UpdatedAt,
 		subscription.DeletedAt,
+		subscription.StableDomainKey,
 	)
 
 	return err
@@ -76,7 +78,7 @@ func (r *PostgresSubscriptionRepository) FindByID(ctx context.Context, id uuid.U
 		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at, deleted_at
+			created_at, updated_at, deleted_at, stable_domain_key
 		FROM subscriptions
 		WHERE id = $1 AND deleted_at IS NULL
 	`
@@ -89,7 +91,7 @@ func (r *PostgresSubscriptionRepository) FindByAppID(ctx context.Context, appID 
 		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at, deleted_at
+			created_at, updated_at, deleted_at, stable_domain_key
 		FROM subscriptions
 		WHERE app_id = $1 AND deleted_at IS NULL
 		ORDER BY COALESCE(shop_name, myshopify_domain)
@@ -109,7 +111,7 @@ func (r *PostgresSubscriptionRepository) FindByShopifyGID(ctx context.Context, s
 		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at, deleted_at
+			created_at, updated_at, deleted_at, stable_domain_key
 		FROM subscriptions
 		WHERE shopify_gid = $1 AND deleted_at IS NULL
 	`
@@ -122,7 +124,7 @@ func (r *PostgresSubscriptionRepository) FindByAppIDAndDomain(ctx context.Contex
 		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at, deleted_at
+			created_at, updated_at, deleted_at, stable_domain_key
 		FROM subscriptions
 		WHERE app_id = $1 AND myshopify_domain = $2 AND deleted_at IS NULL
 	`
@@ -135,7 +137,7 @@ func (r *PostgresSubscriptionRepository) FindByRiskState(ctx context.Context, ap
 		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at, deleted_at
+			created_at, updated_at, deleted_at, stable_domain_key
 		FROM subscriptions
 		WHERE app_id = $1 AND risk_state = $2 AND deleted_at IS NULL
 		ORDER BY COALESCE(shop_name, myshopify_domain)
@@ -162,6 +164,7 @@ func (r *PostgresSubscriptionRepository) scanSubscription(row pgx.Row) (*entity.
 	var riskState string
 	var shopName *string
 	var shopGID *string
+	var stableDomainKey *string
 
 	err := row.Scan(
 		&sub.ID,
@@ -181,6 +184,7 @@ func (r *PostgresSubscriptionRepository) scanSubscription(row pgx.Row) (*entity.
 		&sub.CreatedAt,
 		&sub.UpdatedAt,
 		&sub.DeletedAt,
+		&stableDomainKey,
 	)
 
 	if err != nil {
@@ -195,6 +199,9 @@ func (r *PostgresSubscriptionRepository) scanSubscription(row pgx.Row) (*entity.
 	}
 	if shopName != nil {
 		sub.ShopName = *shopName
+	}
+	if stableDomainKey != nil {
+		sub.StableDomainKey = *stableDomainKey
 	}
 	sub.BillingInterval = valueobject.BillingInterval(billingInterval)
 	sub.RiskState = valueobject.RiskState(riskState)
@@ -211,6 +218,7 @@ func (r *PostgresSubscriptionRepository) scanSubscriptions(rows pgx.Rows) ([]*en
 		var riskState string
 		var shopName *string
 		var shopGID *string
+		var stableDomainKey *string
 
 		err := rows.Scan(
 			&sub.ID,
@@ -230,6 +238,7 @@ func (r *PostgresSubscriptionRepository) scanSubscriptions(rows pgx.Rows) ([]*en
 			&sub.CreatedAt,
 			&sub.UpdatedAt,
 			&sub.DeletedAt,
+			&stableDomainKey,
 		)
 		if err != nil {
 			return nil, err
@@ -240,6 +249,9 @@ func (r *PostgresSubscriptionRepository) scanSubscriptions(rows pgx.Rows) ([]*en
 		}
 		if shopName != nil {
 			sub.ShopName = *shopName
+		}
+		if stableDomainKey != nil {
+			sub.StableDomainKey = *stableDomainKey
 		}
 		sub.BillingInterval = valueobject.BillingInterval(billingInterval)
 		sub.RiskState = valueobject.RiskState(riskState)
@@ -346,7 +358,7 @@ func (r *PostgresSubscriptionRepository) FindWithFilters(ctx context.Context, ap
 		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at, deleted_at
+			created_at, updated_at, deleted_at, stable_domain_key
 		FROM subscriptions
 		WHERE %s
 		ORDER BY %s %s
@@ -471,7 +483,7 @@ func (r *PostgresSubscriptionRepository) FindDeletedByAppID(ctx context.Context,
 		SELECT id, app_id, shopify_gid, shopify_shop_gid, myshopify_domain, shop_name, plan_name,
 			base_price_cents, currency, billing_interval, status,
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
-			created_at, updated_at, deleted_at
+			created_at, updated_at, deleted_at, stable_domain_key
 		FROM subscriptions
 		WHERE app_id = $1 AND deleted_at IS NOT NULL
 		ORDER BY deleted_at DESC

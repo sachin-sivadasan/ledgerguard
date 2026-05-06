@@ -78,6 +78,7 @@ entity "subscriptions" as subscriptions {
   *app_id : UUID <<FK>>
   *shopify_gid : VARCHAR(255) <<UNIQUE>>
   shopify_shop_gid : VARCHAR(255)
+  stable_domain_key : VARCHAR(50)
   *myshopify_domain : VARCHAR(255)
   shop_name : VARCHAR(255)
   plan_name : VARCHAR(255)
@@ -366,13 +367,14 @@ note right of transactions
 end note
 
 note right of subscriptions
-  Migrations: 000005, 000010, 000016, 000021, 000022
+  Migrations: 000005, 000010, 000016, 000021, 000022, 000035
   - Rebuilt from transactions (deterministic)
   - Tracks last_recurring_charge_date
   - Computes expected_next_charge_date
   - Risk classification
   - Soft delete support (deleted_at)
   - Shop GID for webhook/event lookup
+  - stable_domain_key: lg_sub_ + SHA1(domain) for churn-return tracking
 
   Indexes:
   - idx_subscriptions_app_status

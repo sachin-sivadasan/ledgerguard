@@ -4,6 +4,68 @@ A chronological record of all features implemented with detailed summaries.
 
 ---
 
+## [2026-05-07] Finalize Revenue API Format — Numeric IDs, Usages-by-Subscription, chargeId Fix
+
+**Commit:** `8acfa59` — feat: finalize Revenue API format — numeric IDs, usages-by-subscription, chargeId fix
+
+**Summary:**
+Revenue API DX overhaul: all endpoints now accept plain numeric IDs (e.g., `28262727727`) in addition to full GIDs. Added `GET /usages?subscription_id={id}` endpoint. Fixed ReadModelBuilder to use `chargeId` (`gid://shopify/AppUsageRecord/...`) as usage status `shopify_gid` instead of the Partner API transaction GID. Added admin rebuild-read-model endpoint.
+
+**Implemented:**
+- Batch suffix matching in subscription + usage repos (`= ANY($1) OR LIKE ANY($2)`)
+- `GetBySubscriptionShopifyGID` suffix matching for numeric IDs
+- `UsageStatusService.GetBySubscriptionGID()` — lookup subscription, verify access, fetch usages
+- `UsageStatusHandler.GetBySubscription()` — `GET /usages?subscription_id={id}`
+- `ReadModelBuilder.transactionToUsageStatus` uses `chargeId` (stored in `tx.SubscriptionGID`) as usage GID
+- `AdminHandler.RebuildReadModel` — `POST /api/v1/admin/apps/{appID}/rebuild-read-model`
+- Postman collection updated to use numeric IDs
+- Developer docs: external Revenue API surface documented in `13-revenue-api.md`
+
+**Files Modified:** 20
+
+**Tests:** All passing
+
+---
+
+## [2026-05-06] Wire ReadModelBuilder into Sync Pipeline
+
+**Commit:** `364c3b2` — fix: wire ReadModelBuilder into sync pipeline to populate Revenue API tables
+
+**Summary:**
+`ReadModelBuilder.RebuildForApp()` was dead code — the service existed but was never called after ledger rebuilds. Wired it into both the queue-based and direct sync paths as a non-fatal post-sync step. Revenue API endpoints (`/subscriptions/*`, `/usages/*`) now return real data after every sync.
+
+**Implemented:**
+- `TransactionProcessor.WithReadModelBuilder()` — queue path calls `RebuildForApp` after ledger rebuild
+- `SyncService.WithReadModelBuilder()` — direct sync path calls `RebuildForApp` after ledger rebuild
+- Both paths log and swallow errors (non-fatal — sync still succeeds)
+- Wiring in `main.go` for both sync service and transaction processor
+
+**Files Modified:** 3 source files
+
+**Tests:** All passing
+
+---
+
+## [2026-05-06] StableDomainKey + Real Shopify Subscription GID
+
+**Commit:** `e63e57d` — feat: add StableDomainKey + map real Shopify subscription GID from chargeId
+
+**Summary:**
+Mapped Partner API `chargeId` field to `tx.SubscriptionGID` so subscriptions get real Shopify GIDs instead of synthetic keys. Added `stable_domain_key` column (`lg_sub_` + SHA1(domain)) to enable churn-return analysis across reinstalls.
+
+**Implemented:**
+- Parse `chargeId` from `AppSubscriptionSale` transaction and assign to `tx.SubscriptionGID`
+- `StableDomainKey(domain)` function: deterministic `lg_sub_` + SHA1 hash
+- Migration 000035: add `stable_domain_key` column to subscriptions table
+- `LedgerService` populates `stable_domain_key` during ledger rebuild
+- Subscription entity gains `StableDomainKey` field
+
+**Files Modified:** 9 source files
+
+**Tests:** All passing
+
+---
+
 ## [2026-05-05] Queue System Hardening — Fix 14 Bugs
 
 **Commit:** fix: harden queue system with ownership-aware locks and centralized state transitions

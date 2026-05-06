@@ -655,11 +655,11 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 
 	// Add shop details
 	tx.ShopifyShopGID = shopGID
-	// Note: ShopPlan is no longer available from Partner API transactions query
 
-	// Note: Subscription status/details are not available from transactions query.
-	// Use FetchAppEvents to get subscription lifecycle events (SUBSCRIPTION_CHARGE_ACCEPTED,
-	// SUBSCRIPTION_CHARGE_CANCELED, RELATIONSHIP_INSTALLED, RELATIONSHIP_UNINSTALLED)
+	// chargeId for AppSubscriptionSale is the subscription GID (gid://shopify/AppSubscription/...)
+	if node.ChargeID != "" {
+		tx.SubscriptionGID = node.ChargeID
+	}
 
 	return tx
 }

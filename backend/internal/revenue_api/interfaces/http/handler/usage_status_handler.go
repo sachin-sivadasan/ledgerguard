@@ -33,7 +33,6 @@ func (h *UsageStatusHandler) GetByGID(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "shopify_gid is required")
 		return
 	}
-
 	status, err := h.service.GetByShopifyGID(r.Context(), apiKey.UserID, shopifyGID)
 	if err != nil {
 		switch err {
@@ -49,6 +48,40 @@ func (h *UsageStatusHandler) GetByGID(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(status)
+}
+
+// GetBySubscription retrieves all usages for a subscription.
+// GET /v1/usages?subscription_id={id}
+func (h *UsageStatusHandler) GetBySubscription(w http.ResponseWriter, r *http.Request) {
+	apiKey := middleware.APIKeyFromContext(r.Context())
+	if apiKey == nil {
+		writeJSONError(w, http.StatusUnauthorized, "API key required")
+		return
+	}
+
+	subscriptionID := r.URL.Query().Get("subscription_id")
+	if subscriptionID == "" {
+		writeJSONError(w, http.StatusBadRequest, "subscription_id query parameter is required")
+		return
+	}
+
+	results, err := h.service.GetBySubscriptionGID(r.Context(), apiKey.UserID, subscriptionID)
+	if err != nil {
+		switch err {
+		case service.ErrUsageNotFound:
+			writeJSONError(w, http.StatusNotFound, "subscription not found")
+		case service.ErrAppAccessDenied:
+			writeJSONError(w, http.StatusForbidden, "access denied")
+		default:
+			writeJSONError(w, http.StatusInternalServerError, "failed to get usage statuses")
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"results": results,
+	})
 }
 
 // UsageBatchRequest is the request body for batch lookups

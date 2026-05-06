@@ -37,6 +37,11 @@
     {
       "key": "domain",
       "value": ""
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "description": "Revenue API key (lgk_...) — create via '15 - API Keys > Create API Key'"
     }
   ],
   "item": [
@@ -1047,6 +1052,19 @@
             ],
             "url": "{{baseUrl}}/api/v1/admin/notifications/daily-summary?hour=8"
           }
+        },
+        {
+          "name": "Rebuild Read Model",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/apps/{{appUUID}}/rebuild-read-model"
+          }
         }
       ]
     },
@@ -1058,6 +1076,147 @@
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 - Revenue API (External)",
+      "description": "Public Revenue API endpoints. Authenticated via X-API-Key header (not Firebase token). Create an API key first using '15 - API Keys > Create API Key', then set the {{apiKey}} variable.\n\nAll endpoints accept both numeric IDs (e.g. 12345) and full GIDs (e.g. gid://partners/AppSubscription/12345). Numeric IDs are recommended for simplicity.",
+      "item": [
+        {
+          "name": "Get Subscription by GID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/subscriptions/28262727727"
+          }
+        },
+        {
+          "name": "Get Subscription by Domain",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subscriptions/status?domain={{domain}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "subscriptions", "status"],
+              "query": [
+                {
+                  "key": "domain",
+                  "value": "{{domain}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Batch Subscriptions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"ids\": [\n        \"28262727727\",\n        \"28262727728\"\n    ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/subscriptions/batch"
+          }
+        },
+        {
+          "name": "Get Usage by GID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/usages/690933138"
+          }
+        },
+        {
+          "name": "Get Usages by Subscription",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/usages?subscription_id=28262727727",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "usages"],
+              "query": [
+                {
+                  "key": "subscription_id",
+                  "value": "28262727727"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Batch Usages",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"ids\": [\n        \"690933138\",\n        \"690933139\"\n    ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/usages/batch"
+          }
+        },
+        {
+          "name": "GraphQL Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"{ subscription(shopifyGid: \\\"gid://shopify/AppSubscription/123\\\") { subscriptionId myshopifyDomain riskState isPaidCurrentCycle } }\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/graphql"
           }
         }
       ]

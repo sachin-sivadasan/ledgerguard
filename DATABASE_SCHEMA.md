@@ -122,6 +122,7 @@ Current state of each subscription.
 | created_at | TIMESTAMPTZ | DEFAULT NOW() | First seen |
 | updated_at | TIMESTAMPTZ | DEFAULT NOW() | Last updated |
 | deleted_at | TIMESTAMPTZ | NULL | Soft delete timestamp (NULL = active) |
+| stable_domain_key | VARCHAR(255) | NULL | Deterministic ID from domain (`lg_sub_` + SHA1), stable across reinstalls |
 
 ### subscription_events
 Subscription lifecycle events for churn analysis and auditing.
@@ -378,7 +379,8 @@ CREATE TABLE subscriptions (
     expected_next_charge_date TIMESTAMPTZ,
     risk_state VARCHAR(30) NOT NULL CHECK (risk_state IN ('SAFE', 'ONE_CYCLE_MISSED', 'TWO_CYCLE_MISSED', 'CHURNED')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    stable_domain_key VARCHAR(255)
 );
 
 -- daily_metrics_snapshot

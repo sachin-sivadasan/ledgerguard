@@ -80,7 +80,7 @@ WorkerPool goroutine (BRPOP loop)
 full_sync_processor starts
   │
   │  Wave 1 — No subscription dependency
-  ├── transaction_sync  → regular queue (fetches transactions + rebuilds ledger)
+  ├── transaction_sync  → regular queue (fetches transactions + rebuilds ledger + rebuilds read model)
   ├── review_sync       → regular queue (scrapes app store reviews)
   │
   │  Poll transaction_sync until complete (5s interval)
@@ -113,7 +113,7 @@ SyncTrigger.TriggerSync(appID, userID, partnerAccountID)
 | Job Type | Queue | What It Does | Progress Unit |
 |----------|-------|-------------|---------------|
 | `full_sync` | `:queue:full` | Orchestrator — dispatches 6 child jobs | children completed / 6 |
-| `transaction_sync` | `:queue` | Fetch 12-month transactions + ledger rebuild | transactions fetched |
+| `transaction_sync` | `:queue` | Fetch 12-month transactions + ledger rebuild + read model rebuild | transactions fetched |
 | `event_sync` | `:queue` | Fetch app lifecycle events + store raw | events fetched |
 | `snapshot_sync` | `:queue` | Backfill historical monthly snapshots | months / 12 |
 | `status_sync` | `:queue` | Enrich subscription status from events | subscriptions enriched |

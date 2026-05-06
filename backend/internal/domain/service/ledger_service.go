@@ -198,13 +198,13 @@ func (s *LedgerService) buildSubscriptionFromTransactions(appID uuid.UUID, domai
 		basePriceCents = lastRecurring.NetAmountCents
 	}
 
-	// Determine subscription GID:
-	// 1. Use real Shopify subscription GID if available from transaction
-	// 2. Otherwise generate internal synthetic ID with lg_ prefix
+	// Generate stable domain key (deterministic, survives reinstalls)
+	stableDomainKey := "lg_sub_" + uuid.NewSHA1(uuid.NameSpaceDNS, []byte(domain)).String()
+
+	// Use real Shopify subscription GID if available, otherwise fall back to stable key
 	subscriptionGID := lastRecurring.SubscriptionGID
 	if subscriptionGID == "" {
-		// Generate synthetic ID - use lg_sub_ prefix to clearly distinguish from Shopify GIDs
-		subscriptionGID = "lg_sub_" + uuid.NewSHA1(uuid.NameSpaceDNS, []byte(domain)).String()
+		subscriptionGID = stableDomainKey
 	}
 
 	// Determine subscription status from transaction or default to ACTIVE
@@ -224,8 +224,9 @@ func (s *LedgerService) buildSubscriptionFromTransactions(appID uuid.UUID, domai
 		billingInterval,
 	)
 
-	// Set shop GID for events lookup
+	// Set shop GID for events lookup and stable domain key
 	sub.ShopifyShopGID = lastRecurring.ShopifyShopGID
+	sub.StableDomainKey = stableDomainKey
 
 	// Set subscription status from transaction data
 	sub.Status = status

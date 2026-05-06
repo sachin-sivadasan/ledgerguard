@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -13,10 +14,16 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 )
 
+// ReadModelRebuilder rebuilds CQRS read model tables for a given app.
+type ReadModelRebuilder interface {
+	RebuildForApp(ctx context.Context, appID uuid.UUID) error
+}
+
 // AdminHandler serves admin dashboard endpoints.
 type AdminHandler struct {
-	adminRepo  repository.AdminRepository
-	notifSched *scheduler.NotificationScheduler
+	adminRepo         repository.AdminRepository
+	notifSched        *scheduler.NotificationScheduler
+	readModelBuilder  ReadModelRebuilder
 }
 
 func NewAdminHandler(adminRepo repository.AdminRepository) *AdminHandler {
@@ -144,5 +151,37 @@ func (h *AdminHandler) TriggerDailySummary(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"hour":           hour,
 		"users_notified": usersNotified,
+	})
+}
+
+// SetReadModelBuilder adds the read model builder for admin rebuild triggers.
+func (h *AdminHandler) SetReadModelBuilder(builder ReadModelRebuilder) {
+	h.readModelBuilder = builder
+}
+
+// RebuildReadModel triggers a read model rebuild for a specific app.
+// POST /api/v1/admin/apps/{appID}/rebuild-read-model
+func (h *AdminHandler) RebuildReadModel(w http.ResponseWriter, r *http.Request) {
+	if h.readModelBuilder == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "read model builder not configured")
+		return
+	}
+
+	appID, err := uuid.Parse(chi.URLParam(r, "appID"))
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid appID")
+		return
+	}
+
+	if err := h.readModelBuilder.RebuildForApp(r.Context(), appID); err != nil {
+		log.Printf("[admin] RebuildReadModel error for app %s: %v", appID, err)
+		writeJSONError(w, http.StatusInternalServerError, "failed to rebuild read model")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "ok",
+		"app_id": appID.String(),
 	})
 }

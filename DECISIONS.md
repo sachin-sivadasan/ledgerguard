@@ -646,3 +646,47 @@ Move event_sync from Wave 1 to Wave 2. Wave 1 = [transaction_sync, review_sync].
 - event_sync correctly finds subscriptions after ledger rebuild
 - Wave 1 is smaller (2 jobs) but transaction_sync dominates runtime anyway
 - Future: can move event_sync back to Wave 1 by removing subscription dependency (fetch all events without shop filter)
+
+---
+
+### ADR-030: CQRS Read Models for Revenue API
+**Date:** 2026-05-06
+**Status:** Accepted
+
+**Context:**
+The Revenue API exposes subscription and usage status via external API key auth. Initially, read model tables (`api_subscription_status`, `api_usage_status`) were created but never populated — `ReadModelBuilder.RebuildForApp()` existed but was never called from the sync pipeline.
+
+**Decision:**
+Wire `ReadModelBuilder` as a non-fatal post-sync step in both sync paths:
+- **Queue path:** `TransactionProcessor` calls `ReadModelBuilder.RebuildForApp()` after ledger rebuild via `WithReadModelBuilder()` setter
+- **Direct path:** `SyncService` calls it after ledger rebuild via `WithReadModelBuilder()` setter
+- **Admin safety net:** `POST /api/v1/admin/apps/{appID}/rebuild-read-model` allows manual triggering
+- Read model errors are logged but do not fail the sync
+
+**Consequences:**
+- Revenue API endpoints now return real data after every sync
+- Non-fatal: sync succeeds even if read model population fails
+- Admin endpoint provides manual recovery without re-running full sync
+- Two wiring points in main.go (sync service + admin handler)
+
+---
+
+### ADR-031: Dual Subscription Identity (ShopifyGID + StableDomainKey)
+**Date:** 2026-05-06
+**Status:** Accepted
+
+**Context:**
+Shopify subscriptions get a new GID on every reinstall. When a store uninstalls and reinstalls an app, the old subscription is cancelled and a new one is created with a different `shopify_gid`. This makes it impossible to track churn-return patterns across reinstalls using the GID alone.
+
+**Decision:**
+Introduce dual identity for subscriptions:
+- `shopify_gid`: The real Shopify subscription GID, mapped from Partner API `chargeId` field on `AppSubscriptionSale` transactions. Changes on reinstall.
+- `stable_domain_key`: Deterministic key `lg_sub_` + SHA1(`myshopify_domain`). Survives reinstalls because it's derived from the store's domain, which is permanent.
+
+Migration 000035 adds the `stable_domain_key` column to the `subscriptions` table.
+
+**Consequences:**
+- Enables future churn-return analysis (same domain, different GID = reinstall)
+- `shopify_gid` now contains the real Shopify GID (previously it was a synthetic key)
+- `stable_domain_key` is computed deterministically — no external lookup needed
+- SHA1 is used for compactness, not security (domain names are not secret)

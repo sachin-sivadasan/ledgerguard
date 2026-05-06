@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -98,32 +99,47 @@ func (r *PostgresUsageStatusRepository) UpsertBatch(ctx context.Context, statuse
 	return nil
 }
 
-// GetByShopifyGID retrieves a usage status by Shopify GID
+// GetByShopifyGID retrieves a usage status by Shopify GID.
+// Accepts a full GID (gid://partners/...) or a plain numeric ID (suffix match).
 func (r *PostgresUsageStatusRepository) GetByShopifyGID(ctx context.Context, shopifyGID string) (*entity.UsageStatus, error) {
 	query := `
 		SELECT id, shopify_gid, subscription_shopify_gid, subscription_id,
 			billed, billing_date, amount_cents, description, last_synced_at
 		FROM api_usage_status
 		WHERE shopify_gid = $1
+		   OR ($2 AND shopify_gid LIKE '%/' || $1)
 	`
+	isNumeric := !strings.HasPrefix(shopifyGID, "gid://")
 
-	return r.scanStatus(r.pool.QueryRow(ctx, query, shopifyGID))
+	return r.scanStatus(r.pool.QueryRow(ctx, query, shopifyGID, isNumeric))
 }
 
-// GetByShopifyGIDs retrieves multiple usage statuses by Shopify GIDs
+// GetByShopifyGIDs retrieves multiple usage statuses by Shopify GIDs.
+// Accepts full GIDs (gid://partners/...) or plain numeric IDs (suffix match).
 func (r *PostgresUsageStatusRepository) GetByShopifyGIDs(ctx context.Context, shopifyGIDs []string) ([]*entity.UsageStatus, error) {
 	if len(shopifyGIDs) == 0 {
 		return []*entity.UsageStatus{}, nil
+	}
+
+	// Split into full GIDs and numeric IDs for suffix matching
+	var fullGIDs []string
+	var suffixPatterns []string
+	for _, id := range shopifyGIDs {
+		if strings.HasPrefix(id, "gid://") {
+			fullGIDs = append(fullGIDs, id)
+		} else {
+			suffixPatterns = append(suffixPatterns, "%/"+id)
+		}
 	}
 
 	query := `
 		SELECT id, shopify_gid, subscription_shopify_gid, subscription_id,
 			billed, billing_date, amount_cents, description, last_synced_at
 		FROM api_usage_status
-		WHERE shopify_gid = ANY($1)
+		WHERE shopify_gid = ANY($1) OR shopify_gid LIKE ANY($2)
 	`
 
-	rows, err := r.pool.Query(ctx, query, shopifyGIDs)
+	rows, err := r.pool.Query(ctx, query, fullGIDs, suffixPatterns)
 	if err != nil {
 		return nil, err
 	}
@@ -151,17 +167,20 @@ func (r *PostgresUsageStatusRepository) GetBySubscriptionID(ctx context.Context,
 	return r.scanStatuses(rows)
 }
 
-// GetBySubscriptionShopifyGID retrieves all usage statuses by subscription Shopify GID
+// GetBySubscriptionShopifyGID retrieves all usage statuses by subscription Shopify GID.
+// Accepts a full GID (gid://partners/...) or a plain numeric ID (suffix match).
 func (r *PostgresUsageStatusRepository) GetBySubscriptionShopifyGID(ctx context.Context, subscriptionShopifyGID string) ([]*entity.UsageStatus, error) {
 	query := `
 		SELECT id, shopify_gid, subscription_shopify_gid, subscription_id,
 			billed, billing_date, amount_cents, description, last_synced_at
 		FROM api_usage_status
 		WHERE subscription_shopify_gid = $1
+		   OR ($2 AND subscription_shopify_gid LIKE '%/' || $1)
 		ORDER BY last_synced_at DESC
 	`
+	isNumeric := !strings.HasPrefix(subscriptionShopifyGID, "gid://")
 
-	rows, err := r.pool.Query(ctx, query, subscriptionShopifyGID)
+	rows, err := r.pool.Query(ctx, query, subscriptionShopifyGID, isNumeric)
 	if err != nil {
 		return nil, err
 	}

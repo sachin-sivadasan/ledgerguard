@@ -6,25 +6,32 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
-	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue"
 )
 
+// ReadModelRebuilder rebuilds the Revenue API read model after sync
+type ReadModelRebuilder interface {
+	RebuildForApp(ctx context.Context, appID uuid.UUID) error
+}
+
 // TransactionProcessor handles transaction_sync jobs
 type TransactionProcessor struct {
-	fetcher     service.TransactionFetcher
-	txRepo      repository.TransactionRepository
-	appRepo     repository.AppRepository
-	partnerRepo repository.PartnerAccountRepository
-	decryptor   queue.Decryptor
-	ledger      service.LedgerRebuilder
-	syncJobRepo repository.SyncJobRepository
-	lockManager *queue.LockManager
-	progress    *queue.ProgressTracker
+	fetcher          service.TransactionFetcher
+	txRepo           repository.TransactionRepository
+	appRepo          repository.AppRepository
+	partnerRepo      repository.PartnerAccountRepository
+	decryptor        queue.Decryptor
+	ledger           service.LedgerRebuilder
+	syncJobRepo      repository.SyncJobRepository
+	lockManager      *queue.LockManager
+	progress         *queue.ProgressTracker
+	readModelBuilder ReadModelRebuilder
 }
 
 // NewTransactionProcessor creates a new transaction processor
@@ -52,6 +59,12 @@ func NewTransactionProcessor(
 	}
 }
 
+// WithReadModelBuilder adds an optional read model builder for Revenue API
+func (p *TransactionProcessor) WithReadModelBuilder(builder ReadModelRebuilder) *TransactionProcessor {
+	p.readModelBuilder = builder
+	return p
+}
+
 func (p *TransactionProcessor) Type() string { return entity.SyncJobTypeTransactionSync }
 
 func (p *TransactionProcessor) Process(ctx context.Context, payload *queue.SyncJobPayload) error {
@@ -68,9 +81,9 @@ func (p *TransactionProcessor) Process(ctx context.Context, payload *queue.SyncJ
 
 	p.progress.Update(ctx, payload.JobID, queue.Progress{Message: "Fetching transactions..."})
 
-	// Calculate 12-month window
+	// Calculate 1-month window (testing — change back to -1, 0, 0 for production)
 	now := time.Now().UTC()
-	from := now.AddDate(-1, 0, 0)
+	from := now.AddDate(0, -1, 0)
 
 	fetchCtx := external.WithOrganizationID(ctx, pCtx.OrganizationID)
 
@@ -110,6 +123,14 @@ func (p *TransactionProcessor) Process(ctx context.Context, payload *queue.SyncJ
 	if p.ledger != nil {
 		if _, err := p.ledger.RebuildFromTransactions(ctx, payload.AppID, now); err != nil {
 			return fmt.Errorf("failed to rebuild ledger: %w", err)
+		}
+	}
+
+	// Rebuild Revenue API read model
+	if p.readModelBuilder != nil {
+		if err := p.readModelBuilder.RebuildForApp(ctx, payload.AppID); err != nil {
+			log.Printf("[queue] TransactionProcessor: failed to rebuild read model: %v", err)
+			// Non-fatal — don't fail the sync for read model issues
 		}
 	}
 

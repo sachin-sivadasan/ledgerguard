@@ -10,8 +10,9 @@ import (
 type Subscription struct {
 	ID                      uuid.UUID
 	AppID                   uuid.UUID
-	ShopifyGID              string // Shopify subscription GID
+	ShopifyGID              string // Shopify subscription GID (gid://shopify/AppSubscription/...)
 	ShopifyShopGID          string // Shopify shop GID for events lookup
+	StableDomainKey         string // Deterministic ID from domain (lg_sub_...), stable across reinstalls
 	MyshopifyDomain         string
 	ShopName                string // Human-readable shop name
 	PlanName                string

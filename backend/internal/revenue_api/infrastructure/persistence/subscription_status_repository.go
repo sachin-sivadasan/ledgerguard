@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -117,7 +118,8 @@ func (r *PostgresSubscriptionStatusRepository) UpsertBatch(ctx context.Context, 
 	return nil
 }
 
-// GetByShopifyGID retrieves a subscription status by Shopify GID
+// GetByShopifyGID retrieves a subscription status by Shopify GID.
+// Accepts a full GID (gid://partners/...) or a plain numeric ID (suffix match).
 func (r *PostgresSubscriptionStatusRepository) GetByShopifyGID(ctx context.Context, shopifyGID string) (*entity.SubscriptionStatus, error) {
 	query := `
 		SELECT id, shopify_gid, app_id, myshopify_domain, shop_name, plan_name,
@@ -125,15 +127,29 @@ func (r *PostgresSubscriptionStatusRepository) GetByShopifyGID(ctx context.Conte
 			last_successful_charge_date, expected_next_charge_date, status, last_synced_at
 		FROM api_subscription_status
 		WHERE shopify_gid = $1
+		   OR ($2 AND shopify_gid LIKE '%/' || $1)
 	`
+	isNumeric := !strings.HasPrefix(shopifyGID, "gid://")
 
-	return r.scanStatus(r.pool.QueryRow(ctx, query, shopifyGID))
+	return r.scanStatus(r.pool.QueryRow(ctx, query, shopifyGID, isNumeric))
 }
 
-// GetByShopifyGIDs retrieves multiple subscription statuses by Shopify GIDs
+// GetByShopifyGIDs retrieves multiple subscription statuses by Shopify GIDs.
+// Accepts full GIDs (gid://partners/...) or plain numeric IDs (suffix match).
 func (r *PostgresSubscriptionStatusRepository) GetByShopifyGIDs(ctx context.Context, shopifyGIDs []string) ([]*entity.SubscriptionStatus, error) {
 	if len(shopifyGIDs) == 0 {
 		return []*entity.SubscriptionStatus{}, nil
+	}
+
+	// Split into full GIDs and numeric IDs for suffix matching
+	var fullGIDs []string
+	var suffixPatterns []string
+	for _, id := range shopifyGIDs {
+		if strings.HasPrefix(id, "gid://") {
+			fullGIDs = append(fullGIDs, id)
+		} else {
+			suffixPatterns = append(suffixPatterns, "%/"+id)
+		}
 	}
 
 	query := `
@@ -141,10 +157,10 @@ func (r *PostgresSubscriptionStatusRepository) GetByShopifyGIDs(ctx context.Cont
 			risk_state, is_paid_current_cycle, months_overdue,
 			last_successful_charge_date, expected_next_charge_date, status, last_synced_at
 		FROM api_subscription_status
-		WHERE shopify_gid = ANY($1)
+		WHERE shopify_gid = ANY($1) OR shopify_gid LIKE ANY($2)
 	`
 
-	rows, err := r.pool.Query(ctx, query, shopifyGIDs)
+	rows, err := r.pool.Query(ctx, query, fullGIDs, suffixPatterns)
 	if err != nil {
 		return nil, err
 	}

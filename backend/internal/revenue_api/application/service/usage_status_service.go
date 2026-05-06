@@ -61,6 +61,33 @@ func (s *UsageStatusService) GetByShopifyGID(ctx context.Context, userID uuid.UU
 	return &resp, nil
 }
 
+// GetBySubscriptionGID retrieves all usages for a subscription by Shopify GID (or numeric ID).
+// Looks up the subscription first to verify access, then fetches usages.
+func (s *UsageStatusService) GetBySubscriptionGID(ctx context.Context, userID uuid.UUID, subscriptionGID string) ([]entity.UsageStatusResponse, error) {
+	// Verify the subscription exists and user has access
+	subscription, err := s.subscriptionRepo.GetByShopifyGID(ctx, subscriptionGID)
+	if err != nil {
+		return nil, ErrUsageNotFound
+	}
+
+	if err := s.verifyAppAccess(ctx, userID, subscription.AppID); err != nil {
+		return nil, err
+	}
+
+	// Fetch usages by the subscription's canonical Shopify GID
+	usages, err := s.usageRepo.GetBySubscriptionShopifyGID(ctx, subscription.ShopifyGID)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]entity.UsageStatusResponse, len(usages))
+	for i, u := range usages {
+		results[i] = u.ToResponseWithSubscription(subscription)
+	}
+
+	return results, nil
+}
+
 // GetByShopifyGIDs retrieves multiple usage statuses by Shopify GIDs
 func (s *UsageStatusService) GetByShopifyGIDs(ctx context.Context, userID uuid.UUID, shopifyGIDs []string) (*entity.UsageStatusBatchResponse, error) {
 	if len(shopifyGIDs) == 0 {

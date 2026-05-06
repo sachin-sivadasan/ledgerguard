@@ -64,6 +64,15 @@ No feature-specific configuration. Uses standard Firebase Auth middleware.
 | `page` | int | Page number (default 1) |
 | `pageSize` | int | Items per page (default 25, max 100) |
 
+## Dual Identity: ShopifyGID + StableDomainKey
+
+Subscriptions have two identity fields:
+
+- **`shopify_gid`** — The real Shopify subscription GID, mapped from the Partner API `chargeId` field on `AppSubscriptionSale` transactions. This changes when a store uninstalls and reinstalls the app (new subscription = new GID).
+- **`stable_domain_key`** — Deterministic key computed as `lg_sub_` + SHA1(`myshopify_domain`). This survives reinstalls because it's derived from the store's permanent domain.
+
+This dual identity enables churn-return analysis: when the same `stable_domain_key` appears with a different `shopify_gid`, it indicates a store reinstalled the app. See ADR-031.
+
 ## Extension Points
 - Add new filter parameters by extending `SubscriptionFilters` struct
 - Implement new detail service methods (e.g., GetChurnPrediction)

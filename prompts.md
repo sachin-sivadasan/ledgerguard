@@ -1576,6 +1576,19 @@
 
 ---
 
+### [2026-05-07] Finalize Revenue API Format
+**Original:**
+> Implement the following plan: Finalize Revenue API Format — Accept Numeric IDs + Add Usages-by-Subscription
+
+**Improved:**
+> Fix Revenue API DX: (1) batch endpoints accept numeric IDs via suffix matching, (2) add GET /usages?subscription_id={id} endpoint, (3) fix ReadModelBuilder to use chargeId as usage shopify_gid, (4) add admin rebuild-read-model endpoint, (5) update Postman + docs.
+
+**Result:**
+- 20 files changed across repos, services, handlers, router, Postman, docs
+- Squashed into commit: `8acfa59`
+
+---
+
 ### [2026-04-21] Queue-Based Async Sync System
 **Original:**
 > Implement the following plan: Queue-Based Sync System — Implementation Plan (5 phases A-E)

@@ -19,6 +19,7 @@ The service coordinates between external APIs (Shopify Partner, Storefront, App 
 | `backend/internal/infrastructure/external/shopify_partner_client.go` | ~1044 | Partner API GraphQL client with rate limiting |
 | `backend/internal/interfaces/http/handler/sync.go` | ~127 | POST /api/v1/sync and /api/v1/sync/{appID} endpoints |
 | `backend/internal/domain/service/earnings_calculator.go` | ~118 | Earnings availability date calculation and status tracking |
+| `backend/internal/revenue_api/application/service/read_model_builder.go` | ~183 | CQRS read model population after ledger rebuild |
 
 ## Data Flow
 ```
@@ -40,10 +41,13 @@ The service coordinates between external APIs (Shopify Partner, Storefront, App 
 │  7. ledger.RebuildFromTx()       ← Full ledger rebuild + snapshot  │
 │  8. ledger.BackfillSnapshots()   ← Historical monthly snapshots    │
 │                                                                     │
+│  ── Post-Sync (non-fatal) ──                                       │
+│  9. readModelBuilder.RebuildForApp() ← Populate Revenue API tables │
+│                                                                     │
 │  ── Optional Enrichment (errors ignored) ──                         │
-│  9. enrichSubscriptionStatus()   ← App lifecycle events → status   │
-│ 10. fetchShopBrands()            ← Storefront API → logos          │
-│ 11. scrapeAndStoreReviews()      ← App Store → reviews             │
+│ 10. enrichSubscriptionStatus()   ← App lifecycle events → status   │
+│ 11. fetchShopBrands()            ← Storefront API → logos          │
+│ 12. scrapeAndStoreReviews()      ← App Store → reviews             │
 └─────────────────────────────────────────────────────────────────────┘
           │
           ▼

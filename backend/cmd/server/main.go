@@ -152,6 +152,7 @@ func run() error {
 	var reviewRepo *persistence.PostgresAppReviewRepository
 	var syncJobRepo *persistence.PostgresSyncJobRepository
 	var appEventRepo *persistence.PostgresAppEventRepository
+	var subscriptionEventRepo *persistence.PostgresSubscriptionEventRepository
 	var adminRepo repository.AdminRepository
 
 	if db != nil {
@@ -166,6 +167,7 @@ func run() error {
 		reviewRepo = persistence.NewPostgresAppReviewRepository(db.Pool)
 		syncJobRepo = persistence.NewPostgresSyncJobRepository(db.Pool)
 		appEventRepo = persistence.NewPostgresAppEventRepository(db.Pool)
+		subscriptionEventRepo = persistence.NewPostgresSubscriptionEventRepository(db.Pool)
 		adminRepo = persistence.NewPostgresAdminRepository(db.Pool)
 	}
 
@@ -446,6 +448,23 @@ func run() error {
 		}
 	}
 
+	// Initialize webhook handler for Shopify Partner webhooks
+	var webhookHandler *handler.WebhookHandler
+	if subscriptionRepo != nil && appRepo != nil {
+		webhookSvc := appservice.NewWebhookService(subscriptionRepo, appRepo)
+		if subscriptionEventRepo != nil {
+			webhookSvc = webhookSvc.WithSubscriptionEventRepo(subscriptionEventRepo)
+		}
+		if appEventRepo != nil {
+			webhookSvc = webhookSvc.WithAppEventRepo(appEventRepo)
+		}
+		if partnerRepo != nil && notificationService != nil {
+			webhookSvc = webhookSvc.WithNotificationService(partnerRepo, notificationService)
+		}
+		webhookHandler = handler.NewWebhookHandler(webhookSvc)
+		log.Println("Webhook handler initialized")
+	}
+
 	// Initialize insight handler
 	var insightHandler *handler.InsightHandler
 	if db != nil && appRepo != nil && partnerRepo != nil {
@@ -498,6 +517,7 @@ func run() error {
 	var regularWorkerPool *queue.WorkerPool
 	var fullSyncWorkerPool *queue.WorkerPool
 	var recoveryService *queue.RecoveryService
+	var dailyCatchupScheduler *scheduler.DailyCatchupScheduler
 
 	if cfg.Queue.Enabled && redisClient != nil && syncJobRepo != nil && appRepo != nil && partnerRepo != nil && encryptor != nil {
 		lockManager := queue.NewLockManager(redisClient)
@@ -577,7 +597,18 @@ func run() error {
 		)
 		queueSyncService.SetTracker(tracker)
 		queueSyncHandler = handler.NewQueueSyncHandler(queueSyncService, partnerRepo, appRepo)
+
+		// Start daily catchup scheduler
+		dailyCatchupScheduler = scheduler.NewDailyCatchupScheduler(queueSyncService, appRepo, partnerRepo)
+		dailyCatchupScheduler.Start(ctx)
+		log.Println("Daily catchup scheduler started (3 AM UTC)")
+
 		log.Println("Queue-based sync system initialized")
+	}
+
+	// Wire daily catchup scheduler into admin handler (after queue init)
+	if adminHandler != nil && dailyCatchupScheduler != nil {
+		adminHandler.WithDailyCatchupScheduler(dailyCatchupScheduler)
 	}
 
 	// Initialize chat GraphQL handler and chat handler
@@ -586,9 +617,6 @@ func run() error {
 	if subscriptionRepo != nil && txRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
 		riskEngine := domainservice.NewRiskEngine()
 		metricsEngine := domainservice.NewMetricsEngine()
-
-		var subscriptionEventRepo *persistence.PostgresSubscriptionEventRepository
-		subscriptionEventRepo = persistence.NewPostgresSubscriptionEventRepository(db.Pool)
 
 		chatResolver := &chatgraphql.Resolver{
 			SubscriptionRepo:      subscriptionRepo,
@@ -674,6 +702,7 @@ func run() error {
 		NotificationPreferencesHandler:  notificationPreferencesHandler,
 		DeviceHandler:                   deviceHandler,
 		InsightHandler:                  insightHandler,
+		WebhookHandler:                  webhookHandler,
 		BillingHandler:                  billingHandler,
 		ReviewHandler:                   reviewHandler,
 		QueueSyncHandler:                queueSyncHandler,
@@ -749,6 +778,11 @@ func run() error {
 
 	if notificationScheduler != nil {
 		notificationScheduler.Stop()
+	}
+
+	if dailyCatchupScheduler != nil {
+		dailyCatchupScheduler.Stop()
+		log.Println("Daily catchup scheduler stopped")
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)

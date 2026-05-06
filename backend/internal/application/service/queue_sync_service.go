@@ -106,6 +106,44 @@ func (s *QueueSyncService) EnqueueSync(ctx context.Context, appID, userID, partn
 	return job, nil
 }
 
+// EnqueueCatchupSync enqueues a sync job with a lookback window.
+// Silently skips if a duplicate job is already running.
+func (s *QueueSyncService) EnqueueCatchupSync(ctx context.Context, appID, userID, partnerAccountID uuid.UUID, jobType string, lookbackDays int) (*entity.SyncJob, error) {
+	// Check for duplicate active job — silently skip
+	existing, err := s.syncJobRepo.FindActiveByAppIDAndType(ctx, appID, jobType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check for existing job: %w", err)
+	}
+	if existing != nil {
+		return nil, nil // already running — silently skip
+	}
+
+	// Create job
+	job := entity.NewSyncJob(appID, userID, partnerAccountID, jobType, 0)
+	if err := s.syncJobRepo.Create(ctx, job); err != nil {
+		return nil, fmt.Errorf("failed to create sync job: %w", err)
+	}
+
+	// Enqueue to Redis with lookback days
+	payload := &queue.SyncJobPayload{
+		JobID:            job.ID,
+		AppID:            job.AppID,
+		UserID:           job.UserID,
+		PartnerAccountID: job.PartnerAccountID,
+		JobType:          job.JobType,
+		LookbackDays:     lookbackDays,
+		Priority:         job.Priority,
+		EnqueuedAt:       time.Now().UTC(),
+	}
+
+	if err := queue.Enqueue(ctx, s.redisClient, payload); err != nil {
+		_ = s.syncJobRepo.MarkFailed(ctx, job.ID, fmt.Sprintf("enqueue failed: %v", err))
+		return nil, fmt.Errorf("failed to enqueue sync job: %w", err)
+	}
+
+	return job, nil
+}
+
 // TriggerSync enqueues a high-priority full_sync job for a newly-selected app.
 // Duplicate jobs are silently ignored.
 func (s *QueueSyncService) TriggerSync(ctx context.Context, appID, userID, partnerAccountID uuid.UUID) error {

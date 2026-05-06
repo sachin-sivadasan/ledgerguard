@@ -23,6 +23,7 @@ type ReadModelRebuilder interface {
 type AdminHandler struct {
 	adminRepo         repository.AdminRepository
 	notifSched        *scheduler.NotificationScheduler
+	catchupSched      *scheduler.DailyCatchupScheduler
 	readModelBuilder  ReadModelRebuilder
 }
 
@@ -154,6 +155,12 @@ func (h *AdminHandler) TriggerDailySummary(w http.ResponseWriter, r *http.Reques
 	})
 }
 
+// WithDailyCatchupScheduler adds the daily catchup scheduler for admin triggers.
+func (h *AdminHandler) WithDailyCatchupScheduler(s *scheduler.DailyCatchupScheduler) *AdminHandler {
+	h.catchupSched = s
+	return h
+}
+
 // SetReadModelBuilder adds the read model builder for admin rebuild triggers.
 func (h *AdminHandler) SetReadModelBuilder(builder ReadModelRebuilder) {
 	h.readModelBuilder = builder
@@ -183,5 +190,32 @@ func (h *AdminHandler) RebuildReadModel(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "ok",
 		"app_id": appID.String(),
+	})
+}
+
+// TriggerDailyCatchup triggers the daily catchup sync for all apps.
+// POST /api/v1/admin/sync/daily-catchup?lookback_days=2
+func (h *AdminHandler) TriggerDailyCatchup(w http.ResponseWriter, r *http.Request) {
+	if h.catchupSched == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "daily catchup scheduler not configured")
+		return
+	}
+
+	lookbackDays := 2
+	if v := r.URL.Query().Get("lookback_days"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 30 {
+			lookbackDays = n
+		} else {
+			writeJSONError(w, http.StatusBadRequest, "lookback_days must be 1-30")
+			return
+		}
+	}
+
+	jobCount := h.catchupSched.RunOnce(r.Context(), lookbackDays)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"lookback_days": lookbackDays,
+		"jobs_enqueued": jobCount,
 	})
 }

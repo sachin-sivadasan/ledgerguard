@@ -690,3 +690,29 @@ Migration 000035 adds the `stable_domain_key` column to the `subscriptions` tabl
 - `shopify_gid` now contains the real Shopify GID (previously it was a synthetic key)
 - `stable_domain_key` is computed deterministically — no external lookup needed
 - SHA1 is used for compactness, not security (domain names are not secret)
+
+---
+
+### ADR-032: Daily Catch-Up Sync with Configurable Lookback
+**Date:** 2026-05-07
+**Status:** Accepted
+
+**Context:**
+The queue-based sync system runs full syncs on a 12-hour schedule, but if a sync fails, the server is restarted, or the scheduler misses a window, recent transactions can go unsynced until the next full cycle. For a revenue intelligence platform, even a few hours of missing data is problematic — risk states and MRR calculations become stale. A lightweight mechanism is needed to fill these gaps without the overhead of a full 12-month ledger rebuild.
+
+**Decision:**
+Add a daily catch-up sync that enqueues `transaction_sync` + `event_sync` jobs with a short lookback window (default 2 days) for all active apps. Key design choices:
+
+1. **`LookbackDays` on `SyncJobPayload`** — backward-compatible field (0 = default 1-month window). `TransactionProcessor` uses it when > 0 to narrow the fetch window.
+2. **`DailyCatchupScheduler`** — follows the `NotificationScheduler` pattern: checks every 15 minutes, fires at a configurable UTC hour (default 3 AM), tracks `lastRunDate` to prevent double-runs.
+3. **Selective job types** — only `transaction_sync` + `event_sync`, not a `full_sync`. Snapshots, status, store, and review syncs are unnecessary for a 2-day window.
+4. **Duplicate-safe** — `EnqueueCatchupSync` silently skips apps that already have an active job of the same type (uses existing duplicate detection).
+5. **Admin + internal endpoints** — `POST /api/v1/admin/sync/daily-catchup?lookback_days=N` for manual trigger; `POST /api/v1/internal/sync/daily-catchup` for Cloud Scheduler.
+
+**Consequences:**
+- Fills data gaps from missed or failed syncs without full 12-month rebuild
+- 2-day lookback is cheap (few API pages vs hundreds for full sync)
+- Runs at 3 AM UTC by default — off-peak for most Shopify partners
+- Does not replace the full sync scheduler — complementary mechanism
+- `RunOnce(ctx, lookbackDays)` enables manual/admin-triggered catch-ups with custom windows
+- Internal endpoint enables Cloud Scheduler integration for serverless environments (Cloud Run)

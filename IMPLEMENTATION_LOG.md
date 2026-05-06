@@ -2154,3 +2154,36 @@ Added 4 read-only admin API endpoints for cross-tenant visibility (users, onboar
 - `IMPLEMENTATION_LOG.md` — This entry
 
 **Tests:** 13 new tests (8 admin handler + 5 event tracker). All existing tests pass (`go test ./...`). Flutter: `flutter analyze` — no issues.
+
+---
+
+## [2026-05-07] Daily Catch-Up Sync (Transactions + Events)
+
+**Summary:**
+Added a daily catch-up sync scheduler that re-syncs recent transactions and events for all active apps with a short lookback window (default 2 days). This fills gaps left by the 12-hour full sync scheduler — if a sync fails or the server is down, the catch-up ensures no transaction data is lost. Runs at a configurable UTC hour (default 3 AM), checks every 15 minutes, and prevents double-runs via `lastRunDate` tracking.
+
+**Implemented:**
+- `LookbackDays` field on `SyncJobPayload` in `queue.go` — backward-compatible, 0 = default 1-month window
+- `TransactionProcessor` uses `payload.LookbackDays` when > 0, falling back to 1-month default
+- `EnqueueCatchupSync()` on `QueueSyncService` — enqueues jobs with lookback, silently skips duplicates
+- `DailyCatchupScheduler` (follows `NotificationScheduler` pattern):
+  - Checks every 15 min, fires at configurable UTC hour (default 3 AM)
+  - Enqueues `transaction_sync` + `event_sync` for all active apps with 2-day lookback
+  - Tracks `lastRunDate` to prevent double-runs within the same day
+  - Exposes `RunOnce(ctx, lookbackDays)` for manual/admin trigger
+- `TriggerDailyCatchup` admin handler: `POST /api/v1/admin/sync/daily-catchup?lookback_days=2`
+- Internal route: `POST /api/v1/internal/sync/daily-catchup` for Cloud Scheduler invocation
+- Wired `DailyCatchupScheduler` in `main.go` (create, start, shutdown, admin handler registration)
+
+**Files Created:**
+- `backend/internal/application/scheduler/daily_catchup_scheduler.go`
+
+**Files Modified:**
+- `backend/internal/infrastructure/queue/queue.go` — Added `LookbackDays` to `SyncJobPayload`
+- `backend/internal/infrastructure/queue/processors/transaction_processor.go` — Lookback-aware date window
+- `backend/internal/application/service/queue_sync_service.go` — `EnqueueCatchupSync()` method
+- `backend/internal/interfaces/http/handler/admin.go` — `TriggerDailyCatchup` handler
+- `backend/internal/interfaces/http/router/router.go` — Admin + internal routes for daily catchup
+- `backend/cmd/server/main.go` — Scheduler creation, start, shutdown, handler wiring
+
+**Tests:** All existing tests pass (`go test ./...`).

@@ -26,6 +26,7 @@ type SyncJobPayload struct {
 	ParentJobID      *uuid.UUID `json:"parent_job_id,omitempty"`
 	Priority         int       `json:"priority"`
 	EntityType       string    `json:"entity_type,omitempty"`
+	LookbackDays     int       `json:"lookback_days,omitempty"` // 0 = default window
 	EnqueuedAt       time.Time `json:"enqueued_at"`
 }
 

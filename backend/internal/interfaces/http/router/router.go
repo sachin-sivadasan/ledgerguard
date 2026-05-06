@@ -72,6 +72,7 @@ func New(cfg Config) *chi.Mux {
 	if cfg.WebhookHandler != nil {
 		r.Route("/webhooks/shopify", func(r chi.Router) {
 			r.Post("/", cfg.WebhookHandler.HandleWebhook)
+			r.Post("/installed", cfg.WebhookHandler.HandleAppInstalled)
 			r.Post("/subscriptions", cfg.WebhookHandler.HandleSubscriptionUpdate)
 			r.Post("/uninstalled", cfg.WebhookHandler.HandleAppUninstalled)
 			r.Post("/billing-failure", cfg.WebhookHandler.HandleBillingFailure)
@@ -280,6 +281,7 @@ func New(cfg Config) *chi.Mux {
 				r.Delete("/apps/{appID}/data", cfg.AdminHandler.ResetAppData)
 				r.Post("/apps/{appID}/rebuild-read-model", cfg.AdminHandler.RebuildReadModel)
 				r.Post("/notifications/daily-summary", cfg.AdminHandler.TriggerDailySummary)
+				r.Post("/sync/daily-catchup", cfg.AdminHandler.TriggerDailyCatchup)
 			})
 		}
 
@@ -320,6 +322,11 @@ func New(cfg Config) *chi.Mux {
 				if cfg.SyncHandler != nil {
 					r.Post("/sync/transactions", cfg.SyncHandler.SyncAllApps)
 					r.Post("/sync/transactions/{appID}", cfg.SyncHandler.SyncApp)
+				}
+
+				// Daily catchup sync (Cloud Scheduler trigger)
+				if cfg.AdminHandler != nil {
+					r.Post("/sync/daily-catchup", cfg.AdminHandler.TriggerDailyCatchup)
 				}
 			})
 		}

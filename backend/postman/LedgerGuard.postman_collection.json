@@ -1065,6 +1065,30 @@
             ],
             "url": "{{baseUrl}}/api/v1/admin/apps/{{appUUID}}/rebuild-read-model"
           }
+        },
+        {
+          "name": "Trigger Daily Catchup Sync",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/sync/daily-catchup?lookback_days=2",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "sync", "daily-catchup"],
+              "query": [
+                {
+                  "key": "lookback_days",
+                  "value": "2",
+                  "description": "Number of days to look back (1-30, default 2)"
+                }
+              ]
+            }
+          }
         }
       ]
     },

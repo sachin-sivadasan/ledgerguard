@@ -81,9 +81,13 @@ func (p *TransactionProcessor) Process(ctx context.Context, payload *queue.SyncJ
 
 	p.progress.Update(ctx, payload.JobID, queue.Progress{Message: "Fetching transactions..."})
 
-	// Calculate 1-month window (testing — change back to -1, 0, 0 for production)
 	now := time.Now().UTC()
-	from := now.AddDate(0, -1, 0)
+	var from time.Time
+	if payload.LookbackDays > 0 {
+		from = now.AddDate(0, 0, -payload.LookbackDays)
+	} else {
+		from = now.AddDate(0, -1, 0) // default: 1 month (testing)
+	}
 
 	fetchCtx := external.WithOrganizationID(ctx, pCtx.OrganizationID)
 

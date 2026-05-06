@@ -217,3 +217,70 @@ The queue system is designed for multiple server instances sharing Redis + Postg
 - [ADR-026](../../DECISIONS.md) — Ownership-aware distributed locks (Lua scripts)
 - [ADR-027](../../DECISIONS.md) — Centralized job state transitions in worker
 - [33-queue-multi-node-deployment.puml](../diagrams/puml/33-queue-multi-node-deployment.puml) — Multi-node deployment diagram
+
+---
+
+## Daily Catch-Up Sync
+
+### What It Does
+A lightweight daily scheduler that re-syncs recent transactions and events for all active apps using a short lookback window (default 2 days). It fills gaps left by missed or failed full syncs — if the server was down or a sync errored out, the catch-up ensures no recent transaction data is lost.
+
+Unlike a `full_sync` (which rebuilds the entire 12-month ledger and dispatches 6 child jobs), the daily catch-up only enqueues `transaction_sync` + `event_sync` with a narrow date window. This makes it fast and cheap — typically a few API pages per app instead of hundreds.
+
+### How It Works
+
+```
+DailyCatchupScheduler (goroutine)
+  │
+  ├── Tick every 15 minutes
+  ├── Check: current UTC hour == configured hour (default 3 AM)?
+  ├── Check: lastRunDate != today?
+  │
+  │  If both true:
+  ├── Fetch all active apps from AppRepository
+  ├── For each app:
+  │     ├── EnqueueCatchupSync(appID, userID, partnerAccountID, lookbackDays=2)
+  │     │     ├── Enqueue transaction_sync with LookbackDays=2
+  │     │     └── Enqueue event_sync with LookbackDays=2
+  │     └── Skip silently if duplicate job already active
+  └── Set lastRunDate = today (prevents double-run)
+```
+
+### LookbackDays Payload Field
+`SyncJobPayload.LookbackDays` controls the transaction fetch window:
+- `0` (default) — uses the standard 1-month window (backward-compatible)
+- `> 0` — `TransactionProcessor` sets `since = now - LookbackDays` instead of the default window
+
+This field is backward-compatible: existing jobs without it behave exactly as before.
+
+### Key Files
+| File | Purpose |
+|------|---------|
+| `backend/internal/application/scheduler/daily_catchup_scheduler.go` | Scheduler implementation (check interval, run logic, `RunOnce`) |
+| `backend/internal/application/service/queue_sync_service.go` | `EnqueueCatchupSync()` — enqueues transaction + event jobs with lookback |
+| `backend/internal/infrastructure/queue/queue.go` | `SyncJobPayload.LookbackDays` field |
+| `backend/internal/infrastructure/queue/processors/transaction_processor.go` | Lookback-aware date window logic |
+| `backend/internal/interfaces/http/handler/admin.go` | `TriggerDailyCatchup` admin handler |
+| `backend/internal/interfaces/http/router/router.go` | Admin + internal route registration |
+
+### API Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/v1/admin/sync/daily-catchup?lookback_days=2` | Firebase (admin) | Manual trigger with optional lookback override |
+| POST | `/api/v1/internal/sync/daily-catchup` | Internal | Cloud Scheduler trigger (no auth, internal network only) |
+
+### Configuration
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DAILY_CATCHUP_HOUR` | `3` | UTC hour to run the daily catch-up (0-23) |
+| `DAILY_CATCHUP_LOOKBACK_DAYS` | `2` | Default lookback window in days |
+
+### Design Decisions
+- **Follows `NotificationScheduler` pattern** — same 15-minute check interval, same `lastRunDate` guard, same `Start()`/`Stop()` lifecycle.
+- **Only `transaction_sync` + `event_sync`** — snapshots, status, store, and review syncs are unnecessary for a 2-day window. Snapshots are daily aggregates computed from the full ledger; status/store/review data doesn't change frequently enough to warrant daily re-sync.
+- **Duplicate-safe** — uses existing `EnqueueSync` duplicate detection. If an app already has an active `transaction_sync`, the catch-up silently skips it.
+- **`RunOnce(ctx, lookbackDays)`** — enables admin-triggered catch-ups with custom windows (e.g., 7-day lookback after a prolonged outage).
+- **Internal endpoint for Cloud Scheduler** — on Cloud Run, the in-process scheduler may not run reliably (scale-to-zero). The internal endpoint allows GCP Cloud Scheduler to trigger the catch-up via HTTP cron.
+
+### Related
+- [ADR-032](../../DECISIONS.md) — Daily catch-up sync with configurable lookback

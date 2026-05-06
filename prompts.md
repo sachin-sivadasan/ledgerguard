@@ -1603,17 +1603,47 @@
 
 ---
 
-### [2026-05-07] Daily Catch-Up Sync + User Personas Diagram
+### [2026-05-07] Daily Catch-Up Sync (Transactions + Events)
 **Original:**
-> Implement daily catch-up sync for transactions + events (last 2 days). Also: create a PlantUML diagram showing all user personas and what features they use.
+> Implement the following plan: Daily Catch-Up Sync — Transactions + Events (Last 2 Days) [detailed plan with 8 files to modify]
 
 **Improved:**
-> 1. Implement a DailyCatchupScheduler (3 AM UTC, 2-day lookback) that enqueues transaction_sync + event_sync for all apps. Add LookbackDays to SyncJobPayload, admin endpoint, internal endpoint for Cloud Scheduler.
-> 2. Create a PlantUML use-case diagram mapping 9 user personas (Embedded-Only Dev, Non-Embedded Dev, API-First Dev, Notification-Only, Mobile-First, AI Power User, Agency/Multi-App, Finance/Compliance, Marketplace Veteran) to feature packages, with pricing tier legend.
+> Implement DailyCatchupScheduler (3 AM UTC, 2-day lookback) that enqueues transaction_sync + event_sync for all active apps. Add LookbackDays to SyncJobPayload (backward-compatible). Update TransactionProcessor to use lookback window. Add EnqueueCatchupSync to QueueSyncService. Admin endpoint: POST /api/v1/admin/sync/daily-catchup. Internal endpoint: POST /api/v1/internal/sync/daily-catchup for Cloud Scheduler. Update Postman collection.
 
 **Result:**
-- Daily catchup: 7 files modified/created, scheduler + admin + internal routes
-- User personas: `docs/diagrams/puml/USER_PERSONAS.puml` with 9 personas, 8 feature packages
-- Commits: `1f4b76c`, pending
+- 11 files changed (1 new: `daily_catchup_scheduler.go`)
+- `queue.go`, `transaction_processor.go`, `queue_sync_service.go`, `admin.go`, `router.go`, `main.go`, Postman collection, IMPLEMENTATION_LOG, DECISIONS (ADR-032), docs/developer/31
+- Commit: `1f4b76c`
+
+---
+
+### [2026-05-07] User Personas PlantUML Diagram (9 initial)
+**Original:**
+> want puml whatever diagram which shows for example: client has no website or anything they just had a embeded shopify app. so they will use my app to see installations, subscriptions. example 2: client has non embeded app... [6 examples of different user types]
+
+**Improved:**
+> Create a PlantUML use-case diagram mapping every distinct user persona for LedgerGuard, showing what features each persona uses and why they'd pay. Include 9+ personas: Embedded-Only Dev, Non-Embedded Dev, API-First Dev, Notification-Only, Mobile-First Dev, AI Power User, Agency/Multi-App, Finance/Compliance, Marketplace Veteran. Group features into packages. Add pricing tier legend.
+
+**Result:**
+- Created initial `docs/diagrams/puml/USER_PERSONAS.puml` with 9 personas
+- Identified 6 additional personas needed (Freemium Dev, Investor, CS Manager, Support Lead, Side-Project Dev, Growth/Marketing)
+- Expanded to 15 personas with `docs/USER_PERSONAS.md` (feature coverage matrix, pricing tiers, gap analysis)
+- Restructured into mindmap overview + 3 focused group diagrams after original was visually unreadable
+- Files: `USER_PERSONAS.puml`, `USER_PERSONAS_1_dashboard.puml`, `USER_PERSONAS_2_api_ops.puml`, `USER_PERSONAS_3_power.puml`, `USER_PERSONAS.md`
+- Commit: `9b1aa89` (squashed from 4 commits)
+
+---
+
+### [2026-05-07] Missing UI Features Gap Analysis
+**Original:**
+> now note missing ui feature or menus from whatever we discussed and add it to future
+
+**Improved:**
+> Review all 15 user personas and their required features from USER_PERSONAS.md. Cross-reference with existing Flutter app screens/menus in both frontend/app (Bloc) and frontend-flutter (Provider). Identify every UI feature, screen, or menu item referenced in personas but not yet built. Append as actionable items to future.md grouped by feature area with priority, description, backend readiness, and persona references.
+
+**Result:**
+- 18 missing UI features added to `future.md` across 8 areas: Conversion & Growth, Reporting & Export, Notifications, Risk & CS, Dashboard, Reviews, Mobile, Sync & Data
+- Key gaps: conversion funnel, PDF/CSV export, weekly digest, at-risk outreach list, global domain search, AI brief card, revenue concentration, sync jobs history
+- Commit: `9b1aa89` (included in squash)
 
 ---

@@ -1,0 +1,87 @@
+@startmindmap
+title LedgerGuard — All 15 User Personas Overview
+
+<style>
+mindmapDiagram {
+  node {
+    FontSize 13
+    RoundCorner 10
+    Padding 8
+    Margin 4
+  }
+}
+</style>
+
+*[#FFFFFF] **LedgerGuard**\nRevenue Intelligence\nfor Shopify App Devs
+
+right side
+
+**[#E8F5E9] FREE Tier ($0/mo)
+***[#E8F5E9] 14. Side-Project Dev\n//Weekly check-ins//
+****[#FAFAFA] Weekly email digest
+****[#FAFAFA] Basic MRR + installs
+****[#FAFAFA] Push notifications
+
+**[#E3F2FD] STARTER Tier ($249/mo)
+***[#E3F2FD] 1. Embedded-Only Dev\n//No website — LG is their dashboard//
+****[#FAFAFA] Full dashboard (MRR, installs, subs)
+****[#FAFAFA] Earnings timeline
+****[#FAFAFA] Risk classification + store health
+***[#E3F2FD] 2. Non-Embedded Dev\n//Has own dashboard//
+****[#FAFAFA] Subscription intelligence
+****[#FAFAFA] Risk + churn alerts
+****[#FAFAFA] Slack notifications
+***[#E3F2FD] 4. Notification-Only\n//Alerts only, no UI//
+****[#FAFAFA] Slack + email alerts
+****[#FAFAFA] At-risk subscriber alerts
+****[#FAFAFA] Configurable preferences
+***[#E3F2FD] 5. Mobile-First Dev\n//On-the-go monitoring//
+****[#FAFAFA] Mobile dashboard
+****[#FAFAFA] Push notifications (FCM)
+****[#FAFAFA] Quick sub lookup
+***[#E3F2FD] 9. Marketplace Veteran\n//Reviews & reputation//
+****[#FAFAFA] Review scraping + sentiment
+****[#FAFAFA] Install trends
+***[#E3F2FD] 10. Freemium App Dev\n//Free-to-paid conversion//
+****[#FAFAFA] Conversion funnel
+****[#FAFAFA] Trial expiry tracking
+***[#E3F2FD] 13. Support Team Lead\n//Ticket prioritization//
+****[#FAFAFA] Domain-based sub lookup
+****[#FAFAFA] Store health check
+
+left side
+
+**[#FFF3E0] PRO Tier ($499/mo)
+***[#FFF3E0] 3. API-First Dev\n//Feature gating via API//
+****[#FAFAFA] Revenue API (GID/domain)
+****[#FAFAFA] Batch lookup + GraphQL
+****[#FAFAFA] API key management
+***[#FFF3E0] 6. AI Power User\n//Forecasting & analytics//
+****[#FAFAFA] AI Daily Revenue Brief
+****[#FAFAFA] NL chat (ask about MRR)
+****[#FAFAFA] Churn prediction + cohort
+***[#FFF3E0] 8. Finance / Compliance\n//Audit & reconciliation//
+****[#FAFAFA] Daily snapshots (audit trail)
+****[#FAFAFA] Fee breakdown (Shopify cut)
+****[#FAFAFA] PDF/CSV export + 12mo history
+***[#FFF3E0] 11. Investor / Acquirer\n//Due diligence//
+****[#FAFAFA] MRR trend reports
+****[#FAFAFA] Revenue concentration
+****[#FAFAFA] Historical data export
+***[#FFF3E0] 12. Customer Success Mgr\n//Proactive outreach//
+****[#FAFAFA] Per-store risk alerts
+****[#FAFAFA] Churn lifecycle events
+****[#FAFAFA] Slack + API sub lookup
+***[#FFF3E0] 15. Growth / Marketing\n//Install & campaign analytics//
+****[#FAFAFA] Install velocity
+****[#FAFAFA] Review sentiment
+****[#FAFAFA] PDF/CSV export
+
+**[#F3E5F5] ENTERPRISE (Custom)
+***[#F3E5F5] 7. Agency / Multi-App\n//Manages 5+ apps//
+****[#FAFAFA] Multi-app aggregate metrics
+****[#FAFAFA] Portfolio earnings + fees
+****[#FAFAFA] Custom widgets + queue mgmt
+****[#FAFAFA] PDF/CSV export
+
+@endmindmap

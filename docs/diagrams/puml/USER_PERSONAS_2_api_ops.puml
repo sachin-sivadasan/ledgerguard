@@ -1,0 +1,100 @@
+@startuml
+title LedgerGuard Personas — Group 2: API, Ops & Notification Users
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam sequenceArrowThickness 2
+skinparam defaultFontSize 13
+skinparam packageFontSize 14
+skinparam packageFontStyle bold
+skinparam usecaseFontSize 12
+skinparam actorFontSize 12
+
+left to right direction
+
+' ─── ACTORS ───
+
+actor "API-First Dev\n(Feature gating)" as P3 #LightYellow
+actor "Notification-Only\n(Alerts only, no UI)" as P4 #LightCoral
+actor "Customer Success Mgr\n(Proactive outreach)" as P12 #MistyRose
+actor "Support Team Lead\n(Ticket prioritization)" as P13 #Honeydew
+actor "Freemium App Dev\n(Free-to-paid conversion)" as P10 #Thistle
+
+' ─── FEATURES ───
+
+rectangle "Revenue API (External)" as PKG_API #FFFDE7 {
+  usecase "Subscription status\n(by GID or domain)" as UC_API_SUB
+  usecase "Batch lookup" as UC_API_BATCH
+  usecase "Usage charge status" as UC_API_USAGE
+  usecase "GraphQL endpoint" as UC_API_GQL
+  usecase "API key management" as UC_API_KEY
+}
+
+rectangle "Risk Engine" as PKG_RISK #FFEBEE {
+  usecase "At-risk alerts" as UC_ATRISK
+  usecase "Churn detection" as UC_CHURN
+}
+
+rectangle "Notifications" as PKG_NOTIF #F3E5F5 {
+  usecase "Slack alerts" as UC_SLACK
+  usecase "Email daily summary" as UC_EMAIL
+  usecase "Alert preferences" as UC_PREFS
+}
+
+rectangle "Dashboard" as PKG_DASH #E8F4FD {
+  usecase "Subscription list" as UC_SUBS
+  usecase "Store health" as UC_STORE
+  usecase "MRR / installs" as UC_MRR
+}
+
+rectangle "Conversion & Growth" as PKG_GROWTH #E8F5E9 {
+  usecase "Free-to-paid\nconversion funnel" as UC_CONVERT
+  usecase "Trial expiry tracking" as UC_TRIAL
+}
+
+rectangle "Mobile" as PKG_MOBILE #F1F8E9 {
+  usecase "Quick sub lookup" as UC_MOB_SUBS
+}
+
+' ─── CONNECTIONS ───
+
+P3 --> UC_API_SUB
+P3 --> UC_API_BATCH
+P3 --> UC_API_USAGE
+P3 --> UC_API_GQL
+P3 --> UC_API_KEY
+
+P4 --> UC_SLACK
+P4 --> UC_EMAIL
+P4 --> UC_PREFS
+P4 --> UC_ATRISK
+P4 --> UC_CHURN
+
+P12 --> UC_STORE
+P12 --> UC_ATRISK
+P12 --> UC_CHURN
+P12 --> UC_SUBS
+P12 --> UC_SLACK
+P12 --> UC_API_SUB
+
+P13 --> UC_API_SUB
+P13 --> UC_SUBS
+P13 --> UC_STORE
+P13 --> UC_MOB_SUBS
+
+P10 --> UC_CONVERT
+P10 --> UC_TRIAL
+P10 --> UC_SUBS
+P10 --> UC_MRR
+P10 --> UC_CHURN
+
+legend bottom
+  |= Persona |= Tier |= Key Need |
+  | API-First Dev | Starter/Pro | Gate features via Revenue API |
+  | Notification-Only | Starter | Slack/email alerts, no dashboard |
+  | Customer Success Mgr | Starter/Pro | Per-store risk, proactive saves |
+  | Support Team Lead | Starter | Quick subscriber verification |
+  | Freemium App Dev | Starter | Free-to-paid conversion tracking |
+end legend
+
+@enduml

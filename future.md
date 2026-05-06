@@ -51,6 +51,44 @@ Postponed ideas and features for later implementation.
 | Revenue API: Subscription list with filters | P2 | `GET /subscriptions?risk_state=ONE_CYCLE_MISSED&status=ACTIVE&limit=50&cursor=...` — list all subscriptions with cursor pagination and filter by risk_state, status, plan_name. Currently external API only supports single/batch lookup by ID or domain. Internal API has list but it's Firebase-auth only. |
 | Revenue API: Revenue summary endpoint | P3 | `GET /revenue/summary` — returns aggregate stats: active_subscriptions, mrr_cents, at_risk_count, total_usage_cents, churned_30d. Single call gives developers a dashboard-ready overview without fetching individual subscriptions. Reads from existing `daily_metrics_snapshot` table. |
 
+### Missing UI Features (from User Personas Analysis)
+
+Cross-referenced 15 user personas (`docs/USER_PERSONAS.md`) with existing Flutter screens. These are features that personas need but have **no UI screen or menu** in either `frontend/app` (Bloc) or `frontend-flutter` (Provider).
+
+**Conversion & Growth (P10: Freemium Dev, P15: Growth/Marketing)**
+| Free-to-paid conversion funnel screen | P2 | New screen showing upgrade funnel: total installs → free users → trial starts → paid conversions → churned. Funnel chart + conversion rate metrics. No backend endpoint yet either — needs new query on subscription status transitions. |
+| Trial expiry tracking screen | P2 | List of subscriptions approaching trial end with days remaining, auto-renewal status. Filter by "expiring in 7 days". Helps Freemium devs intervene before trials lapse. Backend: needs query on subscriptions with trial end dates. |
+| Install velocity chart | P3 | Time-series chart showing installs per day/week overlaid with uninstalls. Currently only a total install count exists (`GET /apps/{appID}/install-count`). Needs historical install data aggregation. Persona P15 uses this to correlate marketing campaigns with install spikes. |
+
+**Reporting & Export (P7: Agency, P8: Finance, P11: Investor, P15: Growth)**
+| PDF/CSV export buttons on dashboard & metrics | P2 | Add export action to: dashboard KPI cards, subscription list, earnings timeline, fee breakdown, metrics by period. Use `pdf` and `csv` Flutter packages. No backend changes — frontend formats existing API data into downloadable files. Unlocks Investor (due diligence) and Finance (reconciliation) personas. |
+| Revenue concentration analysis screen | P3 | "Top 10 Stores by Revenue" view showing revenue distribution. Table: store domain, MRR contribution, % of total, risk state. Highlight single-store dependency risk. Backend: aggregate query on transactions grouped by shop domain. |
+| Historical data browser (12-month snapshots) | P3 | Calendar-based or timeline view to browse daily_metrics_snapshots across 12 months. Select any date to see that day's MRR, churn, installs. Compare two dates side-by-side. Backend data exists (`daily_metrics_snapshot` table), needs UI. |
+
+**Notifications & Digests (P4: Notification-Only, P14: Side-Project Dev)**
+| Weekly email digest toggle in notification settings | P2 | Add "Weekly Digest" option (day + time picker) alongside existing daily summary. Backend: needs new `weekly_digest_enabled` + `weekly_digest_day` fields in notification_preferences table + scheduler logic. Frontend: toggle + day picker in notification settings page. |
+| Notification history / event log screen | P3 | Chronological feed of all notifications sent to the user: churn alerts, billing failures, daily summaries, install events. Backend: needs `notification_log` table. Frontend: new screen accessible from settings or bell icon. |
+
+**Risk & Customer Success (P12: CS Manager, P13: Support Lead)**
+| At-risk stores outreach list | P2 | Filtered view of stores by risk state with action buttons: "Contact Store", "View Details", "Dismiss". Groups by risk level (1-cycle missed, 2-cycles missed, churned). CS Managers use this as their daily work queue. Backend: existing subscription list API with risk_state filter. Frontend: new screen or tab in Risk section. |
+| Global domain search bar | P2 | Search bar in app header to instantly look up any store by domain name. Returns subscription status, risk state, last payment, plan. Support Team Leads use this for ticket triage. Backend: existing `GET /subscriptions/status?domain=` endpoint. Frontend: search icon in AppBar → overlay search with results dropdown. |
+
+**Dashboard Enhancements (P1: Embedded-Only, P6: AI Power, P7: Agency)**
+| AI Daily Brief card on dashboard | P2 | Compact card on dashboard showing today's AI insight summary (1-2 sentences + key metric). Tap to expand or navigate to full insights page. Backend: existing `GET /apps/{appID}/insights/daily` endpoint. Frontend: new dashboard widget. Currently insights are only on a separate page. |
+| Revenue by charge type breakdown | P3 | Pie/donut chart showing revenue split: Recurring vs Usage vs One-Time vs Refund. Backend: existing earnings API has charge type data. Frontend: new chart widget on dashboard or earnings page. Finance persona (P8) needs this for reconciliation. |
+| Customizable dashboard widget layout | P3 | Allow users to show/hide and reorder dashboard cards (drag-and-drop or toggle list). Persist layout via existing `PUT /user/preferences/dashboard` endpoint. Agency persona (P7) managing multiple apps wants different layouts per context. |
+
+**Reviews & Reputation (P9: Marketplace Veteran, P15: Growth)**
+| Review sentiment dashboard | P3 | Beyond star ratings — show sentiment trends over time, common themes (positive/negative word clouds), comparison with competitor apps. Backend: needs AI-based sentiment analysis (future.md already has this). Frontend: new tab or enhancement to existing reviews tab in `frontend-flutter`. |
+
+**Mobile-Specific (P5: Mobile-First)**
+| FCM push notification setup flow | P2 | In-app prompt to enable push notifications, request permission, register FCM token via `POST /api/v1/devices`. Show notification preview. Already in future.md as backend item — this is the frontend counterpart. |
+| Mobile home screen widgets | P3 | iOS/Android widgets showing MRR, at-risk count, last event. Already in future.md — adding persona context: Mobile-First Dev (P5) primary use case. |
+
+**Sync & Data (P7: Agency, P8: Finance)**
+| Sync jobs history page | P2 | List of recent sync jobs with status, duration, items processed, errors. Filter by job type and status. Cancel button for pending jobs. Backend: existing `GET /sync/jobs` API. Frontend: mentioned as "Future" in REQUIREMENTS.md — still not built. |
+| Fee verification / reconciliation screen | P3 | Side-by-side view: LedgerGuard calculated fees vs expected Shopify payout. Highlights discrepancies. Backend: existing `GET /apps/{appID}/fees/summary` and `/fees/breakdown`. Frontend: new screen under earnings or settings. Finance persona (P8) primary use case. |
+
 ---
 
 ## Completed

@@ -1,0 +1,122 @@
+@startuml
+title LedgerGuard Personas — Group 3: Power Users (Pro / Enterprise)
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam sequenceArrowThickness 2
+skinparam defaultFontSize 13
+skinparam packageFontSize 14
+skinparam packageFontStyle bold
+skinparam usecaseFontSize 12
+skinparam actorFontSize 12
+
+left to right direction
+
+' ─── ACTORS ───
+
+actor "AI Power User\n(Forecasting & analytics)" as P6 #Gold
+actor "Agency / Multi-App\n(Manages 5+ apps)" as P7 #LightSkyBlue
+actor "Finance / Compliance\n(Audit & reconciliation)" as P8 #PaleGreen
+actor "Investor / Acquirer\n(Due diligence)" as P11 #LightSteelBlue
+actor "Growth / Marketing\n(Campaign analytics)" as P15 #Linen
+
+' ─── FEATURES ───
+
+rectangle "AI & Analytics" as PKG_AI #FFF8E1 {
+  usecase "AI Daily Revenue Brief" as UC_BRIEF
+  usecase "Natural language chat" as UC_CHAT
+  usecase "Churn prediction" as UC_FORECAST
+  usecase "Cohort analysis" as UC_COHORT
+}
+
+rectangle "Dashboard & KPIs" as PKG_DASH #E8F4FD {
+  usecase "MRR / ARR / churn" as UC_MRR
+  usecase "Multi-app aggregate" as UC_MULTI
+  usecase "Custom widgets" as UC_WIDGETS
+  usecase "Install count & trends" as UC_INSTALLS
+}
+
+rectangle "Revenue & Earnings" as PKG_REV #FFF3E0 {
+  usecase "Earnings timeline" as UC_EARN
+  usecase "Fee breakdown" as UC_FEES
+  usecase "Revenue by charge type" as UC_CHARGE
+  usecase "Daily snapshots" as UC_SNAP
+}
+
+rectangle "Reporting & Export" as PKG_REPORT #E3F2FD {
+  usecase "PDF / CSV export" as UC_EXPORT
+  usecase "Revenue concentration\n(top stores)" as UC_CONC
+  usecase "12-month history" as UC_HIST
+}
+
+rectangle "Conversion & Growth" as PKG_GROWTH #E8F5E9 {
+  usecase "Install velocity" as UC_VELOCITY
+  usecase "Conversion funnel" as UC_CONVERT
+}
+
+rectangle "Notifications" as PKG_NOTIF #F3E5F5 {
+  usecase "Slack alerts" as UC_SLACK
+  usecase "Email summary" as UC_EMAIL
+}
+
+rectangle "Reviews" as PKG_REVIEWS #FBE9E7 {
+  usecase "Review scraping" as UC_REVIEWS
+  usecase "Sentiment tracking" as UC_SENTIMENT
+}
+
+rectangle "Sync Engine" as PKG_SYNC #ECEFF1 {
+  usecase "Queue management" as UC_QUEUE
+  usecase "Daily catchup sync" as UC_CATCHUP
+}
+
+' ─── CONNECTIONS ───
+
+P6 --> UC_BRIEF
+P6 --> UC_CHAT
+P6 --> UC_FORECAST
+P6 --> UC_COHORT
+P6 --> UC_MRR
+P6 --> UC_CHARGE
+
+P7 --> UC_MULTI
+P7 --> UC_WIDGETS
+P7 --> UC_MRR
+P7 --> UC_EARN
+P7 --> UC_FEES
+P7 --> UC_SLACK
+P7 --> UC_EMAIL
+P7 --> UC_QUEUE
+P7 --> UC_EXPORT
+
+P8 --> UC_SNAP
+P8 --> UC_EARN
+P8 --> UC_FEES
+P8 --> UC_CHARGE
+P8 --> UC_CATCHUP
+P8 --> UC_EXPORT
+P8 --> UC_HIST
+
+P11 --> UC_EXPORT
+P11 --> UC_CONC
+P11 --> UC_HIST
+P11 --> UC_MRR
+P11 --> UC_COHORT
+P11 --> UC_FORECAST
+
+P15 --> UC_VELOCITY
+P15 --> UC_INSTALLS
+P15 --> UC_REVIEWS
+P15 --> UC_SENTIMENT
+P15 --> UC_CONVERT
+P15 --> UC_EXPORT
+
+legend bottom
+  |= Persona |= Tier |= Key Need |
+  | AI Power User | Pro | Forecasting, chat, AI briefs |
+  | Agency / Multi-App | Pro/Enterprise | Portfolio-wide metrics, unlimited apps |
+  | Finance / Compliance | Pro | Audit trail, fee reconciliation |
+  | Investor / Acquirer | Pro | Due diligence reports |
+  | Growth / Marketing | Starter/Pro | Install velocity, campaign correlation |
+end legend
+
+@enduml

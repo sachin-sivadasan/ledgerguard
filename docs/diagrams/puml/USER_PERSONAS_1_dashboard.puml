@@ -1,0 +1,101 @@
+@startuml
+title LedgerGuard Personas — Group 1: Dashboard & Monitoring Users
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam sequenceArrowThickness 2
+skinparam defaultFontSize 13
+skinparam packageFontSize 14
+skinparam packageFontStyle bold
+skinparam usecaseFontSize 12
+skinparam actorFontSize 12
+
+left to right direction
+
+' ─── ACTORS ───
+
+actor "Embedded-Only Dev\n(No website/dashboard)" as P1 #LightBlue
+actor "Non-Embedded Dev\n(Has own dashboard)" as P2 #LightGreen
+actor "Mobile-First Dev\n(On-the-go monitoring)" as P5 #Plum
+actor "Side-Project Dev\n(Weekly check-ins)" as P14 #LavenderBlush
+actor "Marketplace Veteran\n(Reviews & reputation)" as P9 #Wheat
+
+' ─── FEATURES ───
+
+rectangle "Dashboard & KPIs" as PKG_DASH #E8F4FD {
+  usecase "MRR / ARR / churn rate" as UC_MRR
+  usecase "Install count & trends" as UC_INSTALLS
+  usecase "Subscription list" as UC_SUBS
+  usecase "Store health per shop" as UC_STORE
+}
+
+rectangle "Revenue & Earnings" as PKG_REV #FFF3E0 {
+  usecase "Earnings timeline" as UC_EARN
+  usecase "Daily snapshots" as UC_SNAP
+}
+
+rectangle "Risk Engine" as PKG_RISK #FFEBEE {
+  usecase "Risk classification" as UC_RISK
+  usecase "At-risk alerts" as UC_ATRISK
+  usecase "Churn detection" as UC_CHURN
+}
+
+rectangle "Notifications" as PKG_NOTIF #F3E5F5 {
+  usecase "Slack alerts" as UC_SLACK
+  usecase "Weekly email digest" as UC_WEEKLY
+  usecase "Push notifications" as UC_PUSH
+}
+
+rectangle "Mobile App" as PKG_MOBILE #F1F8E9 {
+  usecase "Mobile dashboard" as UC_MOB_DASH
+  usecase "Real-time push" as UC_MOB_PUSH
+  usecase "Quick sub lookup" as UC_MOB_SUBS
+}
+
+rectangle "Reviews" as PKG_REVIEWS #FBE9E7 {
+  usecase "Review scraping" as UC_REVIEWS
+  usecase "Sentiment tracking" as UC_SENTIMENT
+}
+
+' ─── CONNECTIONS ───
+
+P1 --> UC_MRR
+P1 --> UC_INSTALLS
+P1 --> UC_SUBS
+P1 --> UC_EARN
+P1 --> UC_RISK
+P1 --> UC_STORE
+
+P2 --> UC_SUBS
+P2 --> UC_RISK
+P2 --> UC_ATRISK
+P2 --> UC_CHURN
+P2 --> UC_SNAP
+P2 --> UC_SLACK
+
+P5 --> UC_MOB_DASH
+P5 --> UC_MOB_PUSH
+P5 --> UC_MOB_SUBS
+P5 --> UC_PUSH
+
+P14 --> UC_WEEKLY
+P14 --> UC_MRR
+P14 --> UC_INSTALLS
+P14 --> UC_PUSH
+
+P9 --> UC_REVIEWS
+P9 --> UC_SENTIMENT
+P9 --> UC_INSTALLS
+P9 --> UC_MRR
+P9 --> UC_PUSH
+
+legend bottom
+  |= Persona |= Tier |= Key Need |
+  | Embedded-Only Dev | Starter | LedgerGuard IS their dashboard |
+  | Non-Embedded Dev | Starter | Subscription intel + risk alerts |
+  | Mobile-First Dev | Starter | Monitor on the go |
+  | Side-Project Dev | Free | Weekly digest, minimal setup |
+  | Marketplace Veteran | Starter | Reviews + install trends |
+end legend
+
+@enduml

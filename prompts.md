@@ -1602,3 +1602,18 @@
 - Commit: `38bf1c2`
 
 ---
+
+### [2026-05-07] Daily Catch-Up Sync + User Personas Diagram
+**Original:**
+> Implement daily catch-up sync for transactions + events (last 2 days). Also: create a PlantUML diagram showing all user personas and what features they use.
+
+**Improved:**
+> 1. Implement a DailyCatchupScheduler (3 AM UTC, 2-day lookback) that enqueues transaction_sync + event_sync for all apps. Add LookbackDays to SyncJobPayload, admin endpoint, internal endpoint for Cloud Scheduler.
+> 2. Create a PlantUML use-case diagram mapping 9 user personas (Embedded-Only Dev, Non-Embedded Dev, API-First Dev, Notification-Only, Mobile-First, AI Power User, Agency/Multi-App, Finance/Compliance, Marketplace Veteran) to feature packages, with pricing tier legend.
+
+**Result:**
+- Daily catchup: 7 files modified/created, scheduler + admin + internal routes
+- User personas: `docs/diagrams/puml/USER_PERSONAS.puml` with 9 personas, 8 feature packages
+- Commits: `1f4b76c`, pending
+
+---

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "LedgerGuard API",
-    "description": "Revenue Intelligence Platform for Shopify App Developers.\n\nSetup:\n1. Run '01 - Firebase Sign In' to get a token\n2. Token is auto-saved to {{firebaseToken}} variable\n3. All other requests use it automatically",
+    "description": "Revenue Intelligence Platform for Shopify App Developers.\n\nSetup:\n1. Run '01 - Firebase Sign In' to get a token\n2. Token is auto-saved to {{firebaseToken}} variable\n3. All other requests use it automatically\n\nOrg-Scoped Access:\n- Data endpoints (apps, sync, metrics) resolve via organization context\n- Single-org users: auto-selected (no header needed)\n- Multi-org users: set X-Org-Id header with {{orgId}}\n- Use 'Get Selected Org' / 'Set Selected Org' to persist org choice",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -725,6 +725,40 @@
               "raw": "{\n    \"app_id\": \"{{appID}}\"\n}"
             },
             "url": "{{baseUrl}}/api/v1/user/preferences/default-app"
+          }
+        },
+        {
+          "name": "Get Selected Org",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/user/preferences/selected-org"
+          }
+        },
+        {
+          "name": "Set Selected Org",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"org_id\": \"{{orgId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/user/preferences/selected-org"
           }
         }
       ]

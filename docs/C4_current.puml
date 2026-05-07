@@ -63,7 +63,7 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
 
     ' Domain Layer - IMPLEMENTED
     Component(user_entity, "User", "Entity", "id, firebase_uid, email, role, plan_tier")
-    Component(partner_entity, "PartnerAccount", "Entity", "id, user_id, partner_id, encrypted_token")
+    Component(partner_entity, "PartnerAccount", "Entity", "id, user_id, org_id, partner_id, encrypted_token")
     Component(app_entity, "App", "Entity", "id, partner_account_id, partner_app_id, name")
     Component(tx_entity, "Transaction", "Entity", "id, app_id, shopify_gid, shop_name, charge_type, gross_amount, net_amount")
     Component(sub_entity, "Subscription", "Entity", "id, app_id, shop_name, risk_state, status")
@@ -257,6 +257,12 @@ Rel(router, org_handler, "/api/v1/orgs/*")
 Rel(router, org_audit_handler, "/api/v1/orgs/{orgId}/audit-log")
 Rel(org_handler, org_context_mw, "Uses")
 Rel(org_audit_handler, org_context_mw, "Uses")
+
+' Org-scoped data handlers (OrgContextMW wired to data routes)
+Rel(app_handler, org_context_mw, "Uses (org-scoped)")
+Rel(sync_handler, org_context_mw, "Uses (org-scoped)")
+Rel(metrics_handler, org_context_mw, "Uses (org-scoped)")
+Rel(integration_status_handler, org_context_mw, "Uses (org-scoped)")
 Rel(org_handler, org_service, "Org operations")
 Rel(org_audit_handler, org_audit_service, "Query audit log")
 Rel(org_service, org_repo_if, "Org CRUD")

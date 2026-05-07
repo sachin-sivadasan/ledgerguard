@@ -1,0 +1,87 @@
+@startuml
+title 37. Org-Scoped Data Query Flow
+
+skinparam sequenceArrowThickness 2
+
+actor "User" as User
+participant "Flutter App" as App
+participant "AuthMW" as Auth
+participant "OrgContextMW" as OrgMW
+participant "Handler" as Handler
+participant "resolvePartnerAccount" as Resolve
+database "PostgreSQL" as DB
+
+== Data Request (apps, sync, metrics, etc.) ==
+
+User -> App: Any data endpoint request
+App -> Auth: Authorization: Bearer <token>\n[optional] X-Org-Id: <uuid>
+activate Auth
+
+Auth -> Auth: Verify Firebase token
+Auth -> DB: Find/create user
+DB --> Auth: User
+Auth -> OrgMW: Continue (user in context)
+deactivate Auth
+activate OrgMW
+
+alt X-Org-Id header present
+    OrgMW -> DB: SELECT role, status\nFROM org_members\nWHERE org_id = ? AND user_id = ?
+    DB --> OrgMW: Membership
+
+    alt Active member
+        OrgMW -> DB: SELECT * FROM organizations\nWHERE id = ?
+        DB --> OrgMW: Organization
+        OrgMW -> OrgMW: Set org in ctx
+    else Suspended → 403
+    else Not member → 403
+    end
+
+else No header
+    OrgMW -> DB: SELECT * FROM org_members\nWHERE user_id = ?
+    DB --> OrgMW: Memberships
+
+    alt Exactly 1 org → auto-select
+        OrgMW -> OrgMW: Set org in ctx
+    else 0 orgs → continue (no org)
+    else Multiple orgs → 400\n"org selection required"
+    end
+end
+
+OrgMW -> Handler: Continue
+deactivate OrgMW
+activate Handler
+
+Handler -> Resolve: resolvePartnerAccount(r, partnerRepo)
+activate Resolve
+
+Resolve -> Resolve: org := OrgFromContext(ctx)
+
+alt org != nil (preferred path)
+    Resolve -> DB: SELECT * FROM partner_accounts\nWHERE org_id = ?
+    DB --> Resolve: PartnerAccount
+    note right: Primary scoping:\norg_id → partner_account
+else org == nil (fallback for non-org routes)
+    Resolve -> Resolve: user := UserFromContext(ctx)
+    Resolve -> DB: SELECT * FROM partner_accounts\nWHERE user_id = ?
+    DB --> Resolve: PartnerAccount
+    note right: Legacy fallback:\nuser_id → partner_account
+end
+
+Resolve --> Handler: PartnerAccount
+deactivate Resolve
+
+Handler -> DB: Query data using\npartnerAccount.ID
+DB --> Handler: Results
+Handler --> App: JSON response
+
+deactivate Handler
+
+note over OrgMW, Resolve
+  Backward compatibility:
+  - Single-org users: auto-select (transparent)
+  - Migration 037 backfills personal orgs
+  - All existing users have exactly 1 org
+  - No breaking changes for existing clients
+end note
+
+@enduml

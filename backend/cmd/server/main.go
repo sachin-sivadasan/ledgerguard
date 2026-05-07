@@ -524,6 +524,26 @@ func run() error {
 		log.Println("Razorpay billing handler initialized")
 	}
 
+	// Initialize organization repos, services, handlers, and middleware
+	var orgHandler *handler.OrgHandler
+	var orgAuditHandler *handler.OrgAuditHandler
+	var orgContextMW func(http.Handler) http.Handler
+	if db != nil && userRepo != nil {
+		orgRepo := persistence.NewPostgresOrganizationRepository(db.Pool)
+		memberRepo := persistence.NewPostgresMemberRepository(db.Pool)
+		invitationRepo := persistence.NewPostgresInvitationRepository(db.Pool)
+		orgAuditRepo := persistence.NewPostgresOrgAuditRepository(db.Pool)
+
+		orgAuditService := appservice.NewOrgAuditService(orgAuditRepo)
+		orgService := appservice.NewOrgService(orgRepo, memberRepo, invitationRepo, orgAuditService)
+
+		orgHandler = handler.NewOrgHandler(orgService)
+		orgAuditHandler = handler.NewOrgAuditHandler(orgAuditService)
+		orgContextMiddleware := middleware.NewOrgContextMiddleware(orgRepo, memberRepo)
+		orgContextMW = orgContextMiddleware.RequireOrg
+		log.Println("Organization handler initialized")
+	}
+
 	// Initialize review handler with Shopify App Store scraper
 	var reviewHandler *handler.ReviewHandler
 	appStoreScraper := external.NewShopifyAppStoreClient()
@@ -743,6 +763,9 @@ func run() error {
 		StoreHandler:                    storeHandler,
 		EventHandler:                    eventHandler,
 		RiskHandler:                     riskHandler,
+		OrgHandler:                      orgHandler,
+		OrgAuditHandler:                 orgAuditHandler,
+		OrgContextMW:                    orgContextMW,
 		QueueSyncHandler:                queueSyncHandler,
 		AdminHandler:                    adminHandler,
 		APIKeyHandler:                   apiKeyHandler,

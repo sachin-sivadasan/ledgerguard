@@ -105,4 +105,5 @@ Both endpoints return JSON with `app_id`, `app_name`, `transaction_count`, and `
 - **Access token is encrypted at rest.** The Decryptor interface is called on every sync to decrypt the AES-256-GCM encrypted Shopify access token. If the encryption key rotates, tokens must be re-encrypted.
 - **Review scraping is capped at 2 pages (~20 reviews)** during sync to keep the operation fast. A separate full scrape can be triggered independently.
 - **BackfillHistoricalSnapshots errors are ignored** (double underscore: both the backfill call itself and FindByAppID failures are swallowed). Historical snapshots are best-effort.
-- **Tenant isolation** is enforced at the handler level — the `SyncApp` endpoint verifies that `app.PartnerAccountID == user's partnerAccount.ID` before proceeding.
+- **Tenant isolation** is enforced at the handler level — the `SyncApp` endpoint resolves the partner account via `resolvePartnerAccount(r, partnerRepo)` (org-scoped via OrgContextMW, fallback to user-based) and verifies `app.PartnerAccountID == partnerAccount.ID` before proceeding.
+- **Background sync uses FindByUserID.** The `SyncService` (used by schedulers and queue processors) runs without HTTP context, so it still uses `partnerRepo.FindByUserID()` / `partnerRepo.FindByID()` directly. Org-scoped resolution only applies to HTTP handlers via `resolvePartnerAccount`.

@@ -96,9 +96,9 @@ func (h *StoreHealthHandler) GetStoreHealth(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Get partner account
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "no partner account found")
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 

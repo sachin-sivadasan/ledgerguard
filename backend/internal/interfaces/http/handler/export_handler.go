@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -51,7 +52,7 @@ func (h *ExportHandler) ExportTransactions(w http.ResponseWriter, r *http.Reques
 
 	// Parse app ID from URL
 	appIDStr := chi.URLParam(r, "appID")
-	app, err := h.lookupAppByNumericID(ctx, user.ID, appIDStr)
+	app, err := h.lookupAppByNumericID(ctx, r, appIDStr)
 	if err != nil {
 		writeExportError(w, http.StatusNotFound, "app not found")
 		return
@@ -124,7 +125,7 @@ func (h *ExportHandler) ExportSubscriptions(w http.ResponseWriter, r *http.Reque
 
 	// Parse app ID from URL
 	appIDStr := chi.URLParam(r, "appID")
-	app, err := h.lookupAppByNumericID(ctx, user.ID, appIDStr)
+	app, err := h.lookupAppByNumericID(ctx, r, appIDStr)
 	if err != nil {
 		writeExportError(w, http.StatusNotFound, "app not found")
 		return
@@ -175,7 +176,7 @@ func (h *ExportHandler) ExportMetrics(w http.ResponseWriter, r *http.Request) {
 
 	// Parse app ID from URL
 	appIDStr := chi.URLParam(r, "appID")
-	app, err := h.lookupAppByNumericID(ctx, user.ID, appIDStr)
+	app, err := h.lookupAppByNumericID(ctx, r, appIDStr)
 	if err != nil {
 		writeExportError(w, http.StatusNotFound, "app not found")
 		return
@@ -233,7 +234,7 @@ func (h *ExportHandler) ExportMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 // lookupAppByNumericID finds an app by its numeric order (1-indexed) for the user
-func (h *ExportHandler) lookupAppByNumericID(ctx context.Context, userID uuid.UUID, appIDStr string) (*entity.App, error) {
+func (h *ExportHandler) lookupAppByNumericID(ctx context.Context, r *http.Request, appIDStr string) (*entity.App, error) {
 	// First, try parsing as UUID
 	appID, err := uuid.Parse(appIDStr)
 	if err == nil {
@@ -246,10 +247,10 @@ func (h *ExportHandler) lookupAppByNumericID(ctx context.Context, userID uuid.UU
 		return nil, ErrAppNotFound
 	}
 
-	// Get partner account for user
-	partner, err := h.partnerRepo.FindByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
+	// Get partner account (org-scoped or user-fallback)
+	partner, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		return nil, errors.New(lookupErr.message)
 	}
 
 	// Get apps for the partner

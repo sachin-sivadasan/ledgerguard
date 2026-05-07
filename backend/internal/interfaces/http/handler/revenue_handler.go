@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -54,7 +55,7 @@ func (h *RevenueHandler) GetEarningsStatus(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Convert numeric app ID to UUID by looking up the app
-	app, err := h.lookupAppByNumericID(ctx, user.ID, appIDStr)
+	app, err := h.lookupAppByNumericID(ctx, r, appIDStr)
 	if err != nil {
 		writeJSONErrorResponse(w, http.StatusNotFound, "app not found")
 		return
@@ -92,7 +93,7 @@ func (h *RevenueHandler) GetEarnings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert numeric app ID to UUID by looking up the app
-	app, err := h.lookupAppByNumericID(ctx, user.ID, appIDStr)
+	app, err := h.lookupAppByNumericID(ctx, r, appIDStr)
 	if err != nil {
 		writeJSONErrorResponse(w, http.StatusNotFound, "app not found")
 		return
@@ -143,13 +144,13 @@ func (h *RevenueHandler) GetEarnings(w http.ResponseWriter, r *http.Request) {
 }
 
 // lookupAppByNumericID finds an app by its numeric ID (extracted from Shopify GID)
-func (h *RevenueHandler) lookupAppByNumericID(ctx context.Context, userID uuid.UUID, numericID string) (*struct {
+func (h *RevenueHandler) lookupAppByNumericID(ctx context.Context, r *http.Request, numericID string) (*struct {
 	ID uuid.UUID
 }, error) {
-	// Get partner account for user
-	partner, err := h.partnerRepo.FindByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
+	// Get partner account (org-scoped or user-fallback)
+	partner, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		return nil, errors.New(lookupErr.message)
 	}
 
 	// Search for app in partner account

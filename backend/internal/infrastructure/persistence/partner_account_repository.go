@@ -23,13 +23,14 @@ func NewPostgresPartnerAccountRepository(pool *pgxpool.Pool) *PostgresPartnerAcc
 
 func (r *PostgresPartnerAccountRepository) Create(ctx context.Context, account *entity.PartnerAccount) error {
 	query := `
-		INSERT INTO partner_accounts (id, user_id, integration_type, partner_id, encrypted_access_token, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO partner_accounts (id, user_id, org_id, integration_type, partner_id, encrypted_access_token, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
 		account.ID,
 		account.UserID,
+		account.OrgID,
 		account.IntegrationType.String(),
 		account.PartnerID,
 		account.EncryptedAccessToken,
@@ -41,77 +42,52 @@ func (r *PostgresPartnerAccountRepository) Create(ctx context.Context, account *
 
 func (r *PostgresPartnerAccountRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.PartnerAccount, error) {
 	query := `
-		SELECT id, user_id, integration_type, partner_id, encrypted_access_token, created_at
+		SELECT id, user_id, org_id, integration_type, partner_id, encrypted_access_token, created_at
 		FROM partner_accounts
 		WHERE id = $1
 	`
 
-	var account entity.PartnerAccount
-	var integrationType string
-
-	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&account.ID,
-		&account.UserID,
-		&integrationType,
-		&account.PartnerID,
-		&account.EncryptedAccessToken,
-		&account.CreatedAt,
-	)
-
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrPartnerAccountNotFound
-		}
-		return nil, err
-	}
-
-	account.IntegrationType = valueobject.IntegrationType(integrationType)
-	return &account, nil
+	return r.scanOne(ctx, query, id)
 }
 
 func (r *PostgresPartnerAccountRepository) FindByUserID(ctx context.Context, userID uuid.UUID) (*entity.PartnerAccount, error) {
 	query := `
-		SELECT id, user_id, integration_type, partner_id, encrypted_access_token, created_at
+		SELECT id, user_id, org_id, integration_type, partner_id, encrypted_access_token, created_at
 		FROM partner_accounts
 		WHERE user_id = $1
 	`
 
-	var account entity.PartnerAccount
-	var integrationType string
+	return r.scanOne(ctx, query, userID)
+}
 
-	err := r.pool.QueryRow(ctx, query, userID).Scan(
-		&account.ID,
-		&account.UserID,
-		&integrationType,
-		&account.PartnerID,
-		&account.EncryptedAccessToken,
-		&account.CreatedAt,
-	)
+func (r *PostgresPartnerAccountRepository) FindByOrgID(ctx context.Context, orgID uuid.UUID) (*entity.PartnerAccount, error) {
+	query := `
+		SELECT id, user_id, org_id, integration_type, partner_id, encrypted_access_token, created_at
+		FROM partner_accounts
+		WHERE org_id = $1
+	`
 
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrPartnerAccountNotFound
-		}
-		return nil, err
-	}
-
-	account.IntegrationType = valueobject.IntegrationType(integrationType)
-	return &account, nil
+	return r.scanOne(ctx, query, orgID)
 }
 
 func (r *PostgresPartnerAccountRepository) FindByPartnerID(ctx context.Context, partnerID string) (*entity.PartnerAccount, error) {
 	query := `
-		SELECT id, user_id, integration_type, partner_id, encrypted_access_token, created_at
+		SELECT id, user_id, org_id, integration_type, partner_id, encrypted_access_token, created_at
 		FROM partner_accounts
 		WHERE partner_id = $1
 	`
 
+	return r.scanOne(ctx, query, partnerID)
+}
+
+func (r *PostgresPartnerAccountRepository) scanOne(ctx context.Context, query string, arg interface{}) (*entity.PartnerAccount, error) {
 	var account entity.PartnerAccount
 	var integrationType string
 
-	err := r.pool.QueryRow(ctx, query, partnerID).Scan(
+	err := r.pool.QueryRow(ctx, query, arg).Scan(
 		&account.ID,
 		&account.UserID,
+		&account.OrgID,
 		&integrationType,
 		&account.PartnerID,
 		&account.EncryptedAccessToken,

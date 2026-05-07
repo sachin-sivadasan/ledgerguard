@@ -60,8 +60,8 @@ func (h *ManualTokenHandler) AddToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if account already exists
-	existingAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err == nil && existingAccount != nil {
+	existingAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr == nil && existingAccount != nil {
 		// Update existing account
 		existingAccount.PartnerID = req.PartnerID
 		existingAccount.EncryptedAccessToken = encryptedToken
@@ -110,9 +110,9 @@ func (h *ManualTokenHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	account, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "no partner account found")
+	account, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 

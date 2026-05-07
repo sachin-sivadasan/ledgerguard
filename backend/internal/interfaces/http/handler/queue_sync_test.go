@@ -175,6 +175,9 @@ func (m *mockPartnerRepoForQueueSync) FindByUserID(_ context.Context, userID uui
 	}
 	return nil, fmt.Errorf("not found")
 }
+func (m *mockPartnerRepoForQueueSync) FindByOrgID(_ context.Context, _ uuid.UUID) (*entity.PartnerAccount, error) {
+	return nil, fmt.Errorf("not found")
+}
 func (m *mockPartnerRepoForQueueSync) FindByPartnerID(_ context.Context, _ string) (*entity.PartnerAccount, error) {
 	return nil, fmt.Errorf("not found")
 }

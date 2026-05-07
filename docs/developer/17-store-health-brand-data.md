@@ -135,3 +135,4 @@ No feature-flag or environment variable required. The Storefront API is unauthen
 - **Transactions window is 3 months** -- hardcoded in the handler. The earnings summary covers all time for that store.
 - **Storefront API version** is a constant (`2026-01`). Update this when Shopify deprecates the version.
 - **Nullable columns** in `shops` -- all brand fields except `myshopify_domain` are nullable. The persistence layer uses pointer scanning to handle NULLs.
+- **Org-scoped resolution.** The handler resolves the partner account via `resolvePartnerAccount(r, partnerRepo)` (org context → `FindByOrgID`, fallback → `FindByUserID`). See ADR-035 for the org-scoped data access pattern.

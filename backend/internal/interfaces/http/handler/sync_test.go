@@ -126,6 +126,10 @@ func (m *mockSyncPartnerRepo) FindByUserID(ctx context.Context, userID uuid.UUID
 	return m.account, m.err
 }
 
+func (m *mockSyncPartnerRepo) FindByOrgID(ctx context.Context, orgID uuid.UUID) (*entity.PartnerAccount, error) {
+	return m.account, m.err
+}
+
 func (m *mockSyncPartnerRepo) FindByPartnerID(ctx context.Context, partnerID string) (*entity.PartnerAccount, error) {
 	return nil, nil
 }

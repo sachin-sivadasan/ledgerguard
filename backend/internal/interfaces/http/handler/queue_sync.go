@@ -51,9 +51,9 @@ func (h *QueueSyncHandler) EnqueueSync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Tenant isolation
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "no partner account found")
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
@@ -220,9 +220,9 @@ func (h *QueueSyncHandler) ListJobs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Tenant isolation
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "no partner account found")
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 

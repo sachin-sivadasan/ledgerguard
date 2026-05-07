@@ -254,15 +254,10 @@ type subHandlerError struct {
 
 // getAppIDFromRequest extracts and validates app ID from request
 func (h *SubscriptionHandler) getAppIDFromRequest(r *http.Request) (uuid.UUID, *subHandlerError) {
-	user := middleware.UserFromContext(r.Context())
-	if user == nil {
-		return uuid.Nil, &subHandlerError{statusCode: http.StatusUnauthorized, message: "authentication required"}
-	}
-
 	// Get partner account
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		return uuid.Nil, &subHandlerError{statusCode: http.StatusNotFound, message: "no partner account found"}
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		return uuid.Nil, &subHandlerError{statusCode: lookupErr.statusCode, message: lookupErr.message}
 	}
 
 	// Get numeric appID from URL and construct full GID
@@ -292,9 +287,9 @@ func (h *SubscriptionHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get partner account
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "no partner account found")
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 

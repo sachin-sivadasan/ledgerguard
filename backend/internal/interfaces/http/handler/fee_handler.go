@@ -10,7 +10,6 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
-	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
 const feeAppGIDPrefix = "gid://partners/App/"
@@ -38,15 +37,10 @@ func NewFeeHandler(
 
 // getAppFromRequest resolves app from numeric Shopify app ID
 func (h *FeeHandler) getAppFromRequest(r *http.Request) (*uuid.UUID, *valueobject.RevenueShareTier, error) {
-	user := middleware.UserFromContext(r.Context())
-	if user == nil {
-		return nil, nil, &feeError{http.StatusUnauthorized, "authentication required"}
-	}
-
 	// Get partner account
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		return nil, nil, &feeError{http.StatusNotFound, "no partner account found"}
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		return nil, nil, &feeError{lookupErr.statusCode, lookupErr.message}
 	}
 
 	// Get numeric appID from URL and construct full GID

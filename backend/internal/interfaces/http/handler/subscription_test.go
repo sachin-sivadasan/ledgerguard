@@ -260,6 +260,10 @@ func (m *mockPartnerRepoForSub) FindByUserID(ctx context.Context, userID uuid.UU
 	return m.account, m.findErr
 }
 
+func (m *mockPartnerRepoForSub) FindByOrgID(ctx context.Context, orgID uuid.UUID) (*entity.PartnerAccount, error) {
+	return m.account, m.findErr
+}
+
 func (m *mockPartnerRepoForSub) FindByPartnerID(ctx context.Context, partnerID string) (*entity.PartnerAccount, error) {
 	return nil, nil
 }

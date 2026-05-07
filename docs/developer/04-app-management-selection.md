@@ -33,7 +33,9 @@ Spans all four DDD layers. The app management flow bridges the Shopify Partner i
       │  1. GET /api/v1/apps/available   │                                   │
       │ ────────────────────────────────▶│                                   │
       │                                  │                                   │
-      │                         2. partnerRepo.FindByUserID()                │
+      │                         2. resolvePartnerAccount(r)                   │
+      │                            → OrgContextMW: FindByOrgID()            │
+      │                            → fallback: FindByUserID()               │
       │                         3. decryptor.Decrypt(token)                  │
       │                                  │                                   │
       │                         4. FetchApps(orgID, token)                   │
@@ -182,3 +184,4 @@ See [31-queue-based-sync-system.md](31-queue-based-sync-system.md) for full queu
 - **App discovery depends on transaction history.** `FetchApps` finds apps by scanning transaction records. An app with no transactions (e.g., free app, new app with no paying users) will not appear in the available apps list.
 - **COALESCE in SQL queries.** The PostgreSQL repository uses `COALESCE` for `revenue_share_tier`, `install_count`, and `app_store_slug` to handle rows created before these columns existed. Defaults are `DEFAULT_20`, `0`, and `''` respectively.
 - **App store slug enables review scraping.** Without a slug set, the review handler cannot scrape reviews from the Shopify App Store. The slug must be set manually via the PATCH endpoint or updated during sync.
+- **Org-scoped resolution.** All AppHandler methods use `resolvePartnerAccount(r, partnerRepo)` which resolves via `FindByOrgID` (org context from OrgContextMiddleware) or falls back to `FindByUserID`. The `lookupAppID` helper chains through this. See ADR-035.

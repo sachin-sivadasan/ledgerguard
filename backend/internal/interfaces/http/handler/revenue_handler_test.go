@@ -47,6 +47,10 @@ func (m *mockPartnerRepoForRevenue) FindByUserID(ctx context.Context, userID uui
 	return m.account, m.err
 }
 
+func (m *mockPartnerRepoForRevenue) FindByOrgID(ctx context.Context, orgID uuid.UUID) (*entity.PartnerAccount, error) {
+	return m.account, m.err
+}
+
 func (m *mockPartnerRepoForRevenue) FindByPartnerID(ctx context.Context, partnerID string) (*entity.PartnerAccount, error) {
 	return m.account, m.err
 }

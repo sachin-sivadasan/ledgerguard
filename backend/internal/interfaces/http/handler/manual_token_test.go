@@ -48,6 +48,13 @@ func (m *mockPartnerRepoForManual) FindByUserID(ctx context.Context, userID uuid
 	return m.account, nil
 }
 
+func (m *mockPartnerRepoForManual) FindByOrgID(ctx context.Context, orgID uuid.UUID) (*entity.PartnerAccount, error) {
+	if m.findErr != nil {
+		return nil, m.findErr
+	}
+	return m.account, nil
+}
+
 func (m *mockPartnerRepoForManual) FindByPartnerID(ctx context.Context, partnerID string) (*entity.PartnerAccount, error) {
 	return nil, nil
 }

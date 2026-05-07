@@ -115,6 +115,8 @@ func New(cfg Config) *chi.Mux {
 				r.Put("/dashboard", cfg.UserPreferencesHandler.SaveDashboardPreferences)
 				r.Get("/default-app", cfg.UserPreferencesHandler.GetDefaultApp)
 				r.Put("/default-app", cfg.UserPreferencesHandler.SetDefaultApp)
+				r.Get("/selected-org", cfg.UserPreferencesHandler.GetSelectedOrg)
+				r.Put("/selected-org", cfg.UserPreferencesHandler.SetSelectedOrg)
 			})
 		}
 
@@ -135,9 +137,13 @@ func New(cfg Config) *chi.Mux {
 
 		// Shopify integration routes
 		r.Route("/integrations/shopify", func(r chi.Router) {
-			// Integration status (user accessible)
+			// Integration status (user accessible, org-scoped when available)
 			if cfg.IntegrationStatusHandler != nil && cfg.AuthMW != nil {
-				r.With(cfg.AuthMW).Get("/status", cfg.IntegrationStatusHandler.GetStatus)
+				mws := []func(http.Handler) http.Handler{cfg.AuthMW}
+				if cfg.OrgContextMW != nil {
+					mws = append(mws, cfg.OrgContextMW)
+				}
+				r.With(mws...).Get("/status", cfg.IntegrationStatusHandler.GetStatus)
 			}
 
 			// OAuth routes
@@ -156,15 +162,22 @@ func New(cfg Config) *chi.Mux {
 			}
 		})
 
-		// Aggregate metrics (across all apps)
+		// Aggregate metrics (across all apps, org-scoped when available)
 		if cfg.MetricsHandler != nil && cfg.AuthMW != nil {
-			r.With(cfg.AuthMW).Get("/metrics/aggregate", cfg.MetricsHandler.GetAggregateMetrics)
+			mws := []func(http.Handler) http.Handler{cfg.AuthMW}
+			if cfg.OrgContextMW != nil {
+				mws = append(mws, cfg.OrgContextMW)
+			}
+			r.With(mws...).Get("/metrics/aggregate", cfg.MetricsHandler.GetAggregateMetrics)
 		}
 
-		// App routes (requires auth)
+		// App routes (requires auth, org-scoped when available)
 		if cfg.AppHandler != nil && cfg.AuthMW != nil {
 			r.Route("/apps", func(r chi.Router) {
 				r.Use(cfg.AuthMW)
+				if cfg.OrgContextMW != nil {
+					r.Use(cfg.OrgContextMW)
+				}
 				r.Get("/available", cfg.AppHandler.GetAvailableApps)
 				r.Post("/select", cfg.AppHandler.SelectApp)
 				r.Get("/", cfg.AppHandler.ListApps)
@@ -300,10 +313,13 @@ func New(cfg Config) *chi.Mux {
 			r.Get("/tiers", cfg.FeeHandler.ListAvailableTiers)
 		}
 
-		// Sync routes (requires auth)
+		// Sync routes (requires auth, org-scoped when available)
 		if cfg.SyncHandler != nil && cfg.AuthMW != nil {
 			r.Route("/sync", func(r chi.Router) {
 				r.Use(cfg.AuthMW)
+				if cfg.OrgContextMW != nil {
+					r.Use(cfg.OrgContextMW)
+				}
 				r.Post("/", cfg.SyncHandler.SyncAllApps)
 				r.Post("/{appID}", cfg.SyncHandler.SyncApp)
 

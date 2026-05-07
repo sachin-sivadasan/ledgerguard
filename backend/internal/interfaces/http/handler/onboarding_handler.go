@@ -64,8 +64,8 @@ func (h *OnboardingHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user has a partner account
-	partnerAccount, err := h.partnerRepo.FindByUserID(ctx, user.ID)
-	if err == nil && partnerAccount != nil {
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr == nil && partnerAccount != nil {
 		status.HasPartnerAccount = true
 
 		// Check if user has apps
@@ -120,8 +120,8 @@ func (h *OnboardingHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate that prerequisites are met
-	partnerAccount, err := h.partnerRepo.FindByUserID(ctx, user.ID)
-	if err != nil || partnerAccount == nil {
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil || partnerAccount == nil {
 		writeOnboardingError(w, http.StatusBadRequest, "must connect partner account before completing onboarding")
 		return
 	}

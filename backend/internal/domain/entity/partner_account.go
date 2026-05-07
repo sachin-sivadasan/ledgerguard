@@ -10,6 +10,7 @@ import (
 type PartnerAccount struct {
 	ID                   uuid.UUID
 	UserID               uuid.UUID
+	OrgID                uuid.UUID
 	IntegrationType      valueobject.IntegrationType
 	PartnerID            string
 	EncryptedAccessToken []byte

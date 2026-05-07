@@ -109,3 +109,4 @@ See `docs/diagrams/puml/35-notification-scheduler-sequence.puml`
 - **No delivery tracking.** Summaries are fire-and-forget. No record of what was sent or when. If FCM fails, the error is logged but the summary is not retried.
 - **Preferences queried twice.** The scheduler calls `FindUsersWithDailySummaryAtHour()`, then `SendDailySummary` calls `FindByUserID()` again to re-check `ShouldSendDailySummary()`. Minor redundancy.
 - **Single-instance only.** No distributed lock — if multiple server instances run, each will send duplicate summaries. Needs Redis-based leader election for multi-node deployment.
+- **Uses FindByUserID (not org-scoped).** The scheduler is a background goroutine with no HTTP context, so it uses `partnerRepo.FindByUserID()` directly instead of `resolvePartnerAccount`. This is intentional — org-scoped resolution requires `OrgContextMiddleware` which only runs in HTTP request pipelines.

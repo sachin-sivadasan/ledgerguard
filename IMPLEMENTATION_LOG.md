@@ -2303,3 +2303,77 @@ Built a Ruby/Sinatra mock server that mimics Shopify Partner API GraphQL endpoin
 | NEW | `backend/config.mock.yaml` |
 
 **Tests:** Go build succeeds, all existing tests pass. Mock server tested with curl.
+
+---
+
+## Session: Wire Org Context into Existing Data Endpoints
+**Date:** 2026-05-08
+
+### Goal
+Complete the org model wiring so all data endpoints resolve ownership via `org_id → partner_account` instead of `user_id → partner_account`. Previously, the org model tables/entities/middleware/handlers were built but data endpoints still used `FindByUserID`.
+
+### What was built
+
+**Phase 1 — Entity + Repository + Persistence:**
+- Added `OrgID uuid.UUID` field to `PartnerAccount` entity
+- Added `FindByOrgID(ctx, orgID)` to `PartnerAccountRepository` interface
+- Updated all SQL queries in persistence layer to include `org_id` column (SELECT, INSERT)
+- Refactored persistence to use shared `scanOne()` helper (DRY)
+- Added `FindByOrgID` stub to all 10 test mock implementations
+
+**Phase 2 — Shared Helper:**
+- New `resolvePartnerAccount(r, partnerRepo)` function in `app_lookup.go`
+- Tries org-based lookup (`FindByOrgID`) first when `OrgFromContext` is present
+- Falls back to user-based lookup (`FindByUserID`) for routes without `OrgContextMW`
+- Updated `lookupAppID` to use `resolvePartnerAccount` (auto-fixes 4 handlers: Transaction, Store, Event, Risk)
+
+**Phase 3 — Handler Updates (26 call sites across 14 files):**
+- Replaced `partnerRepo.FindByUserID(ctx, user.ID)` → `resolvePartnerAccount(r, h.partnerRepo)` in:
+  - `app.go` (7), `sync.go` (2), `metrics.go` (2), `insight.go` (1), `integration_status.go` (1)
+  - `fee_handler.go` (1), `subscription.go` (2), `store_health.go` (1), `review.go` (1)
+  - `queue_sync.go` (2), `revenue_handler.go` (1), `onboarding_handler.go` (2)
+  - `manual_token.go` (2), `export_handler.go` (1)
+- Updated `lookupAppByNumericID` signatures in `revenue_handler.go` and `export_handler.go` to accept `*http.Request` instead of `userID`
+
+**Phase 4 — Router Wiring:**
+- Added `OrgContextMW` (guarded with `if cfg.OrgContextMW != nil`) to:
+  - `/api/v1/apps/*` route group
+  - `/api/v1/sync/*` route group
+  - `/api/v1/metrics/aggregate` endpoint
+  - `/api/v1/integrations/shopify/status` endpoint
+
+**Phase 5 — Backend Org Persistence:**
+- Migration 000038: `ALTER TABLE user_preferences ADD COLUMN selected_org_id UUID REFERENCES organizations(id)`
+- Added `SelectedOrgID` field to `UserPreferences` struct
+- New `GET/PUT /api/v1/user/preferences/selected-org` endpoints
+- Updated `findByUserID` query to include `selected_org_id` column
+
+### Files
+
+| Action | File |
+|--------|------|
+| MODIFY | `backend/internal/domain/entity/partner_account.go` |
+| MODIFY | `backend/internal/domain/repository/partner_account_repository.go` |
+| MODIFY | `backend/internal/infrastructure/persistence/partner_account_repository.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/app_lookup.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/app.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/sync.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/metrics.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/insight.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/integration_status.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/fee_handler.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/subscription.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/store_health.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/review.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/queue_sync.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/revenue_handler.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/onboarding_handler.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/manual_token.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/export_handler.go` |
+| MODIFY | `backend/internal/interfaces/http/handler/user_preferences.go` |
+| MODIFY | `backend/internal/interfaces/http/router/router.go` |
+| MODIFY | 10 test mock files (FindByOrgID stubs) |
+| NEW | `backend/migrations/000038_add_selected_org_to_preferences.up.sql` |
+| NEW | `backend/migrations/000038_add_selected_org_to_preferences.down.sql` |
+
+**Tests:** `go build ./...` succeeds, `go test ./...` all pass, `go vet ./...` clean.

@@ -332,9 +332,12 @@ CREATE TABLE users (
 );
 
 -- partner_accounts
+-- org_id is the primary scoping mechanism for multi-org data access.
+-- Queries use FindByOrgID (preferred) with FindByUserID as fallback.
 CREATE TABLE partner_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     integration_type VARCHAR(20) NOT NULL CHECK (integration_type IN ('OAUTH', 'MANUAL')),
     partner_id VARCHAR(100) NOT NULL,
     encrypted_access_token BYTEA NOT NULL,
@@ -525,6 +528,8 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000034_create_app_events_table | Create app_events table for Shopify lifecycle events | ✓ Implemented |
 | 000035_add_stable_domain_key_to_subscriptions | Add stable_domain_key column to subscriptions | ✓ Implemented |
 | 000036_create_organizations_tables | Create organizations, org_members, org_invitations, org_audit_log + add org_id to partner_accounts, billing_subscriptions, api_keys | ✓ Implemented |
+| 000037_backfill_organizations | Backfill: create personal org per user, set org_id on partner_accounts/billing_subscriptions/api_keys, make org_id NOT NULL, add indexes | ✓ Implemented |
+| 000038_add_selected_org_to_preferences | Add selected_org_id to user_preferences for cross-device org persistence | ✓ Implemented |
 
 ---
 

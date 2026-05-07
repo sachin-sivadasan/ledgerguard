@@ -27,8 +27,8 @@ func (h *IntegrationStatusHandler) GetStatus(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	account, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil || account == nil {
+	account, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
 		// Not connected
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{

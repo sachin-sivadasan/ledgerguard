@@ -17,12 +17,12 @@ Spans all four DDD layers (ADR-006 for CSRF state parameter protection):
 | `backend/internal/infrastructure/external/shopify_oauth.go` | ~178 | OAuth flow: GenerateAuthURL(), ExchangeCodeForToken(), FetchOrganizationID() via Partner API GraphQL |
 | `backend/internal/interfaces/http/handler/oauth.go` | ~169 | StartOAuth (GET, generates URL + state), Callback (GET, exchanges code, encrypts token, creates PartnerAccount) |
 | `backend/internal/interfaces/http/handler/manual_token.go` | ~163 | AddToken (POST), GetToken (GET, masked), RevokeToken (DELETE) for manual Partner API tokens |
-| `backend/internal/domain/entity/partner_account.go` | ~29 | PartnerAccount entity: id, user_id, partner_id, integration_type, encrypted_access_token |
+| `backend/internal/domain/entity/partner_account.go` | ~29 | PartnerAccount entity: id, user_id, org_id, partner_id, integration_type, encrypted_access_token |
 | `backend/internal/infrastructure/external/shopify_partner_client.go` | ~1045 | Partner API GraphQL client: FetchApps, FetchTransactions (paginated), FetchAppEvents, FetchInstallCount; token bucket rate limiting with per-partner isolation, exponential backoff with jitter |
 | `backend/internal/infrastructure/cache/oauth_state_store.go` | — | In-memory state store with TTL and one-time-use validation |
 | `backend/pkg/crypto/aes_encryptor.go` | — | AES-256-GCM encryption/decryption for token storage |
 | `backend/internal/domain/valueobject/integration_type.go` | — | IntegrationType: OAUTH, MANUAL |
-| `backend/internal/domain/repository/partner_account_repository.go` | — | PartnerAccountRepository interface (port) |
+| `backend/internal/domain/repository/partner_account_repository.go` | — | PartnerAccountRepository interface: FindByUserID, FindByOrgID, FindByPartnerID, Create, Update, Delete, GetAllIDs |
 
 ## Data Flow
 
@@ -154,3 +154,4 @@ The client supports these queries:
 - **OAuth callback is unauthenticated.** The `/callback` endpoint cannot use Firebase auth because it receives a redirect from Shopify (no Bearer token). Security comes from the CSRF state parameter which maps back to a specific user ID.
 - **Organization ID extraction.** The `FetchOrganizationID` method queries the Partner API to get the org GID (e.g., `gid://partners/Organization/12345`) and extracts the numeric ID. This ID is used as the path segment in all subsequent Partner API calls.
 - **Manual token path requires ADMIN role.** Only users with ADMIN or OWNER role can upload tokens directly. This is enforced by the `RequireRoles` middleware on the manual token routes.
+- **Org-scoped data access.** All data handlers now resolve partner accounts via `resolvePartnerAccount()` which uses `FindByOrgID` (from OrgContextMiddleware) as the primary lookup, falling back to `FindByUserID` for routes without org context. See ADR-035.

@@ -18,6 +18,7 @@ type UserPreferences struct {
 	PrimaryKpis      []string   `json:"primary_kpis"`
 	SecondaryWidgets []string   `json:"secondary_widgets"`
 	DefaultAppID     *uuid.UUID `json:"default_app_id,omitempty"`
+	SelectedOrgID    *uuid.UUID `json:"selected_org_id,omitempty"`
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
 }
@@ -115,7 +116,7 @@ func (h *UserPreferencesHandler) SaveDashboardPreferences(w http.ResponseWriter,
 // findByUserID retrieves preferences for a user
 func (h *UserPreferencesHandler) findByUserID(ctx context.Context, userID uuid.UUID) (*UserPreferences, error) {
 	query := `
-		SELECT id, user_id, primary_kpis, secondary_widgets, default_app_id, created_at, updated_at
+		SELECT id, user_id, primary_kpis, secondary_widgets, default_app_id, selected_org_id, created_at, updated_at
 		FROM user_preferences
 		WHERE user_id = $1
 	`
@@ -127,6 +128,7 @@ func (h *UserPreferencesHandler) findByUserID(ctx context.Context, userID uuid.U
 		&prefs.PrimaryKpis,
 		&prefs.SecondaryWidgets,
 		&prefs.DefaultAppID,
+		&prefs.SelectedOrgID,
 		&prefs.CreatedAt,
 		&prefs.UpdatedAt,
 	)
@@ -224,6 +226,94 @@ func (h *UserPreferencesHandler) SetDefaultApp(w http.ResponseWriter, r *http.Re
 			"default_app_id": nil,
 		})
 	}
+}
+
+// GetSelectedOrg returns the user's selected organization preference
+// GET /api/v1/user/preferences/selected-org
+func (h *UserPreferencesHandler) GetSelectedOrg(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	prefs, err := h.findByUserID(r.Context(), user.ID)
+	if err != nil || prefs.SelectedOrgID == nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"selected_org_id": nil,
+			"message":         "no organization selected",
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"selected_org_id": prefs.SelectedOrgID.String(),
+	})
+}
+
+// SetSelectedOrg sets the user's selected organization preference
+// PUT /api/v1/user/preferences/selected-org
+func (h *UserPreferencesHandler) SetSelectedOrg(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	var req struct {
+		SelectedOrgID *string `json:"selected_org_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	var orgID *uuid.UUID
+	if req.SelectedOrgID != nil && *req.SelectedOrgID != "" {
+		parsed, err := uuid.Parse(*req.SelectedOrgID)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid org_id format")
+			return
+		}
+		orgID = &parsed
+	}
+
+	err := h.setSelectedOrg(r.Context(), user.ID, orgID)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to save selected organization")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if orgID != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message":         "selected organization updated",
+			"selected_org_id": orgID.String(),
+		})
+	} else {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message":         "selected organization cleared",
+			"selected_org_id": nil,
+		})
+	}
+}
+
+// setSelectedOrg updates the selected org in the database
+func (h *UserPreferencesHandler) setSelectedOrg(ctx context.Context, userID uuid.UUID, orgID *uuid.UUID) error {
+	query := `
+		INSERT INTO user_preferences (user_id, primary_kpis, secondary_widgets, selected_org_id, updated_at)
+		VALUES ($1, $2, $3, $4, NOW())
+		ON CONFLICT (user_id) DO UPDATE SET
+			selected_org_id = EXCLUDED.selected_org_id,
+			updated_at = NOW()
+	`
+
+	defaults := defaultPreferences()
+	_, err := h.db.Exec(ctx, query, userID, defaults.PrimaryKpis, defaults.SecondaryWidgets, orgID)
+	return err
 }
 
 // setDefaultApp updates the default app in the database

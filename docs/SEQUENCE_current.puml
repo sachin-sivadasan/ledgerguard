@@ -1328,4 +1328,101 @@ note right: All screens reload\nwith new org context
 
 App --> User: Dashboard refreshes\nwith new org's data
 
+' ==========================================
+' 22. Org-Scoped Data Query Flow
+' ==========================================
+newpage Org-Scoped Data Query Flow
+
+actor User
+participant "Client App" as App
+participant "AuthMW" as AuthMW
+participant "OrgContextMW" as OrgMW
+participant "Handler\n(any data endpoint)" as Handler
+participant "resolvePartnerAccount" as Resolve
+database "PostgreSQL" as DB
+
+note over User, DB
+  All data endpoints (apps, sync, metrics,
+  integrations) resolve partner accounts via
+  org context instead of user ID.
+  OrgContextMW auto-selects for single-org users.
+end note
+
+== Single-Org User (Auto-Select) ==
+
+User -> App: GET /api/v1/apps
+App -> AuthMW: Authorization: Bearer <token>
+AuthMW -> AuthMW: Verify Firebase token
+AuthMW -> DB: Find/create user
+DB --> AuthMW: User (set in context)
+
+AuthMW -> OrgMW: Continue
+OrgMW -> DB: SELECT org_id, role, status\nFROM org_members\nWHERE user_id = ?
+DB --> OrgMW: [{org_id: A, role: OWNER, status: ACTIVE}]
+
+alt Exactly 1 org
+    OrgMW -> DB: SELECT * FROM organizations\nWHERE id = A
+    DB --> OrgMW: Organization A
+    OrgMW -> OrgMW: Set org in request context
+    OrgMW -> Handler: Continue (org in ctx)
+else 0 orgs
+    OrgMW -> Handler: Continue (no org in ctx)
+end
+
+Handler -> Resolve: resolvePartnerAccount(r, partnerRepo)
+
+Resolve -> Resolve: org := OrgFromContext(ctx)
+alt org != nil
+    Resolve -> DB: SELECT * FROM partner_accounts\nWHERE org_id = ?
+    DB --> Resolve: PartnerAccount
+else org == nil (fallback)
+    Resolve -> DB: SELECT * FROM partner_accounts\nWHERE user_id = ?
+    DB --> Resolve: PartnerAccount
+end
+
+Resolve --> Handler: PartnerAccount
+
+Handler -> DB: SELECT * FROM apps\nWHERE partner_account_id = ?
+DB --> Handler: App list
+Handler --> App: 200 OK { apps: [...] }
+
+== Multi-Org User (X-Org-Id Header) ==
+
+User -> App: GET /api/v1/apps\nX-Org-Id: <orgB-uuid>
+App -> AuthMW: Bearer token + X-Org-Id
+AuthMW -> OrgMW: Continue
+
+OrgMW -> OrgMW: Read X-Org-Id header
+OrgMW -> DB: SELECT role, status FROM org_members\nWHERE org_id = ? AND user_id = ?
+DB --> OrgMW: {role: ADMIN, status: ACTIVE}
+
+alt Active member
+    OrgMW -> DB: SELECT * FROM organizations\nWHERE id = ?
+    DB --> OrgMW: Organization B
+    OrgMW -> Handler: Continue (org B in ctx)
+else Suspended
+    OrgMW --> App: 403 "account suspended"
+else Not a member
+    OrgMW --> App: 403 "not a member"
+end
+
+Handler -> Resolve: resolvePartnerAccount(r, partnerRepo)
+Resolve -> DB: FindByOrgID(orgB)
+DB --> Resolve: PartnerAccount (for org B)
+Resolve --> Handler: PartnerAccount
+Handler --> App: 200 OK (org B's data)
+
+== Multi-Org Without Header ==
+
+User -> App: GET /api/v1/apps\n(no X-Org-Id)
+App -> AuthMW: Bearer token only
+AuthMW -> OrgMW: Continue
+
+OrgMW -> DB: SELECT * FROM org_members\nWHERE user_id = ?
+DB --> OrgMW: [{org A}, {org B}]
+
+alt Multiple orgs, no header
+    OrgMW --> App: 400 "org selection required\n(X-Org-Id header missing)"
+end
+
 @enduml

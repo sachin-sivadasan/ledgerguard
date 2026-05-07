@@ -764,3 +764,25 @@ Introduce `organizations` as the top-level data-owning entity. Key design choice
 - Migration 000036 creates 4 new tables and adds 3 `org_id` columns
 - Plan tier moves from `users` to `organizations` table (after backfill)
 - API keys become org-scoped: any org member with ADMIN+ can manage
+
+---
+
+### ADR-035: Org-Scoped Data Access via resolvePartnerAccount + FindByOrgID
+**Date:** 2026-05-08
+**Status:** Accepted
+
+**Context:**
+ADR-034 introduced organizations but all 26 data endpoint call sites still resolved partner accounts via `FindByUserID`. Multi-org data isolation was not enforced.
+
+**Decision:**
+1. **`resolvePartnerAccount(r, partnerRepo)` helper** — centralized function that tries org-based lookup first (`FindByOrgID`), falls back to user-based (`FindByUserID`). Located in `app_lookup.go`.
+2. **`FindByOrgID` on repository** — new method `WHERE org_id = $1` for org-scoped queries.
+3. **OrgContextMW on data routes** — added to `/apps/*`, `/sync/*`, `/metrics/aggregate`, `/integrations/shopify/status`. Guarded with `if cfg.OrgContextMW != nil` for backward compatibility.
+4. **Backend org persistence** — `selected_org_id` stored in `user_preferences` table (migration 000038), accessed via `GET/PUT /api/v1/user/preferences/selected-org`. Persists across devices/logins.
+5. **Not changed** — background jobs (`sync_service.go`, schedulers) continue using `GetAllIDs`/`FindByID` since they have no HTTP context.
+
+**Consequences:**
+- Existing single-user flow works unchanged (OrgContextMW auto-selects single org)
+- Multi-org users must pass `X-Org-Id` header or use URL param
+- All data queries now flow through org membership verification
+- Selected org persists server-side (no client-only storage needed)

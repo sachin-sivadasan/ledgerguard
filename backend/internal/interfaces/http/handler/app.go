@@ -78,9 +78,9 @@ func (h *AppHandler) GetAvailableApps(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get partner account
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "no partner account found")
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
@@ -144,9 +144,9 @@ func (h *AppHandler) SelectApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get partner account
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "no partner account found")
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
@@ -208,9 +208,9 @@ func (h *AppHandler) ListApps(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get partner account
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "no partner account found")
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
@@ -295,10 +295,9 @@ func (h *AppHandler) UpdateAppTier(w http.ResponseWriter, r *http.Request) {
 		app, err = h.appRepo.FindByID(r.Context(), appID)
 	} else {
 		// Not a UUID - try as partner app ID (GID or numeric)
-		// Get partner account for this user
-		partnerAccount, paErr := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-		if paErr != nil {
-			writeJSONError(w, http.StatusNotFound, "partner account not found")
+		partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+		if lookupErr != nil {
+			writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 			return
 		}
 
@@ -364,14 +363,15 @@ func (h *AppHandler) RefreshInstallCount(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Get partner account
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "partner account not found")
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
 	// Find app
 	var app *entity.App
+	var err error
 	appID, uuidErr := uuid.Parse(appIDStr)
 	if uuidErr == nil {
 		app, err = h.appRepo.FindByID(r.Context(), appID)
@@ -439,14 +439,15 @@ func (h *AppHandler) GetInstallCount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get partner account
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "partner account not found")
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
 	// Find app
 	var app *entity.App
+	var err error
 	appID, uuidErr := uuid.Parse(appIDStr)
 	if uuidErr == nil {
 		app, err = h.appRepo.FindByID(r.Context(), appID)
@@ -505,9 +506,9 @@ func (h *AppHandler) UpdateStoreSlug(w http.ResponseWriter, r *http.Request) {
 	if uuidErr == nil {
 		app, err = h.appRepo.FindByID(r.Context(), appID)
 	} else {
-		partnerAccount, paErr := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-		if paErr != nil {
-			writeJSONError(w, http.StatusNotFound, "partner account not found")
+		partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+		if lookupErr != nil {
+			writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 			return
 		}
 		partnerAppID := appIDStr

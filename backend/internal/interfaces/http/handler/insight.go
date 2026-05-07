@@ -50,9 +50,9 @@ func (h *InsightHandler) GetDailyInsight(w http.ResponseWriter, r *http.Request)
 	fullAppGID := "gid://partners/App/" + appIDStr
 
 	// Get partner account to verify ownership
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "Partner account not found")
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 

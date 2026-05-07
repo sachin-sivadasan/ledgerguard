@@ -149,6 +149,9 @@ func (m *mockPartnerAccountRepo) FindByID(ctx context.Context, id uuid.UUID) (*e
 func (m *mockPartnerAccountRepo) FindByUserID(ctx context.Context, userID uuid.UUID) (*entity.PartnerAccount, error) {
 	return m.account, m.err
 }
+func (m *mockPartnerAccountRepo) FindByOrgID(ctx context.Context, orgID uuid.UUID) (*entity.PartnerAccount, error) {
+	return m.account, m.err
+}
 func (m *mockPartnerAccountRepo) FindByPartnerID(ctx context.Context, partnerID string) (*entity.PartnerAccount, error) {
 	return m.account, m.err
 }

@@ -1727,3 +1727,24 @@
 - ADR-033: ON CONFLICT includes app_id
 - ADR-034: Organizations as top-level data-owning entity
 - Commit: `5bd4f29`
+
+---
+
+### Prompt 20 — Wire Org Context into Existing Data Endpoints
+**Date:** 2026-05-08
+
+**Original prompt:**
+> Implement the plan: Wire Org Context into Existing Data Endpoints
+
+**Improved prompt:**
+> Complete the org model wiring by: (1) adding OrgID to PartnerAccount entity and FindByOrgID to repository interface, (2) creating resolvePartnerAccount helper that prefers org-based lookup with user-fallback, (3) replacing FindByUserID in all 26 handler call sites across 14 files, (4) adding OrgContextMW to /apps, /sync, /metrics, /integrations route groups, (5) adding selected_org_id to user_preferences for backend persistence, (6) updating documentation. Maintain backward compatibility — single-org users auto-select, multi-org users use X-Org-Id header.
+
+**What was done:**
+- Phase 1: Entity + repo interface + persistence (org_id on all queries, scanOne DRY refactor)
+- Phase 2: resolvePartnerAccount helper + lookupAppID rewrite
+- Phase 3: 26 call sites in 14 handler files updated
+- Phase 4: OrgContextMW on 4 route groups (guarded)
+- Phase 5: Migration 000038 + GET/PUT /user/preferences/selected-org (backend persistence instead of Flutter SharedPreferences, per user request)
+- Phase 6: IMPLEMENTATION_LOG, DECISIONS (ADR-035), DATABASE_SCHEMA, prompts.md
+- 10 test mocks updated with FindByOrgID stubs
+- `go build ./...` clean, `go test ./...` all pass, `go vet ./...` clean

@@ -146,9 +146,9 @@ func (h *MetricsHandler) GetMetricsByPeriod(w http.ResponseWriter, r *http.Reque
 	fullAppGID := appGIDPrefix + appID
 
 	// Get partner account to verify access
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusForbidden, "no partner account found")
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
@@ -306,9 +306,9 @@ func (h *MetricsHandler) GetAggregateMetrics(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Get partner account
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "no partner account found")
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 

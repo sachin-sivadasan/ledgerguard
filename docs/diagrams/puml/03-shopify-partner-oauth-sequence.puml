@@ -38,7 +38,7 @@ Shopify --> LG: organization_id
 
 LG -> LG: Encrypt token\n(AES-256-GCM)
 
-LG -> DB: INSERT partner_accounts\n(user_id, partner_id,\nencrypted_access_token)
+LG -> DB: INSERT partner_accounts\n(user_id, org_id, partner_id,\nencrypted_access_token)
 
 LG --> Dev: Success redirect
 deactivate LG

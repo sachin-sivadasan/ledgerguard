@@ -151,6 +151,9 @@ func (m *mockPartnerRepo) GetAllIDs(_ context.Context) ([]uuid.UUID, error)     
 func (m *mockPartnerRepo) FindByUserID(_ context.Context, _ uuid.UUID) (*entity.PartnerAccount, error) {
 	return nil, fmt.Errorf("not found")
 }
+func (m *mockPartnerRepo) FindByOrgID(_ context.Context, _ uuid.UUID) (*entity.PartnerAccount, error) {
+	return nil, fmt.Errorf("not found")
+}
 func (m *mockPartnerRepo) FindByPartnerID(_ context.Context, _ string) (*entity.PartnerAccount, error) {
 	return nil, fmt.Errorf("not found")
 }

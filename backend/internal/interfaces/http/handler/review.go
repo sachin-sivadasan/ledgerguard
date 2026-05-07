@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -188,7 +189,6 @@ func (h *ReviewHandler) Scrape(w http.ResponseWriter, r *http.Request) {
 
 // findApp resolves the app from the URL parameter (UUID or partner app ID)
 func (h *ReviewHandler) findApp(r *http.Request) (*entity.App, error) {
-	user := middleware.UserFromContext(r.Context())
 	appIDStr := chi.URLParam(r, "appID")
 
 	appID, uuidErr := uuid.Parse(appIDStr)
@@ -197,9 +197,9 @@ func (h *ReviewHandler) findApp(r *http.Request) (*entity.App, error) {
 	}
 
 	// Not a UUID — try as partner app ID
-	partnerAccount, err := h.partnerRepo.FindByUserID(r.Context(), user.ID)
-	if err != nil {
-		return nil, err
+	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if lookupErr != nil {
+		return nil, errors.New(lookupErr.message)
 	}
 	partnerAppID := appIDStr
 	if !strings.HasPrefix(partnerAppID, "gid://") {

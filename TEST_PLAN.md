@@ -1059,3 +1059,154 @@ flutter test --watch
 | Q-100 | Worker on Node A cannot release Node B's lock | Ownership check prevents cross-node release | ✓ |
 | Q-101 | Recovery on Node A cleans stale locks from crashed Node B | ForceReleaseLock removes orphaned locks | ✓ |
 | Q-102 | Cancelled job not overwritten to failed | IsCancelled check prevents misclassification | ✓ |
+
+---
+
+### 12. Organization Model
+
+#### 12.1 Organization CRUD
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| ORG-001 | POST /api/v1/orgs (create org) | 201, org created with OWNER membership | Pending |
+| ORG-002 | Create org — duplicate slug | 409, conflict | Pending |
+| ORG-003 | GET /api/v1/orgs (list user's orgs) | 200, returns memberships with roles | Pending |
+| ORG-004 | GET /api/v1/orgs/{orgId} | 200, org details (requires membership) | Pending |
+| ORG-005 | GET /api/v1/orgs/{orgId} — not a member | 403, forbidden | Pending |
+| ORG-006 | PUT /api/v1/orgs/{orgId} (update name/slug) | 200, updated (OWNER only) | Pending |
+
+#### 12.2 Member Invitations
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| ORG-010 | POST /orgs/{orgId}/invitations | 201, invitation with token + 7-day expiry | Pending |
+| ORG-011 | Invite — plan limit exceeded | 403, plan_limit_reached | Pending |
+| ORG-012 | Invite — pending invitations count toward limit | 403 when members + pending >= limit | Pending |
+| ORG-013 | Invite — duplicate email with PENDING status | 409, already invited | Pending |
+| ORG-014 | POST /invitations/{token}/accept | 200, member created with ACTIVE status | Pending |
+| ORG-015 | Accept — expired token | 410, invitation_expired | Pending |
+| ORG-016 | Accept — already a member | 409, already_member | Pending |
+| ORG-017 | Accept — invalid token | 404, not found | Pending |
+| ORG-018 | DELETE /orgs/{orgId}/invitations/{id} (revoke) | 200, status → REVOKED | Pending |
+
+#### 12.3 Member Management
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| ORG-020 | GET /orgs/{orgId}/members | 200, member list with roles/status | Pending |
+| ORG-021 | PUT /members/{id}/role | 200, role changed (ADMIN+ only) | Pending |
+| ORG-022 | PUT /members/{id}/suspend | 200, status → SUSPENDED | Pending |
+| ORG-023 | Suspend OWNER | 403, cannot_suspend_owner | Pending |
+| ORG-024 | PUT /members/{id}/unsuspend | 200, status → ACTIVE | Pending |
+| ORG-025 | DELETE /members/{id} (remove) | 200, member removed | Pending |
+| ORG-026 | Remove OWNER | 403, cannot_remove_owner | Pending |
+
+#### 12.4 Org Audit Log
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| ORG-030 | GET /orgs/{orgId}/audit-log | 200, paginated audit entries | Pending |
+| ORG-031 | Invite creates audit entry | action=member.invited logged | Pending |
+| ORG-032 | Suspend creates audit entry | action=member.suspended logged | Pending |
+
+#### 12.5 OrgContextMiddleware
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| ORG-040 | Request with X-Org-Id — active member | Org set in context, continue | Pending |
+| ORG-041 | Request with X-Org-Id — suspended member | 403, account suspended | Pending |
+| ORG-042 | Request with X-Org-Id — not a member | 403, not a member | Pending |
+| ORG-043 | No X-Org-Id — single org user | Auto-select, continue | Pending |
+| ORG-044 | No X-Org-Id — multi-org user | 400, org selection required | Pending |
+| ORG-045 | No X-Org-Id — zero orgs | Continue with no org in context | Pending |
+
+---
+
+### 13. Org-Scoped Data Access
+
+#### 13.1 resolvePartnerAccount Helper
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| OSD-001 | Org in context → FindByOrgID succeeds | Returns partner account for org | Pending |
+| OSD-002 | Org in context → FindByOrgID fails | 404, no partner account for organization | Pending |
+| OSD-003 | No org in context → FindByUserID succeeds | Fallback returns partner account for user | Pending |
+| OSD-004 | No org, no user in context | 401, authentication required | Pending |
+| OSD-005 | No org, user has no partner account | 404, no partner account found | Pending |
+
+#### 13.2 Handler Org Scoping (integration)
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| OSD-010 | GET /api/v1/apps with org context | Returns apps for org's partner account | Pending |
+| OSD-011 | POST /api/v1/sync with org context | Syncs apps for org's partner account | Pending |
+| OSD-012 | GET /api/v1/metrics/aggregate with org context | Returns metrics for org's apps | Pending |
+| OSD-013 | GET /integrations/shopify/status with org context | Returns status for org's partner account | Pending |
+| OSD-014 | Multi-org user without X-Org-Id on data endpoint | 400 from OrgContextMW | Pending |
+| OSD-015 | Single-org user on data endpoint (no header) | Auto-selects, returns data | Pending |
+
+#### 13.3 Selected Org Persistence
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| OSD-020 | GET /user/preferences/selected-org — no preference set | 200, org_id: null | Pending |
+| OSD-021 | PUT /user/preferences/selected-org with valid org | 200, org persisted | Pending |
+| OSD-022 | PUT /user/preferences/selected-org — not a member | 403, not a member | Pending |
+| OSD-023 | PUT /user/preferences/selected-org — null to clear | 200, org cleared | Pending |
+| OSD-024 | GET /user/preferences/selected-org after set | 200, returns saved org_id | Pending |
+
+---
+
+### 14. Daily Catch-Up Sync
+
+#### 14.1 Scheduler
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| DCS-001 | DailyCatchupScheduler.Start — runs at configured hour | checkAndEnqueue called at 3 AM UTC | Pending |
+| DCS-002 | RunOnce — enqueues for all active apps | transaction_sync + event_sync per app with LookbackDays=2 | Pending |
+| DCS-003 | RunOnce — skip apps with no partner account | Logged, continues to next app | Pending |
+| DCS-004 | RunOnce — queue not enabled | No jobs enqueued, warning logged | Pending |
+
+#### 14.2 Admin/Internal Endpoints
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| DCS-010 | POST /api/v1/admin/sync/daily-catchup | 200, catch-up triggered for all apps | Pending |
+| DCS-011 | POST /api/v1/admin/sync/daily-catchup — non-admin | 403, forbidden | Pending |
+| DCS-012 | POST /api/v1/internal/sync/daily-catchup | 200, Cloud Scheduler trigger | Pending |
+
+#### 14.3 Lookback Window
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| DCS-020 | TransactionProcessor with LookbackDays=2 | Fetches from now-2d instead of 12-month window | Pending |
+| DCS-021 | TransactionProcessor with LookbackDays=0 | Falls back to default 12-month window | Pending |
+
+---
+
+### 15. Revenue API
+
+#### 15.1 API Key Authentication
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| RAPI-001 | Valid API key in X-Api-Key header | 200, request proceeds | Pending |
+| RAPI-002 | Invalid API key | 401, invalid_api_key | Pending |
+| RAPI-003 | Revoked API key | 401, invalid_api_key | Pending |
+| RAPI-004 | Missing X-Api-Key header | 401, unauthorized | Pending |
+
+#### 15.2 Rate Limiting
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| RAPI-010 | Requests within rate limit | 200, requests succeed | Pending |
+| RAPI-011 | Requests exceed rate limit | 429, rate_limit_exceeded | Pending |
+
+#### 15.3 Subscription Status
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| RAPI-020 | GET /revenue-api/v1/subscriptions/{gid} | 200, subscription status from read model | Pending |
+| RAPI-021 | GET with unknown GID | 404, not found | Pending |
+| RAPI-022 | GET with numeric ID (suffix match) | 200, resolves via GID suffix | Pending |
+| RAPI-023 | POST /revenue-api/v1/subscriptions/batch | 200, multiple statuses | Pending |
+
+#### 15.4 Usage Status
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| RAPI-030 | GET /revenue-api/v1/usage/{gid} | 200, usage status from read model | Pending |
+| RAPI-031 | GET /revenue-api/v1/usages?subscription_id={id} | 200, list of usage records | Pending |
+
+#### 15.5 Read Model Builder
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| RAPI-040 | RebuildForApp populates api_subscription_status | Read model reflects subscription data | Pending |
+| RAPI-041 | RebuildForApp populates api_usage_status | Read model reflects usage transactions | Pending |
+| RAPI-042 | POST /admin/rebuild-read-model | 200, read model rebuilt for app | Pending |

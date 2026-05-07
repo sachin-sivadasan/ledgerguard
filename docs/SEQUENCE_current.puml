@@ -1425,4 +1425,77 @@ alt Multiple orgs, no header
     OrgMW --> App: 400 "org selection required\n(X-Org-Id header missing)"
 end
 
+' ==========================================
+' 23. Daily Catch-Up Sync Flow
+' ==========================================
+newpage Daily Catch-Up Sync Flow
+
+participant "Cloud Scheduler\n(or Admin)" as Trigger
+participant "API Server" as API
+participant "DailyCatchupScheduler" as DCS
+participant "QueueSyncService" as QSvc
+participant "Redis" as Redis
+database "PostgreSQL" as DB
+
+note over Trigger, DB
+  Enqueues transaction_sync + event_sync
+  for every active app with a 2-day lookback.
+  Runs at 3 AM UTC daily, or triggered manually.
+end note
+
+== Scheduled Trigger (3 AM UTC) ==
+
+DCS -> DCS: Timer fires (3 AM UTC)
+DCS -> DCS: RunOnce(ctx, lookbackDays=2)
+
+DCS -> DB: SELECT DISTINCT pa.id, pa.user_id\nFROM partner_accounts pa\nJOIN apps a ON a.partner_account_id = pa.id\nWHERE a.tracking_enabled = true
+DB --> DCS: Active partner accounts
+
+loop For each partner account
+    DCS -> DB: SELECT id FROM apps\nWHERE partner_account_id = ?\nAND tracking_enabled = true
+    DB --> DCS: App list
+
+    loop For each app
+        DCS -> QSvc: EnqueueCatchupSync(appID,\nuserID, partnerAccountID,\nlookbackDays=2)
+
+        QSvc -> DB: INSERT sync_jobs\n(type=transaction_sync, status=pending)\nwith lookback_days=2
+        QSvc -> Redis: LPUSH :queue:regular\n{payload with lookbackDays}
+        QSvc --> DCS: job
+
+        DCS -> QSvc: EnqueueCatchupSync(appID,\nuserID, partnerAccountID,\nlookbackDays=2, type=event_sync)
+
+        QSvc -> DB: INSERT sync_jobs\n(type=event_sync, status=pending)
+        QSvc -> Redis: LPUSH :queue:regular\n{payload}
+        QSvc --> DCS: job
+    end
+end
+
+DCS -> DCS: Log "daily catch-up complete:\nN apps, M jobs enqueued"
+
+== Manual Trigger (Admin) ==
+
+Trigger -> API: POST /api/v1/admin/sync/daily-catchup\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware + AdminMiddleware
+API -> DCS: RunOnce(ctx, lookbackDays=2)
+note right: Same flow as scheduled
+
+DCS --> API: nil
+API --> Trigger: 200 OK\n{ "message": "daily catch-up triggered" }
+
+== Internal Trigger (Cloud Scheduler) ==
+
+Trigger -> API: POST /api/v1/internal/sync/daily-catchup
+
+API -> DCS: RunOnce(ctx, lookbackDays=2)
+DCS --> API: nil
+API --> Trigger: 200 OK
+
+note over DCS
+  Worker processing:
+  TransactionProcessor checks LookbackDays > 0
+  → fetches from now-2d instead of 12-month window
+  → faster sync, less API pressure
+end note
+
 @enduml

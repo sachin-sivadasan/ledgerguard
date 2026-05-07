@@ -124,6 +124,8 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(mixpanel_client, "MixpanelClient", "External Adapter", "Fire-and-forget event tracking")
     Component(noop_tracker, "NoopTracker", "External Adapter", "Silent no-op (dev/test)")
     Component(sync_scheduler, "SyncScheduler", "Scheduler", "12-hour background sync (disabled when queue enabled)")
+    Component(daily_catchup_scheduler, "DailyCatchupScheduler", "Scheduler", "3 AM UTC, 2-day lookback catch-up sync")
+    Component(notification_scheduler, "NotificationScheduler", "Scheduler", "15-min tick, hour-dedup daily summary")
 
     ' Queue-Based Sync System
     Component(queue_sync_handler, "QueueSyncHandler", "HTTP Handler", "POST /sync/enqueue, GET /sync/jobs")
@@ -251,6 +253,10 @@ Rel(webhook_service, sub_event_repo_if, "Log events")
 Rel(apikey_handler, apikey_repo_if, "CRUD API keys")
 Rel(user_prefs_handler, user_prefs_repo_if, "CRUD preferences")
 Rel(sync_scheduler, sync_service, "Trigger periodic sync")
+Rel(daily_catchup_scheduler, queue_sync_service, "Enqueue catch-up jobs")
+Rel(daily_catchup_scheduler, app_repo_if, "List active apps")
+Rel(notification_scheduler, partner_repo_if, "Get partner accounts")
+Rel(notification_scheduler, app_repo_if, "Get apps per account")
 
 ' Organization relationships
 Rel(router, org_handler, "/api/v1/orgs/*")

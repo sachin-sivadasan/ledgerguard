@@ -11,6 +11,8 @@ Flutter Web application for LedgerGuard Revenue Intelligence Platform.
 - **Authentication:** Firebase Auth
 - **Architecture:** Clean Architecture + TDD
 
+> **Note:** A Provider-based prototype exists at `frontend-flutter/` (same repo root). It uses ChangeNotifier + Provider instead of Bloc and serves as a rapid-prototyping environment. The Bloc version at `frontend/app/` is the primary app. A Provider-to-Bloc migration is planned — see MEMORY.md for details.
+
 ---
 
 ## Project Structure

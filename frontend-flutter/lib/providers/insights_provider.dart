@@ -15,7 +15,7 @@ class ChatMessage {
 class InsightsProvider extends ChangeNotifier {
   final InsightsService _insightsService;
 
-  bool _demoMode = true;
+  bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
 

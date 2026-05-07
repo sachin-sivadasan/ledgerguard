@@ -10,7 +10,7 @@ import '../widgets/lg_risk_badge.dart';
 class RiskProvider extends ChangeNotifier {
   final RiskService _riskService;
 
-  bool _demoMode = true;
+  bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
   String? _selectedAppId;

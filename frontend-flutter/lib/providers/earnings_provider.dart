@@ -6,7 +6,7 @@ import '../services/earnings_service.dart';
 class EarningsProvider extends ChangeNotifier {
   final EarningsService _earningsService;
 
-  bool _demoMode = true;
+  bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
   String? _selectedAppId;

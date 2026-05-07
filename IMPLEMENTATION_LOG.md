@@ -4,6 +4,21 @@ A chronological record of all features implemented with detailed summaries.
 
 ---
 
+## [2026-05-08] Fix: Org Header Not Sent + Disable Demo Mode by Default
+
+**Summary:**
+Fixed two Flutter frontend issues preventing real API calls from working: the X-Org-Id header was never sent because `loadOrganizations()` was never called on auth, and all 10 data providers defaulted to demo mode (mock data).
+
+**Changes:**
+
+1. **`app.dart`** — Added auth listener that calls `OrganizationProvider.loadOrganizations()` when user authenticates. Uses `_orgLoaded` flag to avoid redundant calls. Resets on logout so orgs reload on next login. Also loads orgs immediately if already authenticated (persisted session).
+
+2. **10 providers** — Changed `bool _demoMode = true` → `bool _demoMode = false` in: AppsProvider, DashboardProvider, SubscriptionProvider, StoreProvider, TransactionProvider, EventsProvider, RiskProvider, AnalyticsProvider, EarningsProvider, InsightsProvider. AppsProvider persists preference via SharedPreferences, so existing users keep their last setting.
+
+3. **`settings_screen.dart`** — Updated Demo Mode toggle subtitle to: "Enable sample data to preview features without a Shopify connection".
+
+---
+
 ## [2026-05-07] Multi-User Team Access Model — Organizations, Members, Invitations, Audit
 
 **Summary:**

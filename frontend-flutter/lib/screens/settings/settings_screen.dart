@@ -39,7 +39,7 @@ class SettingsScreen extends StatelessWidget {
             title: 'Developer',
             child: SwitchListTile(
               title: const Text('Demo Mode'),
-              subtitle: const Text('Show sample data to preview all features'),
+              subtitle: const Text('Enable sample data to preview features without a Shopify connection'),
               value: appsProvider.demoMode,
               onChanged: (v) async {
                 // Set demo mode on all providers

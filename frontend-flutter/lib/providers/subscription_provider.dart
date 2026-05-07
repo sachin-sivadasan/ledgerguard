@@ -12,7 +12,7 @@ import '../widgets/lg_status_badge.dart';
 class SubscriptionProvider extends ChangeNotifier {
   final SubscriptionService _subscriptionService;
 
-  bool _demoMode = true;
+  bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
 

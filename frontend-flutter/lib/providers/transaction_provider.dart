@@ -6,7 +6,7 @@ import '../services/transaction_service.dart';
 class TransactionProvider extends ChangeNotifier {
   final TransactionService _transactionService;
 
-  bool _demoMode = true;
+  bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
 

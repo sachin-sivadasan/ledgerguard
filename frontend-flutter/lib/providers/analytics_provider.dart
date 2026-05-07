@@ -9,7 +9,7 @@ import '../services/metrics_service.dart';
 class AnalyticsProvider extends ChangeNotifier {
   final MetricsService _metricsService;
 
-  bool _demoMode = true;
+  bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
   int _selectedTab = 0;

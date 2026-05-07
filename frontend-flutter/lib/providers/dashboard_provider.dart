@@ -15,7 +15,7 @@ enum DashboardTimeRange { thisWeek, thisMonth, lastMonth, threeMonths }
 class DashboardProvider extends ChangeNotifier {
   final MetricsService _metricsService;
 
-  bool _demoMode = true;
+  bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
   String? _selectedAppId;

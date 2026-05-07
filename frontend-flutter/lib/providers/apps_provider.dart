@@ -10,7 +10,7 @@ class AppsProvider extends ChangeNotifier {
   final AppService _appService;
   static const _demoPrefKey = 'demo_mode';
 
-  bool _demoMode = true;
+  bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
 

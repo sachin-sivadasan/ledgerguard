@@ -8,7 +8,7 @@ enum TimeRange { today, thisWeek, thisMonth }
 class EventsProvider extends ChangeNotifier {
   final EventsService _eventsService;
 
-  bool _demoMode = true;
+  bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
 

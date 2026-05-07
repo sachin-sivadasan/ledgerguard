@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/organization_provider.dart';
 import 'services/mixpanel_service.dart';
 import 'screens/analytics/analytics_screen.dart';
 import 'screens/api_keys/api_keys_screen.dart';
@@ -39,12 +40,24 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> {
   late final GoRouter _router;
+  bool _orgLoaded = false;
 
   @override
   void initState() {
     super.initState();
     final authProvider = context.read<AuthProvider>()
       ..setMixpanel(context.read<MixpanelService>());
+
+    authProvider.addListener(_onAuthChanged);
+
+    // If already authenticated (e.g., persisted session), load orgs immediately
+    if (authProvider.isAuthenticated) {
+      _orgLoaded = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<OrganizationProvider>().loadOrganizations();
+      });
+    }
+
     _router = GoRouter(
       initialLocation: '/',
       refreshListenable: authProvider,
@@ -171,8 +184,19 @@ class _AppState extends State<App> {
     );
   }
 
+  void _onAuthChanged() {
+    final auth = context.read<AuthProvider>();
+    if (auth.isAuthenticated && !_orgLoaded) {
+      _orgLoaded = true;
+      context.read<OrganizationProvider>().loadOrganizations();
+    } else if (!auth.isAuthenticated) {
+      _orgLoaded = false;
+    }
+  }
+
   @override
   void dispose() {
+    context.read<AuthProvider>().removeListener(_onAuthChanged);
     _router.dispose();
     super.dispose();
   }

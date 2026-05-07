@@ -10,7 +10,7 @@ class StoreProvider extends ChangeNotifier {
   final StoreService _storeService;
   final SubscriptionService _subscriptionService;
 
-  bool _demoMode = true;
+  bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
   String _searchQuery = '';

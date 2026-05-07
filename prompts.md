@@ -18,6 +18,20 @@
 
 ## Log
 
+### [2026-05-08] Fix Flutter: Org Header Not Sent + Disable Demo Mode by Default
+**Original:**
+> Implement the plan: Fix Flutter org header not sent + disable demo mode by default
+
+**Improved:**
+> Fix two Flutter frontend issues: (1) X-Org-Id header never sent because loadOrganizations() is never called on app startup — add auth listener in app.dart that triggers the org load chain on login; (2) All 10 data providers default to demoMode=true — change to false so new users get live mode by default. Update settings toggle subtitle.
+
+**Result:**
+- `frontend-flutter/lib/app.dart` — auth listener + org load on startup
+- 10 provider files — `_demoMode = false`
+- `frontend-flutter/lib/screens/settings/settings_screen.dart` — updated subtitle
+- `IMPLEMENTATION_LOG.md` — entry added
+- `prompts.md` — prompt logged
+
 ### [2025-02-26] Initial Setup
 **Original:**
 > init local first / origin git@github.com:sachin-sivadasan/ledgerguard.git

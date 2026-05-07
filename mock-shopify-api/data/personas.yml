@@ -1,0 +1,17 @@
+personas:
+  "1001":
+    file: solo.yml
+    name: "Solo Developer"
+    description: "1 app, 15 stores, all healthy"
+  "1002":
+    file: growing.yml
+    name: "Growing Developer"
+    description: "2 apps, 80 stores, some risk"
+  "1003":
+    file: power.yml
+    name: "Power Developer"
+    description: "4 apps, 200+ stores, mixed risk"
+  "1004":
+    file: churning.yml
+    name: "Churning Developer"
+    description: "1 app, 40 stores, heavy churn"

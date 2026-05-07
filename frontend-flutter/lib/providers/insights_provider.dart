@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_insights.dart';
 import '../models/insight_model.dart';
+import '../services/insights_service.dart';
 
 class ChatMessage {
   final String text;
@@ -12,16 +13,49 @@ class ChatMessage {
 }
 
 class InsightsProvider extends ChangeNotifier {
-  final List<ChatMessage> _messages = [];
+  final InsightsService _insightsService;
 
-  List<AiInsight> get insights => mockInsights;
+  bool _demoMode = true;
+  bool _isLoading = false;
+  String? _error;
+
+  final List<ChatMessage> _messages = [];
+  List<AiInsight> _liveInsights = [];
+
+  InsightsProvider(this._insightsService);
+
+  bool get demoMode => _demoMode;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+
+  void setDemoMode(bool value) {
+    _demoMode = value;
+    notifyListeners();
+  }
+
+  Future<void> loadInsights(String appId) async {
+    if (_demoMode || _isLoading) return;
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      _liveInsights = await _insightsService.fetchInsights(appId);
+    } catch (e) {
+      _error = e.toString();
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  List<AiInsight> get insights =>
+      _demoMode ? mockInsights : _liveInsights;
+
   List<ChatMessage> get messages => _messages;
 
   void sendMessage(String text) {
     _messages.add(ChatMessage(text: text, isUser: true));
     notifyListeners();
 
-    // Simulate AI response
     Future.delayed(const Duration(milliseconds: 800), () {
       _messages.add(ChatMessage(
         text: _generateResponse(text),

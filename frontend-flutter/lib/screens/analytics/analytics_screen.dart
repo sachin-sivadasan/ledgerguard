@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../mock_data/mock_apps.dart';
 import '../../providers/analytics_provider.dart';
 import '../../providers/apps_provider.dart';
 import '../../theme/app_spacing.dart';
@@ -13,12 +12,44 @@ import 'profit_tab.dart';
 import 'cohort_tab.dart';
 import 'multi_app_tab.dart';
 
-class AnalyticsScreen extends StatelessWidget {
+class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
 
   @override
+  State<AnalyticsScreen> createState() => _AnalyticsScreenState();
+}
+
+class _AnalyticsScreenState extends State<AnalyticsScreen> {
+  bool _wasDemoMode = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
+  }
+
+  void _maybeLoadData() {
+    final apps = context.read<AppsProvider>();
+    final provider = context.read<AnalyticsProvider>();
+    if (!apps.demoMode && apps.apps.isNotEmpty && !provider.isLoading) {
+      provider.loadAnalytics(apps.apps.first.id);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final hasApps = context.watch<AppsProvider>().apps.isNotEmpty;
+    final appsProvider = context.watch<AppsProvider>();
+    final hasApps = appsProvider.apps.isNotEmpty;
+
+    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
+    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
+      _wasDemoMode = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<AnalyticsProvider>().loadAnalytics(appsProvider.apps.first.id);
+      });
+    }
+    if (appsProvider.demoMode) _wasDemoMode = true;
+
     if (!hasApps) {
       return LgPage(
         title: 'Analytics',
@@ -34,7 +65,8 @@ class AnalyticsScreen extends StatelessWidget {
     }
 
     final provider = context.watch<AnalyticsProvider>();
-    final showAppFilter = mockApps.length > 1;
+    final appsList = context.watch<AppsProvider>().apps;
+    final showAppFilter = appsList.length > 1;
 
     return LgPage(
       title: 'Analytics',
@@ -52,16 +84,17 @@ class AnalyticsScreen extends StatelessWidget {
                   itemBuilder: (_) => [
                     const PopupMenuItem(
                         value: null, child: Text('All Apps')),
-                    ...mockApps.map((app) => PopupMenuItem(
+                    ...appsList.map((app) => PopupMenuItem(
                           value: app.id,
                           child: Text(app.name),
                         )),
                   ],
                   child: Chip(
                     label: Text(provider.selectedAppId != null
-                        ? mockApps
+                        ? appsList
                             .firstWhere(
-                                (a) => a.id == provider.selectedAppId)
+                                (a) => a.id == provider.selectedAppId,
+                                orElse: () => appsList.first)
                             .name
                         : 'All Apps'),
                     deleteIcon: provider.selectedAppId != null

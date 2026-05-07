@@ -22,4 +22,30 @@ class AppReview {
     this.location = '',
     this.timeUsing = '',
   });
+
+  factory AppReview.fromJson(Map<String, dynamic> json) {
+    return AppReview(
+      id: json['id'].toString(),
+      appId: json['app_id'].toString(),
+      author: json['author'] as String? ?? '',
+      rating: json['rating'] as int? ?? 0,
+      text: json['text'] as String? ?? '',
+      date: DateTime.parse(
+          json['date'] as String? ?? DateTime.now().toIso8601String()),
+      sentiment: _parseSentiment(json['sentiment'] as String? ?? 'NEUTRAL'),
+      location: json['location'] as String? ?? '',
+      timeUsing: json['time_using'] as String? ?? '',
+    );
+  }
+
+  static ReviewSentiment _parseSentiment(String s) {
+    switch (s.toUpperCase()) {
+      case 'POSITIVE':
+        return ReviewSentiment.positive;
+      case 'NEGATIVE':
+        return ReviewSentiment.negative;
+      default:
+        return ReviewSentiment.neutral;
+    }
+  }
 }

@@ -23,6 +23,35 @@ class EarningPeriod {
     this.paidOutDate,
   });
 
+  factory EarningPeriod.fromJson(Map<String, dynamic> json) {
+    return EarningPeriod(
+      id: json['id'].toString(),
+      month: json['month'] as String? ?? '',
+      startDate: DateTime.parse(json['start_date'] as String? ??
+          DateTime.now().toIso8601String()),
+      endDate: DateTime.parse(
+          json['end_date'] as String? ?? DateTime.now().toIso8601String()),
+      grossCents: json['gross_cents'] as int? ?? 0,
+      shopifyCutCents: json['shopify_cut_cents'] as int? ?? 0,
+      netEarningsCents: json['net_earnings_cents'] as int? ?? 0,
+      status: _parseStatus(json['status'] as String? ?? 'PENDING'),
+      paidOutDate: json['paid_out_date'] != null
+          ? DateTime.parse(json['paid_out_date'] as String)
+          : null,
+    );
+  }
+
+  static EarningStatus _parseStatus(String s) {
+    switch (s.toUpperCase()) {
+      case 'AVAILABLE':
+        return EarningStatus.available;
+      case 'PAID_OUT':
+        return EarningStatus.paidOut;
+      default:
+        return EarningStatus.pending;
+    }
+  }
+
   String get grossFormatted =>
       '\$${(grossCents / 100).toStringAsFixed(2)}';
   String get netFormatted =>

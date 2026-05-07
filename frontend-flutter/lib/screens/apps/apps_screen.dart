@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/apps_provider.dart';
@@ -10,8 +11,26 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_page.dart';
 import 'reviews_tab.dart';
 
-class AppsScreen extends StatelessWidget {
+class AppsScreen extends StatefulWidget {
   const AppsScreen({super.key});
+
+  @override
+  State<AppsScreen> createState() => _AppsScreenState();
+}
+
+class _AppsScreenState extends State<AppsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
+  }
+
+  void _maybeLoadData() {
+    final apps = context.read<AppsProvider>();
+    if (!apps.demoMode && !apps.isLoading) {
+      apps.loadApps();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +48,7 @@ class AppsScreen extends StatelessWidget {
           description:
               'Link your Shopify Partner account to start tracking app revenue.',
           actionLabel: 'Connect Partner Account',
-          onAction: () {},
+          onAction: () => context.go('/settings/connect-shopify'),
         ),
       );
     }

@@ -1,0 +1,230 @@
+persona:
+  name: "Solo Developer"
+  description: "1 app, 15 stores, all healthy, steady revenue"
+
+apps:
+  - id: "gid://partners/App/1001"
+    name: "QuickReview Widget"
+
+shops:
+  - domain: "sunrise-boutique.myshopify.com"
+    name: "Sunrise Boutique"
+    gid: "gid://shopify/Shop/100001"
+  - domain: "downtown-threads.myshopify.com"
+    name: "Downtown Threads"
+    gid: "gid://shopify/Shop/100002"
+  - domain: "cozy-candles.myshopify.com"
+    name: "Cozy Candles"
+    gid: "gid://shopify/Shop/100003"
+  - domain: "pet-palace-online.myshopify.com"
+    name: "Pet Palace Online"
+    gid: "gid://shopify/Shop/100004"
+  - domain: "green-garden-co.myshopify.com"
+    name: "Green Garden Co"
+    gid: "gid://shopify/Shop/100005"
+  - domain: "techgear-hub.myshopify.com"
+    name: "TechGear Hub"
+    gid: "gid://shopify/Shop/100006"
+  - domain: "artisan-soaps.myshopify.com"
+    name: "Artisan Soaps"
+    gid: "gid://shopify/Shop/100007"
+  - domain: "fresh-bakes-daily.myshopify.com"
+    name: "Fresh Bakes Daily"
+    gid: "gid://shopify/Shop/100008"
+  - domain: "vintage-vinyl.myshopify.com"
+    name: "Vintage Vinyl"
+    gid: "gid://shopify/Shop/100009"
+  - domain: "mountain-gear.myshopify.com"
+    name: "Mountain Gear"
+    gid: "gid://shopify/Shop/100010"
+  - domain: "healthy-bites.myshopify.com"
+    name: "Healthy Bites"
+    gid: "gid://shopify/Shop/100011"
+  - domain: "bookworm-corner.myshopify.com"
+    name: "Bookworm Corner"
+    gid: "gid://shopify/Shop/100012"
+  - domain: "sporty-life.myshopify.com"
+    name: "Sporty Life"
+    gid: "gid://shopify/Shop/100013"
+  - domain: "urban-plants.myshopify.com"
+    name: "Urban Plants"
+    gid: "gid://shopify/Shop/100014"
+  - domain: "craft-supplies-co.myshopify.com"
+    name: "Craft Supplies Co"
+    gid: "gid://shopify/Shop/100015"
+
+subscriptions:
+  - app_index: 0
+    shop_index: 0
+    plan_name: "Pro"
+    price: "19.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 1
+    plan_name: "Pro"
+    price: "19.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 2
+    plan_name: "Basic"
+    price: "9.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 3
+    plan_name: "Pro"
+    price: "19.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 4
+    plan_name: "Basic"
+    price: "9.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 5
+    plan_name: "Pro"
+    price: "19.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 6
+    plan_name: "Basic"
+    price: "9.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 7
+    plan_name: "Pro"
+    price: "19.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 8
+    plan_name: "Basic"
+    price: "9.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 9
+    plan_name: "Pro"
+    price: "19.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 10
+    plan_name: "Basic"
+    price: "9.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 11
+    plan_name: "Pro"
+    price: "19.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 12
+    plan_name: "Basic"
+    price: "9.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 13
+    plan_name: "Pro"
+    price: "19.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+  - app_index: 0
+    shop_index: 14
+    plan_name: "Basic"
+    price: "9.99"
+    interval: "EVERY_30_DAYS"
+    status: "active"
+
+usage_charges: []
+
+events:
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 0
+    days_ago: 300
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 1
+    days_ago: 270
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 2
+    days_ago: 250
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 3
+    days_ago: 230
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 4
+    days_ago: 210
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 5
+    days_ago: 190
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 6
+    days_ago: 170
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 7
+    days_ago: 150
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 8
+    days_ago: 130
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 9
+    days_ago: 110
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 10
+    days_ago: 90
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 11
+    days_ago: 70
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 12
+    days_ago: 50
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 13
+    days_ago: 30
+  - type: "RELATIONSHIP_INSTALLED"
+    app_index: 0
+    shop_index: 14
+    days_ago: 10
+  - type: "SUBSCRIPTION_CHARGE_ACCEPTED"
+    app_index: 0
+    shop_index: 0
+    days_ago: 5
+  - type: "SUBSCRIPTION_CHARGE_ACCEPTED"
+    app_index: 0
+    shop_index: 1
+    days_ago: 3
+  - type: "SUBSCRIPTION_CHARGE_ACCEPTED"
+    app_index: 0
+    shop_index: 2
+    days_ago: 7
+  - type: "SUBSCRIPTION_CHARGE_ACCEPTED"
+    app_index: 0
+    shop_index: 3
+    days_ago: 2
+  - type: "SUBSCRIPTION_CHARGE_ACCEPTED"
+    app_index: 0
+    shop_index: 4
+    days_ago: 10

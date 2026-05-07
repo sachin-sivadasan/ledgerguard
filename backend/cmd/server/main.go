@@ -225,9 +225,13 @@ func run() error {
 	}
 
 	// Initialize Shopify Partner client for fetching apps with rate limiting
-	partnerClient := external.NewShopifyPartnerClient(
+	partnerClientOpts := []external.ShopifyPartnerClientOption{
 		external.WithRequestsPerSecond(cfg.Shopify.RateLimitRPS),
-	)
+	}
+	if cfg.Shopify.PartnerAPIURL != "" {
+		partnerClientOpts = append(partnerClientOpts, external.WithBaseURL(cfg.Shopify.PartnerAPIURL))
+	}
+	partnerClient := external.NewShopifyPartnerClient(partnerClientOpts...)
 
 	var appHandler *handler.AppHandler
 	if partnerRepo != nil && appRepo != nil && encryptor != nil {
@@ -342,6 +346,36 @@ func run() error {
 		feeService := domainservice.NewFeeVerificationService()
 		feeHandler = handler.NewFeeHandler(appRepo, partnerRepo, txRepo, feeService)
 		log.Println("Fee handler initialized")
+	}
+
+	// Initialize transaction handler
+	var transactionHandler *handler.TransactionHandler
+	if txRepo != nil && partnerRepo != nil && appRepo != nil {
+		transactionHandler = handler.NewTransactionHandler(txRepo, partnerRepo, appRepo)
+		log.Println("Transaction handler initialized")
+	}
+
+	// Initialize store handler
+	var storeHandler *handler.StoreHandler
+	if subscriptionRepo != nil && txRepo != nil && partnerRepo != nil && appRepo != nil {
+		storeRiskEngine := domainservice.NewRiskEngine()
+		storeHandler = handler.NewStoreHandler(subscriptionRepo, txRepo, partnerRepo, appRepo, storeRiskEngine)
+		log.Println("Store handler initialized")
+	}
+
+	// Initialize event handler
+	var eventHandler *handler.EventHandler
+	if appEventRepo != nil && partnerRepo != nil && appRepo != nil {
+		eventHandler = handler.NewEventHandler(appEventRepo, partnerRepo, appRepo)
+		log.Println("Event handler initialized")
+	}
+
+	// Initialize risk handler
+	var riskHandler *handler.RiskHandler
+	if subscriptionRepo != nil && partnerRepo != nil && appRepo != nil {
+		riskRiskEngine := domainservice.NewRiskEngine()
+		riskHandler = handler.NewRiskHandler(subscriptionRepo, partnerRepo, appRepo, riskRiskEngine)
+		log.Println("Risk handler initialized")
 	}
 
 	// Initialize API key service and handler
@@ -705,6 +739,10 @@ func run() error {
 		WebhookHandler:                  webhookHandler,
 		BillingHandler:                  billingHandler,
 		ReviewHandler:                   reviewHandler,
+		TransactionHandler:              transactionHandler,
+		StoreHandler:                    storeHandler,
+		EventHandler:                    eventHandler,
+		RiskHandler:                     riskHandler,
 		QueueSyncHandler:                queueSyncHandler,
 		AdminHandler:                    adminHandler,
 		APIKeyHandler:                   apiKeyHandler,

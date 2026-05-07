@@ -7,24 +7,62 @@ import '../models/analytics_model.dart';
 import '../models/event_model.dart';
 import '../models/insight_model.dart';
 import '../models/subscription_model.dart';
+import '../services/metrics_service.dart';
 import '../widgets/lg_risk_badge.dart';
 
 enum DashboardTimeRange { thisWeek, thisMonth, lastMonth, threeMonths }
 
 class DashboardProvider extends ChangeNotifier {
+  final MetricsService _metricsService;
+
+  bool _demoMode = true;
+  bool _isLoading = false;
+  String? _error;
   String? _selectedAppId;
   DashboardTimeRange _timeRange = DashboardTimeRange.thisWeek;
 
+  DashboardMetrics? _metrics;
+
+  DashboardProvider(this._metricsService);
+
+  bool get demoMode => _demoMode;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
   String? get selectedAppId => _selectedAppId;
   DashboardTimeRange get timeRange => _timeRange;
+
+  void setDemoMode(bool value) {
+    _demoMode = value;
+    notifyListeners();
+  }
 
   void setSelectedApp(String? appId) {
     _selectedAppId = appId;
     notifyListeners();
+    if (!_demoMode && appId != null) {
+      loadMetrics(appId);
+    }
   }
 
   void setTimeRange(DashboardTimeRange range) {
     _timeRange = range;
+    notifyListeners();
+  }
+
+  Future<void> loadMetrics(String appId) async {
+    debugPrint('[DashboardProvider] loadMetrics called – appId=$appId demoMode=$_demoMode isLoading=$_isLoading');
+    if (_demoMode || _isLoading) return;
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      _metrics = await _metricsService.fetchMetrics(appId);
+      debugPrint('[DashboardProvider] loadMetrics success');
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('[DashboardProvider] loadMetrics error – $e');
+    }
+    _isLoading = false;
     notifyListeners();
   }
 
@@ -45,6 +83,7 @@ class DashboardProvider extends ChangeNotifier {
 
   // KPIs
   int get mrrCents {
+    if (!_demoMode) return _metrics?.mrrCents ?? 0;
     return _filteredSubscriptions
         .where((s) => s.riskState == RiskState.safe)
         .fold<int>(0, (sum, s) => sum + s.priceCents);
@@ -53,6 +92,7 @@ class DashboardProvider extends ChangeNotifier {
   String get mrrFormatted => '\$${(mrrCents / 100).toStringAsFixed(0)}';
 
   double get renewalRate {
+    if (!_demoMode) return _metrics?.renewalRate ?? 0;
     final subs = _filteredSubscriptions;
     final total = subs.length;
     final safe = subs.where((s) => s.riskState == RiskState.safe).length;
@@ -60,20 +100,26 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   int get revenueAtRiskCents {
+    if (!_demoMode) return _metrics?.revenueAtRiskCents ?? 0;
     return _filteredSubscriptions
-        .where((s) => s.riskState != RiskState.safe && s.riskState != RiskState.churned)
+        .where((s) =>
+            s.riskState != RiskState.safe && s.riskState != RiskState.churned)
         .fold<int>(0, (sum, s) => sum + s.priceCents);
   }
 
   String get revenueAtRiskFormatted =>
       '\$${(revenueAtRiskCents / 100).toStringAsFixed(0)}';
 
-  int get usageRevenueCents => mockRevenueMix.usageCents;
+  int get usageRevenueCents {
+    if (!_demoMode) return _metrics?.usageRevenueCents ?? 0;
+    return mockRevenueMix.usageCents;
+  }
+
   String get usageRevenueFormatted =>
       '\$${(usageRevenueCents / 100).toStringAsFixed(0)}';
 
-  /// Event totals for the selected time range, filtered by selected app.
   Map<String, int> get activity {
+    if (!_demoMode) return {};
     final cutoff = _activityCutoff;
     final types = {
       'Installs': EventType.appInstall,
@@ -101,14 +147,30 @@ class DashboardProvider extends ChangeNotifier {
         DashboardTimeRange.threeMonths => 'Last 3 Months Activity',
       };
 
-  // Chart data
-  List<MrrSnapshot> get mrrTrend => mockMrrSnapshots;
-  RiskDistribution get riskDistribution => mockRiskDistribution;
-  RevenueMix get revenueMix => mockRevenueMix;
+  List<MrrSnapshot> get mrrTrend {
+    if (!_demoMode) return _metrics?.mrrTrend ?? [];
+    return mockMrrSnapshots;
+  }
 
-  // Forecast summary
+  RiskDistribution get riskDistribution {
+    if (!_demoMode) {
+      return _metrics?.riskDistribution ??
+          const RiskDistribution(
+              safe: 0, oneCycle: 0, twoCycle: 0, churned: 0);
+    }
+    return mockRiskDistribution;
+  }
+
+  RevenueMix get revenueMix {
+    if (!_demoMode) {
+      return _metrics?.revenueMix ??
+          const RevenueMix(
+              recurringCents: 0, usageCents: 0, oneTimeCents: 0);
+    }
+    return mockRevenueMix;
+  }
+
   ForecastPoint get nextMonthForecast => mockForecast.first;
 
-  // Recent alerts
   List<AiInsight> get recentAlerts => mockInsights.take(3).toList();
 }

@@ -30,6 +30,71 @@ class Subscription {
     required this.createdAt,
   });
 
+  factory Subscription.fromJson(Map<String, dynamic> json) {
+    return Subscription(
+      id: json['id'].toString(),
+      shopDomain: json['myshopify_domain'] as String? ??
+          json['shop_domain'] as String? ??
+          '',
+      appId: (json['app_id'] ?? '').toString(),
+      planName: json['plan_name'] as String? ?? '',
+      priceCents: json['base_price_cents'] as int? ??
+          json['price_cents'] as int? ??
+          0,
+      status: _parseStatus(json['status'] as String? ?? 'ACTIVE'),
+      riskState: parseRiskState(json['risk_state'] as String? ?? 'SAFE'),
+      billingInterval: _parseBillingInterval(
+          json['billing_interval'] as String? ?? 'EVERY_30_DAYS'),
+      periodEnd: _parseDate(json['period_end'] ?? json['expected_next_charge']),
+      expectedNextCharge: _parseDate(json['expected_next_charge']),
+      createdAt: _parseDate(json['created_at']),
+    );
+  }
+
+  static BillingInterval _parseBillingInterval(String s) {
+    final upper = s.toUpperCase();
+    if (upper.contains('ANNUAL') || upper.contains('365')) {
+      return BillingInterval.annual;
+    }
+    return BillingInterval.monthly;
+  }
+
+  static DateTime _parseDate(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+    return DateTime.now();
+  }
+
+  static SubscriptionStatus _parseStatus(String s) {
+    switch (s.toUpperCase()) {
+      case 'ACTIVE':
+        return SubscriptionStatus.active;
+      case 'FROZEN':
+        return SubscriptionStatus.frozen;
+      case 'CANCELLED':
+        return SubscriptionStatus.cancelled;
+      case 'PENDING':
+        return SubscriptionStatus.pending;
+      default:
+        return SubscriptionStatus.active;
+    }
+  }
+
+  static RiskState parseRiskState(String s) {
+    switch (s.toUpperCase()) {
+      case 'SAFE':
+        return RiskState.safe;
+      case 'ONE_CYCLE_MISSED':
+        return RiskState.oneCycleMissed;
+      case 'TWO_CYCLES_MISSED':
+        return RiskState.twoCycleMissed;
+      case 'CHURNED':
+        return RiskState.churned;
+      default:
+        return RiskState.safe;
+    }
+  }
+
   String get priceFormatted =>
       '\$${(priceCents / 100).toStringAsFixed(2)}';
 

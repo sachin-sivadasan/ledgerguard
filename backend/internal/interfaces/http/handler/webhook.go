@@ -72,6 +72,30 @@ func (h *WebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// HandleAppInstalled handles app installation webhooks
+// POST /webhooks/shopify/installed
+func (h *WebhookHandler) HandleAppInstalled(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "failed to read request body")
+		return
+	}
+
+	event := service.WebhookEvent{
+		Topic:     "app/installed",
+		ShopID:    r.Header.Get("X-Shopify-Shop-Domain"),
+		AppID:     r.Header.Get("X-Shopify-Webhook-Id"),
+		Payload:   body,
+		Timestamp: time.Now().UTC(),
+	}
+
+	if err := h.webhookService.ProcessAppInstalled(r.Context(), event); err != nil {
+		log.Printf("Webhook: app installed failed: %v", err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 // HandleSubscriptionUpdate handles subscription update webhooks
 // POST /webhooks/shopify/subscriptions
 func (h *WebhookHandler) HandleSubscriptionUpdate(w http.ResponseWriter, r *http.Request) {

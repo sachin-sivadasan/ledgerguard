@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_breakpoints.dart';
 import '../theme/app_colors.dart';
+import '../widgets/org_switcher.dart';
 
 class AppShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -167,6 +168,10 @@ class AppShell extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Image.asset('assets/images/logo.jpeg', height: 40),
           ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: OrgSwitcher(),
+          ),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
@@ -243,6 +248,10 @@ class AppShell extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: OrgSwitcher(),
           ),
           ..._destinations.asMap().entries.map((e) => ListTile(
                 leading: Icon(

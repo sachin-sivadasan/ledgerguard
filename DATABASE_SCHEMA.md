@@ -523,6 +523,8 @@ CREATE TRIGGER notification_preferences_updated_at
 | 000032_create_app_reviews_table | Create app_reviews table for scraped Shopify reviews | ✓ Implemented |
 | 000033_create_sync_jobs_table | Create sync_jobs table for async queue-based sync tracking | ✓ Implemented |
 | 000034_create_app_events_table | Create app_events table for Shopify lifecycle events | ✓ Implemented |
+| 000035_add_stable_domain_key_to_subscriptions | Add stable_domain_key column to subscriptions | ✓ Implemented |
+| 000036_create_organizations_tables | Create organizations, org_members, org_invitations, org_audit_log + add org_id to partner_accounts, billing_subscriptions, api_keys | ✓ Implemented |
 
 ---
 
@@ -630,3 +632,104 @@ Shopify app lifecycle events (install, uninstall, subscription changes) fetched 
 
 **Constraints:** UNIQUE(app_id, shopify_shop_gid, event_type, occurred_at)
 **Indexes:** app_id, shopify_shop_gid, (app_id, shopify_shop_gid), occurred_at
+
+---
+
+## organizations (Migration 000036)
+
+Top-level data-owning entity for multi-user team access. All partner accounts, billing, and API keys are scoped to an organization.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| name | VARCHAR(255) | NOT NULL |
+| slug | VARCHAR(100) | UNIQUE, URL-safe |
+| plan_tier | VARCHAR(20) | FREE, STARTER, PRO |
+| webhook_url | TEXT | Org-level webhook endpoint |
+| webhook_secret | VARCHAR(64) | HMAC signing secret |
+| sso_provider | VARCHAR(50) | SAML, OIDC (PRO only) |
+| sso_config | JSONB | SSO configuration blob |
+| created_by | UUID | FK → users(id) |
+| created_at | TIMESTAMPTZ | |
+| updated_at | TIMESTAMPTZ | |
+
+---
+
+## org_members (Migration 000036)
+
+Users belonging to an organization with role-based access and suspension support.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| org_id | UUID | FK → organizations(id) ON DELETE CASCADE |
+| user_id | UUID | FK → users(id) ON DELETE CASCADE |
+| role | VARCHAR(20) | OWNER, ADMIN, VIEWER |
+| status | VARCHAR(20) | ACTIVE, SUSPENDED |
+| notification_prefs | JSONB | Per-member notification preferences |
+| invited_by | UUID | FK → users(id) |
+| suspended_by | UUID | FK → users(id) |
+| suspended_at | TIMESTAMPTZ | |
+| joined_at | TIMESTAMPTZ | |
+
+**Constraints:** UNIQUE(org_id, user_id)
+**Indexes:** user_id, org_id, (org_id, status)
+
+---
+
+## org_invitations (Migration 000036)
+
+Pending invitations to join an organization. Token-based acceptance.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| org_id | UUID | FK → organizations(id) ON DELETE CASCADE |
+| email | VARCHAR(255) | NOT NULL |
+| role | VARCHAR(20) | ADMIN, VIEWER |
+| invited_by | UUID | FK → users(id) |
+| token | VARCHAR(64) | UNIQUE, NOT NULL |
+| status | VARCHAR(20) | PENDING, ACCEPTED, EXPIRED, REVOKED |
+| expires_at | TIMESTAMPTZ | NOT NULL |
+| created_at | TIMESTAMPTZ | |
+
+**Constraints:** UNIQUE(org_id, email, status)
+
+---
+
+## org_audit_log (Migration 000036)
+
+Organization-scoped audit trail for member lifecycle and org actions.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| org_id | UUID | FK → organizations(id) ON DELETE CASCADE |
+| actor_id | UUID | FK → users(id) |
+| action | VARCHAR(50) | org.created, member.invited, member.suspended, role.changed, etc. |
+| target_type | VARCHAR(30) | member, app, invitation, org |
+| target_id | UUID | ID of the affected entity |
+| metadata | JSONB | Extra context (old_role, new_role, etc.) |
+| ip_address | INET | |
+| created_at | TIMESTAMPTZ | |
+
+**Indexes:** (org_id, created_at DESC), (actor_id, created_at DESC)
+
+---
+
+## Modified Tables (Migration 000036)
+
+### partner_accounts — added `org_id`
+| Column | Type | Notes |
+|--------|------|-------|
+| org_id | UUID | FK → organizations(id) ON DELETE CASCADE, nullable until backfill |
+
+### billing_subscriptions — added `org_id`
+| Column | Type | Notes |
+|--------|------|-------|
+| org_id | UUID | FK → organizations(id) ON DELETE CASCADE, nullable until backfill |
+
+### api_keys — added `org_id`
+| Column | Type | Notes |
+|--------|------|-------|
+| org_id | UUID | FK → organizations(id) ON DELETE CASCADE, nullable until backfill |

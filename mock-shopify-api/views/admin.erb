@@ -1,0 +1,58 @@
+<h1>Mock Shopify Partner API — Dashboard</h1>
+<p style="margin-bottom:24px; color:#666;">Select a persona to view/edit its data. Each persona maps to an org ID used by the backend.</p>
+
+<div class="cards">
+  <% @personas.each do |org_id, persona| %>
+    <% stats = settings.data_store.stats(org_id) %>
+    <a href="/admin/personas/<%= org_id %>" class="persona-link">
+      <div class="card">
+        <h3><%= persona['name'] %></h3>
+        <p style="font-size:13px; color:#666; margin-bottom:12px;"><%= persona['description'] %></p>
+        <p style="font-size:12px; color:#999; margin-bottom:8px;">Org ID: <strong><%= org_id %></strong></p>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+          <div>
+            <div class="label">Apps</div>
+            <div class="stat"><%= stats[:apps] %></div>
+          </div>
+          <div>
+            <div class="label">Shops</div>
+            <div class="stat"><%= stats[:shops] %></div>
+          </div>
+          <div>
+            <div class="label">Active</div>
+            <div style="font-size:20px; font-weight:700; color:#28a745;"><%= stats[:active] %></div>
+          </div>
+          <div>
+            <div class="label">At Risk</div>
+            <div style="font-size:20px; font-weight:700; color:#ffc107;"><%= stats[:frozen] %></div>
+          </div>
+          <div>
+            <div class="label">Churned</div>
+            <div style="font-size:20px; font-weight:700; color:#dc3545;"><%= stats[:cancelled] %></div>
+          </div>
+          <div>
+            <div class="label">Total Subs</div>
+            <div style="font-size:20px; font-weight:700;"><%= stats[:subscriptions] %></div>
+          </div>
+        </div>
+      </div>
+    </a>
+  <% end %>
+</div>
+
+<h2>Quick Reference</h2>
+<div class="panel">
+  <h3>GraphQL Endpoint</h3>
+  <code>POST http://localhost:4000/:org_id/api/2025-07/graphql.json</code>
+  <h3 style="margin-top:16px;">Test Commands</h3>
+  <pre style="background:#1a1a2e; color:#8be9fd; padding:12px; border-radius:6px; overflow-x:auto; font-size:13px;">
+# Fetch transactions for Growing Developer
+curl -s http://localhost:4000/1002/api/2025-07/graphql.json \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"query":"{ transactions(first: 5) { edges { node { id __typename createdAt grossAmount { amount } app { name } shop { myshopifyDomain } } } pageInfo { hasNextPage } } }"}' | python3 -m json.tool
+
+# Fetch events
+curl -s http://localhost:4000/1002/api/2025-07/graphql.json \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"query":"{ app(id: \"gid://partners/App/2001\") { events(first: 10) { edges { node { type occurredAt shop { myshopifyDomain } } } } } }"}' | python3 -m json.tool</pre>
+</div>

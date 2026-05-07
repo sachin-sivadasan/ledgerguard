@@ -1,0 +1,118 @@
+<h1>Webhook Tester</h1>
+<p style="margin-bottom:24px; color:#666;">Send test webhooks to the backend to simulate Shopify events.</p>
+
+<div class="panel">
+  <h3>Send Webhook</h3>
+  <form action="/admin/webhooks/send" method="post" id="webhook-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Backend URL</label>
+        <input type="text" name="backend_url" value="http://localhost:8080" id="backend-url">
+      </div>
+      <div class="form-group">
+        <label>Persona</label>
+        <select name="persona_org_id" id="persona-select">
+          <% @personas.each do |org_id, persona| %>
+            <option value="<%= org_id %>"><%= persona['name'] %> (<%= org_id %>)</option>
+          <% end %>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Shop</label>
+        <select name="shop_index" id="shop-select">
+          <option value="0">Loading...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Webhook Type</label>
+        <select name="webhook_type" id="webhook-type">
+          <option value="installed">App Installed</option>
+          <option value="uninstalled">App Uninstalled</option>
+          <option value="subscriptions">Subscription Updated</option>
+          <option value="billing-failure">Billing Failure</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" id="subscription-fields" style="display:none;">
+      <div class="form-group">
+        <label>Plan Name</label>
+        <input type="text" name="plan_name" placeholder="Pro" value="Pro">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status_value">
+          <option value="ACTIVE">ACTIVE</option>
+          <option value="FROZEN">FROZEN</option>
+          <option value="CANCELLED">CANCELLED</option>
+          <option value="EXPIRED">EXPIRED</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary" style="margin-top:8px;">Send Webhook</button>
+  </form>
+</div>
+
+<!-- History -->
+<h2>Webhook History</h2>
+<% if @history.empty? %>
+  <div class="panel" style="color:#999; text-align:center;">No webhooks sent yet</div>
+<% else %>
+  <table>
+    <thead>
+      <tr><th>Time</th><th>Type</th><th>Shop</th><th>Status</th><th>Response</th></tr>
+    </thead>
+    <tbody>
+      <% @history.each do |entry| %>
+        <tr>
+          <td><%= entry[:time] %></td>
+          <td><code><%= entry[:type] %></code></td>
+          <td class="truncate"><%= entry[:shop] %></td>
+          <td>
+            <span class="badge badge-<%= entry[:success] ? 'success' : 'error' %>">
+              <%= entry[:status] %>
+            </span>
+          </td>
+          <td style="font-size:12px;">
+            <% if entry[:error] %>
+              <span style="color:#dc3545;"><%= entry[:error] %></span>
+            <% else %>
+              OK
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<script>
+  // Load shops when persona changes
+  const personaSelect = document.getElementById('persona-select');
+  const shopSelect = document.getElementById('shop-select');
+  const webhookType = document.getElementById('webhook-type');
+  const subFields = document.getElementById('subscription-fields');
+
+  function loadShops() {
+    const orgId = personaSelect.value;
+    fetch('/admin/api/shops/' + orgId)
+      .then(r => r.json())
+      .then(shops => {
+        shopSelect.innerHTML = '';
+        shops.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.index;
+          opt.textContent = s.index + ': ' + s.domain;
+          shopSelect.appendChild(opt);
+        });
+      });
+  }
+
+  personaSelect.addEventListener('change', loadShops);
+  loadShops();
+
+  webhookType.addEventListener('change', () => {
+    subFields.style.display = (webhookType.value === 'subscriptions') ? 'flex' : 'none';
+  });
+</script>

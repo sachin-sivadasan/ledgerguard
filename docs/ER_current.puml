@@ -19,6 +19,7 @@ entity "partner_accounts" as partner_accounts {
   *id : UUID <<PK>>
   --
   *user_id : UUID <<FK>>
+  org_id : UUID <<FK>>
   *integration_type : VARCHAR(20) <<CHECK: OAUTH, MANUAL>>
   *partner_id : VARCHAR(100)
   *encrypted_access_token : BYTEA
@@ -171,10 +172,68 @@ entity "user_preferences" as user_preferences {
   updated_at : TIMESTAMPTZ
 }
 
+entity "organizations" as organizations {
+  *id : UUID <<PK>>
+  --
+  *name : VARCHAR(255)
+  slug : VARCHAR(100) <<UNIQUE>>
+  *plan_tier : VARCHAR(20) <<CHECK: FREE, STARTER, PRO>>
+  webhook_url : TEXT
+  webhook_secret : VARCHAR(64)
+  sso_provider : VARCHAR(50) <<CHECK: SAML, OIDC>>
+  sso_config : JSONB
+  *created_by : UUID <<FK>>
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "org_members" as org_members {
+  *id : UUID <<PK>>
+  --
+  *org_id : UUID <<FK>>
+  *user_id : UUID <<FK>>
+  *role : VARCHAR(20) <<CHECK: OWNER, ADMIN, VIEWER>>
+  *status : VARCHAR(20) <<CHECK: ACTIVE, SUSPENDED>>
+  notification_prefs : JSONB
+  invited_by : UUID <<FK>>
+  suspended_by : UUID <<FK>>
+  suspended_at : TIMESTAMPTZ
+  joined_at : TIMESTAMPTZ
+  <<UNIQUE: org_id, user_id>>
+}
+
+entity "org_invitations" as org_invitations {
+  *id : UUID <<PK>>
+  --
+  *org_id : UUID <<FK>>
+  *email : VARCHAR(255)
+  *role : VARCHAR(20) <<CHECK: ADMIN, VIEWER>>
+  *invited_by : UUID <<FK>>
+  *token : VARCHAR(64) <<UNIQUE>>
+  *status : VARCHAR(20) <<CHECK: PENDING, ACCEPTED, EXPIRED, REVOKED>>
+  *expires_at : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+  <<UNIQUE: org_id, email, status>>
+}
+
+entity "org_audit_log" as org_audit_log {
+  *id : UUID <<PK>>
+  --
+  *org_id : UUID <<FK>>
+  *actor_id : UUID <<FK>>
+  *action : VARCHAR(50)
+  target_type : VARCHAR(30)
+  target_id : UUID
+  metadata : JSONB
+  ip_address : INET
+  created_at : TIMESTAMPTZ
+}
+
 entity "api_keys" as api_keys {
   *id : UUID <<PK>>
   --
   *user_id : UUID <<FK>>
+  org_id : UUID <<FK>>
   name : VARCHAR(100)
   *key_hash : VARCHAR(64) <<UNIQUE>>
   rate_limit_per_minute : INT <<DEFAULT: 60>>
@@ -289,6 +348,17 @@ entity "app_reviews" as app_reviews {
   created_at : TIMESTAMPTZ
   updated_at : TIMESTAMPTZ
 }
+
+' Organization Relationships
+organizations ||--o{ org_members : "has"
+organizations ||--o{ org_invitations : "tracks"
+organizations ||--o{ org_audit_log : "records"
+organizations ||--o{ partner_accounts : "owns"
+organizations ||--o{ api_keys : "scopes"
+org_members }o--|| users : "user"
+org_invitations }o--|| users : "invited_by"
+org_audit_log }o--|| users : "actor"
+users ||--o{ organizations : "created_by"
 
 ' Core Relationships
 users ||--o{ partner_accounts : "has"
@@ -474,6 +544,53 @@ note bottom of api_usage_status
   - Populated from usage transactions
   - Tracks billed/unbilled usage
   - Links to parent subscription
+end note
+
+note right of organizations
+  Migration: 000036_create_organizations_tables
+  - Top-level data-owning entity
+  - Plan tier determines team limits:
+    FREE=1, STARTER=3, PRO=10
+  - Org-level webhooks (STARTER+)
+  - SSO/SAML support (PRO only)
+  - partner_accounts.org_id replaces
+    user-level data ownership
+end note
+
+note right of org_members
+  Migration: 000036
+  - Links users to organizations
+  - Role: OWNER > ADMIN > VIEWER
+  - Status: ACTIVE, SUSPENDED
+  - Per-member notification preferences
+  - Suspended members get 403
+
+  Indexes:
+  - idx_org_members_user
+  - idx_org_members_org
+  - idx_org_members_status
+end note
+
+note right of org_invitations
+  Migration: 000036
+  - Email-based invitations with token
+  - Pending invitations count toward limit
+  - 7-day expiry
+
+  Indexes:
+  - idx_org_invitations_token
+end note
+
+note right of org_audit_log
+  Migration: 000036
+  - Immutable audit trail for org actions
+  - Actions: member.invited, member.removed,
+    member.suspended, role.changed, etc.
+  - Metadata JSONB for extra context
+
+  Indexes:
+  - idx_audit_log_org (org_id, created_at DESC)
+  - idx_audit_log_actor (actor_id, created_at DESC)
 end note
 
 @enduml

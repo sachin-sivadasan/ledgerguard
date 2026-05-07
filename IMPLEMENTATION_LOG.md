@@ -4,6 +4,80 @@ A chronological record of all features implemented with detailed summaries.
 
 ---
 
+## [2026-05-07] Multi-User Team Access Model — Organizations, Members, Invitations, Audit
+
+**Summary:**
+Implemented the full multi-user team access model. Organizations become the top-level data-owning entity. Users join organizations with role-based access (OWNER/ADMIN/VIEWER). Includes invitation flow, member lifecycle (suspend/unsuspend), org-scoped audit log, plan-based team limits, and org-level webhooks.
+
+**Implemented:**
+
+1. **Migration 000036** — 4 new tables: `organizations`, `org_members`, `org_invitations`, `org_audit_log`. Added `org_id` column to `partner_accounts`, `billing_subscriptions`, `api_keys`.
+
+2. **Domain Layer:**
+   - Entity: `organization.go` — Organization, OrgMember, OrgInvitation, OrgAuditEntry with constructors + behavioral methods
+   - Value Objects: `org_role.go` (OWNER/ADMIN/VIEWER with permission methods), `member_status.go` (ACTIVE/SUSPENDED), `invitation_status.go` (PENDING/ACCEPTED/EXPIRED/REVOKED)
+   - Repository interfaces: `organization_repository.go` — OrganizationRepository, MemberRepository, InvitationRepository, OrgAuditRepository
+
+3. **Infrastructure Layer:**
+   - `org_repository.go` — PostgreSQL CRUD for organizations
+   - `member_repository.go` — PostgreSQL CRUD for org_members with CountByOrgID
+   - `invitation_repository.go` — PostgreSQL CRUD for org_invitations with token lookup
+   - `audit_repository.go` — PostgreSQL append + paginated query for org_audit_log
+
+4. **Application Layer:**
+   - `org_service.go` — CreateOrganization, InviteMember, AcceptInvitation, RevokeInvitation, RemoveMember, SuspendMember, UnsuspendMember, ChangeRole, UpdateNotificationPrefs, ConfigureWebhook
+   - `org_audit_service.go` — LogAction, GetAuditLog (paginated)
+   - Plan guards: FREE=1, STARTER=3, PRO=10 members (pending invitations count toward limit)
+
+5. **Middleware:**
+   - `org_context.go` — OrgContextMiddleware resolves org from URL param or X-Org-Id header, checks membership + active status + role
+
+6. **HTTP Handlers:**
+   - `org_handler.go` — 15 endpoints for org CRUD, member management, invitations, webhooks
+   - `audit_handler.go` — Paginated audit log endpoint
+
+7. **Router:**
+   - Added `/api/v1/orgs` routes with org-scoped sub-routes
+   - Added `/api/v1/invitations/{token}/accept` for token-based invite acceptance
+   - Added `X-Org-Id` to CORS allowed headers
+
+**New Files:** 14 (3 value objects, 1 entity, 1 repo interface, 4 persistence, 2 services, 1 middleware, 2 handlers, 2 migrations)
+
+**Tests:** 24 new tests (org service + value objects + entities), all passing. Full suite passes.
+
+---
+
+## [2026-05-07] Fix App Filter API Calls, Transaction Upsert app_id, Disconnect Cleanup
+
+**Summary:**
+Fixed demo↔live mode switching across all Flutter providers, fixed transaction upsert to include `app_id` in ON CONFLICT, added debug logging to ledger rebuild, and ensured disconnect flow resets all 10 providers to demo mode.
+
+**Implemented:**
+
+1. **8 Providers — app selection triggers API loads in live mode:**
+   - `DashboardProvider`, `StoreProvider`, `SubscriptionProvider`, `TransactionProvider`, `EarningsProvider`, `EventsProvider`, `RiskProvider`, `AnalyticsProvider`
+   - `setSelectedApp()`/`setAppFilter()` now calls the provider's `load*()` method when `!_demoMode && appId != null`
+
+2. **transaction_repository.go — ON CONFLICT includes app_id:**
+   - Both `Upsert()` and `UpsertBatch()` now include `app_id = EXCLUDED.app_id` in the conflict resolution
+   - Ensures transactions are re-assigned to the correct app during re-syncs or app re-creation
+
+3. **ledger_service.go — Debug logging:**
+   - Transaction count with date range
+   - Charge type breakdown map (`RECURRING: 5, USAGE: 2, ...`)
+   - Unique domain count after grouping
+   - Subscription count after rebuild
+
+4. **connect_shopify_screen.dart — Disconnect resets all providers:**
+   - `_disconnect()` calls `setDemoMode(true)` on all 10 providers (Apps, Dashboard, Subscription, Store, Transaction, Events, Risk, Analytics, Earnings, Insights)
+   - Symmetric with connect flow which sets live mode on all 10
+
+**Files Modified:** ~15 (8 providers, 1 repository, 1 domain service, 1 settings screen, router, config, handlers)
+
+**Tests:** All passing
+
+---
+
 ## [2026-05-07] Finalize Revenue API Format — Numeric IDs, Usages-by-Subscription, chargeId Fix
 
 **Commit:** `8acfa59` — feat: finalize Revenue API format — numeric IDs, usages-by-subscription, chargeId fix
@@ -2187,3 +2261,45 @@ Added a daily catch-up sync scheduler that re-syncs recent transactions and even
 - `backend/cmd/server/main.go` — Scheduler creation, start, shutdown, handler wiring
 
 **Tests:** All existing tests pass (`go test ./...`).
+
+
+---
+
+## Mock Shopify Partner API Server + Admin UI + Webhook Tester
+
+**Date:** 2026-05-07
+
+### Summary
+Built a Ruby/Sinatra mock server that mimics Shopify Partner API GraphQL endpoints, enabling full-stack testing with diverse data scenarios without a real Shopify account.
+
+### What was built
+
+**Mock Server (Ruby/Sinatra):**
+- GraphQL endpoint at `POST /:org_id/api/2025-07/graphql.json`
+- 4 personas: Solo (1 app/15 shops), Growing (2 apps/80 shops), Power (4 apps/210 shops), Churning (1 app/40 shops)
+- Transaction resolver generates `AppSubscriptionSale`, `AppUsageSale` with proper GID format
+- Event resolver generates `RELATIONSHIP_INSTALLED/UNINSTALLED`, `SUBSCRIPTION_CHARGE_ACCEPTED/CANCELED`
+- YAML-based data files for easy editing
+
+**Admin UI:**
+- Dashboard at `/admin` with persona cards showing stats
+- Persona detail at `/admin/personas/:org_id` with tables and forms to add/edit shops, subscriptions, events
+- Webhook tester at `/admin/webhooks` to send test webhooks to backend
+
+**Backend Changes (Go):**
+- Added `partner_api_url` config field to `ShopifyConfig`
+- Added `WithBaseURL()` option to `ShopifyPartnerClient`
+- Wired base URL override in `main.go`
+- Created `config.mock.yaml` pointing to mock server
+
+### Files
+
+| Action | File |
+|--------|------|
+| NEW | `mock-shopify-api/` (entire directory — app.rb, lib/, views/, data/) |
+| MODIFY | `backend/internal/infrastructure/config/config.go` |
+| MODIFY | `backend/internal/infrastructure/external/shopify_partner_client.go` |
+| MODIFY | `backend/cmd/server/main.go` |
+| NEW | `backend/config.mock.yaml` |
+
+**Tests:** Go build succeeds, all existing tests pass. Mock server tested with curl.

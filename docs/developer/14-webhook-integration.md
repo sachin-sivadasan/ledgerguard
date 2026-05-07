@@ -1,8 +1,9 @@
 # 14. Webhook Integration
 
 ## What It Does
-Processes incoming Shopify webhooks to keep subscription data in near-real-time sync. Three webhook topics are handled:
+Processes incoming Shopify Partner webhooks to keep subscription data in near-real-time sync. Four webhook topics are handled:
 
+- **`app/installed`** — a merchant installs the app. Logs the event; if a previous subscription exists (reinstall), reactivates it from UNINSTALLED/CANCELLED to PENDING and restores from soft-delete.
 - **`app_subscriptions/update`** — subscription status changes (ACTIVE, CANCELLED, FROZEN, EXPIRED). Updates the subscription record and recalculates risk state.
 - **`app/uninstalled`** — a merchant uninstalls the app. Soft-deletes the subscription and marks it as CHURNED.
 - **`subscription_billing_attempts/failure`** — a billing attempt failed. Escalates the subscription's risk state by one level (SAFE to ONE_CYCLE_MISSED, ONE_CYCLE_MISSED to TWO_CYCLES_MISSED, etc.).
@@ -17,6 +18,7 @@ Two layers:
 
 The `WebhookService` uses the builder pattern for optional dependencies:
 - `WithSubscriptionEventRepo()` — enables lifecycle event recording.
+- `WithAppEventRepo()` — enables install/uninstall event recording in `app_events` table.
 - `WithNotificationService()` — enables risk change alerts (requires both a `PartnerAccountRepository` and a `NotificationService`).
 
 HMAC validation is implemented in the service (`ValidateHMAC`) using `crypto/hmac` with SHA-256 and base64 encoding, but is not enforced in the current handler. The handler logs a warning when the HMAC header is missing.
@@ -24,12 +26,33 @@ HMAC validation is implemented in the service (`ValidateHMAC`) using `crypto/hma
 ## Key Files
 | File | Purpose |
 |------|---------|
-| `backend/internal/interfaces/http/handler/webhook.go` | WebhookHandler: HandleWebhook (generic router), HandleSubscriptionUpdate, HandleAppUninstalled, HandleBillingFailure, GetStats |
-| `backend/internal/application/service/webhook_service.go` | WebhookService: ProcessEvent (router), ProcessSubscriptionUpdate, ProcessAppUninstalled, ProcessBillingFailure, ValidateHMAC |
+| `backend/internal/interfaces/http/handler/webhook.go` | WebhookHandler: HandleWebhook (generic router), HandleAppInstalled, HandleSubscriptionUpdate, HandleAppUninstalled, HandleBillingFailure, GetStats |
+| `backend/internal/application/service/webhook_service.go` | WebhookService: ProcessEvent (router), ProcessAppInstalled, ProcessSubscriptionUpdate, ProcessAppUninstalled, ProcessBillingFailure, ValidateHMAC |
 | `backend/internal/domain/entity/subscription_event.go` | SubscriptionEvent entity: lifecycle tracking with from/to status and risk state, event type classification (IsChurnEvent, IsVoluntaryChurn, IsInvoluntaryChurn) |
 | `backend/internal/domain/repository/subscription_event_repository.go` | SubscriptionEventRepository interface: Create, FindBySubscriptionID, FindByAppID, FindChurnEvents, CountByEventType |
 
 ## Data Flow
+
+### App Installed
+```
+POST /webhooks/shopify/installed
+│
+├── WebhookService.ProcessAppInstalled(event)
+│     ├── Parse payload (same shape as AppUninstalledPayload: ID, Domain, MyshopifyDomain)
+│     ├── appRepo.FindAllByPartnerAppID(event.AppID)
+│     │     └── No matching app → log and return nil
+│     └── For each app:
+│           ├── Record RELATIONSHIP_INSTALLED in app_events (always — audit trail)
+│           ├── subRepo.FindByAppIDAndDomain(appID, myshopifyDomain)
+│           │     └── Not found → log "new install, subscription created on first sync"
+│           ├── If previous status was UNINSTALLED or CANCELLED (reinstall):
+│           │     ├── Set status = "PENDING", riskState = SAFE
+│           │     ├── sub.Restore() — clear soft-delete marker
+│           │     └── subRepo.Upsert(sub)
+│           └── Record SubscriptionEvent (type="app_installed", reason="Shop installed the app")
+│
+└── Return HTTP 200
+```
 
 ### Subscription Update
 ```
@@ -101,10 +124,11 @@ POST /webhooks/shopify/billing-failure
 POST /webhooks/shopify
 │
 └── WebhookService.ProcessEvent(event)
-      ├── topic="app_subscriptions/update"            → ProcessSubscriptionUpdate
-      ├── topic="app/uninstalled"                     → ProcessAppUninstalled
-      ├── topic="subscription_billing_attempts/failure" → ProcessBillingFailure
-      └── default                                      → log "Unhandled webhook topic"
+      ├── topic="app/installed"                         → ProcessAppInstalled
+      ├── topic="app_subscriptions/update"              → ProcessSubscriptionUpdate
+      ├── topic="app/uninstalled"                       → ProcessAppUninstalled
+      ├── topic="subscription_billing_attempts/failure"  → ProcessBillingFailure
+      └── default                                        → log "Unhandled webhook topic"
 ```
 
 ## Configuration
@@ -118,6 +142,7 @@ POST /webhooks/shopify
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | `/webhooks/shopify` | HMAC (not enforced) | Generic webhook router, dispatches by `X-Shopify-Topic` header |
+| POST | `/webhooks/shopify/installed` | HMAC (not enforced) | App installation events (new install or reinstall) |
 | POST | `/webhooks/shopify/subscriptions` | HMAC (not enforced) | Subscription status update events |
 | POST | `/webhooks/shopify/uninstalled` | HMAC (not enforced) | App uninstallation events |
 | POST | `/webhooks/shopify/billing-failure` | HMAC (not enforced) | Billing attempt failure events |
@@ -136,6 +161,7 @@ Note: Webhook endpoints do NOT use Firebase authentication. They are public endp
 - **HMAC is not enforced.** The `ValidateHMAC()` method exists but is never called by the handler. In development this is fine, but in production any actor can POST to the webhook endpoints. This is the most critical security gap in the webhook system.
 - **Always returns HTTP 200.** Even if processing fails, the handler returns 200 and logs the error. This prevents Shopify from retrying, which means failed events are silently dropped. Check application logs to detect processing failures.
 - **FROZEN maps to TWO_CYCLES_MISSED in webhooks but ONE_CYCLE_MISSED in the Risk Engine.** The `ProcessSubscriptionUpdate` method maps FROZEN status to `RiskStateTwoCyclesMissed`, while the domain RiskEngine maps FROZEN to `RiskStateOneCycleMissed`. This inconsistency means webhook-driven updates produce different risk states than sync-driven updates for the same subscription status.
+- **WebhookHandler not wired in main.go.** The handler and service exist but `WebhookHandler` is not set in the router config. Routes are guarded by `if cfg.WebhookHandler != nil` so they're currently inactive. Wire in main.go when deploying to a publicly reachable server.
 - **Unknown subscriptions are silently ignored.** If a webhook arrives for a subscription that has not been synced yet (`FindByShopifyGID` returns not found), the event is logged and discarded. There is no queuing mechanism to process it once the subscription appears.
 - **App uninstall iterates all matching apps.** `FindAllByPartnerAppID` can return multiple apps if the same Shopify app GID appears under different partner accounts. The uninstall handler processes subscriptions across all of them.
 - **Billing failure escalation is one-directional.** Each failure bumps the risk state up by exactly one level. There is no de-escalation on successful retry; that only happens through `ProcessSubscriptionUpdate` when status returns to ACTIVE.

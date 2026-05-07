@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../mock_data/mock_apps.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/store_provider.dart';
 import '../../theme/app_colors.dart';
@@ -12,12 +11,44 @@ import '../../widgets/lg_page.dart';
 import '../../widgets/lg_risk_badge.dart';
 import '../../widgets/lg_search_field.dart';
 
-class StoreListScreen extends StatelessWidget {
+class StoreListScreen extends StatefulWidget {
   const StoreListScreen({super.key});
 
   @override
+  State<StoreListScreen> createState() => _StoreListScreenState();
+}
+
+class _StoreListScreenState extends State<StoreListScreen> {
+  bool _wasDemoMode = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
+  }
+
+  void _maybeLoadData() {
+    final apps = context.read<AppsProvider>();
+    final provider = context.read<StoreProvider>();
+    if (!apps.demoMode && apps.apps.isNotEmpty && !provider.isLoading) {
+      provider.loadStores(apps.apps.first.id);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final hasApps = context.watch<AppsProvider>().apps.isNotEmpty;
+    final appsProvider = context.watch<AppsProvider>();
+    final hasApps = appsProvider.apps.isNotEmpty;
+
+    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
+    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
+      _wasDemoMode = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<StoreProvider>().loadStores(appsProvider.apps.first.id);
+      });
+    }
+    if (appsProvider.demoMode) _wasDemoMode = true;
+
     if (!hasApps) {
       return LgPage(
         title: 'Stores',
@@ -34,7 +65,8 @@ class StoreListScreen extends StatelessWidget {
     final provider = context.watch<StoreProvider>();
     final stores = provider.stores;
     final theme = Theme.of(context);
-    final showAppFilter = mockApps.length > 1;
+    final appsList = context.watch<AppsProvider>().apps;
+    final showAppFilter = appsList.length > 1;
 
     return LgPage(
       title: 'Stores',
@@ -51,14 +83,14 @@ class StoreListScreen extends StatelessWidget {
                   onSelected: provider.setSelectedApp,
                   itemBuilder: (_) => [
                     const PopupMenuItem(value: null, child: Text('All Apps')),
-                    ...mockApps.map((app) => PopupMenuItem(
+                    ...appsList.map((app) => PopupMenuItem(
                           value: app.id,
                           child: Text(app.name),
                         )),
                   ],
                   child: Chip(
                     label: Text(provider.selectedAppId != null
-                        ? mockApps.firstWhere((a) => a.id == provider.selectedAppId).name
+                        ? appsList.firstWhere((a) => a.id == provider.selectedAppId, orElse: () => appsList.first).name
                         : 'All Apps'),
                     deleteIcon: provider.selectedAppId != null
                         ? const Icon(Icons.close, size: 14)

@@ -1,6 +1,11 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'app.dart';
+import 'core/config/app_config.dart';
+import 'core/network/api_client.dart';
+import 'firebase_options.dart';
 import 'providers/analytics_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/api_key_provider.dart';
@@ -14,33 +19,69 @@ import 'providers/settings_provider.dart';
 import 'providers/store_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'providers/transaction_provider.dart';
+import 'providers/organization_provider.dart';
 import 'providers/webhook_provider.dart';
+import 'services/app_service.dart';
+import 'services/earnings_service.dart';
+import 'services/events_service.dart';
+import 'services/insights_service.dart';
+import 'services/metrics_service.dart';
 import 'services/mixpanel_service.dart';
+import 'services/risk_service.dart';
+import 'services/store_service.dart';
+import 'services/subscription_service.dart';
+import 'services/organization_service.dart';
+import 'services/transaction_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   final mixpanel = MixpanelService();
   await mixpanel.init();
+
+  final apiClient = ApiClient(baseUrl: AppConfig.apiBaseUrl);
+
+  // Create services
+  final appService = AppService(apiClient);
+  final metricsService = MetricsService(apiClient);
+  final subscriptionService = SubscriptionService(apiClient);
+  final transactionService = TransactionService(apiClient);
+  final earningsService = EarningsService(apiClient);
+  final riskService = RiskService(apiClient);
+  final eventsService = EventsService(apiClient);
+  final insightsService = InsightsService(apiClient);
+  final storeService = StoreService(apiClient);
+  final organizationService = OrganizationService(apiClient);
 
   runApp(
     MultiProvider(
       providers: [
         Provider<MixpanelService>.value(value: mixpanel),
+        Provider<ApiClient>.value(value: apiClient),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => DashboardProvider()),
-        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
-        ChangeNotifierProvider(create: (_) => StoreProvider()),
-        ChangeNotifierProvider(create: (_) => TransactionProvider()),
-        ChangeNotifierProvider(create: (_) => EventsProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardProvider(metricsService)),
+        ChangeNotifierProvider(
+            create: (_) => SubscriptionProvider(subscriptionService)),
+        ChangeNotifierProvider(
+            create: (_) => StoreProvider(storeService, subscriptionService)),
+        ChangeNotifierProvider(
+            create: (_) => TransactionProvider(transactionService)),
+        ChangeNotifierProvider(create: (_) => EventsProvider(eventsService)),
         ChangeNotifierProvider(create: (_) => WebhookProvider()),
-        ChangeNotifierProvider(create: (_) => RiskProvider()),
-        ChangeNotifierProvider(create: (_) => AnalyticsProvider()),
-        ChangeNotifierProvider(create: (_) => EarningsProvider()),
-        ChangeNotifierProvider(create: (_) => AppsProvider()),
+        ChangeNotifierProvider(create: (_) => RiskProvider(riskService)),
+        ChangeNotifierProvider(
+            create: (_) => AnalyticsProvider(metricsService)),
+        ChangeNotifierProvider(
+            create: (_) => EarningsProvider(earningsService)),
+        ChangeNotifierProvider(create: (_) => AppsProvider(appService)),
         ChangeNotifierProvider(create: (_) => ApiKeyProvider()),
-        ChangeNotifierProvider(create: (_) => InsightsProvider()),
+        ChangeNotifierProvider(
+            create: (_) => InsightsProvider(insightsService)),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(
+            create: (_) => OrganizationProvider(organizationService,
+                apiClient: apiClient)),
       ],
       child: const App(),
     ),

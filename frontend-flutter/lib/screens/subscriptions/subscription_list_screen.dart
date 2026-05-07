@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../mock_data/mock_apps.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../theme/app_colors.dart';
@@ -16,12 +15,45 @@ import '../../widgets/lg_risk_badge.dart';
 import '../../widgets/lg_search_field.dart';
 import '../../widgets/lg_status_badge.dart';
 
-class SubscriptionListScreen extends StatelessWidget {
+class SubscriptionListScreen extends StatefulWidget {
   const SubscriptionListScreen({super.key});
 
   @override
+  State<SubscriptionListScreen> createState() => _SubscriptionListScreenState();
+}
+
+class _SubscriptionListScreenState extends State<SubscriptionListScreen> {
+  bool _wasDemoMode = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
+  }
+
+  void _maybeLoadData() {
+    final apps = context.read<AppsProvider>();
+    final provider = context.read<SubscriptionProvider>();
+    if (!apps.demoMode && apps.apps.isNotEmpty && !provider.isLoading) {
+      provider.loadSubscriptions(apps.apps.first.id);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final hasApps = context.watch<AppsProvider>().apps.isNotEmpty;
+    final appsProvider = context.watch<AppsProvider>();
+    final hasApps = appsProvider.apps.isNotEmpty;
+
+    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
+    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
+      _wasDemoMode = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<SubscriptionProvider>().loadSubscriptions(appsProvider.apps.first.id);
+        }
+      });
+    }
+    if (appsProvider.demoMode) _wasDemoMode = true;
     if (!hasApps) {
       return LgPage(
         title: 'Subscriptions',
@@ -39,7 +71,8 @@ class SubscriptionListScreen extends StatelessWidget {
     final provider = context.watch<SubscriptionProvider>();
     final subs = provider.subscriptions;
     final dateFmt = DateFormat('MMM d, y');
-    final showAppFilter = mockApps.length > 1;
+    final appsList = context.watch<AppsProvider>().apps;
+    final showAppFilter = appsList.length > 1;
 
     return LgPage(
       title: 'Subscriptions',
@@ -52,14 +85,14 @@ class SubscriptionListScreen extends StatelessWidget {
               onSelected: provider.setAppFilter,
               itemBuilder: (_) => [
                 const PopupMenuItem(value: null, child: Text('All Apps')),
-                ...mockApps.map((app) => PopupMenuItem(
+                ...appsList.map((app) => PopupMenuItem(
                       value: app.id,
                       child: Text(app.name),
                     )),
               ],
               child: Chip(
                 label: Text(provider.appFilter != null
-                    ? mockApps.firstWhere((a) => a.id == provider.appFilter).name
+                    ? appsList.firstWhere((a) => a.id == provider.appFilter, orElse: () => appsList.first).name
                     : 'All Apps'),
                 deleteIcon: provider.appFilter != null
                     ? const Icon(Icons.close, size: 14)
@@ -165,7 +198,7 @@ class SubscriptionListScreen extends StatelessWidget {
                           radius: 14,
                           backgroundColor: LgColors.primary,
                           child: Text(
-                            sub.shopDomain[0].toUpperCase(),
+                            sub.shopDomain.isNotEmpty ? sub.shopDomain[0].toUpperCase() : '?',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,

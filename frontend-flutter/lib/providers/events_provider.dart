@@ -1,22 +1,58 @@
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_events.dart';
 import '../models/event_model.dart';
+import '../services/events_service.dart';
 
 enum TimeRange { today, thisWeek, thisMonth }
 
 class EventsProvider extends ChangeNotifier {
+  final EventsService _eventsService;
+
+  bool _demoMode = true;
+  bool _isLoading = false;
+  String? _error;
+
   EventType? _typeFilter;
   String? _appFilter;
   String? _storeFilter;
   TimeRange _timeRange = TimeRange.thisWeek;
 
+  List<AppEvent> _liveEvents = [];
+
+  EventsProvider(this._eventsService);
+
+  bool get demoMode => _demoMode;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
   EventType? get typeFilter => _typeFilter;
   String? get appFilter => _appFilter;
   String? get storeFilter => _storeFilter;
   TimeRange get timeRange => _timeRange;
 
+  void setDemoMode(bool value) {
+    _demoMode = value;
+    notifyListeners();
+  }
+
+  Future<void> loadEvents(String appId) async {
+    if (_demoMode || _isLoading) return;
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      _liveEvents = await _eventsService.fetchEvents(appId);
+    } catch (e) {
+      _error = e.toString();
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  List<AppEvent> get _allEvents =>
+      _demoMode ? mockEvents : _liveEvents;
+
   List<AppEvent> get events {
-    var list = mockEvents.toList();
+    var list = _allEvents.toList();
 
     if (_typeFilter != null) {
       list = list.where((e) => e.type == _typeFilter).toList();
@@ -25,14 +61,15 @@ class EventsProvider extends ChangeNotifier {
       list = list.where((e) => e.appId == _appFilter).toList();
     }
     if (_storeFilter != null) {
-      list = list.where((e) => e.storeDomain.contains(_storeFilter!)).toList();
+      list = list
+          .where((e) => e.storeDomain.contains(_storeFilter!))
+          .toList();
     }
 
     list.sort((a, b) => b.date.compareTo(a.date));
     return list;
   }
 
-  // KPIs
   int get totalEvents => events.length;
 
   DateTime _startOfRange() {
@@ -63,9 +100,9 @@ class EventsProvider extends ChangeNotifier {
 
   List<AppEvent> get recentEvents => events.take(5).toList();
 
-  /// Returns this week's event totals by type for the dashboard summary.
   Map<String, int> get weeklyActivity {
     final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+    final source = _allEvents;
     final types = {
       'Installs': EventType.appInstall,
       'Uninstalls': EventType.appUninstall,
@@ -76,14 +113,15 @@ class EventsProvider extends ChangeNotifier {
     };
     return {
       for (final entry in types.entries)
-        entry.key: mockEvents
-            .where((e) => e.type == entry.value && e.date.isAfter(weekAgo))
+        entry.key: source
+            .where(
+                (e) => e.type == entry.value && e.date.isAfter(weekAgo))
             .length,
     };
   }
 
   List<AppEvent> eventsForStore(String storeDomain) {
-    return mockEvents
+    return _allEvents
         .where((e) => e.storeDomain == storeDomain)
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
@@ -105,6 +143,9 @@ class EventsProvider extends ChangeNotifier {
   void setAppFilter(String? appId) {
     _appFilter = appId;
     notifyListeners();
+    if (!_demoMode && appId != null) {
+      loadEvents(appId);
+    }
   }
 
   void setStoreFilter(String? store) {

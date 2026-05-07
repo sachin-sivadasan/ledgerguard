@@ -1,0 +1,134 @@
+persona:
+  name: "Churning Developer"
+  description: "1 app, 40 stores, heavy churn, declining revenue"
+
+apps:
+  - id: "gid://partners/App/4001"
+    name: "PageSpeed Optimizer"
+
+shops:
+  - { domain: "abandon-cart.myshopify.com", name: "Abandon Cart", gid: "gid://shopify/Shop/400001" }
+  - { domain: "budget-buys.myshopify.com", name: "Budget Buys", gid: "gid://shopify/Shop/400002" }
+  - { domain: "closeout-deals.myshopify.com", name: "Closeout Deals", gid: "gid://shopify/Shop/400003" }
+  - { domain: "discount-depot.myshopify.com", name: "Discount Depot", gid: "gid://shopify/Shop/400004" }
+  - { domain: "economy-shop.myshopify.com", name: "Economy Shop", gid: "gid://shopify/Shop/400005" }
+  - { domain: "fading-glory.myshopify.com", name: "Fading Glory", gid: "gid://shopify/Shop/400006" }
+  - { domain: "gone-fishing.myshopify.com", name: "Gone Fishing", gid: "gid://shopify/Shop/400007" }
+  - { domain: "half-price.myshopify.com", name: "Half Price", gid: "gid://shopify/Shop/400008" }
+  - { domain: "idle-shop.myshopify.com", name: "Idle Shop", gid: "gid://shopify/Shop/400009" }
+  - { domain: "just-browsing.myshopify.com", name: "Just Browsing", gid: "gid://shopify/Shop/400010" }
+  - { domain: "kinda-working.myshopify.com", name: "Kinda Working", gid: "gid://shopify/Shop/400011" }
+  - { domain: "low-traffic.myshopify.com", name: "Low Traffic", gid: "gid://shopify/Shop/400012" }
+  - { domain: "maybe-later.myshopify.com", name: "Maybe Later", gid: "gid://shopify/Shop/400013" }
+  - { domain: "not-sure-yet.myshopify.com", name: "Not Sure Yet", gid: "gid://shopify/Shop/400014" }
+  - { domain: "on-the-fence.myshopify.com", name: "On The Fence", gid: "gid://shopify/Shop/400015" }
+  - { domain: "penny-pinch.myshopify.com", name: "Penny Pinch", gid: "gid://shopify/Shop/400016" }
+  - { domain: "quiet-store.myshopify.com", name: "Quiet Store", gid: "gid://shopify/Shop/400017" }
+  - { domain: "reluctant-buyer.myshopify.com", name: "Reluctant Buyer", gid: "gid://shopify/Shop/400018" }
+  - { domain: "slow-sales.myshopify.com", name: "Slow Sales", gid: "gid://shopify/Shop/400019" }
+  - { domain: "teetering-biz.myshopify.com", name: "Teetering Biz", gid: "gid://shopify/Shop/400020" }
+  - { domain: "uncertain-future.myshopify.com", name: "Uncertain Future", gid: "gid://shopify/Shop/400021" }
+  - { domain: "vanishing-act.myshopify.com", name: "Vanishing Act", gid: "gid://shopify/Shop/400022" }
+  - { domain: "winding-down.myshopify.com", name: "Winding Down", gid: "gid://shopify/Shop/400023" }
+  - { domain: "exit-strategy.myshopify.com", name: "Exit Strategy", gid: "gid://shopify/Shop/400024" }
+  - { domain: "yesterday-news.myshopify.com", name: "Yesterday News", gid: "gid://shopify/Shop/400025" }
+  - { domain: "zero-growth.myshopify.com", name: "Zero Growth", gid: "gid://shopify/Shop/400026" }
+  - { domain: "almost-gone.myshopify.com", name: "Almost Gone", gid: "gid://shopify/Shop/400027" }
+  - { domain: "barely-there.myshopify.com", name: "Barely There", gid: "gid://shopify/Shop/400028" }
+  - { domain: "counting-days.myshopify.com", name: "Counting Days", gid: "gid://shopify/Shop/400029" }
+  - { domain: "dwindling-sales.myshopify.com", name: "Dwindling Sales", gid: "gid://shopify/Shop/400030" }
+  - { domain: "end-of-road.myshopify.com", name: "End Of Road", gid: "gid://shopify/Shop/400031" }
+  - { domain: "final-chapter.myshopify.com", name: "Final Chapter", gid: "gid://shopify/Shop/400032" }
+  - { domain: "ghost-town.myshopify.com", name: "Ghost Town", gid: "gid://shopify/Shop/400033" }
+  - { domain: "hanging-on.myshopify.com", name: "Hanging On", gid: "gid://shopify/Shop/400034" }
+  - { domain: "in-decline.myshopify.com", name: "In Decline", gid: "gid://shopify/Shop/400035" }
+  - { domain: "just-surviving.myshopify.com", name: "Just Surviving", gid: "gid://shopify/Shop/400036" }
+  - { domain: "keeping-lights.myshopify.com", name: "Keeping Lights", gid: "gid://shopify/Shop/400037" }
+  - { domain: "last-resort.myshopify.com", name: "Last Resort", gid: "gid://shopify/Shop/400038" }
+  - { domain: "minimal-effort.myshopify.com", name: "Minimal Effort", gid: "gid://shopify/Shop/400039" }
+  - { domain: "no-momentum.myshopify.com", name: "No Momentum", gid: "gid://shopify/Shop/400040" }
+
+subscriptions:
+  # 15 active
+  - { app_index: 0, shop_index: 0, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 1, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 2, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 3, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 4, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 5, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 6, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 7, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 8, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 9, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 10, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 11, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 12, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 13, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 14, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  # 15 frozen (at-risk) — various stages
+  - { app_index: 0, shop_index: 15, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 35 }
+  - { app_index: 0, shop_index: 16, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 38 }
+  - { app_index: 0, shop_index: 17, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 42 }
+  - { app_index: 0, shop_index: 18, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 45 }
+  - { app_index: 0, shop_index: 19, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 50 }
+  - { app_index: 0, shop_index: 20, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 55 }
+  - { app_index: 0, shop_index: 21, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 58 }
+  - { app_index: 0, shop_index: 22, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 62 }
+  - { app_index: 0, shop_index: 23, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 65 }
+  - { app_index: 0, shop_index: 24, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 70 }
+  - { app_index: 0, shop_index: 25, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 75 }
+  - { app_index: 0, shop_index: 26, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 78 }
+  - { app_index: 0, shop_index: 27, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 82 }
+  - { app_index: 0, shop_index: 28, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 85 }
+  - { app_index: 0, shop_index: 29, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 88 }
+  # 10 cancelled (churned)
+  - { app_index: 0, shop_index: 30, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 95 }
+  - { app_index: 0, shop_index: 31, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 100 }
+  - { app_index: 0, shop_index: 32, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 110 }
+  - { app_index: 0, shop_index: 33, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 120 }
+  - { app_index: 0, shop_index: 34, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 130 }
+  - { app_index: 0, shop_index: 35, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 140 }
+  - { app_index: 0, shop_index: 36, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 150 }
+  - { app_index: 0, shop_index: 37, plan_name: "Pro", price: "19.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 160 }
+  - { app_index: 0, shop_index: 38, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 170 }
+  - { app_index: 0, shop_index: 39, plan_name: "Basic", price: "9.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 180 }
+
+usage_charges: []
+
+events:
+  # Installs (all shops installed at various times)
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 0, days_ago: 360 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 5, days_ago: 340 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 10, days_ago: 300 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 15, days_ago: 280 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 20, days_ago: 250 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 25, days_ago: 220 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 30, days_ago: 300 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 35, days_ago: 280 }
+  # Cancellations
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 30, days_ago: 95 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 31, days_ago: 100 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 32, days_ago: 110 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 33, days_ago: 120 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 34, days_ago: 130 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 35, days_ago: 140 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 36, days_ago: 150 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 37, days_ago: 160 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 38, days_ago: 170 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 39, days_ago: 180 }
+  # Uninstalls (churned shops also uninstalled)
+  - { type: "RELATIONSHIP_UNINSTALLED", app_index: 0, shop_index: 30, days_ago: 93 }
+  - { type: "RELATIONSHIP_UNINSTALLED", app_index: 0, shop_index: 31, days_ago: 98 }
+  - { type: "RELATIONSHIP_UNINSTALLED", app_index: 0, shop_index: 32, days_ago: 108 }
+  - { type: "RELATIONSHIP_UNINSTALLED", app_index: 0, shop_index: 33, days_ago: 118 }
+  - { type: "RELATIONSHIP_UNINSTALLED", app_index: 0, shop_index: 34, days_ago: 128 }
+  - { type: "RELATIONSHIP_UNINSTALLED", app_index: 0, shop_index: 35, days_ago: 138 }
+  - { type: "RELATIONSHIP_UNINSTALLED", app_index: 0, shop_index: 36, days_ago: 148 }
+  - { type: "RELATIONSHIP_UNINSTALLED", app_index: 0, shop_index: 37, days_ago: 158 }
+  - { type: "RELATIONSHIP_UNINSTALLED", app_index: 0, shop_index: 38, days_ago: 168 }
+  - { type: "RELATIONSHIP_UNINSTALLED", app_index: 0, shop_index: 39, days_ago: 178 }
+  # Recent charges for active shops
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 0, shop_index: 0, days_ago: 5 }
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 0, shop_index: 1, days_ago: 3 }
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 0, shop_index: 2, days_ago: 7 }
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 0, shop_index: 5, days_ago: 10 }

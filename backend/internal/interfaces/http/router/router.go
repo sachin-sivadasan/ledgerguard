@@ -33,6 +33,13 @@ type Config struct {
 	APIKeyHandler                   *apikeyhandler.APIKeyHandler
 	QueueSyncHandler                *handler.QueueSyncHandler
 	AdminHandler                    *handler.AdminHandler
+	TransactionHandler              *handler.TransactionHandler
+	StoreHandler                    *handler.StoreHandler
+	EventHandler                    *handler.EventHandler
+	RiskHandler                     *handler.RiskHandler
+	OrgHandler                      *handler.OrgHandler
+	OrgAuditHandler                 *handler.OrgAuditHandler
+	OrgContextMW                    func(next http.Handler) http.Handler // Org resolution + membership check
 	GraphQLHandler                  http.Handler       // Internal chat GraphQL endpoint
 	ChatHandler                     http.HandlerFunc   // POST /api/v1/chat (SSE)
 	ChatModulesHandler              http.HandlerFunc   // GET /api/v1/chat/modules
@@ -55,7 +62,7 @@ func New(cfg Config) *chi.Mux {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:*", "https://*.ledgerguard.app", "https://ledgerguard-c7557.web.app", "https://ledgerguard-c7557.firebaseapp.com"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key", "X-Org-Id"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
 		MaxAge:           300,
@@ -196,6 +203,26 @@ func New(cfg Config) *chi.Mux {
 					r.Get("/{appID}/stores/{domain}/health", cfg.StoreHealthHandler.GetStoreHealth)
 				}
 
+				// Transaction list route
+				if cfg.TransactionHandler != nil {
+					r.Get("/{appID}/transactions", cfg.TransactionHandler.List)
+				}
+
+				// Store list route
+				if cfg.StoreHandler != nil {
+					r.Get("/{appID}/stores", cfg.StoreHandler.List)
+				}
+
+				// Event list route
+				if cfg.EventHandler != nil {
+					r.Get("/{appID}/events", cfg.EventHandler.List)
+				}
+
+				// Risk summary route
+				if cfg.RiskHandler != nil {
+					r.Get("/{appID}/risk/summary", cfg.RiskHandler.Summary)
+				}
+
 				// Insights routes
 				if cfg.InsightHandler != nil {
 					r.Get("/{appID}/insights/daily", cfg.InsightHandler.GetDailyInsight)
@@ -223,6 +250,49 @@ func New(cfg Config) *chi.Mux {
 				r.Post("/checkout", cfg.BillingHandler.CreateCheckout)
 				r.Get("/status", cfg.BillingHandler.GetStatus)
 			})
+		}
+
+		// Organization routes (requires auth)
+		if cfg.OrgHandler != nil && cfg.AuthMW != nil {
+			// Top-level org routes (no org context needed)
+			r.Route("/orgs", func(r chi.Router) {
+				r.Use(cfg.AuthMW)
+				r.Post("/", cfg.OrgHandler.CreateOrg)
+				r.Get("/", cfg.OrgHandler.ListOrgs)
+
+				// Org-scoped routes (require org context)
+				if cfg.OrgContextMW != nil {
+					r.Route("/{orgId}", func(r chi.Router) {
+						r.Use(cfg.OrgContextMW)
+						r.Get("/", cfg.OrgHandler.GetOrg)
+						r.Put("/", cfg.OrgHandler.UpdateOrg)
+						r.Delete("/", cfg.OrgHandler.DeleteOrg)
+
+						// Members
+						r.Get("/members", cfg.OrgHandler.ListMembers)
+						r.Delete("/members/{userId}", cfg.OrgHandler.RemoveMember)
+						r.Put("/members/{userId}/role", cfg.OrgHandler.ChangeRole)
+						r.Put("/members/{userId}/suspend", cfg.OrgHandler.SuspendMember)
+						r.Put("/members/{userId}/unsuspend", cfg.OrgHandler.UnsuspendMember)
+						r.Put("/members/{userId}/notifications", cfg.OrgHandler.UpdateNotificationPrefs)
+
+						// Invitations
+						r.Post("/invitations", cfg.OrgHandler.InviteMember)
+						r.Delete("/invitations/{id}", cfg.OrgHandler.RevokeInvitation)
+
+						// Webhooks
+						r.Put("/webhooks", cfg.OrgHandler.ConfigureWebhook)
+
+						// Audit log
+						if cfg.OrgAuditHandler != nil {
+							r.Get("/audit-log", cfg.OrgAuditHandler.ListAuditLog)
+						}
+					})
+				}
+			})
+
+			// Accept invitation (outside org scope — token-based)
+			r.With(cfg.AuthMW).Post("/invitations/{token}/accept", cfg.OrgHandler.AcceptInvitation)
 		}
 
 		// Tiers route (public info)

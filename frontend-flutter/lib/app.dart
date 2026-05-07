@@ -14,8 +14,11 @@ import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/earnings/earnings_screen.dart';
 import 'screens/insights/insights_screen.dart';
 import 'screens/risk/risk_screen.dart';
+import 'screens/settings/connect_shopify_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/stores/store_detail_screen.dart';
+import 'screens/team/audit_log_screen.dart';
+import 'screens/team/team_screen.dart';
 import 'screens/stores/store_list_screen.dart';
 import 'screens/subscriptions/subscription_detail_screen.dart';
 import 'screens/subscriptions/subscription_list_screen.dart';
@@ -146,7 +149,21 @@ class _AppState extends State<App> {
             StatefulShellBranch(routes: [
               GoRoute(
                   path: '/settings',
-                  builder: (c, s) => const SettingsScreen()),
+                  builder: (c, s) => const SettingsScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'connect-shopify',
+                      builder: (c, s) => const ConnectShopifyScreen(),
+                    ),
+                    GoRoute(
+                      path: 'team',
+                      builder: (c, s) => const TeamScreen(),
+                    ),
+                    GoRoute(
+                      path: 'audit-log',
+                      builder: (c, s) => const AuditLogScreen(),
+                    ),
+                  ]),
             ]),
           ],
         ),

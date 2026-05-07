@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../mock_data/mock_apps.dart';
 import '../../models/event_model.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/events_provider.dart';
@@ -15,12 +14,44 @@ import '../../widgets/lg_metric_card.dart';
 import '../../widgets/lg_metric_grid.dart';
 import '../../widgets/lg_page.dart';
 
-class EventsScreen extends StatelessWidget {
+class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
 
   @override
+  State<EventsScreen> createState() => _EventsScreenState();
+}
+
+class _EventsScreenState extends State<EventsScreen> {
+  bool _wasDemoMode = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
+  }
+
+  void _maybeLoadData() {
+    final apps = context.read<AppsProvider>();
+    final provider = context.read<EventsProvider>();
+    if (!apps.demoMode && apps.apps.isNotEmpty && !provider.isLoading) {
+      provider.loadEvents(apps.apps.first.id);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final hasApps = context.watch<AppsProvider>().apps.isNotEmpty;
+    final appsProvider = context.watch<AppsProvider>();
+    final hasApps = appsProvider.apps.isNotEmpty;
+
+    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
+    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
+      _wasDemoMode = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<EventsProvider>().loadEvents(appsProvider.apps.first.id);
+      });
+    }
+    if (appsProvider.demoMode) _wasDemoMode = true;
+
     if (!hasApps) {
       return LgPage(
         title: 'Events',
@@ -277,15 +308,16 @@ class _AppFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final apps = context.watch<AppsProvider>().apps;
     return PopupMenuButton<String?>(
       onSelected: onChanged,
       itemBuilder: (ctx) => [
         const PopupMenuItem(value: null, child: Text('All Apps')),
-        ...mockApps.map((app) => PopupMenuItem(value: app.id, child: Text(app.name))),
+        ...apps.map((app) => PopupMenuItem(value: app.id, child: Text(app.name))),
       ],
       child: Chip(
         label: Text(value != null
-            ? mockApps.firstWhere((a) => a.id == value, orElse: () => mockApps.first).name
+            ? apps.firstWhere((a) => a.id == value, orElse: () => apps.first).name
             : 'App'),
         deleteIcon: value != null ? const Icon(Icons.close, size: 14) : null,
         onDeleted: value != null ? () => onChanged(null) : null,

@@ -35,6 +35,7 @@ func (r *PostgresTransactionRepository) Upsert(ctx context.Context, tx *entity.T
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
 		ON CONFLICT (shopify_gid) DO UPDATE SET
+			app_id = EXCLUDED.app_id,
 			shop_name = EXCLUDED.shop_name,
 			charge_type = EXCLUDED.charge_type,
 			gross_amount_cents = EXCLUDED.gross_amount_cents,
@@ -102,6 +103,7 @@ func (r *PostgresTransactionRepository) UpsertBatch(ctx context.Context, txs []*
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
 		ON CONFLICT (shopify_gid) DO UPDATE SET
+			app_id = EXCLUDED.app_id,
 			shop_name = EXCLUDED.shop_name,
 			charge_type = EXCLUDED.charge_type,
 			gross_amount_cents = EXCLUDED.gross_amount_cents,

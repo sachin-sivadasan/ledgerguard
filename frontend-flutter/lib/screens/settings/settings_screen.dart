@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../providers/analytics_provider.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/organization_provider.dart';
+import '../../providers/dashboard_provider.dart';
+import '../../providers/earnings_provider.dart';
+import '../../providers/events_provider.dart';
+import '../../providers/insights_provider.dart';
+import '../../providers/risk_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/store_provider.dart';
+import '../../providers/subscription_provider.dart';
+import '../../providers/transaction_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
@@ -30,7 +41,81 @@ class SettingsScreen extends StatelessWidget {
               title: const Text('Demo Mode'),
               subtitle: const Text('Show sample data to preview all features'),
               value: appsProvider.demoMode,
-              onChanged: (v) => appsProvider.setDemoMode(v),
+              onChanged: (v) async {
+                // Set demo mode on all providers
+                appsProvider.setDemoMode(v);
+                context.read<DashboardProvider>().setDemoMode(v);
+                context.read<SubscriptionProvider>().setDemoMode(v);
+                context.read<StoreProvider>().setDemoMode(v);
+                context.read<TransactionProvider>().setDemoMode(v);
+                context.read<EventsProvider>().setDemoMode(v);
+                context.read<RiskProvider>().setDemoMode(v);
+                context.read<AnalyticsProvider>().setDemoMode(v);
+                context.read<EarningsProvider>().setDemoMode(v);
+                context.read<InsightsProvider>().setDemoMode(v);
+
+                // When switching to live mode, load data
+                if (!v) {
+                  await appsProvider.loadApps();
+                  final apps = appsProvider.apps;
+                  debugPrint('[Settings] loadApps done – ${apps.length} apps, error=${appsProvider.error}');
+                  if (apps.isNotEmpty) {
+                    final appId = apps.first.id;
+                    debugPrint('[Settings] Loading all providers for appId=$appId');
+                    if (!context.mounted) return;
+                    context.read<DashboardProvider>().loadMetrics(appId);
+                    context.read<SubscriptionProvider>().loadSubscriptions(appId);
+                    context.read<StoreProvider>().loadStores(appId);
+                    context.read<TransactionProvider>().loadTransactions(appId);
+                    context.read<EventsProvider>().loadEvents(appId);
+                    context.read<RiskProvider>().loadRiskSummary(appId);
+                    context.read<AnalyticsProvider>().loadAnalytics(appId);
+                    context.read<EarningsProvider>().loadEarnings(appId);
+                    context.read<InsightsProvider>().loadInsights(appId);
+                  }
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: LgSpacing.s600),
+
+          // Organization / Team
+          LgCard(
+            title: 'Organization',
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.group_outlined),
+                  title: const Text('Team Members'),
+                  subtitle: Text(
+                    context.watch<OrganizationProvider>().currentOrg != null
+                        ? '${context.watch<OrganizationProvider>().members.length} members'
+                        : 'Manage your team',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.go('/settings/team'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.history_outlined),
+                  title: const Text('Audit Log'),
+                  subtitle: const Text('View organization activity'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.go('/settings/audit-log'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: LgSpacing.s600),
+
+          // Shopify Integration
+          LgCard(
+            title: 'Shopify Integration',
+            child: ListTile(
+              leading: const Icon(Icons.link),
+              title: const Text('Connect Partner Account'),
+              subtitle: const Text('Link your Shopify Partner API token'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/settings/connect-shopify'),
             ),
           ),
           const SizedBox(height: LgSpacing.s600),

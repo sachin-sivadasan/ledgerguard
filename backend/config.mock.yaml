@@ -1,0 +1,38 @@
+# LedgerGuard Mock Development Configuration
+# Uses mock Shopify Partner API instead of real Shopify
+
+server:
+  port: "8080"
+
+database:
+  host: "localhost"
+  port: "5432"
+  user: "postgres"
+  password: "password"
+  name: "ledgerguard"
+  sslmode: "disable"
+  migrations_path: "migrations"
+
+firebase:
+  credentials_file: "firebase-credentials.json"
+
+shopify:
+  partner_api_url: "http://localhost:4000"
+  rate_limit_rps: 100
+  client_id: ""
+  client_secret: ""
+  redirect_uri: "http://localhost:8080/api/v1/integrations/shopify/callback"
+  scopes: "read_analytics"
+
+encryption:
+  master_key: "369825167d395803a13db7eb92761796"
+
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+
+queue:
+  enabled: true
+  num_workers: 3
+  full_sync_workers: 1

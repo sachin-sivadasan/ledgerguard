@@ -1,0 +1,174 @@
+persona:
+  name: "Growing Developer"
+  description: "2 apps, 80 stores, moderate revenue, some risk"
+
+apps:
+  - id: "gid://partners/App/2001"
+    name: "InventorySync Pro"
+  - id: "gid://partners/App/2002"
+    name: "ShipFlow Express"
+
+shops:
+  - { domain: "acme-store.myshopify.com", name: "Acme Store", gid: "gid://shopify/Shop/200001" }
+  - { domain: "beta-fashion.myshopify.com", name: "Beta Fashion", gid: "gid://shopify/Shop/200002" }
+  - { domain: "coast-living.myshopify.com", name: "Coast Living", gid: "gid://shopify/Shop/200003" }
+  - { domain: "delta-electronics.myshopify.com", name: "Delta Electronics", gid: "gid://shopify/Shop/200004" }
+  - { domain: "evergreen-market.myshopify.com", name: "Evergreen Market", gid: "gid://shopify/Shop/200005" }
+  - { domain: "fusion-wear.myshopify.com", name: "Fusion Wear", gid: "gid://shopify/Shop/200006" }
+  - { domain: "global-crafts.myshopify.com", name: "Global Crafts", gid: "gid://shopify/Shop/200007" }
+  - { domain: "haven-home.myshopify.com", name: "Haven Home", gid: "gid://shopify/Shop/200008" }
+  - { domain: "indie-press.myshopify.com", name: "Indie Press", gid: "gid://shopify/Shop/200009" }
+  - { domain: "jade-jewelry.myshopify.com", name: "Jade Jewelry", gid: "gid://shopify/Shop/200010" }
+  - { domain: "kite-sports.myshopify.com", name: "Kite Sports", gid: "gid://shopify/Shop/200011" }
+  - { domain: "luma-beauty.myshopify.com", name: "Luma Beauty", gid: "gid://shopify/Shop/200012" }
+  - { domain: "metro-pets.myshopify.com", name: "Metro Pets", gid: "gid://shopify/Shop/200013" }
+  - { domain: "nova-tech.myshopify.com", name: "Nova Tech", gid: "gid://shopify/Shop/200014" }
+  - { domain: "olive-kitchen.myshopify.com", name: "Olive Kitchen", gid: "gid://shopify/Shop/200015" }
+  - { domain: "prime-fitness.myshopify.com", name: "Prime Fitness", gid: "gid://shopify/Shop/200016" }
+  - { domain: "quilt-cottage.myshopify.com", name: "Quilt Cottage", gid: "gid://shopify/Shop/200017" }
+  - { domain: "rise-coffee.myshopify.com", name: "Rise Coffee", gid: "gid://shopify/Shop/200018" }
+  - { domain: "solstice-gear.myshopify.com", name: "Solstice Gear", gid: "gid://shopify/Shop/200019" }
+  - { domain: "tidal-surf.myshopify.com", name: "Tidal Surf", gid: "gid://shopify/Shop/200020" }
+  - { domain: "urban-bloom.myshopify.com", name: "Urban Bloom", gid: "gid://shopify/Shop/200021" }
+  - { domain: "valor-fitness.myshopify.com", name: "Valor Fitness", gid: "gid://shopify/Shop/200022" }
+  - { domain: "willow-home.myshopify.com", name: "Willow Home", gid: "gid://shopify/Shop/200023" }
+  - { domain: "xenon-tech.myshopify.com", name: "Xenon Tech", gid: "gid://shopify/Shop/200024" }
+  - { domain: "yoga-bliss.myshopify.com", name: "Yoga Bliss", gid: "gid://shopify/Shop/200025" }
+  - { domain: "zen-garden.myshopify.com", name: "Zen Garden", gid: "gid://shopify/Shop/200026" }
+  - { domain: "alpine-gear.myshopify.com", name: "Alpine Gear", gid: "gid://shopify/Shop/200027" }
+  - { domain: "bright-toys.myshopify.com", name: "Bright Toys", gid: "gid://shopify/Shop/200028" }
+  - { domain: "coastal-art.myshopify.com", name: "Coastal Art", gid: "gid://shopify/Shop/200029" }
+  - { domain: "dapper-threads.myshopify.com", name: "Dapper Threads", gid: "gid://shopify/Shop/200030" }
+  - { domain: "echo-music.myshopify.com", name: "Echo Music", gid: "gid://shopify/Shop/200031" }
+  - { domain: "flora-garden.myshopify.com", name: "Flora Garden", gid: "gid://shopify/Shop/200032" }
+  - { domain: "glow-skincare.myshopify.com", name: "Glow Skincare", gid: "gid://shopify/Shop/200033" }
+  - { domain: "harbor-fish.myshopify.com", name: "Harbor Fish", gid: "gid://shopify/Shop/200034" }
+  - { domain: "iron-forge.myshopify.com", name: "Iron Forge", gid: "gid://shopify/Shop/200035" }
+  - { domain: "jolly-bakes.myshopify.com", name: "Jolly Bakes", gid: "gid://shopify/Shop/200036" }
+  - { domain: "keen-outdoor.myshopify.com", name: "Keen Outdoor", gid: "gid://shopify/Shop/200037" }
+  - { domain: "lark-vintage.myshopify.com", name: "Lark Vintage", gid: "gid://shopify/Shop/200038" }
+  - { domain: "mint-fresh.myshopify.com", name: "Mint Fresh", gid: "gid://shopify/Shop/200039" }
+  - { domain: "nest-decor.myshopify.com", name: "Nest Decor", gid: "gid://shopify/Shop/200040" }
+  - { domain: "opal-gems.myshopify.com", name: "Opal Gems", gid: "gid://shopify/Shop/200041" }
+  - { domain: "peak-climb.myshopify.com", name: "Peak Climb", gid: "gid://shopify/Shop/200042" }
+  - { domain: "quest-games.myshopify.com", name: "Quest Games", gid: "gid://shopify/Shop/200043" }
+  - { domain: "ruby-wines.myshopify.com", name: "Ruby Wines", gid: "gid://shopify/Shop/200044" }
+  - { domain: "sage-herbs.myshopify.com", name: "Sage Herbs", gid: "gid://shopify/Shop/200045" }
+  - { domain: "terra-plants.myshopify.com", name: "Terra Plants", gid: "gid://shopify/Shop/200046" }
+  - { domain: "ultra-tech.myshopify.com", name: "Ultra Tech", gid: "gid://shopify/Shop/200047" }
+  - { domain: "vibe-audio.myshopify.com", name: "Vibe Audio", gid: "gid://shopify/Shop/200048" }
+  - { domain: "wave-surf.myshopify.com", name: "Wave Surf", gid: "gid://shopify/Shop/200049" }
+  - { domain: "xylo-music.myshopify.com", name: "Xylo Music", gid: "gid://shopify/Shop/200050" }
+  - { domain: "yonder-travel.myshopify.com", name: "Yonder Travel", gid: "gid://shopify/Shop/200051" }
+  - { domain: "zephyr-fashion.myshopify.com", name: "Zephyr Fashion", gid: "gid://shopify/Shop/200052" }
+  - { domain: "aurora-gifts.myshopify.com", name: "Aurora Gifts", gid: "gid://shopify/Shop/200053" }
+  - { domain: "blaze-sports.myshopify.com", name: "Blaze Sports", gid: "gid://shopify/Shop/200054" }
+  - { domain: "crest-outdoor.myshopify.com", name: "Crest Outdoor", gid: "gid://shopify/Shop/200055" }
+  - { domain: "dawn-bakery.myshopify.com", name: "Dawn Bakery", gid: "gid://shopify/Shop/200056" }
+  - { domain: "elm-furniture.myshopify.com", name: "Elm Furniture", gid: "gid://shopify/Shop/200057" }
+  - { domain: "fern-garden.myshopify.com", name: "Fern Garden", gid: "gid://shopify/Shop/200058" }
+  - { domain: "gold-jewelry.myshopify.com", name: "Gold Jewelry", gid: "gid://shopify/Shop/200059" }
+  - { domain: "haze-candles.myshopify.com", name: "Haze Candles", gid: "gid://shopify/Shop/200060" }
+  - { domain: "ivory-home.myshopify.com", name: "Ivory Home", gid: "gid://shopify/Shop/200061" }
+  - { domain: "jungle-pets.myshopify.com", name: "Jungle Pets", gid: "gid://shopify/Shop/200062" }
+  - { domain: "karma-yoga.myshopify.com", name: "Karma Yoga", gid: "gid://shopify/Shop/200063" }
+  - { domain: "lunar-tech.myshopify.com", name: "Lunar Tech", gid: "gid://shopify/Shop/200064" }
+  - { domain: "maple-syrup.myshopify.com", name: "Maple Syrup", gid: "gid://shopify/Shop/200065" }
+  - { domain: "north-winter.myshopify.com", name: "North Winter", gid: "gid://shopify/Shop/200066" }
+  - { domain: "ocean-dive.myshopify.com", name: "Ocean Dive", gid: "gid://shopify/Shop/200067" }
+  - { domain: "pine-lodge.myshopify.com", name: "Pine Lodge", gid: "gid://shopify/Shop/200068" }
+  - { domain: "quartz-gems.myshopify.com", name: "Quartz Gems", gid: "gid://shopify/Shop/200069" }
+  - { domain: "reef-dive.myshopify.com", name: "Reef Dive", gid: "gid://shopify/Shop/200070" }
+  - { domain: "snow-board.myshopify.com", name: "Snow Board", gid: "gid://shopify/Shop/200071" }
+  - { domain: "timber-craft.myshopify.com", name: "Timber Craft", gid: "gid://shopify/Shop/200072" }
+  - { domain: "umbra-fashion.myshopify.com", name: "Umbra Fashion", gid: "gid://shopify/Shop/200073" }
+  - { domain: "vine-wines.myshopify.com", name: "Vine Wines", gid: "gid://shopify/Shop/200074" }
+  - { domain: "wren-birds.myshopify.com", name: "Wren Birds", gid: "gid://shopify/Shop/200075" }
+  - { domain: "xlr-audio.myshopify.com", name: "XLR Audio", gid: "gid://shopify/Shop/200076" }
+  - { domain: "yarrow-herbs.myshopify.com", name: "Yarrow Herbs", gid: "gid://shopify/Shop/200077" }
+  - { domain: "zigzag-toys.myshopify.com", name: "ZigZag Toys", gid: "gid://shopify/Shop/200078" }
+  - { domain: "apex-climb.myshopify.com", name: "Apex Climb", gid: "gid://shopify/Shop/200079" }
+  - { domain: "birch-home.myshopify.com", name: "Birch Home", gid: "gid://shopify/Shop/200080" }
+
+subscriptions:
+  # App 1 (InventorySync Pro) - 50 shops, mostly active
+  - { app_index: 0, shop_index: 0, plan_name: "Enterprise", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 1, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 2, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 3, plan_name: "Basic", price: "14.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 4, plan_name: "Enterprise", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 5, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 6, plan_name: "Basic", price: "14.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 7, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 8, plan_name: "Enterprise", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 9, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 10, plan_name: "Basic", price: "14.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 11, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 12, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 13, plan_name: "Basic", price: "14.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 14, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 15, plan_name: "Enterprise", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 16, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 17, plan_name: "Basic", price: "14.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 18, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 19, plan_name: "Enterprise", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 20, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 21, plan_name: "Basic", price: "14.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 22, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 23, plan_name: "Enterprise", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 24, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  # Frozen subscriptions (at-risk)
+  - { app_index: 0, shop_index: 25, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 45 }
+  - { app_index: 0, shop_index: 26, plan_name: "Basic", price: "14.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 55 }
+  - { app_index: 0, shop_index: 27, plan_name: "Enterprise", price: "49.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 40 }
+  # Cancelled (churned)
+  - { app_index: 0, shop_index: 28, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 95 }
+
+  # App 2 (ShipFlow Express) - 30 shops
+  - { app_index: 1, shop_index: 30, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 31, plan_name: "Growth", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 32, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 33, plan_name: "Growth", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 34, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 35, plan_name: "Growth", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 36, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 37, plan_name: "Growth", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 38, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 39, plan_name: "Growth", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 40, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 41, plan_name: "Growth", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 42, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 43, plan_name: "Growth", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 44, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 45, plan_name: "Growth", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 46, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 47, plan_name: "Growth", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 48, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 49, plan_name: "Growth", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+
+usage_charges:
+  - { app_index: 1, shop_index: 30, amount_range: [5.00, 50.00], frequency: "weekly" }
+  - { app_index: 1, shop_index: 31, amount_range: [10.00, 80.00], frequency: "weekly" }
+  - { app_index: 1, shop_index: 32, amount_range: [3.00, 25.00], frequency: "weekly" }
+
+events:
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 0, days_ago: 360 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 1, days_ago: 340 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 2, days_ago: 320 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 3, days_ago: 300 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 4, days_ago: 280 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 5, days_ago: 250 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 10, days_ago: 200 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 15, days_ago: 160 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 20, days_ago: 120 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 25, days_ago: 90 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 1, shop_index: 30, days_ago: 240 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 1, shop_index: 35, days_ago: 180 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 1, shop_index: 40, days_ago: 120 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 1, shop_index: 45, days_ago: 60 }
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 0, shop_index: 0, days_ago: 5 }
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 0, shop_index: 1, days_ago: 3 }
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 0, shop_index: 2, days_ago: 7 }
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 0, shop_index: 5, days_ago: 2 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 28, days_ago: 95 }
+  - { type: "RELATIONSHIP_UNINSTALLED", app_index: 0, shop_index: 28, days_ago: 93 }

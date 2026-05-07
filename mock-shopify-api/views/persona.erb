@@ -1,0 +1,276 @@
+<h1><%= @persona['name'] %> <span style="color:#999; font-size:16px;">(org: <%= @org_id %>)</span></h1>
+<p style="margin-bottom:16px; color:#666;"><%= @persona['description'] %></p>
+
+<!-- Summary cards -->
+<div class="cards">
+  <div class="card">
+    <div class="label">Apps</div>
+    <div class="stat"><%= @stats[:apps] %></div>
+  </div>
+  <div class="card">
+    <div class="label">Shops</div>
+    <div class="stat"><%= @stats[:shops] %></div>
+  </div>
+  <div class="card">
+    <div class="label">Active Subs</div>
+    <div class="stat" style="color:#28a745;"><%= @stats[:active] %></div>
+  </div>
+  <div class="card">
+    <div class="label">Frozen (At Risk)</div>
+    <div class="stat" style="color:#ffc107;"><%= @stats[:frozen] %></div>
+  </div>
+  <div class="card">
+    <div class="label">Cancelled</div>
+    <div class="stat" style="color:#dc3545;"><%= @stats[:cancelled] %></div>
+  </div>
+</div>
+
+<!-- Apps -->
+<h2>Apps</h2>
+<table>
+  <thead><tr><th>#</th><th>ID</th><th>Name</th></tr></thead>
+  <tbody>
+    <% @apps.each_with_index do |app, i| %>
+      <tr>
+        <td><%= i %></td>
+        <td><code><%= app['id'] %></code></td>
+        <td><%= app['name'] %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<!-- Shops -->
+<%
+  # Build shop_index → app names lookup from subscriptions
+  shop_apps = {}
+  @subscriptions.each do |sub|
+    app = @apps[sub['app_index']] rescue nil
+    next unless app
+    si = sub['shop_index']
+    shop_apps[si] ||= []
+    shop_apps[si] << app['name'] unless shop_apps[si].include?(app['name'])
+  end
+  # Collect unique app names for filter dropdown
+  all_app_names = @apps.map { |a| a['name'] }
+%>
+<h2>Shops (<%= @shops.length %>)</h2>
+<div style="margin-bottom:12px;">
+  <label style="font-weight:600; font-size:13px; margin-right:8px;">Filter by app:</label>
+  <select id="shop-app-filter" onchange="filterShops()" style="padding:4px 8px; font-size:14px; border:1px solid #ccc; border-radius:4px;">
+    <option value="">All apps</option>
+    <% all_app_names.each do |name| %>
+      <option value="<%= name %>"><%= name %></option>
+    <% end %>
+  </select>
+</div>
+<table id="shops-table">
+  <thead><tr><th>#</th><th>Domain</th><th>Name</th><th>App(s)</th></tr></thead>
+  <tbody>
+    <% @shops.first(100).each_with_index do |shop, i| %>
+      <% app_names = (shop_apps[i] || []).join(', ') %>
+      <tr data-apps="<%= app_names %>">
+        <td><%= i %></td>
+        <td><code><%= shop['domain'] %></code></td>
+        <td><%= shop['name'] %></td>
+        <td>
+          <% if shop_apps[i] && !shop_apps[i].empty? %>
+            <% shop_apps[i].each do |an| %>
+              <span class="badge badge-active" style="margin-right:4px;"><%= an %></span>
+            <% end %>
+          <% else %>
+            <span style="color:#999;">—</span>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+    <% if @shops.length > 100 %>
+      <tr><td colspan="4" style="text-align:center; color:#999;">... and <%= @shops.length - 100 %> more shops</td></tr>
+    <% end %>
+  </tbody>
+</table>
+<script>
+  function filterShops() {
+    var filter = document.getElementById('shop-app-filter').value;
+    var rows = document.querySelectorAll('#shops-table tbody tr[data-apps]');
+    rows.forEach(function(row) {
+      if (!filter || row.getAttribute('data-apps').indexOf(filter) !== -1) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+</script>
+
+<!-- Add Shop Form -->
+<div class="panel">
+  <h3>Add Shop</h3>
+  <form action="/admin/personas/<%= @org_id %>/shops" method="post">
+    <div class="form-row">
+      <div class="form-group">
+        <label>App</label>
+        <select name="app_index" required>
+          <% @apps.each_with_index do |app, i| %>
+            <option value="<%= i %>"><%= i %>: <%= app['name'] %></option>
+          <% end %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Domain</label>
+        <input type="text" name="domain" placeholder="my-store.myshopify.com" required>
+      </div>
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" name="name" placeholder="My Store" required>
+      </div>
+      <div class="form-group">
+        <label>Plan</label>
+        <input type="text" name="plan_name" placeholder="Pro" value="Pro" required>
+      </div>
+      <div class="form-group">
+        <label>Price</label>
+        <input type="text" name="price" placeholder="29.99" value="29.99" required>
+      </div>
+      <div class="form-group" style="flex:0; align-self:flex-end;">
+        <button type="submit" class="btn btn-primary">Add</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Subscriptions -->
+<h2>Subscriptions (<%= @subscriptions.length %>)</h2>
+<table>
+  <thead>
+    <tr>
+      <th>#</th><th>App</th><th>Shop</th><th>Plan</th><th>Price</th><th>Status</th><th>Last Charge</th><th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @subscriptions.each_with_index do |sub, idx| %>
+      <% app = @apps[sub['app_index']] rescue nil %>
+      <% shop = @shops[sub['shop_index']] rescue nil %>
+      <tr>
+        <td><%= idx %></td>
+        <td><%= app ? app['name'] : "App #{sub['app_index']}" %></td>
+        <td class="truncate"><%= shop ? shop['domain'] : "Shop #{sub['shop_index']}" %></td>
+        <td><%= sub['plan_name'] %></td>
+        <td>$<%= sub['price'] %></td>
+        <td>
+          <span class="badge badge-<%= sub['status'] %>"><%= sub['status'] %></span>
+        </td>
+        <td><%= sub['last_charge_days_ago'] ? "#{sub['last_charge_days_ago']}d ago" : '-' %></td>
+        <td>
+          <form action="/admin/personas/<%= @org_id %>/subscriptions/<%= idx %>/status" method="post" class="inline">
+            <select name="status" style="font-size:12px; padding:2px;">
+              <option value="active">active</option>
+              <option value="frozen">frozen</option>
+              <option value="cancelled">cancelled</option>
+            </select>
+            <input type="number" name="last_charge_days_ago" placeholder="days" style="width:60px; font-size:12px; padding:2px;">
+            <button type="submit" class="btn btn-sm btn-primary">Set</button>
+          </form>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<!-- Add Subscription Form -->
+<div class="panel">
+  <h3>Add Subscription</h3>
+  <form action="/admin/personas/<%= @org_id %>/subscriptions" method="post">
+    <div class="form-row">
+      <div class="form-group">
+        <label>App Index</label>
+        <select name="app_index">
+          <% @apps.each_with_index do |app, i| %>
+            <option value="<%= i %>"><%= i %>: <%= app['name'] %></option>
+          <% end %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Shop Index</label>
+        <input type="number" name="shop_index" value="0" min="0" max="<%= @shops.length - 1 %>" required>
+      </div>
+      <div class="form-group">
+        <label>Plan Name</label>
+        <input type="text" name="plan_name" placeholder="Pro" required>
+      </div>
+      <div class="form-group">
+        <label>Price</label>
+        <input type="text" name="price" placeholder="29.99" required>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status">
+          <option value="active">active</option>
+          <option value="frozen">frozen</option>
+          <option value="cancelled">cancelled</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:0; align-self:flex-end;">
+        <button type="submit" class="btn btn-primary">Add</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Add Event Form -->
+<div class="panel">
+  <h3>Add Event</h3>
+  <form action="/admin/personas/<%= @org_id %>/events" method="post">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Type</label>
+        <select name="type">
+          <option value="RELATIONSHIP_INSTALLED">RELATIONSHIP_INSTALLED</option>
+          <option value="RELATIONSHIP_UNINSTALLED">RELATIONSHIP_UNINSTALLED</option>
+          <option value="SUBSCRIPTION_CHARGE_ACCEPTED">SUBSCRIPTION_CHARGE_ACCEPTED</option>
+          <option value="SUBSCRIPTION_CHARGE_CANCELED">SUBSCRIPTION_CHARGE_CANCELED</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>App Index</label>
+        <select name="app_index">
+          <% @apps.each_with_index do |app, i| %>
+            <option value="<%= i %>"><%= i %>: <%= app['name'] %></option>
+          <% end %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Shop Index</label>
+        <input type="number" name="shop_index" value="0" min="0" required>
+      </div>
+      <div class="form-group">
+        <label>Days Ago</label>
+        <input type="number" name="days_ago" value="1" min="0" required>
+      </div>
+      <div class="form-group" style="flex:0; align-self:flex-end;">
+        <button type="submit" class="btn btn-primary">Add</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Recent Events -->
+<h2>Events (<%= @events.length %>)</h2>
+<table>
+  <thead><tr><th>Type</th><th>App</th><th>Shop</th><th>Days Ago</th></tr></thead>
+  <tbody>
+    <% @events.sort_by { |e| e['days_ago'] }.first(30).each do |evt| %>
+      <% app = @apps[evt['app_index']] rescue nil %>
+      <% shop = @shops[evt['shop_index']] rescue nil %>
+      <tr>
+        <td><code><%= evt['type'] %></code></td>
+        <td><%= app ? app['name'] : "App #{evt['app_index']}" %></td>
+        <td class="truncate"><%= shop ? shop['domain'] : "Shop #{evt['shop_index']}" %></td>
+        <td><%= evt['days_ago'] %></td>
+      </tr>
+    <% end %>
+    <% if @events.length > 30 %>
+      <tr><td colspan="4" style="text-align:center; color:#999;">... and <%= @events.length - 30 %> more events</td></tr>
+    <% end %>
+  </tbody>
+</table>

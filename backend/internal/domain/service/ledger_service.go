@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log"
 	"sort"
 	"time"
 
@@ -66,11 +67,22 @@ func (s *LedgerService) RebuildFromTransactions(ctx context.Context, appID uuid.
 		return nil, err
 	}
 
+	log.Printf("LedgerService: found %d transactions for app %s (from %s to %s)", len(transactions), appID, from.Format("2006-01-02"), now.Format("2006-01-02"))
+
+	// Count by charge type for debugging
+	typeCounts := map[string]int{}
+	for _, tx := range transactions {
+		typeCounts[tx.ChargeType.String()]++
+	}
+	log.Printf("LedgerService: charge type breakdown: %v", typeCounts)
+
 	// Group transactions by domain (store)
 	byDomain := s.groupTransactionsByDomain(transactions)
+	log.Printf("LedgerService: grouped into %d unique domains", len(byDomain))
 
 	// Rebuild subscriptions from transactions
 	subscriptions := s.rebuildSubscriptions(appID, byDomain, now)
+	log.Printf("LedgerService: rebuilt %d subscriptions", len(subscriptions))
 
 	// Delete existing subscriptions and insert rebuilt ones
 	if err := s.subRepo.DeleteByAppID(ctx, appID); err != nil {

@@ -5,6 +5,14 @@ class MrrSnapshot {
   const MrrSnapshot({required this.date, required this.mrrCents});
 
   double get mrrDollars => mrrCents / 100;
+
+  factory MrrSnapshot.fromJson(Map<String, dynamic> json) {
+    return MrrSnapshot(
+      date: DateTime.parse(
+          json['date'] as String? ?? DateTime.now().toIso8601String()),
+      mrrCents: json['mrr_cents'] as int? ?? 0,
+    );
+  }
 }
 
 class RevenueMix {
@@ -25,6 +33,14 @@ class RevenueMix {
       totalCents > 0 ? usageCents / totalCents * 100 : 0;
   double get oneTimePct =>
       totalCents > 0 ? oneTimeCents / totalCents * 100 : 0;
+
+  factory RevenueMix.fromJson(Map<String, dynamic> json) {
+    return RevenueMix(
+      recurringCents: json['recurring_cents'] as int? ?? 0,
+      usageCents: json['usage_cents'] as int? ?? 0,
+      oneTimeCents: json['one_time_cents'] as int? ?? 0,
+    );
+  }
 }
 
 class RiskDistribution {
@@ -41,6 +57,15 @@ class RiskDistribution {
   });
 
   int get total => safe + oneCycle + twoCycle + churned;
+
+  factory RiskDistribution.fromJson(Map<String, dynamic> json) {
+    return RiskDistribution(
+      safe: json['safe'] as int? ?? 0,
+      oneCycle: json['one_cycle'] as int? ?? 0,
+      twoCycle: json['two_cycle'] as int? ?? 0,
+      churned: json['churned'] as int? ?? 0,
+    );
+  }
 }
 
 class MrrMovement {

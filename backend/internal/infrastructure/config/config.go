@@ -73,11 +73,12 @@ type FirebaseConfig struct {
 }
 
 type ShopifyConfig struct {
-	ClientID     string  `yaml:"client_id"`
-	ClientSecret string  `yaml:"client_secret"`
-	RedirectURI  string  `yaml:"redirect_uri"`
-	Scopes       string  `yaml:"scopes"`
-	RateLimitRPS float64 `yaml:"rate_limit_rps"` // Requests per second for Partner API (default: 3)
+	ClientID      string  `yaml:"client_id"`
+	ClientSecret  string  `yaml:"client_secret"`
+	RedirectURI   string  `yaml:"redirect_uri"`
+	Scopes        string  `yaml:"scopes"`
+	RateLimitRPS  float64 `yaml:"rate_limit_rps"`  // Requests per second for Partner API (default: 3)
+	PartnerAPIURL string  `yaml:"partner_api_url"` // Override base URL (for mock server)
 }
 
 type EncryptionConfig struct {
@@ -196,6 +197,9 @@ func applyEnvOverrides(cfg *Config) {
 		if rps, err := strconv.ParseFloat(v, 64); err == nil && rps > 0 {
 			cfg.Shopify.RateLimitRPS = rps
 		}
+	}
+	if v := os.Getenv("SHOPIFY_PARTNER_API_URL"); v != "" {
+		cfg.Shopify.PartnerAPIURL = v
 	}
 
 	// Encryption

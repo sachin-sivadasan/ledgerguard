@@ -1647,3 +1647,51 @@
 - Commit: `9b1aa89` (included in squash)
 
 ---
+
+## Prompt: Mock Shopify Partner API Server + Admin UI + Webhook Tester
+
+**Date:** 2026-05-07
+
+**Original Prompt:** Implement the following plan: Mock Shopify Partner API Server + Admin UI + Webhook Tester
+
+**Improved Prompt:** Build a Ruby/Sinatra mock server at `mock-shopify-api/` that serves Shopify Partner API GraphQL responses based on 4 YAML-defined personas (Solo/Growing/Power/Churning). Include admin UI for viewing/editing persona data and webhook tester panel. Modify Go backend to support `partner_api_url` config override for routing API calls to the mock server.
+
+**Result:**
+- Mock server with 4 personas, GraphQL endpoint, admin UI, and webhook tester
+- Backend `WithBaseURL()` option + `partner_api_url` config field
+- `config.mock.yaml` for running backend against mock server
+- All Go tests pass, mock server verified with curl
+
+---
+
+### [2026-05-07] Fix App Filter API Calls + Transaction Upsert + Disconnect Cleanup
+**Original:**
+> Fix the providers so that when an app is selected, it triggers API calls in live mode. Also fix the transaction upsert to include app_id in ON CONFLICT. And make sure disconnect flow resets all providers to demo mode.
+
+**Improved:**
+> Audit and fix all 8 data providers (Dashboard, Store, Subscription, Transaction, Earnings, Events, Risk, Analytics) so `setSelectedApp()`/`setAppFilter()` triggers `load*()` when in live mode. Fix `transaction_repository.go` ON CONFLICT to include `app_id = EXCLUDED.app_id`. Add debug logging to `ledger_service.go` (charge type breakdown, domain count, subscription count). Ensure `connect_shopify_screen.dart` disconnect calls `setDemoMode(true)` on all 10 providers.
+
+**Result:**
+- 8 providers fixed with live-mode API load triggers
+- Transaction upsert ON CONFLICT now includes app_id
+- Ledger service has 4 new debug log statements
+- Disconnect flow resets all 10 providers to demo mode
+
+---
+
+### [2026-05-07] Multi-User Team Access Model Design
+**Original:**
+> Design the multi-user / team access model for LedgerGuard. Allow team members (co-founders, VAs, bookkeepers) to access the same data. Include organizations, roles, invitations, audit log, per-member notifications, API key scoping, SSO/SAML (PRO), org-level webhooks.
+
+**Improved:**
+> Design a comprehensive multi-user team access model with: (1) Organizations as top-level data-owning entity replacing user-level ownership; (2) Multi-org support (user belongs to multiple orgs); (3) Role-based access (OWNER/ADMIN/VIEWER) with plan-based member limits (FREE=1, STARTER=3, PRO=10); (4) Member lifecycle (invite→active→suspend→remove); (5) Org audit log; (6) Per-member notification preferences; (7) API key scoping to org; (8) SSO/SAML for PRO; (9) Org-level webhooks; (10) Zero-downtime migration strategy with backfill. Include new DB tables, API endpoints, middleware, Flutter UI changes, and documentation artifacts.
+
+**Result:**
+- Full design document with 4 new tables (organizations, org_members, org_invitations, org_audit_log)
+- 3 modified tables (partner_accounts, billing_subscriptions, api_keys)
+- 20+ new API endpoints with role-based access
+- OrgContextMiddleware design
+- Member lifecycle state machine
+- Plan-based team limits
+- 10-phase implementation plan
+- Zero-downtime migration strategy

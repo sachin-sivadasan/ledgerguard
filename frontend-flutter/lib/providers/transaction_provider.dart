@@ -1,18 +1,53 @@
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_transactions.dart';
 import '../models/transaction_model.dart';
+import '../services/transaction_service.dart';
 
 class TransactionProvider extends ChangeNotifier {
+  final TransactionService _transactionService;
+
+  bool _demoMode = true;
+  bool _isLoading = false;
+  String? _error;
+
   ChargeType? _typeFilter;
   String? _appFilter;
   String? _storeFilter;
 
+  List<Transaction> _liveTransactions = [];
+
+  TransactionProvider(this._transactionService);
+
+  bool get demoMode => _demoMode;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
   ChargeType? get typeFilter => _typeFilter;
   String? get appFilter => _appFilter;
   String? get storeFilter => _storeFilter;
 
+  void setDemoMode(bool value) {
+    _demoMode = value;
+    notifyListeners();
+  }
+
+  Future<void> loadTransactions(String appId) async {
+    if (_demoMode || _isLoading) return;
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      _liveTransactions =
+          await _transactionService.fetchTransactions(appId);
+    } catch (e) {
+      _error = e.toString();
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
   List<Transaction> get transactions {
-    var list = mockTransactions.toList();
+    var list =
+        _demoMode ? mockTransactions.toList() : _liveTransactions.toList();
 
     if (_typeFilter != null) {
       list = list.where((t) => t.chargeType == _typeFilter).toList();
@@ -21,7 +56,9 @@ class TransactionProvider extends ChangeNotifier {
       list = list.where((t) => t.appId == _appFilter).toList();
     }
     if (_storeFilter != null) {
-      list = list.where((t) => t.shopDomain.contains(_storeFilter!)).toList();
+      list = list
+          .where((t) => t.shopDomain.contains(_storeFilter!))
+          .toList();
     }
 
     list.sort((a, b) => b.date.compareTo(a.date));
@@ -41,6 +78,9 @@ class TransactionProvider extends ChangeNotifier {
   void setAppFilter(String? appId) {
     _appFilter = appId;
     notifyListeners();
+    if (!_demoMode && appId != null) {
+      loadTransactions(appId);
+    }
   }
 
   void setStoreFilter(String? store) {

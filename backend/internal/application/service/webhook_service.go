@@ -59,6 +59,7 @@ type AppUninstalledPayload struct {
 type WebhookService struct {
 	subRepo            repository.SubscriptionRepository
 	subEventRepo       repository.SubscriptionEventRepository
+	appEventRepo       repository.AppEventRepository
 	appRepo            repository.AppRepository
 	partnerAccountRepo repository.PartnerAccountRepository
 	notificationSvc    *NotificationService
@@ -80,6 +81,12 @@ func NewWebhookService(
 // WithSubscriptionEventRepo adds subscription event repository for lifecycle tracking
 func (s *WebhookService) WithSubscriptionEventRepo(repo repository.SubscriptionEventRepository) *WebhookService {
 	s.subEventRepo = repo
+	return s
+}
+
+// WithAppEventRepo adds app event repository for recording install/uninstall events
+func (s *WebhookService) WithAppEventRepo(repo repository.AppEventRepository) *WebhookService {
+	s.appEventRepo = repo
 	return s
 }
 
@@ -111,6 +118,79 @@ func (s *WebhookService) ValidateHMAC(appID string, body []byte, signature strin
 	expectedMAC := base64.StdEncoding.EncodeToString(mac.Sum(nil))
 
 	return hmac.Equal([]byte(expectedMAC), []byte(signature))
+}
+
+// ProcessAppInstalled handles app installation webhooks from Partner API.
+// Logs the event and records a lifecycle event if a subscription already exists for this shop.
+func (s *WebhookService) ProcessAppInstalled(ctx context.Context, event WebhookEvent) error {
+	var payload AppUninstalledPayload // Same shop payload structure
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		return fmt.Errorf("failed to parse app installed payload: %w", err)
+	}
+
+	domain := payload.MyshopifyDomain
+	log.Printf("Processing app installed: shop=%s", domain)
+
+	// Find apps matching this webhook's app ID
+	apps, err := s.appRepo.FindAllByPartnerAppID(ctx, event.AppID)
+	if err != nil || len(apps) == 0 {
+		log.Printf("App installed webhook: no matching app found for %s (shop=%s)", event.AppID, domain)
+		return nil
+	}
+
+	for _, app := range apps {
+		// Record install in app_events (always — for both new installs and reinstalls)
+		if s.appEventRepo != nil {
+			appEvent := entity.NewAppEvent(app.ID, event.ShopID, "RELATIONSHIP_INSTALLED", event.Timestamp, event.Payload)
+			if err := s.appEventRepo.UpsertBatch(ctx, []*entity.AppEvent{appEvent}); err != nil {
+				log.Printf("Failed to record app install event: %v", err)
+			}
+		}
+
+		// Check if a subscription already exists (reinstall case)
+		sub, err := s.subRepo.FindByAppIDAndDomain(ctx, app.ID, domain)
+		if err != nil {
+			log.Printf("App installed (new): shop=%s, app=%s — subscription will be created on first sync", domain, app.ID)
+			continue
+		}
+
+		// Existing subscription found — this is a reinstall
+		oldStatus := sub.Status
+		oldRiskState := sub.RiskState
+
+		// Reactivate if it was previously uninstalled/churned
+		if sub.Status == "UNINSTALLED" || sub.Status == "CANCELLED" {
+			sub.Status = "PENDING"
+			sub.RiskState = valueobject.RiskStateSafe
+			sub.UpdatedAt = time.Now().UTC()
+			sub.Restore()
+
+			if err := s.subRepo.Upsert(ctx, sub); err != nil {
+				log.Printf("Failed to reactivate subscription for %s: %v", domain, err)
+				continue
+			}
+		}
+
+		// Record lifecycle event on the subscription
+		if s.subEventRepo != nil {
+			subEvent := entity.NewSubscriptionEvent(
+				sub.ID,
+				oldStatus,
+				sub.Status,
+				oldRiskState,
+				sub.RiskState,
+				"app_installed",
+				"Shop installed the app",
+			)
+			if err := s.subEventRepo.Create(ctx, subEvent); err != nil {
+				log.Printf("Failed to record install event: %v", err)
+			}
+		}
+
+		log.Printf("App installed (reinstall): shop=%s, previous_status=%s, new_status=%s", domain, oldStatus, sub.Status)
+	}
+
+	return nil
 }
 
 // ProcessSubscriptionUpdate handles subscription status change webhooks
@@ -324,6 +404,8 @@ func (s *WebhookService) ProcessBillingFailure(ctx context.Context, event Webhoo
 // ProcessEvent routes webhook events to appropriate handlers
 func (s *WebhookService) ProcessEvent(ctx context.Context, event WebhookEvent) error {
 	switch event.Topic {
+	case "app/installed":
+		return s.ProcessAppInstalled(ctx, event)
 	case "app_subscriptions/update":
 		return s.ProcessSubscriptionUpdate(ctx, event)
 	case "app/uninstalled":

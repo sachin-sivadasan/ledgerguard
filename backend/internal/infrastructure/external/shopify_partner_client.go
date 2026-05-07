@@ -122,6 +122,14 @@ func WithRateLimiterConfig(config RateLimiterConfig) ShopifyPartnerClientOption 
 	}
 }
 
+// WithBaseURL overrides the Partner API base URL (for mock server).
+func WithBaseURL(url string) ShopifyPartnerClientOption {
+	return func(c *ShopifyPartnerClient) {
+		c.baseURL = url
+		log.Printf("Shopify Partner API base URL overridden: %s", url)
+	}
+}
+
 // WithRequestsPerSecond sets the rate limit for Partner API calls.
 // This is used for per-partner rate limiting (each partner gets their own limiter).
 func WithRequestsPerSecond(rps float64) ShopifyPartnerClientOption {

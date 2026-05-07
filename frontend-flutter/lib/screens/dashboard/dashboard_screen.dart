@@ -1,7 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../mock_data/mock_apps.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../services/mixpanel_service.dart';
@@ -22,20 +21,42 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  bool _wasDemoMode = true;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MixpanelService>().trackDashboardViewed();
+      _maybeLoadData();
     });
+  }
+
+  void _maybeLoadData() {
+    final apps = context.read<AppsProvider>();
+    final dash = context.read<DashboardProvider>();
+    if (!apps.demoMode && apps.apps.isNotEmpty && !dash.isLoading) {
+      dash.loadMetrics(apps.apps.first.id);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final dp = context.watch<DashboardProvider>();
-    final hasApps = context.watch<AppsProvider>().apps.isNotEmpty;
+    final appsProvider = context.watch<AppsProvider>();
+    final appsList = appsProvider.apps;
+    final hasApps = appsList.isNotEmpty;
+
+    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
+    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
+      _wasDemoMode = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) dp.loadMetrics(appsList.first.id);
+      });
+    }
+    if (appsProvider.demoMode) _wasDemoMode = true;
     final theme = Theme.of(context);
-    final showAppFilter = mockApps.length > 1;
+    final showAppFilter = appsList.length > 1;
 
     if (!hasApps) {
       return LgPage(
@@ -77,16 +98,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   itemBuilder: (_) => [
                     const PopupMenuItem(
                         value: null, child: Text('All Apps')),
-                    ...mockApps.map((app) => PopupMenuItem(
+                    ...appsList.map((app) => PopupMenuItem(
                           value: app.id,
                           child: Text(app.name),
                         )),
                   ],
                   child: Chip(
                     label: Text(dp.selectedAppId != null
-                        ? mockApps
+                        ? appsList
                             .firstWhere(
-                                (a) => a.id == dp.selectedAppId)
+                                (a) => a.id == dp.selectedAppId,
+                                orElse: () => appsList.first)
                             .name
                         : 'All Apps'),
                     deleteIcon: dp.selectedAppId != null

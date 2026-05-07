@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../mock_data/mock_apps.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/risk_provider.dart';
 import '../../theme/app_colors.dart';
@@ -11,12 +10,44 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_risk_badge.dart';
 
-class RiskScreen extends StatelessWidget {
+class RiskScreen extends StatefulWidget {
   const RiskScreen({super.key});
 
   @override
+  State<RiskScreen> createState() => _RiskScreenState();
+}
+
+class _RiskScreenState extends State<RiskScreen> {
+  bool _wasDemoMode = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
+  }
+
+  void _maybeLoadData() {
+    final apps = context.read<AppsProvider>();
+    final provider = context.read<RiskProvider>();
+    if (!apps.demoMode && apps.apps.isNotEmpty && !provider.isLoading) {
+      provider.loadRiskSummary(apps.apps.first.id);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final hasApps = context.watch<AppsProvider>().apps.isNotEmpty;
+    final appsProvider = context.watch<AppsProvider>();
+    final hasApps = appsProvider.apps.isNotEmpty;
+
+    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
+    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
+      _wasDemoMode = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<RiskProvider>().loadRiskSummary(appsProvider.apps.first.id);
+      });
+    }
+    if (appsProvider.demoMode) _wasDemoMode = true;
+
     if (!hasApps) {
       return LgPage(
         title: 'Risk Breakdown',
@@ -34,7 +65,8 @@ class RiskScreen extends StatelessWidget {
     final provider = context.watch<RiskProvider>();
     final dist = provider.distribution;
     final theme = Theme.of(context);
-    final showAppFilter = mockApps.length > 1;
+    final appsList = context.watch<AppsProvider>().apps;
+    final showAppFilter = appsList.length > 1;
 
     return LgPage(
       title: 'Risk Breakdown',
@@ -47,14 +79,14 @@ class RiskScreen extends StatelessWidget {
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => [
                 const PopupMenuItem(value: null, child: Text('All Apps')),
-                ...mockApps.map((app) => PopupMenuItem(
+                ...appsList.map((app) => PopupMenuItem(
                       value: app.id,
                       child: Text(app.name),
                     )),
               ],
               child: Chip(
                 label: Text(provider.selectedAppId != null
-                    ? mockApps.firstWhere((a) => a.id == provider.selectedAppId).name
+                    ? appsList.firstWhere((a) => a.id == provider.selectedAppId, orElse: () => appsList.first).name
                     : 'All Apps'),
                 deleteIcon: provider.selectedAppId != null
                     ? const Icon(Icons.close, size: 14)
@@ -70,12 +102,26 @@ class RiskScreen extends StatelessWidget {
           // Risk funnel
           LgCard(
             title: 'Risk Funnel',
-            child: Row(
+            child: Column(
               children: [
-                _FunnelSegment('Safe', dist.safe, LgColors.riskSafe, flex: dist.safe),
-                _FunnelSegment('1 Cycle', dist.oneCycle, LgColors.riskOneCycle, flex: dist.oneCycle),
-                _FunnelSegment('2 Cycles', dist.twoCycle, LgColors.riskTwoCycle, flex: dist.twoCycle),
-                _FunnelSegment('Churned', dist.churned, LgColors.riskChurned, flex: dist.churned),
+                Row(
+                  children: [
+                    _FunnelSegment('Safe', dist.safe, LgColors.riskSafe, flex: dist.safe),
+                    _FunnelSegment('1 Cycle', dist.oneCycle, LgColors.riskOneCycle, flex: dist.oneCycle),
+                    _FunnelSegment('2 Cycles', dist.twoCycle, LgColors.riskTwoCycle, flex: dist.twoCycle),
+                    _FunnelSegment('Churned', dist.churned, LgColors.riskChurned, flex: dist.churned),
+                  ],
+                ),
+                const SizedBox(height: LgSpacing.s300),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _FunnelLegend('Safe', dist.safe, LgColors.riskSafe),
+                    _FunnelLegend('1 Cycle', dist.oneCycle, LgColors.riskOneCycle),
+                    _FunnelLegend('2 Cycles', dist.twoCycle, LgColors.riskTwoCycle),
+                    _FunnelLegend('Churned', dist.churned, LgColors.riskChurned),
+                  ],
+                ),
               ],
             ),
           ),
@@ -182,6 +228,25 @@ class RiskScreen extends StatelessWidget {
   }
 }
 
+class _FunnelLegend extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+  const _FunnelLegend(this.label, this.count, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 4),
+        Text('$label: $count', style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+}
+
 class _FunnelSegment extends StatelessWidget {
   final String label;
   final int count;
@@ -191,8 +256,11 @@ class _FunnelSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (count == 0) {
+      return const SizedBox.shrink();
+    }
     return Expanded(
-      flex: flex.clamp(1, 100),
+      flex: flex,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: LgSpacing.s400),
         color: color.withValues(alpha: 0.15),

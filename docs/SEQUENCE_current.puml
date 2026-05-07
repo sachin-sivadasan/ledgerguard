@@ -1071,4 +1071,261 @@ ET -> MP: SetUserProperties\n({$email, role, plan_tier})
 MP -> MixAPI: POST /engage
 MixAPI --> MP: 200
 
+' ==========================================
+' 18. Organization Invite Flow
+' ==========================================
+newpage Organization Invite Flow
+
+actor "Admin/Owner" as AdminUser
+participant "Client App" as App
+participant "API Server" as API
+participant "OrgContextMW" as OrgMW
+participant "OrgService" as OrgSvc
+database "PostgreSQL" as DB
+
+note over AdminUser, DB
+  Admins and Owners can invite new members
+  to their organization via email.
+  Plan-based limits enforced.
+end note
+
+== Send Invitation ==
+
+AdminUser -> App: Click "Invite Member"
+App -> API: POST /api/v1/orgs/{orgId}/invitations\n[Authorization: Bearer <token>]\n{ "email": "new@example.com", "role": "VIEWER" }
+
+API -> API: AuthMiddleware (verify token)
+API -> OrgMW: RequireOrg(orgId)\nRequireOrgRole(ADMIN)
+
+OrgMW -> DB: SELECT * FROM org_members\nWHERE org_id = ? AND user_id = ?
+DB --> OrgMW: Membership record
+
+alt Active ADMIN or OWNER
+    OrgMW -> API: Continue
+
+    API -> OrgSvc: InviteMember(orgId, email, role)
+
+    OrgSvc -> DB: SELECT plan_tier FROM organizations\nWHERE id = ?
+    DB --> OrgSvc: Organization (plan_tier)
+
+    OrgSvc -> DB: SELECT COUNT(*) FROM org_members\nWHERE org_id = ?
+    DB --> OrgSvc: Current member count
+
+    OrgSvc -> DB: SELECT COUNT(*) FROM org_invitations\nWHERE org_id = ? AND status = 'PENDING'
+    DB --> OrgSvc: Pending invitation count
+
+    alt Total exceeds plan limit
+        OrgSvc --> API: Error: plan limit reached
+        API --> App: 403 Forbidden\n{ "error": "plan_limit_reached" }
+    else Within limit
+        OrgSvc -> OrgSvc: Generate unique token\n(32 random bytes hex)
+
+        OrgSvc -> DB: INSERT INTO org_invitations\n(org_id, email, role, token, status='PENDING',\nexpires_at = NOW() + 7 days)
+        DB --> OrgSvc: Invitation record
+
+        OrgSvc -> DB: INSERT INTO org_audit_log\n(action='member.invited', metadata={email, role})
+        DB --> OrgSvc: Audit entry
+
+        OrgSvc --> API: Invitation
+        API --> App: 201 Created\n{ "id": "uuid", "token": "abc...", "email": "..." }
+    end
+
+else Suspended or not a member
+    OrgMW --> API: 403 Forbidden
+    API --> App: 403 Forbidden\n{ "error": "insufficient_permissions" }
+end
+
+' ==========================================
+' 19. Organization Accept Invitation Flow
+' ==========================================
+newpage Organization Accept Invitation Flow
+
+actor "Invited User" as Invitee
+participant "Client App" as App
+participant "API Server" as API
+participant "OrgService" as OrgSvc
+database "PostgreSQL" as DB
+
+note over Invitee, DB
+  Any authenticated user can accept
+  an invitation using the token.
+  Creates org_member entry.
+end note
+
+== Accept Invitation ==
+
+Invitee -> App: Click invitation link / enter token
+App -> API: POST /api/v1/invitations/{token}/accept\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware (verify user)
+API -> OrgSvc: AcceptInvitation(token, userID)
+
+OrgSvc -> DB: SELECT * FROM org_invitations\nWHERE token = ? AND status = 'PENDING'
+DB --> OrgSvc: Invitation record
+
+alt Invitation found
+    OrgSvc -> OrgSvc: Check expiration\n(expires_at > NOW()?)
+
+    alt Expired
+        OrgSvc -> DB: UPDATE org_invitations\nSET status = 'EXPIRED'
+        OrgSvc --> API: Error: invitation expired
+        API --> App: 410 Gone\n{ "error": "invitation_expired" }
+    else Valid
+        OrgSvc -> DB: SELECT * FROM org_members\nWHERE org_id = ? AND user_id = ?
+        DB --> OrgSvc: Check existing membership
+
+        alt Already a member
+            OrgSvc --> API: Error: already a member
+            API --> App: 409 Conflict\n{ "error": "already_member" }
+        else New member
+            OrgSvc -> DB: INSERT INTO org_members\n(org_id, user_id, role, status='ACTIVE',\ninvited_by)
+            DB --> OrgSvc: Member record
+
+            OrgSvc -> DB: UPDATE org_invitations\nSET status = 'ACCEPTED'
+            DB --> OrgSvc: Success
+
+            OrgSvc -> DB: INSERT INTO org_audit_log\n(action='member.joined', metadata={role})
+            DB --> OrgSvc: Audit entry
+
+            OrgSvc --> API: Member
+            API --> App: 200 OK\n{ "org_id": "...", "role": "VIEWER" }
+        end
+    end
+else Invitation not found
+    OrgSvc --> API: Error: not found
+    API --> App: 404 Not Found
+end
+
+' ==========================================
+' 20. Organization Suspend/Unsuspend Flow
+' ==========================================
+newpage Organization Suspend/Unsuspend Flow
+
+actor "Admin/Owner" as AdminUser
+participant "Client App" as App
+participant "API Server" as API
+participant "OrgContextMW" as OrgMW
+participant "OrgService" as OrgSvc
+database "PostgreSQL" as DB
+
+note over AdminUser, DB
+  Admins can suspend members (except OWNER).
+  Suspended members cannot access org data
+  but still count toward member limit.
+end note
+
+== Suspend Member ==
+
+AdminUser -> App: Click "Suspend" on member
+App -> API: PUT /api/v1/orgs/{orgId}/members/{memberId}/suspend\n[Authorization: Bearer <token>]
+
+API -> API: AuthMiddleware (verify token)
+API -> OrgMW: RequireOrg + RequireOrgRole(ADMIN)
+
+OrgMW -> DB: Verify actor is active ADMIN+
+OrgMW --> API: Continue
+
+API -> OrgSvc: SuspendMember(orgId, memberId, actorId)
+
+OrgSvc -> DB: SELECT * FROM org_members\nWHERE id = ? AND org_id = ?
+DB --> OrgSvc: Target member
+
+alt Target is OWNER
+    OrgSvc --> API: Error: cannot suspend owner
+    API --> App: 403 Forbidden\n{ "error": "cannot_suspend_owner" }
+else Target is not OWNER
+    OrgSvc -> DB: UPDATE org_members\nSET status = 'SUSPENDED',\nsuspended_by = ?, suspended_at = NOW()
+    DB --> OrgSvc: Success
+
+    OrgSvc -> DB: INSERT INTO org_audit_log\n(action='member.suspended', metadata={member_id})
+    DB --> OrgSvc: Audit entry
+
+    OrgSvc --> API: Success
+    API --> App: 200 OK
+end
+
+== Unsuspend Member ==
+
+AdminUser -> App: Click "Unsuspend" on member
+App -> API: PUT /api/v1/orgs/{orgId}/members/{memberId}/unsuspend\n[Authorization: Bearer <token>]
+
+API -> OrgMW: RequireOrg + RequireOrgRole(ADMIN)
+API -> OrgSvc: UnsuspendMember(orgId, memberId, actorId)
+
+OrgSvc -> DB: SELECT * FROM org_members\nWHERE id = ? AND org_id = ?
+DB --> OrgSvc: Target member
+
+alt Status is SUSPENDED
+    OrgSvc -> DB: UPDATE org_members\nSET status = 'ACTIVE',\nsuspended_by = NULL, suspended_at = NULL
+    DB --> OrgSvc: Success
+
+    OrgSvc -> DB: INSERT INTO org_audit_log\n(action='member.unsuspended')
+    DB --> OrgSvc: Audit entry
+
+    OrgSvc --> API: Success
+    API --> App: 200 OK
+else Not suspended
+    OrgSvc --> API: Error: not suspended
+    API --> App: 400 Bad Request
+end
+
+' ==========================================
+' 21. Organization Switch Flow
+' ==========================================
+newpage Organization Switch Flow
+
+actor User
+participant "Flutter App" as App
+participant "OrgProvider" as OrgProv
+participant "ApiClient" as Client
+participant "API Server" as API
+database "PostgreSQL" as DB
+
+note over User, DB
+  Multi-org users can switch between
+  organizations. X-Org-Id header is set
+  on all subsequent API requests.
+  Auto-selects when user has exactly 1 org.
+end note
+
+== Load User's Organizations ==
+
+User -> App: Log in
+App -> OrgProv: loadOrganizations()
+
+OrgProv -> Client: GET /api/v1/orgs\n[Authorization: Bearer <token>]
+Client -> API: GET /api/v1/orgs
+API -> DB: SELECT om.org_id, om.role, o.name\nFROM org_members om\nJOIN organizations o ON om.org_id = o.id\nWHERE om.user_id = ?
+DB --> API: List of memberships
+API --> Client: { "organizations": [...] }
+Client --> OrgProv: List<OrgMembership>
+
+alt Single org
+    OrgProv -> OrgProv: Auto-select first org
+    OrgProv -> Client: setOrgId(orgId)
+    note right: X-Org-Id header set\non all future requests
+else Multiple orgs
+    OrgProv -> App: Show org switcher dropdown
+end
+
+== Switch Organization ==
+
+User -> App: Select different org\nfrom dropdown
+App -> OrgProv: selectOrganization(newOrgId)
+
+OrgProv -> Client: GET /api/v1/orgs/{newOrgId}
+Client -> API: GET /api/v1/orgs/{newOrgId}\n[X-Org-Id: newOrgId]
+API -> DB: SELECT * FROM organizations\nWHERE id = ?
+DB --> API: Organization details
+API --> Client: Organization
+Client --> OrgProv: Organization
+
+OrgProv -> Client: setOrgId(newOrgId)
+note right: Updates X-Org-Id header
+
+OrgProv -> OrgProv: notifyListeners()
+note right: All screens reload\nwith new org context
+
+App --> User: Dashboard refreshes\nwith new org's data
+
 @enduml

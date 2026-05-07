@@ -1,0 +1,322 @@
+@startuml
+title 36. Organization Management
+
+skinparam sequenceArrowThickness 2
+
+' ==========================================
+' A. Create Organization
+' ==========================================
+
+actor User
+participant "Flutter App" as App
+participant "OrgHandler" as OH
+participant "OrgService" as OS
+participant "OrgRepo" as OR
+participant "MemberRepo" as MR
+participant "OrgAuditService" as AUD
+database "PostgreSQL" as DB
+
+== Create Organization ==
+
+User -> App: Click "Create Organization"
+App -> OH: POST /api/v1/orgs\n{ "name": "My Team" }
+activate OH
+
+OH -> OS: CreateOrganization(name, userID)
+activate OS
+
+OS -> OS: generateSlug("My Team")\n-> "my-team"
+
+OS -> OR: Create(org)
+OR -> DB: INSERT INTO organizations\n(name, slug, plan_tier='FREE',\ncreated_by)
+DB --> OR: organization
+OR --> OS: organization
+
+OS -> MR: Create(member)
+note right: Creator becomes OWNER
+MR -> DB: INSERT INTO org_members\n(org_id, user_id, role='OWNER',\nstatus='ACTIVE')
+DB --> MR: member
+
+OS -> AUD: LogAction("org.created", ...)
+AUD -> DB: INSERT INTO org_audit_log
+DB --> AUD: OK
+
+OS --> OH: organization
+deactivate OS
+
+OH --> App: 201 Created\n{ "id": "...", "name": "My Team" }
+deactivate OH
+
+' ==========================================
+' B. Invite Member
+' ==========================================
+
+newpage Invite Member
+
+actor "Admin/Owner" as Admin
+participant "Flutter App" as App
+participant "OrgContextMW" as MW
+participant "OrgHandler" as OH
+participant "OrgService" as OS
+participant "MemberRepo" as MR
+participant "InvitationRepo" as IR
+participant "OrgAuditService" as AUD
+database "PostgreSQL" as DB
+
+Admin -> App: Enter email + select role
+App -> OH: POST /api/v1/orgs/{orgId}/invitations\n[X-Org-Id: orgId]\n{ "email": "new@co.com", "role": "VIEWER" }
+
+OH -> MW: RequireOrg + RequireOrgRole(ADMIN)
+MW -> DB: Check membership + status
+MW --> OH: OK (active ADMIN+)
+
+OH -> OS: InviteMember(orgId, email, role, actorID)
+activate OS
+
+OS -> DB: SELECT plan_tier, max_members\nFROM organizations
+DB --> OS: org (plan_tier=STARTER)
+
+OS -> MR: CountByOrgID(orgId)
+MR -> DB: SELECT COUNT(*) FROM org_members
+DB --> MR: 2
+
+OS -> IR: CountPendingByOrgID(orgId)
+IR -> DB: SELECT COUNT(*) FROM org_invitations\nWHERE status='PENDING'
+DB --> IR: 0
+
+OS -> OS: Check: 2 + 0 + 1 <= 3 (STARTER limit)
+
+alt Within plan limit
+    OS -> OS: generateToken()\n-> 32 random bytes hex
+
+    OS -> IR: Create(invitation)
+    IR -> DB: INSERT INTO org_invitations\n(org_id, email, role, token,\nstatus='PENDING',\nexpires_at=NOW()+7d)
+    DB --> IR: invitation
+
+    OS -> AUD: LogAction("member.invited",\n{email, role})
+
+    OS --> OH: invitation
+    OH --> App: 201 Created\n{ "token": "abc..." }
+else Exceeds plan limit
+    OS --> OH: ErrPlanLimitReached
+    OH --> App: 403 { "error": "plan_limit_reached" }
+end
+deactivate OS
+
+' ==========================================
+' C. Accept Invitation
+' ==========================================
+
+newpage Accept Invitation
+
+actor Invitee
+participant "Flutter App" as App
+participant "OrgHandler" as OH
+participant "OrgService" as OS
+participant "InvitationRepo" as IR
+participant "MemberRepo" as MR
+participant "OrgAuditService" as AUD
+database "PostgreSQL" as DB
+
+Invitee -> App: Click invite link / paste token
+App -> OH: POST /api/v1/invitations/{token}/accept\n[Authorization: Bearer <token>]
+
+OH -> OS: AcceptInvitation(token, userID)
+activate OS
+
+OS -> IR: FindByToken(token)
+IR -> DB: SELECT FROM org_invitations\nWHERE token = ? AND status = 'PENDING'
+DB --> IR: invitation
+
+alt Found + not expired
+    OS -> MR: FindByOrgAndUser(orgID, userID)
+
+    alt Already a member
+        OS --> OH: ErrAlreadyMember
+        OH --> App: 409 Conflict
+    else New member
+        OS -> MR: Create(member)
+        MR -> DB: INSERT INTO org_members\n(org_id, user_id, role,\nstatus='ACTIVE', invited_by)
+        DB --> MR: member
+
+        OS -> IR: UpdateStatus(id, 'ACCEPTED')
+        IR -> DB: UPDATE org_invitations\nSET status = 'ACCEPTED'
+
+        OS -> AUD: LogAction("member.joined",\n{role, invited_by})
+
+        OS --> OH: member
+        OH --> App: 200 OK { "org_id": "...", "role": "VIEWER" }
+    end
+else Expired
+    OS -> IR: UpdateStatus(id, 'EXPIRED')
+    OS --> OH: ErrInvitationExpired
+    OH --> App: 410 Gone
+end
+deactivate OS
+
+' ==========================================
+' D. Suspend / Unsuspend Member
+' ==========================================
+
+newpage Suspend & Unsuspend Member
+
+actor "Admin/Owner" as Admin
+participant "Flutter App" as App
+participant "OrgContextMW" as MW
+participant "OrgHandler" as OH
+participant "OrgService" as OS
+participant "MemberRepo" as MR
+participant "OrgAuditService" as AUD
+database "PostgreSQL" as DB
+
+== Suspend ==
+
+Admin -> App: Click "Suspend" on member
+App -> OH: PUT /api/v1/orgs/{orgId}/members/{id}/suspend
+
+OH -> MW: RequireOrgRole(ADMIN)
+MW --> OH: OK
+
+OH -> OS: SuspendMember(orgId, memberId, actorId)
+activate OS
+
+OS -> MR: FindByID(memberId)
+MR -> DB: SELECT FROM org_members
+DB --> MR: member
+
+alt Member is OWNER
+    OS --> OH: ErrCannotSuspendOwner
+    OH --> App: 403 Forbidden
+else Not OWNER
+    OS -> MR: Update(member)
+    note right: status='SUSPENDED'\nsuspended_by=actorId\nsuspended_at=NOW()
+    MR -> DB: UPDATE org_members
+    DB --> MR: OK
+
+    OS -> AUD: LogAction("member.suspended")
+
+    OS --> OH: OK
+    OH --> App: 200 OK
+end
+deactivate OS
+
+== Unsuspend ==
+
+Admin -> App: Click "Unsuspend"
+App -> OH: PUT /api/v1/orgs/{orgId}/members/{id}/unsuspend
+OH -> MW: RequireOrgRole(ADMIN)
+OH -> OS: UnsuspendMember(orgId, memberId)
+
+OS -> MR: FindByID(memberId)
+OS -> MR: Update(member)
+note right: status='ACTIVE'\nsuspended_by=NULL\nsuspended_at=NULL
+
+OS -> AUD: LogAction("member.unsuspended")
+OS --> OH: OK
+OH --> App: 200 OK
+
+== Suspended Member Access ==
+
+actor "Suspended\nMember" as Suspended
+Suspended -> App: Try to access org data
+App -> OH: GET /api/v1/orgs/{orgId}/members\n[X-Org-Id: orgId]
+OH -> MW: RequireOrg(orgId)
+
+MW -> DB: SELECT status FROM org_members\nWHERE org_id=? AND user_id=?
+DB --> MW: status='SUSPENDED'
+
+MW --> OH: 403 Forbidden\n{ "error": "account_suspended" }
+OH --> App: 403 Forbidden
+
+' ==========================================
+' E. Organization Switch (Multi-Org)
+' ==========================================
+
+newpage Organization Switch (Multi-Org)
+
+actor User
+participant "Flutter App" as App
+participant "OrgProvider" as OP
+participant "ApiClient" as AC
+participant "OrgHandler" as OH
+database "PostgreSQL" as DB
+
+== Initial Load ==
+
+User -> App: Login
+App -> OP: loadOrganizations()
+
+OP -> AC: GET /api/v1/orgs
+AC -> OH: GET /api/v1/orgs
+OH -> DB: SELECT om.*, o.name\nFROM org_members om\nJOIN organizations o\nWHERE om.user_id = ?
+DB --> OH: memberships[]
+OH --> AC: { "organizations": [...] }
+AC --> OP: List<OrgMembership>
+
+alt Single org
+    OP -> OP: Auto-select
+    OP -> AC: setOrgId(orgId)
+    note right: X-Org-Id header added\nto all future requests
+else Multiple orgs
+    OP -> App: Show OrgSwitcher\n(dropdown in nav rail)
+end
+
+== Switch ==
+
+User -> App: Select org from dropdown
+App -> OP: selectOrganization(newOrgId)
+
+OP -> AC: GET /api/v1/orgs/{newOrgId}
+AC --> OP: Organization details
+
+OP -> AC: setOrgId(newOrgId)
+note right: X-Org-Id header updated
+
+OP -> OP: notifyListeners()
+note right: All Provider screens\nrebuild with new org context
+
+App --> User: UI refreshes with\nnew org's data
+
+' ==========================================
+' F. Role Change
+' ==========================================
+
+newpage Change Member Role
+
+actor Owner
+participant "Flutter App" as App
+participant "OrgHandler" as OH
+participant "OrgService" as OS
+participant "MemberRepo" as MR
+participant "OrgAuditService" as AUD
+database "PostgreSQL" as DB
+
+Owner -> App: Change role to Admin
+App -> OH: PUT /api/v1/orgs/{orgId}/members/{id}/role\n{ "role": "ADMIN" }
+
+OH -> OS: ChangeRole(orgId, memberId, "ADMIN", actorId)
+activate OS
+
+OS -> MR: FindByID(memberId)
+MR -> DB: SELECT FROM org_members
+DB --> MR: member
+
+alt Target is OWNER
+    OS --> OH: ErrCannotChangeOwnerRole
+    OH --> App: 403 Forbidden
+else Target is not OWNER
+    OS -> OS: Validate actor can manage this role\n(only OWNER can promote to ADMIN)
+
+    OS -> MR: Update(member)
+    note right: role='ADMIN'
+    MR -> DB: UPDATE org_members\nSET role = 'ADMIN'
+    DB --> MR: OK
+
+    OS -> AUD: LogAction("role.changed",\n{old_role, new_role})
+
+    OS --> OH: OK
+    OH --> App: 200 OK
+end
+deactivate OS
+
+@enduml

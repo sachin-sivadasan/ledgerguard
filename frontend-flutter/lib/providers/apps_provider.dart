@@ -1,31 +1,94 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../mock_data/mock_apps.dart';
 import '../mock_data/mock_reviews.dart';
 import '../models/app_model.dart';
 import '../models/review_model.dart';
+import '../services/app_service.dart';
 
 class AppsProvider extends ChangeNotifier {
+  final AppService _appService;
+  static const _demoPrefKey = 'demo_mode';
+
   bool _demoMode = true;
+  bool _isLoading = false;
+  String? _error;
+
+  List<ShopifyApp> _liveApps = [];
+  List<AppReview> _liveReviews = [];
+
+  AppsProvider(this._appService) {
+    _loadDemoPref();
+  }
+
+  Future<void> _loadDemoPref() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getBool(_demoPrefKey);
+    if (saved != null && saved != _demoMode) {
+      _demoMode = saved;
+      notifyListeners();
+    }
+  }
 
   bool get demoMode => _demoMode;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+
   void setDemoMode(bool value) {
     _demoMode = value;
+    SharedPreferences.getInstance().then((p) => p.setBool(_demoPrefKey, value));
     notifyListeners();
   }
 
-  List<ShopifyApp> get apps => _demoMode ? mockApps : [];
+  List<ShopifyApp> get apps => _demoMode ? mockApps : _liveApps;
 
-  List<AppReview> getReviewsForApp(String appId) =>
-      mockReviews.where((r) => r.appId == appId).toList()
+  Future<void> loadApps() async {
+    debugPrint('[AppsProvider] loadApps called – demoMode=$_demoMode isLoading=$_isLoading');
+    if (_demoMode || _isLoading) return;
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      _liveApps = await _appService.fetchApps();
+      debugPrint('[AppsProvider] loadApps success – ${_liveApps.length} apps loaded');
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('[AppsProvider] loadApps error – $e');
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadReviews(String appId) async {
+    if (_demoMode) return;
+    try {
+      _liveReviews = await _appService.fetchReviews(appId);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  List<AppReview> getReviewsForApp(String appId) {
+    if (_demoMode) {
+      return mockReviews.where((r) => r.appId == appId).toList()
         ..sort((a, b) => b.date.compareTo(a.date));
+    }
+    return _liveReviews.where((r) => r.appId == appId).toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
 
-  List<AppReview> get allReviews => mockReviews.toList()
-    ..sort((a, b) => b.date.compareTo(a.date));
+  List<AppReview> get allReviews {
+    final reviews = _demoMode ? mockReviews.toList() : _liveReviews.toList();
+    return reviews..sort((a, b) => b.date.compareTo(a.date));
+  }
 
   double avgRatingForApp(String appId) {
     final reviews = getReviewsForApp(appId);
     if (reviews.isEmpty) return 0;
-    return reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
+    return reviews.map((r) => r.rating).reduce((a, b) => a + b) /
+        reviews.length;
   }
 
   Map<int, int> ratingDistribution(String appId) {

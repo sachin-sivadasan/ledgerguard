@@ -7,12 +7,66 @@ participant "Shopify" as Shop
 participant "WebhookHandler" as WH
 participant "WebhookService" as WS
 participant "SubscriptionRepo" as SR
-participant "AuditLogRepo" as AR
+participant "AppEventRepo" as AER
+participant "SubscriptionEventRepo" as SER
+participant "NotificationService" as NS
 database "PostgreSQL" as DB
+
+== App Installed (New) ==
+
+Shop -> WH: POST /webhooks/shopify/installed\nX-Shopify-Hmac-Sha256: {hmac}
+activate WH
+
+WH -> WH: Read body, build WebhookEvent
+WH -> WS: ProcessAppInstalled(\n  shopDomain, appGID, payload)
+activate WS
+
+WS -> WS: Parse payload (shop domain)
+
+WS -> SR: FindAllByPartnerAppID(appGID)
+SR -> DB: SELECT FROM apps
+DB --> SR: app records
+SR --> WS: apps[]
+
+loop For each matching app
+    WS -> AER: UpsertBatch(appEvent)
+    note right: Record RELATIONSHIP_INSTALLED\nevent in app_events table
+    AER -> DB: INSERT INTO app_events
+    DB --> AER: OK
+
+    WS -> SR: FindByAppIDAndDomain(\n  appID, shopDomain)
+
+    alt Existing subscription (reinstall)
+        SR --> WS: subscription
+
+        alt Was UNINSTALLED or CANCELLED
+            WS -> WS: sub.Status = "PENDING"\nsub.RiskState = SAFE\nsub.Restore() (clear deleted_at)
+
+            WS -> SR: Upsert(subscription)
+            SR -> DB: UPDATE subscriptions SET ...
+            DB --> SR: OK
+
+            WS -> SER: Create(subscriptionEvent)
+            note right: Log: reinstall event\nold_status -> PENDING\nold_risk -> SAFE
+            SER -> DB: INSERT INTO subscription_events
+            DB --> SER: OK
+        end
+
+    else No existing subscription (new install)
+        SR --> WS: not found
+        note right: Subscription will be\ncreated on first sync
+    end
+end
+
+WS --> WH: OK
+deactivate WS
+
+WH --> Shop: 200 OK
+deactivate WH
 
 == App Uninstalled ==
 
-Shop -> WH: POST /webhooks/shopify/app_uninstalled\nX-Shopify-Hmac-Sha256: {hmac}
+Shop -> WH: POST /webhooks/shopify/uninstalled\nX-Shopify-Hmac-Sha256: {hmac}
 activate WH
 
 WH -> WH: Validate HMAC signature
@@ -21,20 +75,33 @@ WH -> WH: Parse webhook payload
 WH -> WS: ProcessAppUninstalled(\n  shopDomain, appGID)
 activate WS
 
-WS -> SR: FindByDomainAndApp(\n  domain, appID)
-SR -> DB: SELECT FROM subscriptions
-DB --> SR: subscription
-SR --> WS: subscription
+WS -> SR: FindAllByPartnerAppID(appGID)
+SR -> DB: SELECT FROM apps
+DB --> SR: apps[]
 
-WS -> WS: subscription.Status = "UNINSTALLED"
-WS -> WS: subscription.RiskState = CHURNED
+loop For each matching app
+    WS -> SR: FindByAppIDAndDomain(\n  appID, domain)
+    SR -> DB: SELECT FROM subscriptions
+    DB --> SR: subscription
+    SR --> WS: subscription
 
-WS -> SR: Upsert(subscription)
-SR -> DB: UPDATE subscriptions SET ...
-DB --> SR: OK
+    WS -> WS: subscription.Status = "UNINSTALLED"
+    WS -> WS: subscription.RiskState = CHURNED
+    WS -> WS: subscription.SoftDelete()
 
-WS -> AR: Create(auditLog)
-note right: Log: APP_UNINSTALLED\nresource: subscription
+    WS -> SR: Upsert(subscription)
+    SR -> DB: UPDATE subscriptions SET ...
+    DB --> SR: OK
+
+    WS -> SER: Create(subscriptionEvent)
+    note right: Log: APP_UNINSTALLED\nevent_type='app_uninstalled'
+    SER -> DB: INSERT INTO subscription_events
+    DB --> SER: OK
+
+    opt NotificationService configured
+        WS -> NS: SendCriticalAlert(\n  userID, appName,\n  domain, oldRisk, CHURNED)
+    end
+end
 
 WS --> WH: OK
 deactivate WS
@@ -42,12 +109,54 @@ deactivate WS
 WH --> Shop: 200 OK
 deactivate WH
 
+== Subscription Update ==
+
+Shop -> WH: POST /webhooks/shopify/subscriptions\nX-Shopify-Topic: app_subscriptions/update
+activate WH
+
+WH -> WH: Validate HMAC
+WH -> WS: ProcessSubscriptionUpdate(event)
+activate WS
+
+WS -> SR: FindByShopifyGID(gid)
+SR -> DB: SELECT FROM subscriptions
+DB --> SR: subscription
+
+WS -> WS: Update status from payload
+WS -> WS: Reclassify risk state
+
+WS -> SR: Upsert(subscription)
+SR -> DB: UPDATE subscriptions
+DB --> SR: OK
+
+WS -> SER: Create(subscriptionEvent)
+note right: Log status + risk\nstate transitions
+
+opt Risk state changed + NotificationService
+    WS -> NS: SendCriticalAlert(...)
+end
+
+WS --> WH: OK
+deactivate WS
+WH --> Shop: 200 OK
+deactivate WH
+
 == Billing Failure ==
 
-Shop -> WH: POST /webhooks/shopify/billing_failure
+Shop -> WH: POST /webhooks/shopify/billing-failure
 WH -> WH: Validate HMAC
-WH -> WS: ProcessBillingFailure(\n  shopDomain, appGID)
-WS -> SR: Find + update status\nto FROZEN
+WH -> WS: ProcessBillingFailure(event)
+
+WS -> SR: Find subscription
+WS -> WS: Escalate risk state:\nSAFE -> ONE_CYCLE_MISSED\nONE_CYCLE -> TWO_CYCLES\nTWO_CYCLES -> CHURNED
+
+WS -> SR: Upsert(subscription)
+WS -> SER: Create(subscriptionEvent)
+
+opt Risk state changed
+    WS -> NS: SendCriticalAlert(...)
+end
+
 WS --> WH: OK
 WH --> Shop: 200 OK
 
@@ -55,7 +164,11 @@ note right of WH
   **No Firebase Auth**
   Webhooks validated via
   HMAC-SHA256 signature
-  (shared secret)
+  (shared secret per app)
+
+  **Always return 200 OK**
+  to prevent Shopify retries.
+  Errors are logged internally.
 end note
 
 @enduml

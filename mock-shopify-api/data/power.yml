@@ -1,0 +1,335 @@
+persona:
+  name: "Power Developer"
+  description: "4 apps, 200+ stores, high revenue, mixed risk states"
+
+apps:
+  - id: "gid://partners/App/3001"
+    name: "MegaReviews"
+  - id: "gid://partners/App/3002"
+    name: "AutoShip Pro"
+  - id: "gid://partners/App/3003"
+    name: "LoyaltyBoost"
+  - id: "gid://partners/App/3004"
+    name: "SEO Wizard"
+
+shops:
+  # 210 shops total — generated with unique domains
+  - { domain: "alpha-store.myshopify.com", name: "Alpha Store", gid: "gid://shopify/Shop/300001" }
+  - { domain: "bravo-shop.myshopify.com", name: "Bravo Shop", gid: "gid://shopify/Shop/300002" }
+  - { domain: "charlie-mart.myshopify.com", name: "Charlie Mart", gid: "gid://shopify/Shop/300003" }
+  - { domain: "delta-goods.myshopify.com", name: "Delta Goods", gid: "gid://shopify/Shop/300004" }
+  - { domain: "echo-retail.myshopify.com", name: "Echo Retail", gid: "gid://shopify/Shop/300005" }
+  - { domain: "foxtrot-style.myshopify.com", name: "Foxtrot Style", gid: "gid://shopify/Shop/300006" }
+  - { domain: "golf-wear.myshopify.com", name: "Golf Wear", gid: "gid://shopify/Shop/300007" }
+  - { domain: "hotel-supply.myshopify.com", name: "Hotel Supply", gid: "gid://shopify/Shop/300008" }
+  - { domain: "india-spice.myshopify.com", name: "India Spice", gid: "gid://shopify/Shop/300009" }
+  - { domain: "juliet-fashion.myshopify.com", name: "Juliet Fashion", gid: "gid://shopify/Shop/300010" }
+  - { domain: "kilo-tech.myshopify.com", name: "Kilo Tech", gid: "gid://shopify/Shop/300011" }
+  - { domain: "lima-crafts.myshopify.com", name: "Lima Crafts", gid: "gid://shopify/Shop/300012" }
+  - { domain: "mike-sports.myshopify.com", name: "Mike Sports", gid: "gid://shopify/Shop/300013" }
+  - { domain: "november-gifts.myshopify.com", name: "November Gifts", gid: "gid://shopify/Shop/300014" }
+  - { domain: "oscar-home.myshopify.com", name: "Oscar Home", gid: "gid://shopify/Shop/300015" }
+  - { domain: "papa-pizza.myshopify.com", name: "Papa Pizza", gid: "gid://shopify/Shop/300016" }
+  - { domain: "quebec-books.myshopify.com", name: "Quebec Books", gid: "gid://shopify/Shop/300017" }
+  - { domain: "romeo-flowers.myshopify.com", name: "Romeo Flowers", gid: "gid://shopify/Shop/300018" }
+  - { domain: "sierra-outdoor.myshopify.com", name: "Sierra Outdoor", gid: "gid://shopify/Shop/300019" }
+  - { domain: "tango-dance.myshopify.com", name: "Tango Dance", gid: "gid://shopify/Shop/300020" }
+  - { domain: "uniform-work.myshopify.com", name: "Uniform Work", gid: "gid://shopify/Shop/300021" }
+  - { domain: "victor-games.myshopify.com", name: "Victor Games", gid: "gid://shopify/Shop/300022" }
+  - { domain: "whiskey-bar.myshopify.com", name: "Whiskey Bar", gid: "gid://shopify/Shop/300023" }
+  - { domain: "xray-health.myshopify.com", name: "Xray Health", gid: "gid://shopify/Shop/300024" }
+  - { domain: "yankee-tools.myshopify.com", name: "Yankee Tools", gid: "gid://shopify/Shop/300025" }
+  - { domain: "zulu-travel.myshopify.com", name: "Zulu Travel", gid: "gid://shopify/Shop/300026" }
+  - { domain: "ace-hardware.myshopify.com", name: "Ace Hardware", gid: "gid://shopify/Shop/300027" }
+  - { domain: "bolt-electric.myshopify.com", name: "Bolt Electric", gid: "gid://shopify/Shop/300028" }
+  - { domain: "crystal-gems.myshopify.com", name: "Crystal Gems", gid: "gid://shopify/Shop/300029" }
+  - { domain: "dash-delivery.myshopify.com", name: "Dash Delivery", gid: "gid://shopify/Shop/300030" }
+  - { domain: "ember-candles.myshopify.com", name: "Ember Candles", gid: "gid://shopify/Shop/300031" }
+  - { domain: "flash-photo.myshopify.com", name: "Flash Photo", gid: "gid://shopify/Shop/300032" }
+  - { domain: "glacier-ice.myshopify.com", name: "Glacier Ice", gid: "gid://shopify/Shop/300033" }
+  - { domain: "horizon-view.myshopify.com", name: "Horizon View", gid: "gid://shopify/Shop/300034" }
+  - { domain: "impulse-buy.myshopify.com", name: "Impulse Buy", gid: "gid://shopify/Shop/300035" }
+  - { domain: "jewel-box.myshopify.com", name: "Jewel Box", gid: "gid://shopify/Shop/300036" }
+  - { domain: "karma-style.myshopify.com", name: "Karma Style", gid: "gid://shopify/Shop/300037" }
+  - { domain: "lantern-light.myshopify.com", name: "Lantern Light", gid: "gid://shopify/Shop/300038" }
+  - { domain: "marble-stone.myshopify.com", name: "Marble Stone", gid: "gid://shopify/Shop/300039" }
+  - { domain: "nectar-honey.myshopify.com", name: "Nectar Honey", gid: "gid://shopify/Shop/300040" }
+  - { domain: "onyx-jewelry.myshopify.com", name: "Onyx Jewelry", gid: "gid://shopify/Shop/300041" }
+  - { domain: "pixel-art.myshopify.com", name: "Pixel Art", gid: "gid://shopify/Shop/300042" }
+  - { domain: "quill-write.myshopify.com", name: "Quill Write", gid: "gid://shopify/Shop/300043" }
+  - { domain: "rocket-toys.myshopify.com", name: "Rocket Toys", gid: "gid://shopify/Shop/300044" }
+  - { domain: "summit-gear.myshopify.com", name: "Summit Gear", gid: "gid://shopify/Shop/300045" }
+  - { domain: "thunder-audio.myshopify.com", name: "Thunder Audio", gid: "gid://shopify/Shop/300046" }
+  - { domain: "unity-yoga.myshopify.com", name: "Unity Yoga", gid: "gid://shopify/Shop/300047" }
+  - { domain: "velvet-touch.myshopify.com", name: "Velvet Touch", gid: "gid://shopify/Shop/300048" }
+  - { domain: "wildfire-bbq.myshopify.com", name: "Wildfire BBQ", gid: "gid://shopify/Shop/300049" }
+  - { domain: "zenith-peak.myshopify.com", name: "Zenith Peak", gid: "gid://shopify/Shop/300050" }
+  # Shops 51-100
+  - { domain: "amber-glow.myshopify.com", name: "Amber Glow", gid: "gid://shopify/Shop/300051" }
+  - { domain: "bamboo-zen.myshopify.com", name: "Bamboo Zen", gid: "gid://shopify/Shop/300052" }
+  - { domain: "cedar-wood.myshopify.com", name: "Cedar Wood", gid: "gid://shopify/Shop/300053" }
+  - { domain: "driftwood-art.myshopify.com", name: "Driftwood Art", gid: "gid://shopify/Shop/300054" }
+  - { domain: "emerald-isle.myshopify.com", name: "Emerald Isle", gid: "gid://shopify/Shop/300055" }
+  - { domain: "falcon-fly.myshopify.com", name: "Falcon Fly", gid: "gid://shopify/Shop/300056" }
+  - { domain: "granite-works.myshopify.com", name: "Granite Works", gid: "gid://shopify/Shop/300057" }
+  - { domain: "hawk-eye.myshopify.com", name: "Hawk Eye", gid: "gid://shopify/Shop/300058" }
+  - { domain: "indigo-dye.myshopify.com", name: "Indigo Dye", gid: "gid://shopify/Shop/300059" }
+  - { domain: "jasmine-tea.myshopify.com", name: "Jasmine Tea", gid: "gid://shopify/Shop/300060" }
+  - { domain: "kelp-sea.myshopify.com", name: "Kelp Sea", gid: "gid://shopify/Shop/300061" }
+  - { domain: "lotus-spa.myshopify.com", name: "Lotus Spa", gid: "gid://shopify/Shop/300062" }
+  - { domain: "moss-green.myshopify.com", name: "Moss Green", gid: "gid://shopify/Shop/300063" }
+  - { domain: "nimbus-cloud.myshopify.com", name: "Nimbus Cloud", gid: "gid://shopify/Shop/300064" }
+  - { domain: "orchid-bloom.myshopify.com", name: "Orchid Bloom", gid: "gid://shopify/Shop/300065" }
+  - { domain: "prism-light.myshopify.com", name: "Prism Light", gid: "gid://shopify/Shop/300066" }
+  - { domain: "quasar-tech.myshopify.com", name: "Quasar Tech", gid: "gid://shopify/Shop/300067" }
+  - { domain: "ripple-water.myshopify.com", name: "Ripple Water", gid: "gid://shopify/Shop/300068" }
+  - { domain: "sapphire-ring.myshopify.com", name: "Sapphire Ring", gid: "gid://shopify/Shop/300069" }
+  - { domain: "topaz-shine.myshopify.com", name: "Topaz Shine", gid: "gid://shopify/Shop/300070" }
+  - { domain: "ultra-fit.myshopify.com", name: "Ultra Fit", gid: "gid://shopify/Shop/300071" }
+  - { domain: "vortex-spin.myshopify.com", name: "Vortex Spin", gid: "gid://shopify/Shop/300072" }
+  - { domain: "willow-tree.myshopify.com", name: "Willow Tree", gid: "gid://shopify/Shop/300073" }
+  - { domain: "xenon-glow.myshopify.com", name: "Xenon Glow", gid: "gid://shopify/Shop/300074" }
+  - { domain: "yarrow-field.myshopify.com", name: "Yarrow Field", gid: "gid://shopify/Shop/300075" }
+  - { domain: "zephyr-wind.myshopify.com", name: "Zephyr Wind", gid: "gid://shopify/Shop/300076" }
+  - { domain: "atlas-map.myshopify.com", name: "Atlas Map", gid: "gid://shopify/Shop/300077" }
+  - { domain: "beacon-light.myshopify.com", name: "Beacon Light", gid: "gid://shopify/Shop/300078" }
+  - { domain: "coral-reef.myshopify.com", name: "Coral Reef", gid: "gid://shopify/Shop/300079" }
+  - { domain: "dawn-rise.myshopify.com", name: "Dawn Rise", gid: "gid://shopify/Shop/300080" }
+  - { domain: "eagle-soar.myshopify.com", name: "Eagle Soar", gid: "gid://shopify/Shop/300081" }
+  - { domain: "flint-stone.myshopify.com", name: "Flint Stone", gid: "gid://shopify/Shop/300082" }
+  - { domain: "grove-park.myshopify.com", name: "Grove Park", gid: "gid://shopify/Shop/300083" }
+  - { domain: "harbor-bay.myshopify.com", name: "Harbor Bay", gid: "gid://shopify/Shop/300084" }
+  - { domain: "ivy-leaf.myshopify.com", name: "Ivy Leaf", gid: "gid://shopify/Shop/300085" }
+  - { domain: "jade-palace.myshopify.com", name: "Jade Palace", gid: "gid://shopify/Shop/300086" }
+  - { domain: "kestrel-bird.myshopify.com", name: "Kestrel Bird", gid: "gid://shopify/Shop/300087" }
+  - { domain: "lapis-blue.myshopify.com", name: "Lapis Blue", gid: "gid://shopify/Shop/300088" }
+  - { domain: "meadow-farm.myshopify.com", name: "Meadow Farm", gid: "gid://shopify/Shop/300089" }
+  - { domain: "north-star.myshopify.com", name: "North Star", gid: "gid://shopify/Shop/300090" }
+  - { domain: "oasis-pool.myshopify.com", name: "Oasis Pool", gid: "gid://shopify/Shop/300091" }
+  - { domain: "palm-beach.myshopify.com", name: "Palm Beach", gid: "gid://shopify/Shop/300092" }
+  - { domain: "quartz-watch.myshopify.com", name: "Quartz Watch", gid: "gid://shopify/Shop/300093" }
+  - { domain: "raven-dark.myshopify.com", name: "Raven Dark", gid: "gid://shopify/Shop/300094" }
+  - { domain: "solar-power.myshopify.com", name: "Solar Power", gid: "gid://shopify/Shop/300095" }
+  - { domain: "terra-earth.myshopify.com", name: "Terra Earth", gid: "gid://shopify/Shop/300096" }
+  - { domain: "umber-shade.myshopify.com", name: "Umber Shade", gid: "gid://shopify/Shop/300097" }
+  - { domain: "violet-haze.myshopify.com", name: "Violet Haze", gid: "gid://shopify/Shop/300098" }
+  - { domain: "wisteria-bloom.myshopify.com", name: "Wisteria Bloom", gid: "gid://shopify/Shop/300099" }
+  - { domain: "xylem-plant.myshopify.com", name: "Xylem Plant", gid: "gid://shopify/Shop/300100" }
+  # Shops 101-150
+  - { domain: "acacia-tree.myshopify.com", name: "Acacia Tree", gid: "gid://shopify/Shop/300101" }
+  - { domain: "bluebell-field.myshopify.com", name: "Bluebell Field", gid: "gid://shopify/Shop/300102" }
+  - { domain: "clover-luck.myshopify.com", name: "Clover Luck", gid: "gid://shopify/Shop/300103" }
+  - { domain: "dahlia-garden.myshopify.com", name: "Dahlia Garden", gid: "gid://shopify/Shop/300104" }
+  - { domain: "elm-street.myshopify.com", name: "Elm Street", gid: "gid://shopify/Shop/300105" }
+  - { domain: "fig-tree.myshopify.com", name: "Fig Tree", gid: "gid://shopify/Shop/300106" }
+  - { domain: "ginkgo-leaf.myshopify.com", name: "Ginkgo Leaf", gid: "gid://shopify/Shop/300107" }
+  - { domain: "hazel-nut.myshopify.com", name: "Hazel Nut", gid: "gid://shopify/Shop/300108" }
+  - { domain: "iris-petal.myshopify.com", name: "Iris Petal", gid: "gid://shopify/Shop/300109" }
+  - { domain: "juniper-berry.myshopify.com", name: "Juniper Berry", gid: "gid://shopify/Shop/300110" }
+  - { domain: "kumquat-fruit.myshopify.com", name: "Kumquat Fruit", gid: "gid://shopify/Shop/300111" }
+  - { domain: "lilac-bloom.myshopify.com", name: "Lilac Bloom", gid: "gid://shopify/Shop/300112" }
+  - { domain: "magnolia-park.myshopify.com", name: "Magnolia Park", gid: "gid://shopify/Shop/300113" }
+  - { domain: "nutmeg-spice.myshopify.com", name: "Nutmeg Spice", gid: "gid://shopify/Shop/300114" }
+  - { domain: "olive-grove.myshopify.com", name: "Olive Grove", gid: "gid://shopify/Shop/300115" }
+  - { domain: "peony-rose.myshopify.com", name: "Peony Rose", gid: "gid://shopify/Shop/300116" }
+  - { domain: "quinoa-health.myshopify.com", name: "Quinoa Health", gid: "gid://shopify/Shop/300117" }
+  - { domain: "rosemary-herb.myshopify.com", name: "Rosemary Herb", gid: "gid://shopify/Shop/300118" }
+  - { domain: "sunflower-seed.myshopify.com", name: "Sunflower Seed", gid: "gid://shopify/Shop/300119" }
+  - { domain: "thistle-wild.myshopify.com", name: "Thistle Wild", gid: "gid://shopify/Shop/300120" }
+  - { domain: "upland-farm.myshopify.com", name: "Upland Farm", gid: "gid://shopify/Shop/300121" }
+  - { domain: "verbena-herb.myshopify.com", name: "Verbena Herb", gid: "gid://shopify/Shop/300122" }
+  - { domain: "wattle-gold.myshopify.com", name: "Wattle Gold", gid: "gid://shopify/Shop/300123" }
+  - { domain: "xyris-marsh.myshopify.com", name: "Xyris Marsh", gid: "gid://shopify/Shop/300124" }
+  - { domain: "yucca-desert.myshopify.com", name: "Yucca Desert", gid: "gid://shopify/Shop/300125" }
+  - { domain: "zinnia-bright.myshopify.com", name: "Zinnia Bright", gid: "gid://shopify/Shop/300126" }
+  - { domain: "aspen-snow.myshopify.com", name: "Aspen Snow", gid: "gid://shopify/Shop/300127" }
+  - { domain: "birch-bark.myshopify.com", name: "Birch Bark", gid: "gid://shopify/Shop/300128" }
+  - { domain: "cypress-hill.myshopify.com", name: "Cypress Hill", gid: "gid://shopify/Shop/300129" }
+  - { domain: "dogwood-bloom.myshopify.com", name: "Dogwood Bloom", gid: "gid://shopify/Shop/300130" }
+  - { domain: "elder-berry.myshopify.com", name: "Elder Berry", gid: "gid://shopify/Shop/300131" }
+  - { domain: "fennel-seed.myshopify.com", name: "Fennel Seed", gid: "gid://shopify/Shop/300132" }
+  - { domain: "garlic-press.myshopify.com", name: "Garlic Press", gid: "gid://shopify/Shop/300133" }
+  - { domain: "holly-berry.myshopify.com", name: "Holly Berry", gid: "gid://shopify/Shop/300134" }
+  - { domain: "ivy-climb.myshopify.com", name: "Ivy Climb", gid: "gid://shopify/Shop/300135" }
+  - { domain: "jasper-stone.myshopify.com", name: "Jasper Stone", gid: "gid://shopify/Shop/300136" }
+  - { domain: "kale-green.myshopify.com", name: "Kale Green", gid: "gid://shopify/Shop/300137" }
+  - { domain: "laurel-crown.myshopify.com", name: "Laurel Crown", gid: "gid://shopify/Shop/300138" }
+  - { domain: "myrtle-bush.myshopify.com", name: "Myrtle Bush", gid: "gid://shopify/Shop/300139" }
+  - { domain: "nettle-herb.myshopify.com", name: "Nettle Herb", gid: "gid://shopify/Shop/300140" }
+  - { domain: "oregano-leaf.myshopify.com", name: "Oregano Leaf", gid: "gid://shopify/Shop/300141" }
+  - { domain: "parsley-fresh.myshopify.com", name: "Parsley Fresh", gid: "gid://shopify/Shop/300142" }
+  - { domain: "quince-fruit.myshopify.com", name: "Quince Fruit", gid: "gid://shopify/Shop/300143" }
+  - { domain: "rhubarb-pie.myshopify.com", name: "Rhubarb Pie", gid: "gid://shopify/Shop/300144" }
+  - { domain: "sage-wisdom.myshopify.com", name: "Sage Wisdom", gid: "gid://shopify/Shop/300145" }
+  - { domain: "thyme-herb.myshopify.com", name: "Thyme Herb", gid: "gid://shopify/Shop/300146" }
+  - { domain: "ursinia-daisy.myshopify.com", name: "Ursinia Daisy", gid: "gid://shopify/Shop/300147" }
+  - { domain: "vanilla-bean.myshopify.com", name: "Vanilla Bean", gid: "gid://shopify/Shop/300148" }
+  - { domain: "wasabi-hot.myshopify.com", name: "Wasabi Hot", gid: "gid://shopify/Shop/300149" }
+  - { domain: "yam-root.myshopify.com", name: "Yam Root", gid: "gid://shopify/Shop/300150" }
+  # Shops 151-210
+  - { domain: "agave-plant.myshopify.com", name: "Agave Plant", gid: "gid://shopify/Shop/300151" }
+  - { domain: "basil-leaf.myshopify.com", name: "Basil Leaf", gid: "gid://shopify/Shop/300152" }
+  - { domain: "cactus-bloom.myshopify.com", name: "Cactus Bloom", gid: "gid://shopify/Shop/300153" }
+  - { domain: "dill-weed.myshopify.com", name: "Dill Weed", gid: "gid://shopify/Shop/300154" }
+  - { domain: "echinacea-herb.myshopify.com", name: "Echinacea Herb", gid: "gid://shopify/Shop/300155" }
+  - { domain: "flax-seed.myshopify.com", name: "Flax Seed", gid: "gid://shopify/Shop/300156" }
+  - { domain: "ginger-root.myshopify.com", name: "Ginger Root", gid: "gid://shopify/Shop/300157" }
+  - { domain: "hemp-fiber.myshopify.com", name: "Hemp Fiber", gid: "gid://shopify/Shop/300158" }
+  - { domain: "ivy-vine.myshopify.com", name: "Ivy Vine", gid: "gid://shopify/Shop/300159" }
+  - { domain: "jute-bag.myshopify.com", name: "Jute Bag", gid: "gid://shopify/Shop/300160" }
+  - { domain: "kelp-farm.myshopify.com", name: "Kelp Farm", gid: "gid://shopify/Shop/300161" }
+  - { domain: "lavender-field.myshopify.com", name: "Lavender Field", gid: "gid://shopify/Shop/300162" }
+  - { domain: "mint-garden.myshopify.com", name: "Mint Garden", gid: "gid://shopify/Shop/300163" }
+  - { domain: "neem-tree.myshopify.com", name: "Neem Tree", gid: "gid://shopify/Shop/300164" }
+  - { domain: "oak-barrel.myshopify.com", name: "Oak Barrel", gid: "gid://shopify/Shop/300165" }
+  - { domain: "palm-grove.myshopify.com", name: "Palm Grove", gid: "gid://shopify/Shop/300166" }
+  - { domain: "reed-basket.myshopify.com", name: "Reed Basket", gid: "gid://shopify/Shop/300167" }
+  - { domain: "saffron-spice.myshopify.com", name: "Saffron Spice", gid: "gid://shopify/Shop/300168" }
+  - { domain: "teak-wood.myshopify.com", name: "Teak Wood", gid: "gid://shopify/Shop/300169" }
+  - { domain: "udo-plant.myshopify.com", name: "Udo Plant", gid: "gid://shopify/Shop/300170" }
+  - { domain: "vine-yard.myshopify.com", name: "Vine Yard", gid: "gid://shopify/Shop/300171" }
+  - { domain: "walnut-grove.myshopify.com", name: "Walnut Grove", gid: "gid://shopify/Shop/300172" }
+  - { domain: "xylem-flow.myshopify.com", name: "Xylem Flow", gid: "gid://shopify/Shop/300173" }
+  - { domain: "yarrow-meadow.myshopify.com", name: "Yarrow Meadow", gid: "gid://shopify/Shop/300174" }
+  - { domain: "zest-citrus.myshopify.com", name: "Zest Citrus", gid: "gid://shopify/Shop/300175" }
+  - { domain: "alder-creek.myshopify.com", name: "Alder Creek", gid: "gid://shopify/Shop/300176" }
+  - { domain: "bay-laurel.myshopify.com", name: "Bay Laurel", gid: "gid://shopify/Shop/300177" }
+  - { domain: "chestnut-hill.myshopify.com", name: "Chestnut Hill", gid: "gid://shopify/Shop/300178" }
+  - { domain: "dewdrop-mist.myshopify.com", name: "Dewdrop Mist", gid: "gid://shopify/Shop/300179" }
+  - { domain: "eucalyptus-oil.myshopify.com", name: "Eucalyptus Oil", gid: "gid://shopify/Shop/300180" }
+  - { domain: "fir-cone.myshopify.com", name: "Fir Cone", gid: "gid://shopify/Shop/300181" }
+  - { domain: "guava-juice.myshopify.com", name: "Guava Juice", gid: "gid://shopify/Shop/300182" }
+  - { domain: "hibiscus-tea.myshopify.com", name: "Hibiscus Tea", gid: "gid://shopify/Shop/300183" }
+  - { domain: "inca-gold.myshopify.com", name: "Inca Gold", gid: "gid://shopify/Shop/300184" }
+  - { domain: "jasmine-bloom.myshopify.com", name: "Jasmine Bloom", gid: "gid://shopify/Shop/300185" }
+  - { domain: "kiwi-fresh.myshopify.com", name: "Kiwi Fresh", gid: "gid://shopify/Shop/300186" }
+  - { domain: "lemon-drop.myshopify.com", name: "Lemon Drop", gid: "gid://shopify/Shop/300187" }
+  - { domain: "mango-splash.myshopify.com", name: "Mango Splash", gid: "gid://shopify/Shop/300188" }
+  - { domain: "nectar-flow.myshopify.com", name: "Nectar Flow", gid: "gid://shopify/Shop/300189" }
+  - { domain: "orange-peel.myshopify.com", name: "Orange Peel", gid: "gid://shopify/Shop/300190" }
+  - { domain: "papaya-fruit.myshopify.com", name: "Papaya Fruit", gid: "gid://shopify/Shop/300191" }
+  - { domain: "quince-jam.myshopify.com", name: "Quince Jam", gid: "gid://shopify/Shop/300192" }
+  - { domain: "raspberry-tart.myshopify.com", name: "Raspberry Tart", gid: "gid://shopify/Shop/300193" }
+  - { domain: "starfruit-sweet.myshopify.com", name: "Starfruit Sweet", gid: "gid://shopify/Shop/300194" }
+  - { domain: "tamarind-sour.myshopify.com", name: "Tamarind Sour", gid: "gid://shopify/Shop/300195" }
+  - { domain: "ugli-fruit.myshopify.com", name: "Ugli Fruit", gid: "gid://shopify/Shop/300196" }
+  - { domain: "vanilla-ice.myshopify.com", name: "Vanilla Ice", gid: "gid://shopify/Shop/300197" }
+  - { domain: "watermelon-slice.myshopify.com", name: "Watermelon Slice", gid: "gid://shopify/Shop/300198" }
+  - { domain: "ximenia-nut.myshopify.com", name: "Ximenia Nut", gid: "gid://shopify/Shop/300199" }
+  - { domain: "yuzu-zest.myshopify.com", name: "Yuzu Zest", gid: "gid://shopify/Shop/300200" }
+  - { domain: "zucchini-fresh.myshopify.com", name: "Zucchini Fresh", gid: "gid://shopify/Shop/300201" }
+  - { domain: "artichoke-heart.myshopify.com", name: "Artichoke Heart", gid: "gid://shopify/Shop/300202" }
+  - { domain: "beetroot-red.myshopify.com", name: "Beetroot Red", gid: "gid://shopify/Shop/300203" }
+  - { domain: "carrot-top.myshopify.com", name: "Carrot Top", gid: "gid://shopify/Shop/300204" }
+  - { domain: "daikon-white.myshopify.com", name: "Daikon White", gid: "gid://shopify/Shop/300205" }
+  - { domain: "endive-crisp.myshopify.com", name: "Endive Crisp", gid: "gid://shopify/Shop/300206" }
+  - { domain: "fennel-bulb.myshopify.com", name: "Fennel Bulb", gid: "gid://shopify/Shop/300207" }
+  - { domain: "gourd-squash.myshopify.com", name: "Gourd Squash", gid: "gid://shopify/Shop/300208" }
+  - { domain: "horseradish-root.myshopify.com", name: "Horseradish Root", gid: "gid://shopify/Shop/300209" }
+  - { domain: "iceberg-crisp.myshopify.com", name: "Iceberg Crisp", gid: "gid://shopify/Shop/300210" }
+
+subscriptions:
+  # App 1 (MegaReviews) - 80 shops, mixed status
+  - { app_index: 0, shop_index: 0, plan_name: "Premium", price: "59.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 1, plan_name: "Premium", price: "59.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 2, plan_name: "Business", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 3, plan_name: "Business", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 4, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 5, plan_name: "Premium", price: "59.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 6, plan_name: "Business", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 7, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 8, plan_name: "Premium", price: "59.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 9, plan_name: "Business", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 10, plan_name: "Premium", price: "59.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 11, plan_name: "Business", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 12, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 13, plan_name: "Premium", price: "59.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 14, plan_name: "Business", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 15, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 16, plan_name: "Premium", price: "59.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 17, plan_name: "Business", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 18, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 0, shop_index: 19, plan_name: "Premium", price: "59.99", interval: "EVERY_30_DAYS", status: "active" }
+  # Frozen (at-risk) - 7 shops
+  - { app_index: 0, shop_index: 20, plan_name: "Premium", price: "59.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 35 }
+  - { app_index: 0, shop_index: 21, plan_name: "Business", price: "39.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 42 }
+  - { app_index: 0, shop_index: 22, plan_name: "Premium", price: "59.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 50 }
+  - { app_index: 0, shop_index: 23, plan_name: "Business", price: "39.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 58 }
+  - { app_index: 0, shop_index: 24, plan_name: "Premium", price: "59.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 65 }
+  - { app_index: 0, shop_index: 25, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 72 }
+  - { app_index: 0, shop_index: 26, plan_name: "Business", price: "39.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 80 }
+  # Cancelled (churned) - 3 shops
+  - { app_index: 0, shop_index: 27, plan_name: "Premium", price: "59.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 100 }
+  - { app_index: 0, shop_index: 28, plan_name: "Business", price: "39.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 120 }
+  - { app_index: 0, shop_index: 29, plan_name: "Starter", price: "19.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 150 }
+
+  # App 2 (AutoShip Pro) - 60 shops
+  - { app_index: 1, shop_index: 50, plan_name: "Scale", price: "79.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 51, plan_name: "Growth", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 52, plan_name: "Scale", price: "79.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 53, plan_name: "Growth", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 54, plan_name: "Scale", price: "79.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 55, plan_name: "Growth", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 56, plan_name: "Scale", price: "79.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 57, plan_name: "Growth", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 58, plan_name: "Scale", price: "79.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 1, shop_index: 59, plan_name: "Growth", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  # Frozen
+  - { app_index: 1, shop_index: 60, plan_name: "Scale", price: "79.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 38 }
+  - { app_index: 1, shop_index: 61, plan_name: "Growth", price: "49.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 48 }
+  - { app_index: 1, shop_index: 62, plan_name: "Scale", price: "79.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 62 }
+  # Cancelled
+  - { app_index: 1, shop_index: 63, plan_name: "Growth", price: "49.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 110 }
+  - { app_index: 1, shop_index: 64, plan_name: "Scale", price: "79.99", interval: "EVERY_30_DAYS", status: "cancelled", last_charge_days_ago: 130 }
+
+  # App 3 (LoyaltyBoost) - 40 shops
+  - { app_index: 2, shop_index: 100, plan_name: "Enterprise", price: "99.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 2, shop_index: 101, plan_name: "Pro", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 2, shop_index: 102, plan_name: "Enterprise", price: "99.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 2, shop_index: 103, plan_name: "Pro", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 2, shop_index: 104, plan_name: "Enterprise", price: "99.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 2, shop_index: 105, plan_name: "Pro", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 2, shop_index: 106, plan_name: "Enterprise", price: "99.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 2, shop_index: 107, plan_name: "Pro", price: "49.99", interval: "EVERY_30_DAYS", status: "active" }
+  # Frozen
+  - { app_index: 2, shop_index: 108, plan_name: "Enterprise", price: "99.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 45 }
+  - { app_index: 2, shop_index: 109, plan_name: "Pro", price: "49.99", interval: "EVERY_30_DAYS", status: "frozen", last_charge_days_ago: 55 }
+
+  # App 4 (SEO Wizard) - 20 shops
+  - { app_index: 3, shop_index: 150, plan_name: "Basic", price: "14.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 3, shop_index: 151, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 3, shop_index: 152, plan_name: "Basic", price: "14.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 3, shop_index: 153, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 3, shop_index: 154, plan_name: "Basic", price: "14.99", interval: "EVERY_30_DAYS", status: "active" }
+  - { app_index: 3, shop_index: 155, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
+
+usage_charges:
+  - { app_index: 1, shop_index: 50, amount_range: [10.00, 100.00], frequency: "weekly" }
+  - { app_index: 1, shop_index: 51, amount_range: [5.00, 60.00], frequency: "weekly" }
+  - { app_index: 1, shop_index: 52, amount_range: [15.00, 120.00], frequency: "weekly" }
+  - { app_index: 2, shop_index: 100, amount_range: [20.00, 200.00], frequency: "biweekly" }
+  - { app_index: 2, shop_index: 101, amount_range: [10.00, 80.00], frequency: "biweekly" }
+
+events:
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 0, days_ago: 360 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 5, days_ago: 320 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 10, days_ago: 280 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 15, days_ago: 240 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 20, days_ago: 200 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 1, shop_index: 50, days_ago: 300 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 1, shop_index: 55, days_ago: 240 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 1, shop_index: 60, days_ago: 180 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 2, shop_index: 100, days_ago: 250 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 2, shop_index: 105, days_ago: 200 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 3, shop_index: 150, days_ago: 180 }
+  - { type: "RELATIONSHIP_INSTALLED", app_index: 3, shop_index: 155, days_ago: 120 }
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 0, shop_index: 0, days_ago: 5 }
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 0, shop_index: 1, days_ago: 3 }
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 0, shop_index: 5, days_ago: 7 }
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 1, shop_index: 50, days_ago: 4 }
+  - { type: "SUBSCRIPTION_CHARGE_ACCEPTED", app_index: 1, shop_index: 51, days_ago: 6 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 27, days_ago: 100 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 0, shop_index: 28, days_ago: 120 }
+  - { type: "RELATIONSHIP_UNINSTALLED", app_index: 0, shop_index: 29, days_ago: 148 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 1, shop_index: 63, days_ago: 110 }
+  - { type: "SUBSCRIPTION_CHARGE_CANCELED", app_index: 1, shop_index: 64, days_ago: 130 }

@@ -42,6 +42,26 @@
       "key": "apiKey",
       "value": "",
       "description": "Revenue API key (lgk_...) — create via '15 - API Keys > Create API Key'"
+    },
+    {
+      "key": "orgId",
+      "value": "",
+      "description": "Organization UUID — set after Create Organization"
+    },
+    {
+      "key": "memberId",
+      "value": "",
+      "description": "Org member UUID — set manually from List Members response"
+    },
+    {
+      "key": "invitationId",
+      "value": "",
+      "description": "Invitation UUID — auto-set after Invite Member"
+    },
+    {
+      "key": "invitationToken",
+      "value": "",
+      "description": "Invitation token — auto-set after Invite Member"
     }
   ],
   "item": [
@@ -1241,6 +1261,308 @@
               "raw": "{\n    \"query\": \"{ subscription(shopifyGid: \\\"gid://shopify/AppSubscription/123\\\") { subscriptionId myshopifyDomain riskState isPaidCurrentCycle } }\"\n}"
             },
             "url": "{{baseUrl}}/api/v1/graphql"
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 - Organizations",
+      "item": [
+        {
+          "name": "Create Organization",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.id) { pm.collectionVariables.set('orgId', json.id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"My Organization\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/orgs"
+          }
+        },
+        {
+          "name": "List Organizations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orgs"
+          }
+        },
+        {
+          "name": "Get Organization",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}"
+          }
+        },
+        {
+          "name": "Update Organization",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Org Name\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}"
+          }
+        },
+        {
+          "name": "Delete Organization",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}"
+          }
+        },
+        {
+          "name": "List Members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members"
+          }
+        },
+        {
+          "name": "Invite Member",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.id) { pm.collectionVariables.set('invitationId', json.id); }",
+                  "    if (json.token) { pm.collectionVariables.set('invitationToken', json.token); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"teammate@example.com\",\n    \"role\": \"VIEWER\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/invitations"
+          }
+        },
+        {
+          "name": "Accept Invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/invitations/{{invitationToken}}/accept"
+          }
+        },
+        {
+          "name": "Revoke Invitation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/invitations/{{invitationId}}"
+          }
+        },
+        {
+          "name": "Change Member Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"role\": \"ADMIN\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{memberId}}/role"
+          }
+        },
+        {
+          "name": "Suspend Member",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{memberId}}/suspend"
+          }
+        },
+        {
+          "name": "Unsuspend Member",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{memberId}}/unsuspend"
+          }
+        },
+        {
+          "name": "Remove Member",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{memberId}}"
+          }
+        },
+        {
+          "name": "Update Member Notifications",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": true,\n    \"push\": true,\n    \"events\": [\"churn_alert\", \"sync_complete\"]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{memberId}}/notifications"
+          }
+        },
+        {
+          "name": "Configure Webhook",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"url\": \"https://example.com/webhooks/ledgerguard\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/webhooks"
+          }
+        },
+        {
+          "name": "List Audit Log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orgs/{{orgId}}/audit-log?limit=50&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "orgs", "{{orgId}}", "audit-log"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
           }
         }
       ]

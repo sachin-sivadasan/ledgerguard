@@ -693,6 +693,24 @@ Migration 000035 adds the `stable_domain_key` column to the `subscriptions` tabl
 
 ---
 
+### ADR-033: ON CONFLICT Includes app_id for Transaction Upsert
+**Date:** 2026-05-07
+**Status:** Accepted
+
+**Context:**
+The transaction upsert (`ON CONFLICT (shopify_gid)`) did not update `app_id` when a conflicting row existed. If a Shopify app is deleted and re-created, its internal `app_id` changes but the underlying transaction GIDs remain the same. The upsert would keep the stale `app_id`, causing orphaned transactions that don't appear under the new app.
+
+**Decision:**
+Include `app_id = EXCLUDED.app_id` in the `ON CONFLICT ... DO UPDATE SET` clause for both `Upsert()` and `UpsertBatch()` in `transaction_repository.go`. This ensures the transaction is always associated with the currently-syncing app.
+
+**Consequences:**
+- Transactions are correctly re-parented when an app is re-created with the same Shopify GID space
+- No data loss — all other fields were already being updated on conflict
+- Idempotent: re-running the same sync produces the same result
+- No migration needed — query-only change
+
+---
+
 ### ADR-032: Daily Catch-Up Sync with Configurable Lookback
 **Date:** 2026-05-07
 **Status:** Accepted
@@ -716,3 +734,33 @@ Add a daily catch-up sync that enqueues `transaction_sync` + `event_sync` jobs w
 - Does not replace the full sync scheduler — complementary mechanism
 - `RunOnce(ctx, lookbackDays)` enables manual/admin-triggered catch-ups with custom windows
 - Internal endpoint enables Cloud Scheduler integration for serverless environments (Cloud Run)
+
+---
+
+### ADR-034: Organizations as Top-Level Data-Owning Entity
+**Date:** 2026-05-07
+**Status:** Accepted
+
+**Context:**
+LedgerGuard currently uses a single-user model where partner accounts, billing, and API keys are owned by individual users. App developers often work in teams — co-founders, VAs, bookkeepers need access to the same data. A multi-user model is needed without breaking the existing single-user flow.
+
+**Decision:**
+Introduce `organizations` as the top-level data-owning entity. Key design choices:
+
+1. **Organizations own data, not users** — `partner_accounts`, `billing_subscriptions`, and `api_keys` get `org_id` columns. Data is accessed through org membership.
+2. **Multi-org support** — A user can belong to multiple organizations (e.g., freelancer managing apps for different companies). The `X-Org-Id` header or auto-selection (when user has exactly 1 org) determines the active org.
+3. **Three roles** — OWNER (full control), ADMIN (manage members/apps/sync), VIEWER (read-only). Role hierarchy: OWNER > ADMIN > VIEWER.
+4. **Member lifecycle** — INVITED → ACTIVE → SUSPENDED → REMOVED. Suspended members cannot access data but still count toward plan limits.
+5. **Plan-based limits** — FREE=1 member, STARTER=3, PRO=10. Pending invitations count toward limits.
+6. **Zero-downtime migration** — Add nullable `org_id` first, backfill existing users into personal orgs, then make NOT NULL.
+7. **Org-scoped audit log** — Separate from user-level audit log. Records member lifecycle events, sync triggers, setting changes.
+8. **Org-level webhooks** — STARTER+ plans can configure a webhook URL with HMAC-SHA256 signing.
+9. **SSO/SAML** — PRO only, stored as JSONB config on the organization.
+
+**Consequences:**
+- Existing single-user flow works unchanged (auto-created personal org, auto-selected)
+- New middleware (`OrgContextMiddleware`) resolves org context on every request
+- All data access routes become org-scoped via membership check
+- Migration 000036 creates 4 new tables and adds 3 `org_id` columns
+- Plan tier moves from `users` to `organizations` table (after backfill)
+- API keys become org-scoped: any org member with ADMIN+ can manage

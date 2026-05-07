@@ -1695,3 +1695,35 @@
 - Plan-based team limits
 - 10-phase implementation plan
 - Zero-downtime migration strategy
+
+---
+
+### [2026-05-07] Multi-User Team Access Model — Full Implementation
+**Original:**
+> Implement the following plan: Part 1 (documentation audit) + Part 2 (multi-user team access model) across all phases. Then: frontend changes done? postman collection api done? → yes do both.
+
+**Improved:**
+> Execute the full multi-user org model implementation plan across 8 phases: (A) DB migration 000036 + domain entities + value objects + repository interfaces; (B) PostgreSQL repository implementations + OrgService + OrgAuditService; (C) 24 unit tests for org service with mock repos; (D) OrgContextMiddleware for org resolution + role/status checking; (E) OrgHandler (15 endpoints) + OrgAuditHandler + router wiring with X-Org-Id CORS; (F) Flutter organization UI — models, service, provider, team screen, audit log screen, org switcher widget, wiring into main.dart/app.dart/app_shell/settings; (G) Postman collection with 16 org endpoints; (H) Documentation — DATABASE_SCHEMA.md, DECISIONS.md (ADR-033, ADR-034), IMPLEMENTATION_LOG.md, all PlantUML diagrams (ER, C4, SEQUENCE, webhook, new 36-org-management).
+
+**Result:**
+- Migration 000036: 4 new tables (organizations, org_members, org_invitations, org_audit_log) + org_id on partner_accounts/api_keys
+- Domain: organization.go entity, 3 value objects (OrgRole, MemberStatus, InvitationStatus)
+- 4 repository interfaces + 4 PostgreSQL implementations
+- OrgService: create org, invite (plan limits), accept, suspend, unsuspend, change role, webhooks
+- OrgAuditService: separate from existing user-level AuditService
+- 24 unit tests — all passing
+- OrgContextMiddleware: resolves org from URL/{orgId} or X-Org-Id header, auto-selects single org
+- OrgHandler: 15 HTTP endpoints wired in router
+- Flutter: organization_model.dart, organization_service.dart, organization_provider.dart (with ApiClient.setOrgId wiring)
+- Flutter UI: TeamScreen (members + invite dialog + suspend/remove), AuditLogScreen, OrgSwitcher (desktop rail + tablet drawer)
+- Flutter wiring: main.dart (provider registration), app.dart (routes), settings_screen.dart (Organization card), app_shell.dart (OrgSwitcher)
+- flutter analyze: 0 issues
+- Postman: "19 - Organizations" folder with 16 requests + 4 collection variables
+- ER_current.puml: +4 entities, +10 relationships, +4 notes
+- C4_current.puml: +OrgService, +OrgHandler, +OrgContextMW, +4 new REST handlers (Transaction/Store/Event/Risk)
+- SEQUENCE_current.puml: +4 flows (invite, accept, suspend/unsuspend, org switch)
+- New: 36-org-management-sequence.puml (6-page detailed org flows)
+- Updated: 14-webhook-processing-sequence.puml (app installed + reinstall flow)
+- ADR-033: ON CONFLICT includes app_id
+- ADR-034: Organizations as top-level data-owning entity
+- Commit: `5bd4f29`

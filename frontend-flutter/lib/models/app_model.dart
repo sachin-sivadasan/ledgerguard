@@ -1,5 +1,10 @@
 class ShopifyApp {
+  /// Internal UUID — used as the primary identifier for all API calls.
   final String id;
+
+  /// Numeric Shopify ID (e.g. "5001") — used only for display purposes.
+  final String shopifyId;
+
   final String name;
   final String iconUrl;
   final int installCount;
@@ -10,6 +15,7 @@ class ShopifyApp {
 
   const ShopifyApp({
     required this.id,
+    required this.shopifyId,
     required this.name,
     required this.iconUrl,
     required this.installCount,
@@ -21,7 +27,8 @@ class ShopifyApp {
 
   factory ShopifyApp.fromJson(Map<String, dynamic> json) {
     return ShopifyApp(
-      id: json['id'].toString(),
+      id: json['uuid'] as String? ?? json['id'].toString(),
+      shopifyId: json['id'].toString(),
       name: json['name'] as String? ?? '',
       iconUrl: json['icon_url'] as String? ?? '',
       installCount: json['install_count'] as int? ?? 0,

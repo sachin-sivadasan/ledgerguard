@@ -2,7 +2,8 @@ import '../models/app_model.dart';
 
 final mockApps = [
   ShopifyApp(
-    id: 'app-1',
+    id: '00000000-0000-0000-0000-000000000001',
+    shopifyId: 'app-1',
     name: 'InventorySync Pro',
     iconUrl: 'https://placehold.co/64x64/5C6AC4/white?text=IS',
     installCount: 1247,
@@ -12,7 +13,8 @@ final mockApps = [
     syncStatus: 'synced',
   ),
   ShopifyApp(
-    id: 'app-2',
+    id: '00000000-0000-0000-0000-000000000002',
+    shopifyId: 'app-2',
     name: 'ReviewBoost',
     iconUrl: 'https://placehold.co/64x64/008060/white?text=RB',
     installCount: 832,
@@ -22,7 +24,8 @@ final mockApps = [
     syncStatus: 'synced',
   ),
   ShopifyApp(
-    id: 'app-3',
+    id: '00000000-0000-0000-0000-000000000003',
+    shopifyId: 'app-3',
     name: 'ShipTracker',
     iconUrl: 'https://placehold.co/64x64/2C6ECB/white?text=ST',
     installCount: 2089,

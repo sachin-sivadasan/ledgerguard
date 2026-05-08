@@ -323,6 +323,85 @@ func TestAppHandler_SelectApp_NoUser(t *testing.T) {
 	}
 }
 
+func TestAppHandler_SelectApp_StarterAtLimit(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{
+		ID:     uuid.New(),
+		UserID: uuid.New(),
+	}
+
+	// Already has 1 app
+	existingApps := []*entity.App{
+		{ID: uuid.New(), PartnerAccountID: partnerAccount.ID, Name: "Existing"},
+	}
+
+	partnerRepo := &mockPartnerRepoForApp{account: partnerAccount}
+	appRepo := &mockAppRepo{apps: existingApps, findErr: errors.New("not found")}
+
+	handler := NewAppHandler(nil, partnerRepo, appRepo, nil)
+
+	body := `{"partner_app_id": "gid://partners/App/999", "name": "New App"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/apps/select", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
+	ctx := contextWithUser(req.Context(), user)
+	org := &entity.Organization{ID: uuid.New(), PlanTier: valueobject.PlanTierStarter}
+	ctx = contextWithOrg(ctx, org)
+	req = req.WithContext(ctx)
+
+	rec := httptest.NewRecorder()
+	handler.SelectApp(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected status %d, got %d", http.StatusForbidden, rec.Code)
+	}
+
+	var resp map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&resp)
+	errObj, _ := resp["error"].(map[string]interface{})
+	if errObj == nil {
+		t.Fatal("expected error object in response")
+	}
+	if msg, _ := errObj["message"].(string); msg == "" {
+		t.Error("expected error message about app limit")
+	}
+}
+
+func TestAppHandler_SelectApp_ProUnlimited(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{
+		ID:     uuid.New(),
+		UserID: uuid.New(),
+	}
+
+	// Already has 5 apps
+	existingApps := make([]*entity.App, 5)
+	for i := range existingApps {
+		existingApps[i] = &entity.App{ID: uuid.New(), PartnerAccountID: partnerAccount.ID}
+	}
+
+	partnerRepo := &mockPartnerRepoForApp{account: partnerAccount}
+	appRepo := &mockAppRepo{apps: existingApps, findErr: errors.New("not found")}
+
+	handler := NewAppHandler(nil, partnerRepo, appRepo, nil)
+
+	body := `{"partner_app_id": "gid://partners/App/999", "name": "Sixth App"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/apps/select", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
+	ctx := contextWithUser(req.Context(), user)
+	org := &entity.Organization{ID: uuid.New(), PlanTier: valueobject.PlanTierPro}
+	ctx = contextWithOrg(ctx, org)
+	req = req.WithContext(ctx)
+
+	rec := httptest.NewRecorder()
+	handler.SelectApp(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Errorf("expected status %d, got %d (body: %s)", http.StatusCreated, rec.Code, rec.Body.String())
+	}
+}
+
 func TestAppHandler_ListApps_Success(t *testing.T) {
 	partnerAccount := &entity.PartnerAccount{
 		ID:     uuid.New(),

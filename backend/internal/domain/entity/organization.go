@@ -60,6 +60,18 @@ func (o *Organization) CanUseWebhooks() bool {
 	return o.PlanTier == valueobject.PlanTierStarter || o.PlanTier == valueobject.PlanTierPro
 }
 
+// MaxApps returns the app limit for the org's plan tier. 0 means unlimited.
+func (o *Organization) MaxApps() int {
+	switch o.PlanTier {
+	case valueobject.PlanTierFree, valueobject.PlanTierStarter:
+		return 1
+	case valueobject.PlanTierPro:
+		return 0 // unlimited
+	default:
+		return 1
+	}
+}
+
 // OrgMember represents a user's membership in an organization.
 type OrgMember struct {
 	ID                uuid.UUID

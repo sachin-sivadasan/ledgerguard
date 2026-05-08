@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -148,6 +149,24 @@ func (h *AppHandler) SelectApp(w http.ResponseWriter, r *http.Request) {
 	if lookupErr != nil {
 		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
+	}
+
+	// Enforce app limit based on org plan tier
+	org := middleware.OrgFromContext(r.Context())
+	if org != nil {
+		maxApps := org.MaxApps()
+		if maxApps > 0 {
+			existingApps, err := h.appRepo.FindByPartnerAccountID(r.Context(), partnerAccount.ID)
+			if err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "failed to check app count")
+				return
+			}
+			if len(existingApps) >= maxApps {
+				writeJSONError(w, http.StatusForbidden,
+					fmt.Sprintf("app limit reached: %s plan allows %d app(s)", org.PlanTier, maxApps))
+				return
+			}
+		}
 	}
 
 	// Check if app already exists

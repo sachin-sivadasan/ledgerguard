@@ -27,7 +27,7 @@ class _EventsScreenState extends State<EventsScreen>
     with DataLoadingMixin {
   @override
   void loadData(String appId) {
-    context.read<EventsProvider>().loadEvents(appId);
+    context.read<EventsProvider>().setSelectedApp(appId);
   }
 
   @override
@@ -54,6 +54,13 @@ class _EventsScreenState extends State<EventsScreen>
       return LgPage(
         title: 'Events',
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
+      );
+    }
+
+    if (provider.isLoading && provider.events.isEmpty) {
+      return LgPage(
+        title: 'Events',
+        child: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -100,15 +107,14 @@ class _EventsScreenState extends State<EventsScreen>
                 onChanged: provider.setTypeFilter,
               ),
               _AppFilter(
-                value: provider.appFilter,
-                onChanged: provider.setAppFilter,
+                value: provider.selectedAppId,
+                onChanged: provider.setSelectedApp,
               ),
               _StoreFilter(
                 value: provider.storeFilter,
                 onChanged: provider.setStoreFilter,
               ),
               if (provider.typeFilter != null ||
-                  provider.appFilter != null ||
                   provider.storeFilter != null)
                 TextButton(
                     onPressed: provider.clearFilters,
@@ -294,24 +300,19 @@ class _TypeFilter extends StatelessWidget {
 
 class _AppFilter extends StatelessWidget {
   final String? value;
-  final ValueChanged<String?> onChanged;
+  final ValueChanged<String> onChanged;
   const _AppFilter({this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
     final apps = context.watch<AppsProvider>().apps;
-    return PopupMenuButton<String?>(
+    return PopupMenuButton<String>(
       onSelected: onChanged,
       itemBuilder: (ctx) => [
-        const PopupMenuItem(value: null, child: Text('All Apps')),
         ...apps.map((app) => PopupMenuItem(value: app.id, child: Text(app.name))),
       ],
       child: Chip(
-        label: Text(value != null
-            ? apps.firstWhere((a) => a.id == value, orElse: () => apps.first).name
-            : 'App'),
-        deleteIcon: value != null ? const Icon(Icons.close, size: 14) : null,
-        onDeleted: value != null ? () => onChanged(null) : null,
+        label: Text(apps.firstWhere((a) => a.id == value, orElse: () => apps.first).name),
       ),
     );
   }

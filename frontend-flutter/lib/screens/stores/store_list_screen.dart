@@ -24,7 +24,7 @@ class _StoreListScreenState extends State<StoreListScreen>
     with DataLoadingMixin {
   @override
   void loadData(String appId) {
-    context.read<StoreProvider>().loadStores(appId);
+    context.read<StoreProvider>().setSelectedApp(appId);
   }
 
   @override
@@ -54,6 +54,13 @@ class _StoreListScreenState extends State<StoreListScreen>
       );
     }
 
+    if (provider.isLoading && provider.stores.isEmpty) {
+      return LgPage(
+        title: 'Stores',
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final stores = provider.stores;
     final theme = Theme.of(context);
     final appsList = context.watch<AppsProvider>().apps;
@@ -70,25 +77,16 @@ class _StoreListScreenState extends State<StoreListScreen>
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (showAppFilter)
-                PopupMenuButton<String?>(
+                PopupMenuButton<String>(
                   onSelected: provider.setSelectedApp,
                   itemBuilder: (_) => [
-                    const PopupMenuItem(value: null, child: Text('All Apps')),
                     ...appsList.map((app) => PopupMenuItem(
                           value: app.id,
                           child: Text(app.name),
                         )),
                   ],
                   child: Chip(
-                    label: Text(provider.selectedAppId != null
-                        ? appsList.firstWhere((a) => a.id == provider.selectedAppId, orElse: () => appsList.first).name
-                        : 'All Apps'),
-                    deleteIcon: provider.selectedAppId != null
-                        ? const Icon(Icons.close, size: 14)
-                        : null,
-                    onDeleted: provider.selectedAppId != null
-                        ? () => provider.setSelectedApp(null)
-                        : null,
+                    label: Text(appsList.firstWhere((a) => a.id == provider.selectedAppId, orElse: () => appsList.first).name),
                   ),
                 ),
               LgSearchField(

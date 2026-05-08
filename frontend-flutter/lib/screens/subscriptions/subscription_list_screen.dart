@@ -28,7 +28,7 @@ class _SubscriptionListScreenState extends State<SubscriptionListScreen>
     with DataLoadingMixin {
   @override
   void loadData(String appId) {
-    context.read<SubscriptionProvider>().loadSubscriptions(appId);
+    context.read<SubscriptionProvider>().setSelectedApp(appId);
   }
 
   @override
@@ -59,6 +59,13 @@ class _SubscriptionListScreenState extends State<SubscriptionListScreen>
       );
     }
 
+    if (provider.isLoading && provider.subscriptions.isEmpty) {
+      return LgPage(
+        title: 'Subscriptions',
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final subs = provider.subscriptions;
     final dateFmt = DateFormat('MMM d, y');
     final appsList = context.watch<AppsProvider>().apps;
@@ -71,25 +78,16 @@ class _SubscriptionListScreenState extends State<SubscriptionListScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
-            PopupMenuButton<String?>(
-              onSelected: provider.setAppFilter,
+            PopupMenuButton<String>(
+              onSelected: provider.setSelectedApp,
               itemBuilder: (_) => [
-                const PopupMenuItem(value: null, child: Text('All Apps')),
                 ...appsList.map((app) => PopupMenuItem(
                       value: app.id,
                       child: Text(app.name),
                     )),
               ],
               child: Chip(
-                label: Text(provider.appFilter != null
-                    ? appsList.firstWhere((a) => a.id == provider.appFilter, orElse: () => appsList.first).name
-                    : 'All Apps'),
-                deleteIcon: provider.appFilter != null
-                    ? const Icon(Icons.close, size: 14)
-                    : null,
-                onDeleted: provider.appFilter != null
-                    ? () => provider.setAppFilter(null)
-                    : null,
+                label: Text(appsList.firstWhere((a) => a.id == provider.selectedAppId, orElse: () => appsList.first).name),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -140,8 +138,7 @@ class _SubscriptionListScreenState extends State<SubscriptionListScreen>
               if (provider.searchQuery.isNotEmpty ||
                   provider.statusFilter != null ||
                   provider.riskFilter != null ||
-                  provider.planFilter != null ||
-                  provider.appFilter != null)
+                  provider.planFilter != null)
                 TextButton(
                   onPressed: provider.clearFilters,
                   child: const Text('Clear all'),

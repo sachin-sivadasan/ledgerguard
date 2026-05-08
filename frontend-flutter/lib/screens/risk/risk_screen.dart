@@ -23,7 +23,7 @@ class _RiskScreenState extends State<RiskScreen>
     with DataLoadingMixin {
   @override
   void loadData(String appId) {
-    context.read<RiskProvider>().loadRiskSummary(appId);
+    context.read<RiskProvider>().setSelectedApp(appId);
   }
 
   @override
@@ -54,6 +54,13 @@ class _RiskScreenState extends State<RiskScreen>
       );
     }
 
+    if (provider.isLoading && !provider.demoMode) {
+      return LgPage(
+        title: 'Risk Breakdown',
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final dist = provider.distribution;
     final theme = Theme.of(context);
     final appsList = context.watch<AppsProvider>().apps;
@@ -66,25 +73,16 @@ class _RiskScreenState extends State<RiskScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
-            PopupMenuButton<String?>(
+            PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => [
-                const PopupMenuItem(value: null, child: Text('All Apps')),
                 ...appsList.map((app) => PopupMenuItem(
                       value: app.id,
                       child: Text(app.name),
                     )),
               ],
               child: Chip(
-                label: Text(provider.selectedAppId != null
-                    ? appsList.firstWhere((a) => a.id == provider.selectedAppId, orElse: () => appsList.first).name
-                    : 'All Apps'),
-                deleteIcon: provider.selectedAppId != null
-                    ? const Icon(Icons.close, size: 14)
-                    : null,
-                onDeleted: provider.selectedAppId != null
-                    ? () => provider.setSelectedApp(null)
-                    : null,
+                label: Text(appsList.firstWhere((a) => a.id == provider.selectedAppId, orElse: () => appsList.first).name),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),

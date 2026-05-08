@@ -28,7 +28,7 @@ class _EarningsScreenState extends State<EarningsScreen>
     with DataLoadingMixin {
   @override
   void loadData(String appId) {
-    context.read<EarningsProvider>().loadEarnings(appId);
+    context.read<EarningsProvider>().setSelectedApp(appId);
   }
 
   @override
@@ -59,6 +59,13 @@ class _EarningsScreenState extends State<EarningsScreen>
       );
     }
 
+    if (provider.isLoading && provider.periods.isEmpty) {
+      return LgPage(
+        title: 'Earnings',
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final appsList = context.watch<AppsProvider>().apps;
     final showAppFilter = appsList.length > 1;
 
@@ -73,25 +80,16 @@ class _EarningsScreenState extends State<EarningsScreen>
             if (showAppFilter) ...[
               Align(
                 alignment: Alignment.centerLeft,
-                child: PopupMenuButton<String?>(
+                child: PopupMenuButton<String>(
                   onSelected: provider.setSelectedApp,
                   itemBuilder: (_) => [
-                    const PopupMenuItem(value: null, child: Text('All Apps')),
                     ...appsList.map((app) => PopupMenuItem(
                           value: app.id,
                           child: Text(app.name),
                         )),
                   ],
                   child: Chip(
-                    label: Text(provider.selectedAppId != null
-                        ? appsList.firstWhere((a) => a.id == provider.selectedAppId, orElse: () => appsList.first).name
-                        : 'All Apps'),
-                    deleteIcon: provider.selectedAppId != null
-                        ? const Icon(Icons.close, size: 14)
-                        : null,
-                    onDeleted: provider.selectedAppId != null
-                        ? () => provider.setSelectedApp(null)
-                        : null,
+                    label: Text(appsList.firstWhere((a) => a.id == provider.selectedAppId, orElse: () => appsList.first).name),
                   ),
                 ),
               ),

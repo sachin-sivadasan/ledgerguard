@@ -48,7 +48,7 @@ func (h *SubscriptionHandler) SetDetailService(detailService *service.Subscripti
 // List returns subscriptions for an app with optional filtering
 // GET /api/v1/apps/{appID}/subscriptions
 // Query params: status (comma-sep), priceMin, priceMax, billingInterval, search, sortBy, sortOrder, page, pageSize
-// appID is numeric (e.g., "4599915"), backend constructs full GID
+// appID is a UUID (internal app ID)
 func (h *SubscriptionHandler) List(w http.ResponseWriter, r *http.Request) {
 	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
 	if lookupErr != nil {
@@ -245,7 +245,7 @@ func (h *SubscriptionHandler) PriceStats(w http.ResponseWriter, r *http.Request)
 
 // GetByID returns a single subscription by ID
 // GET /api/v1/apps/{appID}/subscriptions/{subscriptionID}
-// appID is numeric (e.g., "4599915"), backend constructs full GID
+// appID is a UUID (internal app ID)
 func (h *SubscriptionHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
 	if lookupErr != nil {

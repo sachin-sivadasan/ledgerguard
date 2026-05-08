@@ -158,7 +158,7 @@ func TestRevenueHandler_GetEarnings_Success(t *testing.T) {
 
 	// Add chi URL params
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("appID", "12345")
+	rctx.URLParams.Add("appID", appID.String())
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	// Add user to context
@@ -240,7 +240,7 @@ func TestRevenueHandler_GetEarnings_CombinedMode(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/v1/apps/12345/earnings?start=2024-01-01&end=2024-01-31", nil)
 
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("appID", "12345")
+	rctx.URLParams.Add("appID", appID.String())
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	req = req.WithContext(middleware.SetUserContext(req.Context(), &entity.User{
@@ -277,10 +277,11 @@ func TestRevenueHandler_GetEarnings_CombinedMode(t *testing.T) {
 func TestRevenueHandler_GetEarnings_Unauthorized(t *testing.T) {
 	handler := NewRevenueHandler(nil, nil, nil)
 
-	req := httptest.NewRequest("GET", "/api/v1/apps/12345/earnings?start=2024-01-01&end=2024-01-31", nil)
+	someID := uuid.New()
+	req := httptest.NewRequest("GET", "/api/v1/apps/"+someID.String()+"/earnings?start=2024-01-01&end=2024-01-31", nil)
 
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("appID", "12345")
+	rctx.URLParams.Add("appID", someID.String())
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	// No user in context
@@ -323,7 +324,7 @@ func TestRevenueHandler_GetEarnings_MissingParams(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/v1/apps/12345/earnings", nil)
 
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("appID", "12345")
+	rctx.URLParams.Add("appID", appID.String())
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	req = req.WithContext(middleware.SetUserContext(req.Context(), &entity.User{
@@ -342,6 +343,7 @@ func TestRevenueHandler_GetEarnings_MissingParams(t *testing.T) {
 func TestRevenueHandler_GetEarnings_AppNotFound(t *testing.T) {
 	userID := uuid.New()
 	partnerID := uuid.New()
+	nonExistentAppID := uuid.New()
 
 	partnerRepo := &mockPartnerRepoForRevenue{
 		account: &entity.PartnerAccount{
@@ -358,10 +360,10 @@ func TestRevenueHandler_GetEarnings_AppNotFound(t *testing.T) {
 	revenueSvc := service.NewRevenueMetricsService(&mockRevenueRepository{})
 	handler := NewRevenueHandler(revenueSvc, partnerRepo, appRepo)
 
-	req := httptest.NewRequest("GET", "/api/v1/apps/99999/earnings?start=2024-01-01&end=2024-01-31", nil)
+	req := httptest.NewRequest("GET", "/api/v1/apps/"+nonExistentAppID.String()+"/earnings?start=2024-01-01&end=2024-01-31", nil)
 
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("appID", "99999")
+	rctx.URLParams.Add("appID", nonExistentAppID.String())
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	req = req.WithContext(middleware.SetUserContext(req.Context(), &entity.User{
@@ -374,5 +376,27 @@ func TestRevenueHandler_GetEarnings_AppNotFound(t *testing.T) {
 
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("expected status 404, got %d", rr.Code)
+	}
+}
+
+func TestRevenueHandler_GetEarnings_InvalidAppID(t *testing.T) {
+	handler := NewRevenueHandler(nil, nil, nil)
+
+	req := httptest.NewRequest("GET", "/api/v1/apps/not-a-uuid/earnings?start=2024-01-01&end=2024-01-31", nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("appID", "not-a-uuid")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	req = req.WithContext(middleware.SetUserContext(req.Context(), &entity.User{
+		ID:    uuid.New(),
+		Email: "test@example.com",
+	}))
+
+	rr := httptest.NewRecorder()
+	handler.GetEarnings(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected status 400, got %d", rr.Code)
 	}
 }

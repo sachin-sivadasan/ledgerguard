@@ -343,12 +343,11 @@ func TestSubscriptionHandler_List_Success(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915" // Numeric ID used in URL
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
 		Name:             "Test App",
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	now := time.Now()
@@ -385,8 +384,8 @@ func TestSubscriptionHandler_List_Success(t *testing.T) {
 
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions", nil)
-	req = withURLParam(req, "appID", numericAppID)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions", nil)
+	req = withURLParam(req, "appID", appID.String())
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
 	req = req.WithContext(contextWithUser(req.Context(), user))
 
@@ -423,11 +422,10 @@ func TestSubscriptionHandler_List_FilterByRiskState(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915"
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	now := time.Now()
@@ -465,8 +463,8 @@ func TestSubscriptionHandler_List_FilterByRiskState(t *testing.T) {
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
 	// Filter for SAFE only
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?risk_state=SAFE", nil)
-	req = withURLParam(req, "appID", numericAppID)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions?risk_state=SAFE", nil)
+	req = withURLParam(req, "appID", appID.String())
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
 	req = req.WithContext(contextWithUser(req.Context(), user))
 
@@ -490,29 +488,27 @@ func TestSubscriptionHandler_List_FilterByRiskState(t *testing.T) {
 	}
 }
 
-func TestSubscriptionHandler_List_NoUser(t *testing.T) {
+func TestSubscriptionHandler_List_InvalidAppID(t *testing.T) {
 	handler := NewSubscriptionHandler(nil, nil, nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/4599915/subscriptions", nil)
-	req = withURLParam(req, "appID", "4599915")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/not-a-uuid/subscriptions", nil)
+	req = withURLParam(req, "appID", "not-a-uuid")
 
 	rec := httptest.NewRecorder()
 	handler.List(rec, req)
 
-	if rec.Code != http.StatusUnauthorized {
-		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
 	}
 }
 
-func TestSubscriptionHandler_List_NoPartnerAccount(t *testing.T) {
-	partnerRepo := &mockPartnerRepoForSub{findErr: errors.New("not found")}
-	handler := NewSubscriptionHandler(nil, partnerRepo, nil)
+func TestSubscriptionHandler_List_AppNotFoundByID(t *testing.T) {
+	appID := uuid.New()
+	appRepo := &mockAppRepoForSub{findErr: errors.New("not found")}
+	handler := NewSubscriptionHandler(nil, nil, appRepo)
 
-	numericAppID := "4599915"
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions", nil)
-	req = withURLParam(req, "appID", numericAppID)
-	user := &entity.User{ID: uuid.New(), Role: valueobject.RoleOwner}
-	req = req.WithContext(contextWithUser(req.Context(), user))
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions", nil)
+	req = withURLParam(req, "appID", appID.String())
 
 	rec := httptest.NewRecorder()
 	handler.List(rec, req)
@@ -522,55 +518,30 @@ func TestSubscriptionHandler_List_NoPartnerAccount(t *testing.T) {
 	}
 }
 
-func TestSubscriptionHandler_List_UnauthorizedApp(t *testing.T) {
-	partnerAccount := &entity.PartnerAccount{
-		ID:     uuid.New(),
-		UserID: uuid.New(),
-	}
+func TestSubscriptionHandler_List_AppNotFoundNilResult(t *testing.T) {
+	appID := uuid.New()
+	// FindByID returns nil app, nil error
+	appRepo := &mockAppRepoForSub{app: nil, findErr: nil}
+	handler := NewSubscriptionHandler(nil, nil, appRepo)
 
-	numericAppID := "4599915"
-
-	// App belongs to different partner account
-	app := &entity.App{
-		ID:               uuid.New(),
-		PartnerAccountID: uuid.New(), // Different partner
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
-	}
-
-	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
-	// Enable ownership check - FindByPartnerAppID will return error if app doesn't belong to partner
-	appRepo := &mockAppRepoForSub{app: app, checkPartnerOwnership: true}
-	handler := NewSubscriptionHandler(nil, partnerRepo, appRepo)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions", nil)
-	req = withURLParam(req, "appID", numericAppID)
-	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
-	req = req.WithContext(contextWithUser(req.Context(), user))
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions", nil)
+	req = withURLParam(req, "appID", appID.String())
 
 	rec := httptest.NewRecorder()
 	handler.List(rec, req)
 
-	// With FindByPartnerAppID, unauthorized apps return 404 (not found for this partner)
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("expected status %d, got %d", http.StatusNotFound, rec.Code)
 	}
 }
 
 func TestSubscriptionHandler_List_AppNotFound(t *testing.T) {
-	partnerAccount := &entity.PartnerAccount{
-		ID:     uuid.New(),
-		UserID: uuid.New(),
-	}
-
-	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
+	appID := uuid.New()
 	appRepo := &mockAppRepoForSub{findErr: errors.New("not found")}
-	handler := NewSubscriptionHandler(nil, partnerRepo, appRepo)
+	handler := NewSubscriptionHandler(nil, nil, appRepo)
 
-	numericAppID := "4599915"
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions", nil)
-	req = withURLParam(req, "appID", numericAppID)
-	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
-	req = req.WithContext(contextWithUser(req.Context(), user))
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions", nil)
+	req = withURLParam(req, "appID", appID.String())
 
 	rec := httptest.NewRecorder()
 	handler.List(rec, req)
@@ -587,11 +558,10 @@ func TestSubscriptionHandler_GetByID_Success(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915"
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	subID := uuid.New()
@@ -617,9 +587,9 @@ func TestSubscriptionHandler_GetByID_Success(t *testing.T) {
 
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions/"+subID.String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions/"+subID.String(), nil)
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("appID", numericAppID)
+	rctx.URLParams.Add("appID", appID.String())
 	rctx.URLParams.Add("subscriptionID", subID.String())
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
@@ -656,11 +626,10 @@ func TestSubscriptionHandler_GetByID_NotFound(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915"
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
@@ -670,9 +639,9 @@ func TestSubscriptionHandler_GetByID_NotFound(t *testing.T) {
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
 	subID := uuid.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions/"+subID.String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions/"+subID.String(), nil)
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("appID", numericAppID)
+	rctx.URLParams.Add("appID", appID.String())
 	rctx.URLParams.Add("subscriptionID", subID.String())
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
@@ -693,11 +662,10 @@ func TestSubscriptionHandler_GetByID_WrongApp(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915"
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	// Subscription belongs to a different app
@@ -715,9 +683,9 @@ func TestSubscriptionHandler_GetByID_WrongApp(t *testing.T) {
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
 	subID := subscription.ID
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions/"+subID.String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions/"+subID.String(), nil)
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("appID", numericAppID)
+	rctx.URLParams.Add("appID", appID.String())
 	rctx.URLParams.Add("subscriptionID", subID.String())
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
@@ -731,20 +699,20 @@ func TestSubscriptionHandler_GetByID_WrongApp(t *testing.T) {
 	}
 }
 
-func TestSubscriptionHandler_GetByID_NoUser(t *testing.T) {
+func TestSubscriptionHandler_GetByID_InvalidAppID(t *testing.T) {
 	handler := NewSubscriptionHandler(nil, nil, nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/4599915/subscriptions/"+uuid.New().String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/not-a-uuid/subscriptions/"+uuid.New().String(), nil)
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("appID", "4599915")
+	rctx.URLParams.Add("appID", "not-a-uuid")
 	rctx.URLParams.Add("subscriptionID", uuid.New().String())
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	rec := httptest.NewRecorder()
 	handler.GetByID(rec, req)
 
-	if rec.Code != http.StatusUnauthorized {
-		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
 	}
 }
 
@@ -756,11 +724,10 @@ func TestSubscriptionHandler_Summary_Success(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915"
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	subscriptions := []*entity.Subscription{
@@ -776,8 +743,8 @@ func TestSubscriptionHandler_Summary_Success(t *testing.T) {
 
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions/summary", nil)
-	req = withURLParam(req, "appID", numericAppID)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions/summary", nil)
+	req = withURLParam(req, "appID", appID.String())
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
 	req = req.WithContext(contextWithUser(req.Context(), user))
 
@@ -805,17 +772,17 @@ func TestSubscriptionHandler_Summary_Success(t *testing.T) {
 	}
 }
 
-func TestSubscriptionHandler_Summary_NoUser(t *testing.T) {
+func TestSubscriptionHandler_Summary_InvalidAppID(t *testing.T) {
 	handler := NewSubscriptionHandler(nil, nil, nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/4599915/subscriptions/summary", nil)
-	req = withURLParam(req, "appID", "4599915")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/not-a-uuid/subscriptions/summary", nil)
+	req = withURLParam(req, "appID", "not-a-uuid")
 
 	rec := httptest.NewRecorder()
 	handler.Summary(rec, req)
 
-	if rec.Code != http.StatusUnauthorized {
-		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
 	}
 }
 
@@ -827,11 +794,10 @@ func TestSubscriptionHandler_PriceStats_Success(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915"
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
@@ -840,8 +806,8 @@ func TestSubscriptionHandler_PriceStats_Success(t *testing.T) {
 
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions/price-stats", nil)
-	req = withURLParam(req, "appID", numericAppID)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions/price-stats", nil)
+	req = withURLParam(req, "appID", appID.String())
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
 	req = req.WithContext(contextWithUser(req.Context(), user))
 
@@ -890,17 +856,17 @@ func TestSubscriptionHandler_PriceStats_Success(t *testing.T) {
 	}
 }
 
-func TestSubscriptionHandler_PriceStats_NoUser(t *testing.T) {
+func TestSubscriptionHandler_PriceStats_InvalidAppID(t *testing.T) {
 	handler := NewSubscriptionHandler(nil, nil, nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/4599915/subscriptions/price-stats", nil)
-	req = withURLParam(req, "appID", "4599915")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/not-a-uuid/subscriptions/price-stats", nil)
+	req = withURLParam(req, "appID", "not-a-uuid")
 
 	rec := httptest.NewRecorder()
 	handler.PriceStats(rec, req)
 
-	if rec.Code != http.StatusUnauthorized {
-		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
 	}
 }
 
@@ -912,11 +878,10 @@ func TestSubscriptionHandler_List_MultipleStatusFilter(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915"
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	subscriptions := []*entity.Subscription{
@@ -933,8 +898,8 @@ func TestSubscriptionHandler_List_MultipleStatusFilter(t *testing.T) {
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
 	// Filter for SAFE and ONE_CYCLE_MISSED
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?status=SAFE,ONE_CYCLE_MISSED", nil)
-	req = withURLParam(req, "appID", numericAppID)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions?status=SAFE,ONE_CYCLE_MISSED", nil)
+	req = withURLParam(req, "appID", appID.String())
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
 	req = req.WithContext(contextWithUser(req.Context(), user))
 
@@ -961,11 +926,10 @@ func TestSubscriptionHandler_List_PriceRangeFilter(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915"
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	subscriptions := []*entity.Subscription{
@@ -982,8 +946,8 @@ func TestSubscriptionHandler_List_PriceRangeFilter(t *testing.T) {
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
 	// Filter for $20-$60 (2000-6000 cents)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?priceMin=2000&priceMax=6000", nil)
-	req = withURLParam(req, "appID", numericAppID)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions?priceMin=2000&priceMax=6000", nil)
+	req = withURLParam(req, "appID", appID.String())
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
 	req = req.WithContext(contextWithUser(req.Context(), user))
 
@@ -1010,11 +974,10 @@ func TestSubscriptionHandler_List_BillingIntervalFilter(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915"
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	subscriptions := []*entity.Subscription{
@@ -1030,8 +993,8 @@ func TestSubscriptionHandler_List_BillingIntervalFilter(t *testing.T) {
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
 	// Filter for ANNUAL only
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?billingInterval=ANNUAL", nil)
-	req = withURLParam(req, "appID", numericAppID)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions?billingInterval=ANNUAL", nil)
+	req = withURLParam(req, "appID", appID.String())
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
 	req = req.WithContext(contextWithUser(req.Context(), user))
 
@@ -1058,11 +1021,10 @@ func TestSubscriptionHandler_List_SearchFilter(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915"
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	subscriptions := []*entity.Subscription{
@@ -1078,8 +1040,8 @@ func TestSubscriptionHandler_List_SearchFilter(t *testing.T) {
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
 	// Search for "acme"
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?search=acme", nil)
-	req = withURLParam(req, "appID", numericAppID)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions?search=acme", nil)
+	req = withURLParam(req, "appID", appID.String())
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
 	req = req.WithContext(contextWithUser(req.Context(), user))
 
@@ -1106,11 +1068,10 @@ func TestSubscriptionHandler_List_Pagination(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915"
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	// Create 30 subscriptions
@@ -1130,8 +1091,8 @@ func TestSubscriptionHandler_List_Pagination(t *testing.T) {
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
 	// Request page 2 with pageSize 10
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?page=2&pageSize=10", nil)
-	req = withURLParam(req, "appID", numericAppID)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions?page=2&pageSize=10", nil)
+	req = withURLParam(req, "appID", appID.String())
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
 	req = req.WithContext(contextWithUser(req.Context(), user))
 
@@ -1176,11 +1137,10 @@ func TestSubscriptionHandler_List_CombinedFilters(t *testing.T) {
 	}
 
 	appID := uuid.New()
-	numericAppID := "4599915"
 	app := &entity.App{
 		ID:               appID,
 		PartnerAccountID: partnerAccount.ID,
-		PartnerAppID:     "gid://partners/App/" + numericAppID,
+		PartnerAppID:     "gid://partners/App/4599915",
 	}
 
 	subscriptions := []*entity.Subscription{
@@ -1197,8 +1157,8 @@ func TestSubscriptionHandler_List_CombinedFilters(t *testing.T) {
 	handler := NewSubscriptionHandler(subRepo, partnerRepo, appRepo)
 
 	// Combine filters: SAFE, MONTHLY, price <= 6000, search "acme"
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+numericAppID+"/subscriptions?status=SAFE&billingInterval=MONTHLY&priceMax=6000&search=acme", nil)
-	req = withURLParam(req, "appID", numericAppID)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions?status=SAFE&billingInterval=MONTHLY&priceMax=6000&search=acme", nil)
+	req = withURLParam(req, "appID", appID.String())
 	user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
 	req = req.WithContext(contextWithUser(req.Context(), user))
 

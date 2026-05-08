@@ -10,8 +10,6 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
-const appGIDPrefix = "gid://partners/App/"
-
 type appLookupError struct {
 	statusCode int
 	message    string
@@ -40,30 +38,20 @@ func resolvePartnerAccount(r *http.Request, partnerRepo repository.PartnerAccoun
 	return account, nil
 }
 
-// resolveAppFromRequest extracts the app ID from the URL parameter "appID",
-// accepts either UUID or numeric Shopify ID, and returns the resolved app entity.
-// UUID uses fast PK lookup; numeric falls back to GID construction + partner-scoped lookup.
+// resolveAppFromRequest extracts the UUID app ID from the URL parameter "appID"
+// and returns the resolved app entity via primary key lookup.
 func resolveAppFromRequest(r *http.Request, partnerRepo repository.PartnerAccountRepository, appRepo repository.AppRepository) (*entity.App, *appLookupError) {
 	appIDStr := chi.URLParam(r, "appID")
 	if appIDStr == "" {
 		return nil, &appLookupError{http.StatusBadRequest, "app ID is required"}
 	}
 
-	// Fast path: UUID (primary key lookup)
-	if appID, err := uuid.Parse(appIDStr); err == nil {
-		app, err := appRepo.FindByID(r.Context(), appID)
-		if err == nil && app != nil {
-			return app, nil
-		}
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		return nil, &appLookupError{http.StatusBadRequest, "invalid app ID format"}
 	}
 
-	// Fallback: numeric → GID → FindByPartnerAppID
-	partnerAccount, lookupErr := resolvePartnerAccount(r, partnerRepo)
-	if lookupErr != nil {
-		return nil, lookupErr
-	}
-	fullGID := appGIDPrefix + appIDStr
-	app, err := appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, fullGID)
+	app, err := appRepo.FindByID(r.Context(), appID)
 	if err != nil || app == nil {
 		return nil, &appLookupError{http.StatusNotFound, "app not found"}
 	}

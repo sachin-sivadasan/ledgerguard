@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/dashboard_provider.dart';
+import '../../providers/organization_provider.dart';
 import '../../services/mixpanel_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -34,7 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   void loadData(String appId) {
-    context.read<DashboardProvider>().loadMetrics(appId);
+    context.read<DashboardProvider>().setSelectedApp(appId);
   }
 
   @override
@@ -76,6 +77,14 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
     }
 
+    if (dp.isLoading && dp.mrrCents == 0 && !dp.demoMode) {
+      return LgPage(
+        title: 'Dashboard',
+        subtitle: 'Revenue intelligence overview',
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return LgPage(
       title: 'Dashboard',
       subtitle: 'Revenue intelligence overview',
@@ -88,12 +97,14 @@ class _DashboardScreenState extends State<DashboardScreen>
             runSpacing: LgSpacing.s200,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              if (showAppFilter)
-                PopupMenuButton<String?>(
+              if (showAppFilter) Builder(builder: (context) {
+                final canViewAllApps = context.watch<OrganizationProvider>().canViewAllApps;
+                return PopupMenuButton<String?>(
                   onSelected: dp.setSelectedApp,
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
-                        value: null, child: Text('All Apps')),
+                    if (canViewAllApps)
+                      const PopupMenuItem(
+                          value: null, child: Text('All Apps')),
                     ...appsList.map((app) => PopupMenuItem(
                           value: app.id,
                           child: Text(app.name),
@@ -106,15 +117,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 (a) => a.id == dp.selectedAppId,
                                 orElse: () => appsList.first)
                             .name
-                        : 'All Apps'),
-                    deleteIcon: dp.selectedAppId != null
+                        : canViewAllApps
+                            ? 'All Apps'
+                            : appsList.first.name),
+                    deleteIcon: canViewAllApps && dp.selectedAppId != null
                         ? const Icon(Icons.close, size: 14)
                         : null,
-                    onDeleted: dp.selectedAppId != null
+                    onDeleted: canViewAllApps && dp.selectedAppId != null
                         ? () => dp.setSelectedApp(null)
                         : null,
                   ),
-                ),
+                );
+              }),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SegmentedButton<DashboardTimeRange>(

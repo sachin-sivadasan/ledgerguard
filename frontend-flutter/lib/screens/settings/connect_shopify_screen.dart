@@ -9,6 +9,7 @@ import '../../providers/dashboard_provider.dart';
 import '../../providers/earnings_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/insights_provider.dart';
+import '../../providers/organization_provider.dart';
 import '../../providers/risk_provider.dart';
 import '../../providers/store_provider.dart';
 import '../../providers/subscription_provider.dart';
@@ -145,7 +146,14 @@ class _ConnectShopifyScreenState extends State<ConnectShopifyScreen> {
                 'name': a['name']?.toString() ?? 'Unknown',
               })
           .toList();
-      _selectedAppIds.addAll(_availableApps.map((a) => a['id']!));
+
+      // Respect plan app limit for auto-selection
+      final maxApps = context.read<OrganizationProvider>().maxApps;
+      if (maxApps > 0 && _availableApps.length > maxApps) {
+        _selectedAppIds.addAll(_availableApps.take(maxApps).map((a) => a['id']!));
+      } else {
+        _selectedAppIds.addAll(_availableApps.map((a) => a['id']!));
+      }
 
       setState(() {
         _connected = true;
@@ -530,6 +538,10 @@ class _ConnectShopifyScreenState extends State<ConnectShopifyScreen> {
   }
 
   Widget _buildAppSelectionSection() {
+    final maxApps = context.read<OrganizationProvider>().maxApps;
+    final isLimited = maxApps > 0;
+    final atLimit = isLimited && _selectedAppIds.length >= maxApps;
+
     return LgCard(
       title: 'Select Apps (${_selectedAppIds.length}/${_availableApps.length})',
       child: Column(
@@ -540,29 +552,53 @@ class _ConnectShopifyScreenState extends State<ConnectShopifyScreen> {
             'Select which apps to track in LedgerGuard.',
             style: const TextStyle(color: LgColors.textSecondary, fontSize: 14),
           ),
+          if (isLimited) ...[
+            const SizedBox(height: LgSpacing.s200),
+            Text(
+              'Your ${context.read<OrganizationProvider>().currentOrg?.planTier ?? "STARTER"} plan allows $maxApps app${maxApps == 1 ? '' : 's'}.',
+              style: const TextStyle(color: LgColors.warning, fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+          ],
           const SizedBox(height: LgSpacing.s400),
           ..._availableApps.map((app) {
             final id = app['id']!;
+            final isSelected = _selectedAppIds.contains(id);
+            final disabled = !isSelected && atLimit;
             return CheckboxListTile(
-              value: _selectedAppIds.contains(id),
-              onChanged: (v) {
-                setState(() {
-                  if (v == true) {
-                    _selectedAppIds.add(id);
-                  } else {
-                    _selectedAppIds.remove(id);
-                  }
-                });
-              },
+              value: isSelected,
+              onChanged: disabled
+                  ? null
+                  : (v) {
+                      setState(() {
+                        if (v == true) {
+                          _selectedAppIds.add(id);
+                        } else {
+                          _selectedAppIds.remove(id);
+                        }
+                      });
+                    },
               title: Text(app['name']!,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(id,
-                  style: const TextStyle(
-                      fontSize: 12, color: LgColors.textSecondary)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: disabled ? LgColors.textDisabled : null)),
+              subtitle: Text(
+                  disabled ? 'Upgrade to PRO to add more apps' : id,
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: disabled ? LgColors.warning : LgColors.textSecondary)),
               controlAffinity: ListTileControlAffinity.leading,
               contentPadding: EdgeInsets.zero,
             );
           }),
+          if (isLimited && _availableApps.length > maxApps) ...[
+            const SizedBox(height: LgSpacing.s300),
+            OutlinedButton(
+              onPressed: () {
+                // TODO: navigate to upgrade/billing screen
+              },
+              child: const Text('Upgrade to PRO'),
+            ),
+          ],
           const SizedBox(height: LgSpacing.s400),
           SizedBox(
             width: double.infinity,

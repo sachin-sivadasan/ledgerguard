@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'providers/apps_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/organization_provider.dart';
 import 'services/mixpanel_service.dart';
@@ -40,7 +41,6 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> {
   late final GoRouter _router;
-  bool _orgLoaded = false;
 
   @override
   void initState() {
@@ -49,10 +49,10 @@ class _AppState extends State<App> {
       ..setMixpanel(context.read<MixpanelService>());
 
     authProvider.addListener(_onAuthChanged);
+    context.read<OrganizationProvider>().addListener(_onOrgChanged);
 
     // If already authenticated (e.g., persisted session), load orgs immediately
     if (authProvider.isAuthenticated) {
-      _orgLoaded = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         context.read<OrganizationProvider>().loadOrganizations();
       });
@@ -186,17 +186,26 @@ class _AppState extends State<App> {
 
   void _onAuthChanged() {
     final auth = context.read<AuthProvider>();
-    if (auth.isAuthenticated && !_orgLoaded) {
-      _orgLoaded = true;
+    if (auth.isAuthenticated) {
+      // Idempotent: provider's own _isLoading guard prevents concurrent calls.
       context.read<OrganizationProvider>().loadOrganizations();
-    } else if (!auth.isAuthenticated) {
-      _orgLoaded = false;
+    }
+  }
+
+  void _onOrgChanged() {
+    final orgProvider = context.read<OrganizationProvider>();
+    debugPrint('[App] _onOrgChanged – currentOrg=${orgProvider.currentOrg?.name}');
+    if (orgProvider.currentOrg != null && orgProvider.error == null) {
+      debugPrint('[App] → calling loadApps()');
+      // Idempotent: provider's own _isLoading guard prevents concurrent calls.
+      context.read<AppsProvider>().loadApps();
     }
   }
 
   @override
   void dispose() {
     context.read<AuthProvider>().removeListener(_onAuthChanged);
+    context.read<OrganizationProvider>().removeListener(_onOrgChanged);
     _router.dispose();
     super.dispose();
   }

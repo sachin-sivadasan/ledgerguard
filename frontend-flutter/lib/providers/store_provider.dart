@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_stores.dart';
 import '../mock_data/mock_subscriptions.dart';
@@ -15,6 +16,7 @@ class StoreProvider extends ChangeNotifier {
   String? _error;
   String _searchQuery = '';
   String? _selectedAppId;
+  CancelToken? _cancelToken;
 
   List<Store> _liveStores = [];
   final List<Subscription> _liveStoreSubscriptions = [];
@@ -41,16 +43,23 @@ class StoreProvider extends ChangeNotifier {
   }
 
   Future<void> loadStores(String appId) async {
-    if (_demoMode || _isLoading) return;
+    if (_demoMode) return;
+    _cancelToken?.cancel('Superseded');
+    _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      _liveStores = await _storeService.fetchStores(appId);
-      final subs = await _subscriptionService.fetchSubscriptions(appId);
+      _liveStores = await _storeService.fetchStores(appId,
+          cancelToken: _cancelToken);
+      final subs = await _subscriptionService.fetchSubscriptions(appId,
+          cancelToken: _cancelToken);
       _liveStoreSubscriptions
         ..clear()
         ..addAll(subs);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return;
+      _error = e.message;
     } catch (e) {
       _error = e.toString();
     }

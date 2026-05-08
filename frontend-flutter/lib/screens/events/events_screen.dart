@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../models/event_model.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/events_provider.dart';
@@ -10,6 +11,7 @@ import '../../theme/app_spacing.dart';
 import '../../widgets/lg_badge.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_empty_state.dart';
+import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_metric_card.dart';
 import '../../widgets/lg_metric_grid.dart';
 import '../../widgets/lg_page.dart';
@@ -21,36 +23,17 @@ class EventsScreen extends StatefulWidget {
   State<EventsScreen> createState() => _EventsScreenState();
 }
 
-class _EventsScreenState extends State<EventsScreen> {
-  bool _wasDemoMode = true;
-
+class _EventsScreenState extends State<EventsScreen>
+    with DataLoadingMixin {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
-  }
-
-  void _maybeLoadData() {
-    final apps = context.read<AppsProvider>();
-    final provider = context.read<EventsProvider>();
-    if (!apps.demoMode && apps.apps.isNotEmpty && !provider.isLoading) {
-      provider.loadEvents(apps.apps.first.id);
-    }
+  void loadData(String appId) {
+    context.read<EventsProvider>().loadEvents(appId);
   }
 
   @override
   Widget build(BuildContext context) {
     final appsProvider = context.watch<AppsProvider>();
     final hasApps = appsProvider.apps.isNotEmpty;
-
-    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
-    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
-      _wasDemoMode = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.read<EventsProvider>().loadEvents(appsProvider.apps.first.id);
-      });
-    }
-    if (appsProvider.demoMode) _wasDemoMode = true;
 
     if (!hasApps) {
       return LgPage(
@@ -66,6 +49,14 @@ class _EventsScreenState extends State<EventsScreen> {
     }
 
     final provider = context.watch<EventsProvider>();
+
+    if (provider.error != null) {
+      return LgPage(
+        title: 'Events',
+        child: LgErrorState(message: provider.error!, onRetry: retryLoad),
+      );
+    }
+
     final events = provider.events;
     final dateFmt = DateFormat('MMM d, y – h:mm a');
     final theme = Theme.of(context);

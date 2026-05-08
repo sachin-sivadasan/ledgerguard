@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_earnings.dart';
 import '../models/earning_model.dart';
@@ -10,6 +11,7 @@ class EarningsProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   String? _selectedAppId;
+  CancelToken? _cancelToken;
 
   List<EarningPeriod> _liveEarnings = [];
 
@@ -34,12 +36,18 @@ class EarningsProvider extends ChangeNotifier {
   }
 
   Future<void> loadEarnings(String appId) async {
-    if (_demoMode || _isLoading) return;
+    if (_demoMode) return;
+    _cancelToken?.cancel('Superseded');
+    _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      _liveEarnings = await _earningsService.fetchEarnings(appId);
+      _liveEarnings = await _earningsService.fetchEarnings(appId,
+          cancelToken: _cancelToken);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return;
+      _error = e.message;
     } catch (e) {
       _error = e.toString();
     }

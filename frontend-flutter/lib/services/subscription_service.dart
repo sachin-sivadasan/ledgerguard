@@ -9,9 +9,11 @@ class SubscriptionService {
 
   SubscriptionService(this._client);
 
-  Future<List<Subscription>> fetchSubscriptions(String appId) async {
+  Future<List<Subscription>> fetchSubscriptions(String appId,
+      {CancelToken? cancelToken}) async {
     try {
-      final response = await _client.get('/api/v1/apps/$appId/subscriptions');
+      final response = await _client.get('/api/v1/apps/$appId/subscriptions',
+          cancelToken: cancelToken);
       final list = response.data['subscriptions'] as List<dynamic>? ?? [];
       return list
           .map((json) => Subscription.fromJson(json as Map<String, dynamic>))

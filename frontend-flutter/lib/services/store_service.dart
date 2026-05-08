@@ -9,9 +9,11 @@ class StoreService {
 
   StoreService(this._client);
 
-  Future<List<Store>> fetchStores(String appId) async {
+  Future<List<Store>> fetchStores(String appId,
+      {CancelToken? cancelToken}) async {
     try {
-      final response = await _client.get('/api/v1/apps/$appId/stores');
+      final response = await _client.get('/api/v1/apps/$appId/stores',
+          cancelToken: cancelToken);
       final list = response.data['stores'] as List<dynamic>? ?? [];
       return list
           .map((json) => Store.fromJson(json as Map<String, dynamic>))

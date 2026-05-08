@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/risk_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_empty_state.dart';
+import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_risk_badge.dart';
 
@@ -17,36 +19,17 @@ class RiskScreen extends StatefulWidget {
   State<RiskScreen> createState() => _RiskScreenState();
 }
 
-class _RiskScreenState extends State<RiskScreen> {
-  bool _wasDemoMode = true;
-
+class _RiskScreenState extends State<RiskScreen>
+    with DataLoadingMixin {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
-  }
-
-  void _maybeLoadData() {
-    final apps = context.read<AppsProvider>();
-    final provider = context.read<RiskProvider>();
-    if (!apps.demoMode && apps.apps.isNotEmpty && !provider.isLoading) {
-      provider.loadRiskSummary(apps.apps.first.id);
-    }
+  void loadData(String appId) {
+    context.read<RiskProvider>().loadRiskSummary(appId);
   }
 
   @override
   Widget build(BuildContext context) {
     final appsProvider = context.watch<AppsProvider>();
     final hasApps = appsProvider.apps.isNotEmpty;
-
-    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
-    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
-      _wasDemoMode = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.read<RiskProvider>().loadRiskSummary(appsProvider.apps.first.id);
-      });
-    }
-    if (appsProvider.demoMode) _wasDemoMode = true;
 
     if (!hasApps) {
       return LgPage(
@@ -63,6 +46,14 @@ class _RiskScreenState extends State<RiskScreen> {
     }
 
     final provider = context.watch<RiskProvider>();
+
+    if (provider.error != null) {
+      return LgPage(
+        title: 'Risk Breakdown',
+        child: LgErrorState(message: provider.error!, onRetry: retryLoad),
+      );
+    }
+
     final dist = provider.distribution;
     final theme = Theme.of(context);
     final appsList = context.watch<AppsProvider>().apps;

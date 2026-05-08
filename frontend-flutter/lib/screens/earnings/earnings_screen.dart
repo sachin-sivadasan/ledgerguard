@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../models/earning_model.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/earnings_provider.dart';
@@ -11,6 +12,7 @@ import '../../widgets/lg_badge.dart';
 import '../../theme/app_breakpoints.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_empty_state.dart';
+import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_metric_card.dart';
 import '../../widgets/lg_metric_grid.dart';
 import '../../widgets/lg_page.dart';
@@ -22,36 +24,17 @@ class EarningsScreen extends StatefulWidget {
   State<EarningsScreen> createState() => _EarningsScreenState();
 }
 
-class _EarningsScreenState extends State<EarningsScreen> {
-  bool _wasDemoMode = true;
-
+class _EarningsScreenState extends State<EarningsScreen>
+    with DataLoadingMixin {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
-  }
-
-  void _maybeLoadData() {
-    final apps = context.read<AppsProvider>();
-    final provider = context.read<EarningsProvider>();
-    if (!apps.demoMode && apps.apps.isNotEmpty && !provider.isLoading) {
-      provider.loadEarnings(apps.apps.first.id);
-    }
+  void loadData(String appId) {
+    context.read<EarningsProvider>().loadEarnings(appId);
   }
 
   @override
   Widget build(BuildContext context) {
     final appsProvider = context.watch<AppsProvider>();
     final hasApps = appsProvider.apps.isNotEmpty;
-
-    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
-    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
-      _wasDemoMode = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.read<EarningsProvider>().loadEarnings(appsProvider.apps.first.id);
-      });
-    }
-    if (appsProvider.demoMode) _wasDemoMode = true;
 
     if (!hasApps) {
       return LgPage(
@@ -68,6 +51,14 @@ class _EarningsScreenState extends State<EarningsScreen> {
     }
 
     final provider = context.watch<EarningsProvider>();
+
+    if (provider.error != null) {
+      return LgPage(
+        title: 'Earnings',
+        child: LgErrorState(message: provider.error!, onRetry: retryLoad),
+      );
+    }
+
     final appsList = context.watch<AppsProvider>().apps;
     final showAppFilter = appsList.length > 1;
 

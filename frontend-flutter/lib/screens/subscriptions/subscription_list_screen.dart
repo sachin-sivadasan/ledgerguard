@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_data_table.dart';
 import '../../widgets/lg_empty_state.dart';
+import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_metric_card.dart';
 import '../../widgets/lg_metric_grid.dart';
 import '../../widgets/lg_page.dart';
@@ -22,21 +24,11 @@ class SubscriptionListScreen extends StatefulWidget {
   State<SubscriptionListScreen> createState() => _SubscriptionListScreenState();
 }
 
-class _SubscriptionListScreenState extends State<SubscriptionListScreen> {
-  bool _wasDemoMode = true;
-
+class _SubscriptionListScreenState extends State<SubscriptionListScreen>
+    with DataLoadingMixin {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
-  }
-
-  void _maybeLoadData() {
-    final apps = context.read<AppsProvider>();
-    final provider = context.read<SubscriptionProvider>();
-    if (!apps.demoMode && apps.apps.isNotEmpty && !provider.isLoading) {
-      provider.loadSubscriptions(apps.apps.first.id);
-    }
+  void loadData(String appId) {
+    context.read<SubscriptionProvider>().loadSubscriptions(appId);
   }
 
   @override
@@ -44,16 +36,6 @@ class _SubscriptionListScreenState extends State<SubscriptionListScreen> {
     final appsProvider = context.watch<AppsProvider>();
     final hasApps = appsProvider.apps.isNotEmpty;
 
-    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
-    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
-      _wasDemoMode = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          context.read<SubscriptionProvider>().loadSubscriptions(appsProvider.apps.first.id);
-        }
-      });
-    }
-    if (appsProvider.demoMode) _wasDemoMode = true;
     if (!hasApps) {
       return LgPage(
         title: 'Subscriptions',
@@ -69,6 +51,14 @@ class _SubscriptionListScreenState extends State<SubscriptionListScreen> {
     }
 
     final provider = context.watch<SubscriptionProvider>();
+
+    if (provider.error != null) {
+      return LgPage(
+        title: 'Subscriptions',
+        child: LgErrorState(message: provider.error!, onRetry: retryLoad),
+      );
+    }
+
     final subs = provider.subscriptions;
     final dateFmt = DateFormat('MMM d, y');
     final appsList = context.watch<AppsProvider>().apps;

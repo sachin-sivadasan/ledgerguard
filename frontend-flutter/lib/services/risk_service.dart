@@ -31,9 +31,11 @@ class RiskService {
 
   RiskService(this._client);
 
-  Future<RiskSummary> fetchRiskSummary(String appId) async {
+  Future<RiskSummary> fetchRiskSummary(String appId,
+      {CancelToken? cancelToken}) async {
     try {
-      final response = await _client.get('/api/v1/apps/$appId/risk/summary');
+      final response = await _client.get('/api/v1/apps/$appId/risk/summary',
+          cancelToken: cancelToken);
       return RiskSummary.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       debugPrint('[RiskService] error: ${e.response?.statusCode}');

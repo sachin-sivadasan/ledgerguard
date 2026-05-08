@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_analytics.dart';
 import '../mock_data/mock_apps.dart';
@@ -14,6 +15,7 @@ class AnalyticsProvider extends ChangeNotifier {
   String? _error;
   int _selectedTab = 0;
   String? _selectedAppId;
+  CancelToken? _cancelToken;
 
   DashboardMetrics? _liveMetrics;
 
@@ -44,12 +46,18 @@ class AnalyticsProvider extends ChangeNotifier {
   }
 
   Future<void> loadAnalytics(String appId) async {
-    if (_demoMode || _isLoading) return;
+    if (_demoMode) return;
+    _cancelToken?.cancel('Superseded');
+    _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      _liveMetrics = await _metricsService.fetchMetrics(appId);
+      _liveMetrics = await _metricsService.fetchMetrics(appId,
+          cancelToken: _cancelToken);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return;
+      _error = e.message;
     } catch (e) {
       _error = e.toString();
     }

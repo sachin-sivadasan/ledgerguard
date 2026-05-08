@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_payment_history.dart';
 import '../mock_data/mock_risk_timeline.dart';
@@ -15,6 +16,7 @@ class SubscriptionProvider extends ChangeNotifier {
   bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
+  CancelToken? _cancelToken;
 
   String _searchQuery = '';
   SubscriptionStatus? _statusFilter;
@@ -41,13 +43,18 @@ class SubscriptionProvider extends ChangeNotifier {
   }
 
   Future<void> loadSubscriptions(String appId) async {
-    if (_demoMode || _isLoading) return;
+    if (_demoMode) return;
+    _cancelToken?.cancel('Superseded');
+    _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      _liveSubscriptions =
-          await _subscriptionService.fetchSubscriptions(appId);
+      _liveSubscriptions = await _subscriptionService.fetchSubscriptions(appId,
+          cancelToken: _cancelToken);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return;
+      _error = e.message;
     } catch (e) {
       _error = e.toString();
     }

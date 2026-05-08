@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_transactions.dart';
 import '../models/transaction_model.dart';
@@ -9,6 +10,7 @@ class TransactionProvider extends ChangeNotifier {
   bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
+  CancelToken? _cancelToken;
 
   ChargeType? _typeFilter;
   String? _appFilter;
@@ -31,13 +33,18 @@ class TransactionProvider extends ChangeNotifier {
   }
 
   Future<void> loadTransactions(String appId) async {
-    if (_demoMode || _isLoading) return;
+    if (_demoMode) return;
+    _cancelToken?.cancel('Superseded');
+    _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      _liveTransactions =
-          await _transactionService.fetchTransactions(appId);
+      _liveTransactions = await _transactionService.fetchTransactions(appId,
+          cancelToken: _cancelToken);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return;
+      _error = e.message;
     } catch (e) {
       _error = e.toString();
     }

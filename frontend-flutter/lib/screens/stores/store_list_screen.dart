@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/store_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_empty_state.dart';
+import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_risk_badge.dart';
 import '../../widgets/lg_search_field.dart';
@@ -18,36 +20,17 @@ class StoreListScreen extends StatefulWidget {
   State<StoreListScreen> createState() => _StoreListScreenState();
 }
 
-class _StoreListScreenState extends State<StoreListScreen> {
-  bool _wasDemoMode = true;
-
+class _StoreListScreenState extends State<StoreListScreen>
+    with DataLoadingMixin {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
-  }
-
-  void _maybeLoadData() {
-    final apps = context.read<AppsProvider>();
-    final provider = context.read<StoreProvider>();
-    if (!apps.demoMode && apps.apps.isNotEmpty && !provider.isLoading) {
-      provider.loadStores(apps.apps.first.id);
-    }
+  void loadData(String appId) {
+    context.read<StoreProvider>().loadStores(appId);
   }
 
   @override
   Widget build(BuildContext context) {
     final appsProvider = context.watch<AppsProvider>();
     final hasApps = appsProvider.apps.isNotEmpty;
-
-    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
-    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
-      _wasDemoMode = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.read<StoreProvider>().loadStores(appsProvider.apps.first.id);
-      });
-    }
-    if (appsProvider.demoMode) _wasDemoMode = true;
 
     if (!hasApps) {
       return LgPage(
@@ -63,6 +46,14 @@ class _StoreListScreenState extends State<StoreListScreen> {
     }
 
     final provider = context.watch<StoreProvider>();
+
+    if (provider.error != null) {
+      return LgPage(
+        title: 'Stores',
+        child: LgErrorState(message: provider.error!, onRetry: retryLoad),
+      );
+    }
+
     final stores = provider.stores;
     final theme = Theme.of(context);
     final appsList = context.watch<AppsProvider>().apps;

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_analytics.dart';
 import '../mock_data/mock_events.dart';
@@ -20,6 +21,7 @@ class DashboardProvider extends ChangeNotifier {
   String? _error;
   String? _selectedAppId;
   DashboardTimeRange _timeRange = DashboardTimeRange.thisWeek;
+  CancelToken? _cancelToken;
 
   DashboardMetrics? _metrics;
 
@@ -51,13 +53,20 @@ class DashboardProvider extends ChangeNotifier {
 
   Future<void> loadMetrics(String appId) async {
     debugPrint('[DashboardProvider] loadMetrics called – appId=$appId demoMode=$_demoMode isLoading=$_isLoading');
-    if (_demoMode || _isLoading) return;
+    if (_demoMode) return;
+    _cancelToken?.cancel('Superseded');
+    _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      _metrics = await _metricsService.fetchMetrics(appId);
+      _metrics = await _metricsService.fetchMetrics(appId,
+          cancelToken: _cancelToken);
       debugPrint('[DashboardProvider] loadMetrics success');
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return;
+      _error = e.message;
+      debugPrint('[DashboardProvider] loadMetrics error – $e');
     } catch (e) {
       _error = e.toString();
       debugPrint('[DashboardProvider] loadMetrics error – $e');

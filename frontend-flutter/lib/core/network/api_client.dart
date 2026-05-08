@@ -37,9 +37,12 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
   }) {
     return _dio.get<T>(path,
-        queryParameters: queryParameters, options: options);
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken);
   }
 
   Future<Response<T>> post<T>(
@@ -47,9 +50,13 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
   }) {
     return _dio.post<T>(path,
-        data: data, queryParameters: queryParameters, options: options);
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken);
   }
 
   Future<Response<T>> put<T>(
@@ -57,9 +64,13 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
   }) {
     return _dio.put<T>(path,
-        data: data, queryParameters: queryParameters, options: options);
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken);
   }
 
   Future<Response<T>> delete<T>(
@@ -67,9 +78,13 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
   }) {
     return _dio.delete<T>(path,
-        data: data, queryParameters: queryParameters, options: options);
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken);
   }
 }
 

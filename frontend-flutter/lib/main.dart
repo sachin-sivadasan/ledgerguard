@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'app.dart';
 import 'core/config/app_config.dart';
+import 'core/demo_mode_coordinator.dart';
 import 'core/network/api_client.dart';
 import 'firebase_options.dart';
 import 'providers/analytics_provider.dart';
@@ -54,30 +55,50 @@ void main() async {
   final storeService = StoreService(apiClient);
   final organizationService = OrganizationService(apiClient);
 
+  // Create providers (kept as local vars for coordinator wiring)
+  final appsProvider = AppsProvider(appService);
+  final dashboardProvider = DashboardProvider(metricsService);
+  final subscriptionProvider = SubscriptionProvider(subscriptionService);
+  final storeProvider = StoreProvider(storeService, subscriptionService);
+  final transactionProvider = TransactionProvider(transactionService);
+  final eventsProvider = EventsProvider(eventsService);
+  final riskProvider = RiskProvider(riskService);
+  final analyticsProvider = AnalyticsProvider(metricsService);
+  final earningsProvider = EarningsProvider(earningsService);
+  final insightsProvider = InsightsProvider(insightsService);
+
+  final demoCoordinator = DemoModeCoordinator(
+    appsProvider: appsProvider,
+    dashboardProvider: dashboardProvider,
+    subscriptionProvider: subscriptionProvider,
+    storeProvider: storeProvider,
+    transactionProvider: transactionProvider,
+    eventsProvider: eventsProvider,
+    riskProvider: riskProvider,
+    analyticsProvider: analyticsProvider,
+    earningsProvider: earningsProvider,
+    insightsProvider: insightsProvider,
+  );
+
   runApp(
     MultiProvider(
       providers: [
         Provider<MixpanelService>.value(value: mixpanel),
         Provider<ApiClient>.value(value: apiClient),
+        Provider<DemoModeCoordinator>.value(value: demoCoordinator),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => DashboardProvider(metricsService)),
-        ChangeNotifierProvider(
-            create: (_) => SubscriptionProvider(subscriptionService)),
-        ChangeNotifierProvider(
-            create: (_) => StoreProvider(storeService, subscriptionService)),
-        ChangeNotifierProvider(
-            create: (_) => TransactionProvider(transactionService)),
-        ChangeNotifierProvider(create: (_) => EventsProvider(eventsService)),
+        ChangeNotifierProvider.value(value: dashboardProvider),
+        ChangeNotifierProvider.value(value: subscriptionProvider),
+        ChangeNotifierProvider.value(value: storeProvider),
+        ChangeNotifierProvider.value(value: transactionProvider),
+        ChangeNotifierProvider.value(value: eventsProvider),
         ChangeNotifierProvider(create: (_) => WebhookProvider()),
-        ChangeNotifierProvider(create: (_) => RiskProvider(riskService)),
-        ChangeNotifierProvider(
-            create: (_) => AnalyticsProvider(metricsService)),
-        ChangeNotifierProvider(
-            create: (_) => EarningsProvider(earningsService)),
-        ChangeNotifierProvider(create: (_) => AppsProvider(appService)),
+        ChangeNotifierProvider.value(value: riskProvider),
+        ChangeNotifierProvider.value(value: analyticsProvider),
+        ChangeNotifierProvider.value(value: earningsProvider),
+        ChangeNotifierProvider.value(value: appsProvider),
         ChangeNotifierProvider(create: (_) => ApiKeyProvider()),
-        ChangeNotifierProvider(
-            create: (_) => InsightsProvider(insightsService)),
+        ChangeNotifierProvider.value(value: insightsProvider),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(
             create: (_) => OrganizationProvider(organizationService,

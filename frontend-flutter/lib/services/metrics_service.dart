@@ -77,9 +77,11 @@ class MetricsService {
 
   MetricsService(this._client);
 
-  Future<DashboardMetrics> fetchMetrics(String appId) async {
+  Future<DashboardMetrics> fetchMetrics(String appId,
+      {CancelToken? cancelToken}) async {
     try {
-      final response = await _client.get('/api/v1/apps/$appId/metrics');
+      final response = await _client.get('/api/v1/apps/$appId/metrics',
+          cancelToken: cancelToken);
       debugPrint('[MetricsService] response: ${response.data}');
       return DashboardMetrics.fromJson(
           response.data as Map<String, dynamic>);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../models/insight_model.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/insights_provider.dart';
@@ -10,6 +11,7 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_breakpoints.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_empty_state.dart';
+import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 
 class InsightsScreen extends StatefulWidget {
@@ -19,36 +21,17 @@ class InsightsScreen extends StatefulWidget {
   State<InsightsScreen> createState() => _InsightsScreenState();
 }
 
-class _InsightsScreenState extends State<InsightsScreen> {
-  bool _wasDemoMode = true;
-
+class _InsightsScreenState extends State<InsightsScreen>
+    with DataLoadingMixin {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
-  }
-
-  void _maybeLoadData() {
-    final apps = context.read<AppsProvider>();
-    final provider = context.read<InsightsProvider>();
-    if (!apps.demoMode && apps.apps.isNotEmpty && !provider.isLoading) {
-      provider.loadInsights(apps.apps.first.id);
-    }
+  void loadData(String appId) {
+    context.read<InsightsProvider>().loadInsights(appId);
   }
 
   @override
   Widget build(BuildContext context) {
     final appsProvider = context.watch<AppsProvider>();
     final hasApps = appsProvider.apps.isNotEmpty;
-
-    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
-    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
-      _wasDemoMode = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.read<InsightsProvider>().loadInsights(appsProvider.apps.first.id);
-      });
-    }
-    if (appsProvider.demoMode) _wasDemoMode = true;
 
     if (!hasApps) {
       return LgPage(
@@ -65,6 +48,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
     }
 
     final provider = context.watch<InsightsProvider>();
+
+    if (provider.error != null) {
+      return LgPage(
+        title: 'AI Insights',
+        child: LgErrorState(message: provider.error!, onRetry: retryLoad),
+      );
+    }
+
     final theme = Theme.of(context);
     final dateFmt = DateFormat('MMM d, h:mm a');
 

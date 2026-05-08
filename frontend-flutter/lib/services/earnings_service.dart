@@ -10,7 +10,8 @@ class EarningsService {
 
   EarningsService(this._client);
 
-  Future<List<EarningPeriod>> fetchEarnings(String appId) async {
+  Future<List<EarningPeriod>> fetchEarnings(String appId,
+      {CancelToken? cancelToken}) async {
     try {
       final dateFmt = DateFormat('yyyy-MM-dd');
       final now = DateTime.now();
@@ -19,6 +20,7 @@ class EarningsService {
       final response = await _client.get(
         '/api/v1/apps/$appId/earnings',
         queryParameters: {'start': start, 'end': end},
+        cancelToken: cancelToken,
       );
       final list = response.data['earnings'] as List<dynamic>? ?? [];
       return list

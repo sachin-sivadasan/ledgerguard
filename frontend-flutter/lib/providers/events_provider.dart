@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_events.dart';
 import '../models/event_model.dart';
@@ -11,6 +12,7 @@ class EventsProvider extends ChangeNotifier {
   bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
+  CancelToken? _cancelToken;
 
   EventType? _typeFilter;
   String? _appFilter;
@@ -35,12 +37,18 @@ class EventsProvider extends ChangeNotifier {
   }
 
   Future<void> loadEvents(String appId) async {
-    if (_demoMode || _isLoading) return;
+    if (_demoMode) return;
+    _cancelToken?.cancel('Superseded');
+    _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      _liveEvents = await _eventsService.fetchEvents(appId);
+      _liveEvents = await _eventsService.fetchEvents(appId,
+          cancelToken: _cancelToken);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return;
+      _error = e.message;
     } catch (e) {
       _error = e.toString();
     }

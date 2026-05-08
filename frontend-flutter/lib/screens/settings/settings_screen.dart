@@ -1,19 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../providers/analytics_provider.dart';
+import '../../core/demo_mode_coordinator.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/organization_provider.dart';
-import '../../providers/dashboard_provider.dart';
-import '../../providers/earnings_provider.dart';
-import '../../providers/events_provider.dart';
-import '../../providers/insights_provider.dart';
-import '../../providers/risk_provider.dart';
 import '../../providers/settings_provider.dart';
-import '../../providers/store_provider.dart';
-import '../../providers/subscription_provider.dart';
-import '../../providers/transaction_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
@@ -42,37 +34,11 @@ class SettingsScreen extends StatelessWidget {
               subtitle: const Text('Enable sample data to preview features without a Shopify connection'),
               value: appsProvider.demoMode,
               onChanged: (v) async {
-                // Set demo mode on all providers
-                appsProvider.setDemoMode(v);
-                context.read<DashboardProvider>().setDemoMode(v);
-                context.read<SubscriptionProvider>().setDemoMode(v);
-                context.read<StoreProvider>().setDemoMode(v);
-                context.read<TransactionProvider>().setDemoMode(v);
-                context.read<EventsProvider>().setDemoMode(v);
-                context.read<RiskProvider>().setDemoMode(v);
-                context.read<AnalyticsProvider>().setDemoMode(v);
-                context.read<EarningsProvider>().setDemoMode(v);
-                context.read<InsightsProvider>().setDemoMode(v);
-
-                // When switching to live mode, load data
-                if (!v) {
-                  await appsProvider.loadApps();
-                  final apps = appsProvider.apps;
-                  debugPrint('[Settings] loadApps done – ${apps.length} apps, error=${appsProvider.error}');
-                  if (apps.isNotEmpty) {
-                    final appId = apps.first.id;
-                    debugPrint('[Settings] Loading all providers for appId=$appId');
-                    if (!context.mounted) return;
-                    context.read<DashboardProvider>().loadMetrics(appId);
-                    context.read<SubscriptionProvider>().loadSubscriptions(appId);
-                    context.read<StoreProvider>().loadStores(appId);
-                    context.read<TransactionProvider>().loadTransactions(appId);
-                    context.read<EventsProvider>().loadEvents(appId);
-                    context.read<RiskProvider>().loadRiskSummary(appId);
-                    context.read<AnalyticsProvider>().loadAnalytics(appId);
-                    context.read<EarningsProvider>().loadEarnings(appId);
-                    context.read<InsightsProvider>().loadInsights(appId);
-                  }
+                final coordinator = context.read<DemoModeCoordinator>();
+                if (v) {
+                  coordinator.setDemoMode(true);
+                } else {
+                  await coordinator.switchToLiveMode();
                 }
               },
             ),

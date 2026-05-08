@@ -9,9 +9,11 @@ class EventsService {
 
   EventsService(this._client);
 
-  Future<List<AppEvent>> fetchEvents(String appId) async {
+  Future<List<AppEvent>> fetchEvents(String appId,
+      {CancelToken? cancelToken}) async {
     try {
-      final response = await _client.get('/api/v1/apps/$appId/events');
+      final response = await _client.get('/api/v1/apps/$appId/events',
+          cancelToken: cancelToken);
       final list = response.data['events'] as List<dynamic>? ?? [];
       return list
           .map((json) => AppEvent.fromJson(json as Map<String, dynamic>))

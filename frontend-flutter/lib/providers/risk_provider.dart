@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_playbooks.dart';
 import '../mock_data/mock_stores.dart';
@@ -14,6 +15,7 @@ class RiskProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   String? _selectedAppId;
+  CancelToken? _cancelToken;
 
   RiskSummary? _liveSummary;
 
@@ -38,12 +40,18 @@ class RiskProvider extends ChangeNotifier {
   }
 
   Future<void> loadRiskSummary(String appId) async {
-    if (_demoMode || _isLoading) return;
+    if (_demoMode) return;
+    _cancelToken?.cancel('Superseded');
+    _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      _liveSummary = await _riskService.fetchRiskSummary(appId);
+      _liveSummary = await _riskService.fetchRiskSummary(appId,
+          cancelToken: _cancelToken);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return;
+      _error = e.message;
     } catch (e) {
       _error = e.toString();
     }

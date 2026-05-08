@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_insights.dart';
 import '../models/insight_model.dart';
@@ -18,6 +19,7 @@ class InsightsProvider extends ChangeNotifier {
   bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
+  CancelToken? _cancelToken;
 
   final List<ChatMessage> _messages = [];
   List<AiInsight> _liveInsights = [];
@@ -34,12 +36,18 @@ class InsightsProvider extends ChangeNotifier {
   }
 
   Future<void> loadInsights(String appId) async {
-    if (_demoMode || _isLoading) return;
+    if (_demoMode) return;
+    _cancelToken?.cancel('Superseded');
+    _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      _liveInsights = await _insightsService.fetchInsights(appId);
+      _liveInsights = await _insightsService.fetchInsights(appId,
+          cancelToken: _cancelToken);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return;
+      _error = e.message;
     } catch (e) {
       _error = e.toString();
     }

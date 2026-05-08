@@ -9,9 +9,11 @@ class TransactionService {
 
   TransactionService(this._client);
 
-  Future<List<Transaction>> fetchTransactions(String appId) async {
+  Future<List<Transaction>> fetchTransactions(String appId,
+      {CancelToken? cancelToken}) async {
     try {
-      final response = await _client.get('/api/v1/apps/$appId/transactions');
+      final response = await _client.get('/api/v1/apps/$appId/transactions',
+          cancelToken: cancelToken);
       final list = response.data['transactions'] as List<dynamic>? ?? [];
       return list
           .map((json) => Transaction.fromJson(json as Map<String, dynamic>))

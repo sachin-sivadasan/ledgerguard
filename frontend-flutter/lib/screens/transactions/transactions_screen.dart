@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../models/transaction_model.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/transaction_provider.dart';
@@ -12,6 +13,7 @@ import '../../widgets/lg_badge.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_data_table.dart';
 import '../../widgets/lg_empty_state.dart';
+import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 
 class TransactionsScreen extends StatefulWidget {
@@ -21,36 +23,17 @@ class TransactionsScreen extends StatefulWidget {
   State<TransactionsScreen> createState() => _TransactionsScreenState();
 }
 
-class _TransactionsScreenState extends State<TransactionsScreen> {
-  bool _wasDemoMode = true;
-
+class _TransactionsScreenState extends State<TransactionsScreen>
+    with DataLoadingMixin {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadData());
-  }
-
-  void _maybeLoadData() {
-    final apps = context.read<AppsProvider>();
-    final provider = context.read<TransactionProvider>();
-    if (!apps.demoMode && apps.apps.isNotEmpty && !provider.isLoading) {
-      provider.loadTransactions(apps.apps.first.id);
-    }
+  void loadData(String appId) {
+    context.read<TransactionProvider>().loadTransactions(appId);
   }
 
   @override
   Widget build(BuildContext context) {
     final appsProvider = context.watch<AppsProvider>();
     final hasApps = appsProvider.apps.isNotEmpty;
-
-    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
-    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
-      _wasDemoMode = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.read<TransactionProvider>().loadTransactions(appsProvider.apps.first.id);
-      });
-    }
-    if (appsProvider.demoMode) _wasDemoMode = true;
 
     if (!hasApps) {
       return LgPage(
@@ -67,6 +50,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     }
 
     final provider = context.watch<TransactionProvider>();
+
+    if (provider.error != null) {
+      return LgPage(
+        title: 'Transactions',
+        child: LgErrorState(message: provider.error!, onRetry: retryLoad),
+      );
+    }
+
     final txns = provider.transactions;
     final dateFmt = DateFormat('MMM d, y');
     final theme = Theme.of(context);

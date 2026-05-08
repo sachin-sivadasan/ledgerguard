@@ -9,9 +9,11 @@ class InsightsService {
 
   InsightsService(this._client);
 
-  Future<List<AiInsight>> fetchInsights(String appId) async {
+  Future<List<AiInsight>> fetchInsights(String appId,
+      {CancelToken? cancelToken}) async {
     try {
-      final response = await _client.get('/api/v1/apps/$appId/insights/daily');
+      final response = await _client.get('/api/v1/apps/$appId/insights/daily',
+          cancelToken: cancelToken);
       final data = response.data;
       if (data is Map<String, dynamic>) {
         // Single daily insight → wrap in list

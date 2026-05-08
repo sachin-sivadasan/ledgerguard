@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../services/mixpanel_service.dart';
@@ -8,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_breakpoints.dart';
 import '../../widgets/lg_card.dart';
+import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_metric_card.dart';
 import '../../widgets/lg_metric_grid.dart';
 import '../../widgets/lg_onboarding_checklist.dart';
@@ -20,24 +22,19 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  bool _wasDemoMode = true;
-
+class _DashboardScreenState extends State<DashboardScreen>
+    with DataLoadingMixin {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MixpanelService>().trackDashboardViewed();
-      _maybeLoadData();
+      if (mounted) context.read<MixpanelService>().trackDashboardViewed();
     });
   }
 
-  void _maybeLoadData() {
-    final apps = context.read<AppsProvider>();
-    final dash = context.read<DashboardProvider>();
-    if (!apps.demoMode && apps.apps.isNotEmpty && !dash.isLoading) {
-      dash.loadMetrics(apps.apps.first.id);
-    }
+  @override
+  void loadData(String appId) {
+    context.read<DashboardProvider>().loadMetrics(appId);
   }
 
   @override
@@ -46,15 +43,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final appsProvider = context.watch<AppsProvider>();
     final appsList = appsProvider.apps;
     final hasApps = appsList.isNotEmpty;
-
-    // One-shot: detect demo→live transition (initState won't re-fire in indexedStack)
-    if (_wasDemoMode && !appsProvider.demoMode && hasApps) {
-      _wasDemoMode = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) dp.loadMetrics(appsList.first.id);
-      });
-    }
-    if (appsProvider.demoMode) _wasDemoMode = true;
     final theme = Theme.of(context);
     final showAppFilter = appsList.length > 1;
 
@@ -77,6 +65,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
+      );
+    }
+
+    if (dp.error != null) {
+      return LgPage(
+        title: 'Dashboard',
+        subtitle: 'Revenue intelligence overview',
+        child: LgErrorState(message: dp.error!, onRetry: retryLoad),
       );
     }
 

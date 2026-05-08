@@ -52,6 +52,10 @@ class OrganizationProvider extends ChangeNotifier {
   bool get isOwner => currentMembership?.isOwner ?? false;
   bool get isAdmin => currentMembership?.isAdmin ?? false;
 
+  bool get isPro => _currentOrg?.isPro ?? false;
+  int get maxApps => _currentOrg?.maxApps ?? 1;
+  bool get canViewAllApps => isPro;
+
   // --- Load Organizations ---
 
   Future<void> loadOrganizations() async {

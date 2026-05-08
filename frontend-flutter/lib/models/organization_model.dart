@@ -36,6 +36,20 @@ class Organization {
         return 1;
     }
   }
+
+  int get maxApps {
+    switch (planTier) {
+      case 'FREE' || 'STARTER':
+        return 1;
+      case 'PRO':
+        return 0; // unlimited
+      default:
+        return 1;
+    }
+  }
+
+  bool get isPro => planTier == 'PRO';
+  bool get hasUnlimitedApps => maxApps == 0;
 }
 
 class OrgMembership {

@@ -120,6 +120,11 @@ func RequireOrgRole(minRoles ...valueobject.OrgRole) func(http.Handler) http.Han
 	}
 }
 
+// SetOrgContext sets the organization in context (exported for testing).
+func SetOrgContext(ctx context.Context, org *entity.Organization) context.Context {
+	return context.WithValue(ctx, orgContextKey, org)
+}
+
 // OrgFromContext retrieves the organization from the request context.
 func OrgFromContext(ctx context.Context) *entity.Organization {
 	org, ok := ctx.Value(orgContextKey).(*entity.Organization)

@@ -154,11 +154,15 @@ func New(cfg Config) *chi.Mux {
 				r.Get("/callback", cfg.OAuthHandler.Callback)
 			}
 
-			// Manual token routes (ADMIN only)
+			// Manual token routes (ADMIN only, org-scoped when available)
 			if cfg.ManualTokenHandler != nil && cfg.AuthMW != nil && cfg.AdminMW != nil {
-				r.With(cfg.AuthMW, cfg.AdminMW).Post("/token", cfg.ManualTokenHandler.AddToken)
-				r.With(cfg.AuthMW, cfg.AdminMW).Get("/token", cfg.ManualTokenHandler.GetToken)
-				r.With(cfg.AuthMW, cfg.AdminMW).Delete("/token", cfg.ManualTokenHandler.RevokeToken)
+				mws := []func(http.Handler) http.Handler{cfg.AuthMW, cfg.AdminMW}
+				if cfg.OrgContextMW != nil {
+					mws = append(mws, cfg.OrgContextMW)
+				}
+				r.With(mws...).Post("/token", cfg.ManualTokenHandler.AddToken)
+				r.With(mws...).Get("/token", cfg.ManualTokenHandler.GetToken)
+				r.With(mws...).Delete("/token", cfg.ManualTokenHandler.RevokeToken)
 			}
 		})
 

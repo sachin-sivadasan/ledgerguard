@@ -17,10 +17,11 @@ type PartnerAccount struct {
 	CreatedAt            time.Time
 }
 
-func NewPartnerAccount(userID uuid.UUID, partnerID string, integrationType valueobject.IntegrationType, encryptedToken []byte) *PartnerAccount {
+func NewPartnerAccount(userID, orgID uuid.UUID, partnerID string, integrationType valueobject.IntegrationType, encryptedToken []byte) *PartnerAccount {
 	return &PartnerAccount{
 		ID:                   uuid.New(),
 		UserID:               userID,
+		OrgID:                orgID,
 		IntegrationType:      integrationType,
 		PartnerID:            partnerID,
 		EncryptedAccessToken: encryptedToken,

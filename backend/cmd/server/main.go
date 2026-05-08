@@ -541,6 +541,12 @@ func run() error {
 		orgAuditHandler = handler.NewOrgAuditHandler(orgAuditService)
 		orgContextMiddleware := middleware.NewOrgContextMiddleware(orgRepo, memberRepo)
 		orgContextMW = orgContextMiddleware.RequireOrg
+
+		// Wire member repo into OAuth handler for org resolution in callback
+		if oauthHandler != nil {
+			oauthHandler.SetMemberRepo(memberRepo)
+		}
+
 		log.Println("Organization handler initialized")
 	}
 

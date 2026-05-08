@@ -83,8 +83,15 @@ func (h *ManualTokenHandler) AddToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Resolve org from context (set by OrgContextMW)
+	org := middleware.OrgFromContext(r.Context())
+	if org == nil {
+		writeJSONError(w, http.StatusBadRequest, "organization context required")
+		return
+	}
+
 	// Create new account
-	account := entity.NewPartnerAccount(user.ID, req.PartnerID, valueobject.IntegrationTypeManual, encryptedToken)
+	account := entity.NewPartnerAccount(user.ID, org.ID, req.PartnerID, valueobject.IntegrationTypeManual, encryptedToken)
 
 	if err := h.partnerRepo.Create(r.Context(), account); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to save partner account")

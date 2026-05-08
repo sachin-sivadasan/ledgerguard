@@ -17,6 +17,27 @@ Fixed two Flutter frontend issues preventing real API calls from working: the X-
 
 3. **`settings_screen.dart`** — Updated Demo Mode toggle subtitle to: "Enable sample data to preview features without a Shopify connection".
 
+## [2026-05-08] Fix: 500 on POST /integrations/shopify/token — Missing OrgID
+
+**Summary:**
+The `AddToken` handler (manual token) and `OAuth Callback` created `PartnerAccount` records without setting `OrgID`, violating the NOT NULL + FK constraint added in migration 000037. Both code paths now resolve the user's org and pass it to the entity constructor.
+
+**Changes:**
+
+1. **`entity/partner_account.go`** — Added `orgID uuid.UUID` parameter to `NewPartnerAccount()`.
+
+2. **`handler/manual_token.go`** — `AddToken` now reads org from `OrgContextMW` (injected via middleware) and passes `org.ID` to `NewPartnerAccount`. Returns 400 if no org context.
+
+3. **`handler/oauth.go`** — Added `memberRepo` field + `SetMemberRepo()` setter. `Callback` resolves user's org via `memberRepo.FindByUserID()` and passes `orgID` to `NewPartnerAccount`. Returns 400 if user has no org.
+
+4. **`router/router.go`** — Added `OrgContextMW` to manual token routes (same pattern as `/status` and `/apps`).
+
+5. **`middleware/org_context.go`** — Added `SetOrgContext()` exported helper for testing.
+
+6. **`cmd/server/main.go`** — Wires `memberRepo` into `OAuthHandler` via `SetMemberRepo()` after org block initialization.
+
+7. **Tests** — Updated `TestManualTokenHandler_AddToken_Success` (added org context) and `TestOAuthHandler_Callback_Success` (added mock member repo with org membership).
+
 ---
 
 ## [2026-05-07] Multi-User Team Access Model — Organizations, Members, Invitations, Audit

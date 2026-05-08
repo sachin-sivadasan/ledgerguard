@@ -228,11 +228,43 @@ func TestOAuthHandler_Callback_InvalidState(t *testing.T) {
 	}
 }
 
+type mockMemberRepoForOAuth struct {
+	members []*entity.OrgMember
+	err     error
+}
+
+func (m *mockMemberRepoForOAuth) Create(ctx context.Context, member *entity.OrgMember) error {
+	return nil
+}
+func (m *mockMemberRepoForOAuth) FindByID(ctx context.Context, id uuid.UUID) (*entity.OrgMember, error) {
+	return nil, nil
+}
+func (m *mockMemberRepoForOAuth) FindByOrgAndUser(ctx context.Context, orgID, userID uuid.UUID) (*entity.OrgMember, error) {
+	return nil, nil
+}
+func (m *mockMemberRepoForOAuth) FindByOrgID(ctx context.Context, orgID uuid.UUID) ([]*entity.OrgMember, error) {
+	return nil, nil
+}
+func (m *mockMemberRepoForOAuth) FindByUserID(ctx context.Context, userID uuid.UUID) ([]*entity.OrgMember, error) {
+	return m.members, m.err
+}
+func (m *mockMemberRepoForOAuth) CountByOrgID(ctx context.Context, orgID uuid.UUID) (int, error) {
+	return 0, nil
+}
+func (m *mockMemberRepoForOAuth) Update(ctx context.Context, member *entity.OrgMember) error {
+	return nil
+}
+func (m *mockMemberRepoForOAuth) Delete(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
 func TestOAuthHandler_Callback_Success(t *testing.T) {
 	user := &entity.User{
 		ID:   uuid.New(),
 		Role: valueobject.RoleOwner,
 	}
+
+	orgID := uuid.New()
 
 	oauthService := &mockOAuthService{token: "test-access-token"}
 	encryptor := &mockEncryptor{encrypted: []byte("encrypted-token")}
@@ -243,8 +275,12 @@ func TestOAuthHandler_Callback_Success(t *testing.T) {
 		validState:   true,
 		returnUserID: user.ID,
 	}
+	memberRepo := &mockMemberRepoForOAuth{
+		members: []*entity.OrgMember{{OrgID: orgID, UserID: user.ID}},
+	}
 
 	handler := NewOAuthHandler(oauthService, encryptor, partnerRepo, userRepo, stateStore)
+	handler.SetMemberRepo(memberRepo)
 
 	req := httptest.NewRequest(http.MethodGet, "/callback?code=test-code&state=valid-state", nil)
 	rec := httptest.NewRecorder()

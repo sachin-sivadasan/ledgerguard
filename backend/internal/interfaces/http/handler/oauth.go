@@ -37,6 +37,7 @@ type OAuthHandler struct {
 	partnerRepo  repository.PartnerAccountRepository
 	userRepo     repository.UserRepository
 	stateStore   OAuthStateStore
+	memberRepo   repository.MemberRepository
 }
 
 func NewOAuthHandler(
@@ -53,6 +54,11 @@ func NewOAuthHandler(
 		userRepo:     userRepo,
 		stateStore:   stateStore,
 	}
+}
+
+// SetMemberRepo sets the member repository for org resolution in the OAuth callback.
+func (h *OAuthHandler) SetMemberRepo(memberRepo repository.MemberRepository) {
+	h.memberRepo = memberRepo
 }
 
 // StartOAuth generates the OAuth URL and returns it to the client.
@@ -127,8 +133,21 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Resolve user's org for the partner account
+	var orgID uuid.UUID
+	if h.memberRepo != nil {
+		memberships, err := h.memberRepo.FindByUserID(r.Context(), user.ID)
+		if err == nil && len(memberships) > 0 {
+			orgID = memberships[0].OrgID
+		}
+	}
+	if orgID == uuid.Nil {
+		writeJSONError(w, http.StatusBadRequest, "user has no organization")
+		return
+	}
+
 	// Create partner account
-	account := entity.NewPartnerAccount(user.ID, partnerID, valueobject.IntegrationTypeOAuth, encryptedToken)
+	account := entity.NewPartnerAccount(user.ID, orgID, partnerID, valueobject.IntegrationTypeOAuth, encryptedToken)
 
 	if err := h.partnerRepo.Create(r.Context(), account); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to save partner account")
@@ -165,4 +184,9 @@ func writeJSONError(w http.ResponseWriter, status int, message string) {
 // contextWithUser is a helper for testing
 func contextWithUser(ctx context.Context, user *entity.User) context.Context {
 	return middleware.SetUserContext(ctx, user)
+}
+
+// contextWithOrg is a helper for testing
+func contextWithOrg(ctx context.Context, org *entity.Organization) context.Context {
+	return middleware.SetOrgContext(ctx, org)
 }

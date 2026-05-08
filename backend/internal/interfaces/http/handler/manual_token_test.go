@@ -121,7 +121,9 @@ func TestManualTokenHandler_AddToken_Success(t *testing.T) {
 		ID:   uuid.New(),
 		Role: valueobject.RoleAdmin,
 	}
-	req = req.WithContext(contextWithUser(req.Context(), user))
+	ctx := contextWithUser(req.Context(), user)
+	ctx = contextWithOrg(ctx, &entity.Organization{ID: uuid.New(), Name: "Test Org"})
+	req = req.WithContext(ctx)
 
 	rec := httptest.NewRecorder()
 	handler.AddToken(rec, req)

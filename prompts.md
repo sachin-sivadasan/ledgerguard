@@ -32,6 +32,22 @@
 - `IMPLEMENTATION_LOG.md` — entry added
 - `prompts.md` — prompt logged
 
+### [2026-05-08] Fix 500 on POST /integrations/shopify/token
+**Original:**
+> 500 86B on POST /api/v1/integrations/shopify/token
+
+**Improved:**
+> Investigate and fix the 500 error on POST /api/v1/integrations/shopify/token. The error is caused by NewPartnerAccount() not setting OrgID, violating the NOT NULL FK constraint from migration 000037. Fix the entity constructor, add OrgContextMW to the token routes, resolve org in the OAuth callback via memberRepo, and update tests.
+
+**Result:**
+- `backend/internal/domain/entity/partner_account.go` — added orgID param
+- `backend/internal/interfaces/http/handler/manual_token.go` — org from context
+- `backend/internal/interfaces/http/handler/oauth.go` — memberRepo + org resolution
+- `backend/internal/interfaces/http/router/router.go` — OrgContextMW on token routes
+- `backend/internal/interfaces/http/middleware/org_context.go` — SetOrgContext helper
+- `backend/cmd/server/main.go` — wire memberRepo into OAuthHandler
+- Tests updated, all passing
+
 ### [2025-02-26] Initial Setup
 **Original:**
 > init local first / origin git@github.com:sachin-sivadasan/ledgerguard.git

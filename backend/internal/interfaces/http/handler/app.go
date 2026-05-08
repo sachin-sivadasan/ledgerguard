@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
@@ -291,47 +290,15 @@ func (h *AppHandler) UpdateAppTier(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get app ID from URL
-	appIDStr := chi.URLParam(r, "appID")
-	if appIDStr == "" {
-		writeJSONError(w, http.StatusBadRequest, "app_id is required")
-		return
-	}
-
 	var req updateAppTierRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	// Try to find app - first by UUID, then by partner app ID
-	var app *entity.App
-	var err error
-
-	appID, uuidErr := uuid.Parse(appIDStr)
-	if uuidErr == nil {
-		// Valid UUID - find by ID
-		app, err = h.appRepo.FindByID(r.Context(), appID)
-	} else {
-		// Not a UUID - try as partner app ID (GID or numeric)
-		partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
-		if lookupErr != nil {
-			writeJSONError(w, lookupErr.statusCode, lookupErr.message)
-			return
-		}
-
-		// Try with full GID format first
-		partnerAppID := appIDStr
-		if !strings.HasPrefix(partnerAppID, "gid://") {
-			// If just numeric, convert to GID format
-			partnerAppID = "gid://partners/App/" + appIDStr
-		}
-
-		app, err = h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, partnerAppID)
-	}
-
-	if err != nil || app == nil {
-		writeJSONError(w, http.StatusNotFound, "app not found")
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
@@ -374,37 +341,16 @@ func (h *AppHandler) RefreshInstallCount(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Get app ID from URL
-	appIDStr := chi.URLParam(r, "appID")
-	if appIDStr == "" {
-		writeJSONError(w, http.StatusBadRequest, "app_id is required")
-		return
-	}
-
-	// Get partner account
-	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
 	if lookupErr != nil {
 		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
-	// Find app
-	var app *entity.App
-	var err error
-	appID, uuidErr := uuid.Parse(appIDStr)
-	if uuidErr == nil {
-		app, err = h.appRepo.FindByID(r.Context(), appID)
-	} else {
-		// Try as partner app ID
-		partnerAppID := appIDStr
-		if !strings.HasPrefix(partnerAppID, "gid://") {
-			partnerAppID = "gid://partners/App/" + appIDStr
-		}
-		app, err = h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, partnerAppID)
-	}
-
-	if err != nil || app == nil {
-		writeJSONError(w, http.StatusNotFound, "app not found")
+	// Get partner account for decryption
+	partnerAccount, partnerLookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	if partnerLookupErr != nil {
+		writeJSONError(w, partnerLookupErr.statusCode, partnerLookupErr.message)
 		return
 	}
 
@@ -450,37 +396,9 @@ func (h *AppHandler) GetInstallCount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get app ID from URL
-	appIDStr := chi.URLParam(r, "appID")
-	if appIDStr == "" {
-		writeJSONError(w, http.StatusBadRequest, "app_id is required")
-		return
-	}
-
-	// Get partner account
-	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
 	if lookupErr != nil {
 		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
-		return
-	}
-
-	// Find app
-	var app *entity.App
-	var err error
-	appID, uuidErr := uuid.Parse(appIDStr)
-	if uuidErr == nil {
-		app, err = h.appRepo.FindByID(r.Context(), appID)
-	} else {
-		// Try as partner app ID
-		partnerAppID := appIDStr
-		if !strings.HasPrefix(partnerAppID, "gid://") {
-			partnerAppID = "gid://partners/App/" + appIDStr
-		}
-		app, err = h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, partnerAppID)
-	}
-
-	if err != nil || app == nil {
-		writeJSONError(w, http.StatusNotFound, "app not found")
 		return
 	}
 
@@ -505,40 +423,15 @@ func (h *AppHandler) UpdateStoreSlug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	appIDStr := chi.URLParam(r, "appID")
-	if appIDStr == "" {
-		writeJSONError(w, http.StatusBadRequest, "app_id is required")
-		return
-	}
-
 	var req updateStoreSlugRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	// Find app (same pattern as UpdateAppTier)
-	var app *entity.App
-	var err error
-
-	appID, uuidErr := uuid.Parse(appIDStr)
-	if uuidErr == nil {
-		app, err = h.appRepo.FindByID(r.Context(), appID)
-	} else {
-		partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
-		if lookupErr != nil {
-			writeJSONError(w, lookupErr.statusCode, lookupErr.message)
-			return
-		}
-		partnerAppID := appIDStr
-		if !strings.HasPrefix(partnerAppID, "gid://") {
-			partnerAppID = "gid://partners/App/" + appIDStr
-		}
-		app, err = h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, partnerAppID)
-	}
-
-	if err != nil || app == nil {
-		writeJSONError(w, http.StatusNotFound, "app not found")
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 

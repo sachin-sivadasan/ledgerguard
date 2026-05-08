@@ -95,25 +95,9 @@ func (h *StoreHealthHandler) GetStoreHealth(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Get partner account
-	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
 	if lookupErr != nil {
 		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
-		return
-	}
-
-	// Get numeric appID from URL and construct full GID
-	appIDStr := chi.URLParam(r, "appID")
-	if appIDStr == "" {
-		writeJSONError(w, http.StatusBadRequest, "app ID is required")
-		return
-	}
-	fullAppGID := subscriptionAppGIDPrefix + appIDStr
-
-	// Find app by partner app ID (GID)
-	app, err := h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, fullAppGID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "app not found")
 		return
 	}
 

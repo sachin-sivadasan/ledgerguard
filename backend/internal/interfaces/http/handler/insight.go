@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
@@ -39,27 +38,9 @@ func (h *InsightHandler) GetDailyInsight(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Parse app ID from URL
-	appIDStr := chi.URLParam(r, "appID")
-	if appIDStr == "" {
-		writeJSONError(w, http.StatusBadRequest, "Missing app ID")
-		return
-	}
-
-	// Build full app GID from numeric ID
-	fullAppGID := "gid://partners/App/" + appIDStr
-
-	// Get partner account to verify ownership
-	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
 	if lookupErr != nil {
 		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
-		return
-	}
-
-	// Find the app
-	app, err := h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, fullAppGID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "App not found")
 		return
 	}
 

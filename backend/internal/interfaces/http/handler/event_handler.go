@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,16 +28,39 @@ func NewEventHandler(
 	}
 }
 
-// List returns app events for an app.
+// List returns paginated app events for an app.
 // GET /api/v1/apps/{appID}/events
+// Query params: page (default 1), pageSize (default 20, max 100), eventType, storeDomain
 func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
-	appID, lookupErr := lookupAppID(r, h.partnerRepo, h.appRepo)
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
 	if lookupErr != nil {
 		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
-	events, err := h.appEventRepo.FindByAppID(r.Context(), appID)
+	filters := repository.EventFilters{
+		Page:     1,
+		PageSize: 20,
+	}
+
+	if s := r.URL.Query().Get("eventType"); s != "" {
+		filters.EventType = s
+	}
+	if s := r.URL.Query().Get("storeDomain"); s != "" {
+		filters.StoreDomain = s
+	}
+	if s := r.URL.Query().Get("page"); s != "" {
+		if parsed, err := strconv.Atoi(s); err == nil && parsed > 0 {
+			filters.Page = parsed
+		}
+	}
+	if s := r.URL.Query().Get("pageSize"); s != "" {
+		if parsed, err := strconv.Atoi(s); err == nil && parsed > 0 && parsed <= 100 {
+			filters.PageSize = parsed
+		}
+	}
+
+	result, err := h.appEventRepo.FindByAppIDPaginated(r.Context(), app.ID, filters)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to fetch events")
 		return
@@ -52,8 +76,8 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 		Description string `json:"description"`
 	}
 
-	items := make([]eventJSON, 0, len(events))
-	for _, ev := range events {
+	items := make([]eventJSON, 0, len(result.Events))
+	for _, ev := range result.Events {
 		mappedType := mapEventType(ev.EventType)
 		title, desc := eventTitleDescription(mappedType, ev.ShopifyShopGID)
 
@@ -61,7 +85,7 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 			ID:          ev.ID.String(),
 			Date:        ev.OccurredAt.Format(time.RFC3339),
 			Type:        mappedType,
-			AppID:       appID.String(),
+			AppID:       app.ID.String(),
 			StoreDomain: extractDomainFromGID(ev.ShopifyShopGID),
 			Title:       title,
 			Description: desc,
@@ -70,7 +94,11 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"events": items,
+		"events":     items,
+		"total":      result.Total,
+		"page":       result.Page,
+		"pageSize":   result.PageSize,
+		"totalPages": result.TotalPages,
 	})
 }
 

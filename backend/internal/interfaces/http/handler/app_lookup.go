@@ -10,6 +10,8 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
+const appGIDPrefix = "gid://partners/App/"
+
 type appLookupError struct {
 	statusCode int
 	message    string
@@ -38,24 +40,32 @@ func resolvePartnerAccount(r *http.Request, partnerRepo repository.PartnerAccoun
 	return account, nil
 }
 
-// lookupAppID extracts the authenticated user, resolves their partner account,
-// and maps the URL's numeric appID to the internal UUID.
-func lookupAppID(r *http.Request, partnerRepo repository.PartnerAccountRepository, appRepo repository.AppRepository) (uuid.UUID, *appLookupError) {
-	partnerAccount, lookupErr := resolvePartnerAccount(r, partnerRepo)
-	if lookupErr != nil {
-		return uuid.Nil, lookupErr
-	}
-
+// resolveAppFromRequest extracts the app ID from the URL parameter "appID",
+// accepts either UUID or numeric Shopify ID, and returns the resolved app entity.
+// UUID uses fast PK lookup; numeric falls back to GID construction + partner-scoped lookup.
+func resolveAppFromRequest(r *http.Request, partnerRepo repository.PartnerAccountRepository, appRepo repository.AppRepository) (*entity.App, *appLookupError) {
 	appIDStr := chi.URLParam(r, "appID")
 	if appIDStr == "" {
-		return uuid.Nil, &appLookupError{statusCode: http.StatusBadRequest, message: "app ID is required"}
-	}
-	fullAppGID := appGIDPrefix + appIDStr
-
-	app, err := appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, fullAppGID)
-	if err != nil {
-		return uuid.Nil, &appLookupError{statusCode: http.StatusNotFound, message: "app not found"}
+		return nil, &appLookupError{http.StatusBadRequest, "app ID is required"}
 	}
 
-	return app.ID, nil
+	// Fast path: UUID (primary key lookup)
+	if appID, err := uuid.Parse(appIDStr); err == nil {
+		app, err := appRepo.FindByID(r.Context(), appID)
+		if err == nil && app != nil {
+			return app, nil
+		}
+	}
+
+	// Fallback: numeric → GID → FindByPartnerAppID
+	partnerAccount, lookupErr := resolvePartnerAccount(r, partnerRepo)
+	if lookupErr != nil {
+		return nil, lookupErr
+	}
+	fullGID := appGIDPrefix + appIDStr
+	app, err := appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, fullGID)
+	if err != nil || app == nil {
+		return nil, &appLookupError{http.StatusNotFound, "app not found"}
+	}
+	return app, nil
 }

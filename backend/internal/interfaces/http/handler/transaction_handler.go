@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
@@ -26,36 +27,53 @@ func NewTransactionHandler(
 	}
 }
 
-// List returns transactions for an app within a date range.
+// List returns paginated transactions for an app.
 // GET /api/v1/apps/{appID}/transactions
-// Query params: start, end (ISO dates, default last 365 days)
+// Query params: start, end (ISO dates), page (default 1), pageSize (default 20, max 100), chargeType
 func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
-	appID, lookupErr := lookupAppID(r, h.partnerRepo, h.appRepo)
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
 	if lookupErr != nil {
 		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
 	now := time.Now().UTC()
-	from := now.AddDate(-1, 0, 0)
-	to := now
+	filters := repository.TransactionFilters{
+		From:     now.AddDate(-1, 0, 0),
+		To:       now,
+		Page:     1,
+		PageSize: 20,
+	}
 
 	if s := r.URL.Query().Get("start"); s != "" {
 		if t, err := time.Parse(time.RFC3339, s); err == nil {
-			from = t
+			filters.From = t
 		} else if t, err := time.Parse("2006-01-02", s); err == nil {
-			from = t
+			filters.From = t
 		}
 	}
 	if s := r.URL.Query().Get("end"); s != "" {
 		if t, err := time.Parse(time.RFC3339, s); err == nil {
-			to = t
+			filters.To = t
 		} else if t, err := time.Parse("2006-01-02", s); err == nil {
-			to = t
+			filters.To = t
+		}
+	}
+	if s := r.URL.Query().Get("chargeType"); s != "" {
+		filters.ChargeType = s
+	}
+	if s := r.URL.Query().Get("page"); s != "" {
+		if parsed, err := strconv.Atoi(s); err == nil && parsed > 0 {
+			filters.Page = parsed
+		}
+	}
+	if s := r.URL.Query().Get("pageSize"); s != "" {
+		if parsed, err := strconv.Atoi(s); err == nil && parsed > 0 && parsed <= 100 {
+			filters.PageSize = parsed
 		}
 	}
 
-	txs, err := h.txRepo.FindByAppID(r.Context(), appID, from, to)
+	result, err := h.txRepo.FindByAppIDPaginated(r.Context(), app.ID, filters)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to fetch transactions")
 		return
@@ -71,8 +89,8 @@ func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 		NetAmountCents   int64  `json:"net_amount_cents"`
 	}
 
-	items := make([]txJSON, 0, len(txs))
-	for _, tx := range txs {
+	items := make([]txJSON, 0, len(result.Transactions))
+	for _, tx := range result.Transactions {
 		items = append(items, txJSON{
 			ID:               tx.ID.String(),
 			Date:             tx.TransactionDate.Format(time.RFC3339),
@@ -87,5 +105,9 @@ func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"transactions": items,
+		"total":        result.Total,
+		"page":         result.Page,
+		"pageSize":     result.PageSize,
+		"totalPages":   result.TotalPages,
 	})
 }

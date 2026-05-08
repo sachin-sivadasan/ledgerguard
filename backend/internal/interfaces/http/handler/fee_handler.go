@@ -5,14 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
-
-const feeAppGIDPrefix = "gid://partners/App/"
 
 type FeeHandler struct {
 	appRepo         repository.AppRepository
@@ -35,52 +31,16 @@ func NewFeeHandler(
 	}
 }
 
-// getAppFromRequest resolves app from numeric Shopify app ID
-func (h *FeeHandler) getAppFromRequest(r *http.Request) (*uuid.UUID, *valueobject.RevenueShareTier, error) {
-	// Get partner account
-	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
-	if lookupErr != nil {
-		return nil, nil, &feeError{lookupErr.statusCode, lookupErr.message}
-	}
-
-	// Get numeric appID from URL and construct full GID
-	appIDStr := chi.URLParam(r, "appID")
-	if appIDStr == "" {
-		return nil, nil, &feeError{http.StatusBadRequest, "app ID is required"}
-	}
-	fullAppGID := feeAppGIDPrefix + appIDStr
-
-	// Find app by partner app ID (GID)
-	app, err := h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, fullAppGID)
-	if err != nil {
-		return nil, nil, &feeError{http.StatusNotFound, "app not found"}
-	}
-
-	return &app.ID, &app.RevenueShareTier, nil
-}
-
-type feeError struct {
-	statusCode int
-	message    string
-}
-
-func (e *feeError) Error() string {
-	return e.message
-}
-
 // GetFeeSummary returns aggregated fee information for an app
 // GET /api/v1/apps/{appID}/fees/summary?start=YYYY-MM-DD&end=YYYY-MM-DD
 // appID is numeric Shopify app ID (e.g., "4599915")
 func (h *FeeHandler) GetFeeSummary(w http.ResponseWriter, r *http.Request) {
-	appID, tier, err := h.getAppFromRequest(r)
-	if err != nil {
-		if fe, ok := err.(*feeError); ok {
-			writeFeeError(w, fe.statusCode, fe.message)
-		} else {
-			writeFeeError(w, http.StatusInternalServerError, "internal error")
-		}
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeFeeError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
+	tier := app.RevenueShareTier
 
 	// Parse date range (default to last 30 days)
 	now := time.Now()
@@ -99,7 +59,7 @@ func (h *FeeHandler) GetFeeSummary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get transactions
-	transactions, err2 := h.transactionRepo.FindByAppID(r.Context(), *appID, start, end)
+	transactions, err2 := h.transactionRepo.FindByAppID(r.Context(), app.ID, start, end)
 	if err2 != nil {
 		writeFeeError(w, http.StatusInternalServerError, "failed to fetch transactions")
 		return
@@ -109,7 +69,7 @@ func (h *FeeHandler) GetFeeSummary(w http.ResponseWriter, r *http.Request) {
 	summary := h.feeService.CalculateFeeSummary(transactions)
 
 	// Calculate tier savings
-	savings := h.feeService.CalculateTierSavings(summary.TotalGrossAmountCents, *tier)
+	savings := h.feeService.CalculateTierSavings(summary.TotalGrossAmountCents, tier)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -162,15 +122,12 @@ func writeFeeError(w http.ResponseWriter, statusCode int, message string) {
 // GET /api/v1/apps/{appID}/fees/breakdown?amount_cents=4900
 // appID is numeric Shopify app ID (e.g., "4599915")
 func (h *FeeHandler) GetTierBreakdown(w http.ResponseWriter, r *http.Request) {
-	_, currentTier, err := h.getAppFromRequest(r)
-	if err != nil {
-		if fe, ok := err.(*feeError); ok {
-			writeFeeError(w, fe.statusCode, fe.message)
-		} else {
-			writeFeeError(w, http.StatusInternalServerError, "internal error")
-		}
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeFeeError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
+	currentTier := &app.RevenueShareTier
 
 	// Parse amount (default to $49.00)
 	amountCents := int64(4900)

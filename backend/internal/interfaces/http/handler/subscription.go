@@ -15,9 +15,6 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
-// subscriptionAppGIDPrefix is the Shopify Partner App GID prefix
-const subscriptionAppGIDPrefix = "gid://partners/App/"
-
 type SubscriptionHandler struct {
 	subscriptionRepo repository.SubscriptionRepository
 	partnerRepo      repository.PartnerAccountRepository
@@ -53,9 +50,9 @@ func (h *SubscriptionHandler) SetDetailService(detailService *service.Subscripti
 // Query params: status (comma-sep), priceMin, priceMax, billingInterval, search, sortBy, sortOrder, page, pageSize
 // appID is numeric (e.g., "4599915"), backend constructs full GID
 func (h *SubscriptionHandler) List(w http.ResponseWriter, r *http.Request) {
-	appID, err := h.getAppIDFromRequest(r)
-	if err != nil {
-		writeJSONError(w, err.statusCode, err.message)
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
@@ -138,7 +135,7 @@ func (h *SubscriptionHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch subscriptions with filters
-	result, err2 := h.subscriptionRepo.FindWithFilters(r.Context(), appID, filters)
+	result, err2 := h.subscriptionRepo.FindWithFilters(r.Context(), app.ID, filters)
 	if err2 != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to fetch subscriptions")
 		return
@@ -191,13 +188,13 @@ func (h *SubscriptionHandler) List(w http.ResponseWriter, r *http.Request) {
 // Summary returns aggregate subscription statistics
 // GET /api/v1/apps/{appID}/subscriptions/summary
 func (h *SubscriptionHandler) Summary(w http.ResponseWriter, r *http.Request) {
-	appID, err := h.getAppIDFromRequest(r)
-	if err != nil {
-		writeJSONError(w, err.statusCode, err.message)
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
-	summary, err2 := h.subscriptionRepo.GetSummary(r.Context(), appID)
+	summary, err2 := h.subscriptionRepo.GetSummary(r.Context(), app.ID)
 	if err2 != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to fetch summary")
 		return
@@ -216,13 +213,13 @@ func (h *SubscriptionHandler) Summary(w http.ResponseWriter, r *http.Request) {
 // PriceStats returns price statistics and distinct prices for filtering
 // GET /api/v1/apps/{appID}/subscriptions/price-stats
 func (h *SubscriptionHandler) PriceStats(w http.ResponseWriter, r *http.Request) {
-	appID, err := h.getAppIDFromRequest(r)
-	if err != nil {
-		writeJSONError(w, err.statusCode, err.message)
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
-	stats, err2 := h.subscriptionRepo.GetPriceStats(r.Context(), appID)
+	stats, err2 := h.subscriptionRepo.GetPriceStats(r.Context(), app.ID)
 	if err2 != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to fetch price stats")
 		return
@@ -246,70 +243,15 @@ func (h *SubscriptionHandler) PriceStats(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-// subHandlerError is a helper struct for subscription error responses
-type subHandlerError struct {
-	statusCode int
-	message    string
-}
-
-// getAppIDFromRequest extracts and validates app ID from request
-func (h *SubscriptionHandler) getAppIDFromRequest(r *http.Request) (uuid.UUID, *subHandlerError) {
-	// Get partner account
-	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
-	if lookupErr != nil {
-		return uuid.Nil, &subHandlerError{statusCode: lookupErr.statusCode, message: lookupErr.message}
-	}
-
-	// Get numeric appID from URL and construct full GID
-	appIDStr := chi.URLParam(r, "appID")
-	if appIDStr == "" {
-		return uuid.Nil, &subHandlerError{statusCode: http.StatusBadRequest, message: "app ID is required"}
-	}
-	fullAppGID := subscriptionAppGIDPrefix + appIDStr
-
-	// Find app by partner app ID (GID)
-	app, err := h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, fullAppGID)
-	if err != nil {
-		return uuid.Nil, &subHandlerError{statusCode: http.StatusNotFound, message: "app not found"}
-	}
-
-	return app.ID, nil
-}
-
 // GetByID returns a single subscription by ID
 // GET /api/v1/apps/{appID}/subscriptions/{subscriptionID}
 // appID is numeric (e.g., "4599915"), backend constructs full GID
 func (h *SubscriptionHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	user := middleware.UserFromContext(r.Context())
-	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return
-	}
-
-	// Get partner account
-	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
 	if lookupErr != nil {
 		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
-
-	// Get numeric appID from URL and construct full GID
-	appIDStr := chi.URLParam(r, "appID")
-	if appIDStr == "" {
-		writeJSONError(w, http.StatusBadRequest, "app ID is required")
-		return
-	}
-	fullAppGID := subscriptionAppGIDPrefix + appIDStr
-
-	// Find app by partner app ID (GID)
-	app, err := h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, fullAppGID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "app not found")
-		return
-	}
-
-	// App ownership is already verified by FindByPartnerAppID
-	appID := app.ID
 
 	// Parse subscriptionID from URL
 	subIDStr := chi.URLParam(r, "subscriptionID")
@@ -327,7 +269,7 @@ func (h *SubscriptionHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify subscription belongs to the app
-	if subscription.AppID != appID {
+	if subscription.AppID != app.ID {
 		writeJSONError(w, http.StatusForbidden, "subscription does not belong to this app")
 		return
 	}

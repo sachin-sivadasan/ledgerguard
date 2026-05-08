@@ -1,16 +1,11 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
-	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
@@ -50,11 +45,9 @@ func (h *ExportHandler) ExportTransactions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Parse app ID from URL
-	appIDStr := chi.URLParam(r, "appID")
-	app, err := h.lookupAppByNumericID(ctx, r, appIDStr)
-	if err != nil {
-		writeExportError(w, http.StatusNotFound, "app not found")
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeExportError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
@@ -123,11 +116,9 @@ func (h *ExportHandler) ExportSubscriptions(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Parse app ID from URL
-	appIDStr := chi.URLParam(r, "appID")
-	app, err := h.lookupAppByNumericID(ctx, r, appIDStr)
-	if err != nil {
-		writeExportError(w, http.StatusNotFound, "app not found")
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeExportError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
@@ -174,11 +165,9 @@ func (h *ExportHandler) ExportMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse app ID from URL
-	appIDStr := chi.URLParam(r, "appID")
-	app, err := h.lookupAppByNumericID(ctx, r, appIDStr)
-	if err != nil {
-		writeExportError(w, http.StatusNotFound, "app not found")
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeExportError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
@@ -231,53 +220,6 @@ func (h *ExportHandler) ExportMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+result.Filename+"\"")
 	w.Header().Set("X-Record-Count", formatInt(result.RecordCount))
 	w.Write(result.Data)
-}
-
-// lookupAppByNumericID finds an app by its numeric order (1-indexed) for the user
-func (h *ExportHandler) lookupAppByNumericID(ctx context.Context, r *http.Request, appIDStr string) (*entity.App, error) {
-	// First, try parsing as UUID
-	appID, err := uuid.Parse(appIDStr)
-	if err == nil {
-		return h.appRepo.FindByID(ctx, appID)
-	}
-
-	// Otherwise, treat as numeric index
-	var index int
-	if _, err := parsePositiveInt(appIDStr, &index); err != nil || index < 1 {
-		return nil, ErrAppNotFound
-	}
-
-	// Get partner account (org-scoped or user-fallback)
-	partner, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
-	if lookupErr != nil {
-		return nil, errors.New(lookupErr.message)
-	}
-
-	// Get apps for the partner
-	apps, err := h.appRepo.FindByPartnerAccountID(ctx, partner.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Return app at index (1-indexed)
-	if index > len(apps) {
-		return nil, ErrAppNotFound
-	}
-
-	return apps[index-1], nil
-}
-
-// parsePositiveInt parses a string as a positive integer
-func parsePositiveInt(s string, result *int) (bool, error) {
-	var n int
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return false, nil
-		}
-		n = n*10 + int(c-'0')
-	}
-	*result = n
-	return true, nil
 }
 
 // formatInt formats an integer as a string

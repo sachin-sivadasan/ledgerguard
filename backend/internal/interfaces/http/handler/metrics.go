@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
@@ -15,8 +14,6 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
-
-const appGIDPrefix = "gid://partners/App/"
 
 // MetricsAggregator interface for aggregating metrics across periods
 type MetricsAggregator interface {
@@ -57,26 +54,23 @@ func (h *MetricsHandler) GetLatestMetrics(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	appID := chi.URLParam(r, "appID")
-	if appID == "" {
-		writeJSONError(w, http.StatusBadRequest, "app ID is required")
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
-
-	// Construct full GID for internal use
-	fullAppGID := appGIDPrefix + appID
 
 	// Track dashboard view
 	if h.tracker != nil {
 		h.tracker.Track(r.Context(), user.ID.String(), "dashboard_viewed", domainservice.EventProperties{
-			"app_id": appID,
+			"app_id": app.ID.String(),
 		})
 	}
 
-	// TODO: Calculate real metrics from transactions using fullAppGID
+	// TODO: Calculate real metrics from transactions
 	// For now, return sample metrics based on app ID
 	metrics := map[string]interface{}{
-		"app_id":                  fullAppGID,
+		"app_id":                  app.ID.String(),
 		"active_mrr_cents":        125000,  // $1,250.00
 		"revenue_at_risk_cents":   15000,   // $150.00
 		"usage_revenue_cents":     35000,   // $350.00
@@ -136,19 +130,9 @@ func (h *MetricsHandler) GetMetricsByPeriod(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	appID := chi.URLParam(r, "appID")
-	if appID == "" {
-		writeJSONError(w, http.StatusBadRequest, "app ID is required")
-		return
-	}
-
-	// Construct full GID for lookup
-	fullAppGID := appGIDPrefix + appID
-
-	// Get partner account to verify access
-	partnerAccount, lookupErr := resolvePartnerAccount(r, h.partnerRepo)
-	if lookupErr != nil {
-		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
+	app, appLookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if appLookupErr != nil {
+		writeJSONError(w, appLookupErr.statusCode, appLookupErr.message)
 		return
 	}
 
@@ -157,15 +141,6 @@ func (h *MetricsHandler) GetMetricsByPeriod(w http.ResponseWriter, r *http.Reque
 	dateRange, err := h.parseDateRange(r, now)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Find app by partner app ID
-	app, err := h.appRepo.FindByPartnerAppID(r.Context(), partnerAccount.ID, fullAppGID)
-	if err != nil {
-		// App not found - return mock data for development
-		// In production, this would return 404
-		h.writeMockPeriodMetrics(w, dateRange)
 		return
 	}
 
@@ -345,7 +320,7 @@ func (h *MetricsHandler) GetAggregateMetrics(w http.ResponseWriter, r *http.Requ
 	appSummaries := make([]AppMetricsSummary, 0, len(apps))
 
 	for _, app := range apps {
-		appID := extractNumericID(app.PartnerAppID)
+		appID := extractNumericAppID(app.PartnerAppID)
 		summary := AppMetricsSummary{
 			ID:   appID,
 			Name: app.Name,

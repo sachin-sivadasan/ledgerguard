@@ -34,13 +34,13 @@ func NewRiskHandler(
 // Summary returns the risk distribution and at-risk stores for an app.
 // GET /api/v1/apps/{appID}/risk/summary
 func (h *RiskHandler) Summary(w http.ResponseWriter, r *http.Request) {
-	appID, lookupErr := lookupAppID(r, h.partnerRepo, h.appRepo)
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
 	if lookupErr != nil {
 		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
-	subs, err := h.subscriptionRepo.FindByAppID(r.Context(), appID)
+	subs, err := h.subscriptionRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to fetch subscriptions")
 		return

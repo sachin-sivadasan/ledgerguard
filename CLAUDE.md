@@ -18,6 +18,7 @@ Update these files when relevant changes occur:
 | `TEST_PLAN.md` | New test scenarios |
 | `prompts.md` | Log every prompt executed |
 | `future.md` | Postponed features/ideas |
+| `verification.md` | Append verification checklist from every plan |
 | `IMPLEMENTATION_LOG.md` | Backend feature implementations |
 | `marketing/REQUIREMENTS.md` | Marketing site changes |
 | `frontend/REQUIREMENTS.md` | Frontend app changes |
@@ -335,6 +336,7 @@ User Prompt
 - [ ] `frontend/REQUIREMENTS.md` – Frontend changes documented?
 - [ ] `frontend/prompts.md` – Frontend prompt logged?
 - [ ] `frontend/docs/SCREENS.puml` – Screen flow updated?
+- [ ] `verification.md` – Plan verification checklist appended?
 
 ### Prompt Improvement Rule
 Before executing any user prompt:

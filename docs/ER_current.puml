@@ -560,8 +560,8 @@ end note
 note right of organizations
   Migration: 000036_create_organizations_tables
   - Top-level data-owning entity
-  - Plan tier determines team limits:
-    FREE=1, STARTER=3, PRO=10
+  - Plan tier determines app limits:
+    FREE/STARTER=1, PRO=unlimited (MaxApps)
   - Org-level webhooks (STARTER+)
   - SSO/SAML support (PRO only)
   - partner_accounts.org_id replaces

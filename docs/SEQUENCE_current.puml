@@ -181,14 +181,21 @@ Shopify --> API: List of apps
 
 API --> App: 200 OK\n{ "apps": [{"id": "gid://...", "name": "App One"}, ...] }
 
-== Select App (with Auto-Sync) ==
+== Select App (with Auto-Sync + Plan Limit) ==
 
 User -> App: Click "Track this app"
 App -> API: POST /api/v1/apps/select\n{ "partner_app_id": "gid://...", "name": "App One" }
 
 API -> API: AuthMiddleware (verify user)
-API -> DB: SELECT FROM partner_accounts\nWHERE user_id = ?
-DB --> API: Partner account
+API -> DB: resolvePartnerAccount()\nSELECT FROM partner_accounts\nWHERE org_id = ? (or user_id fallback)
+DB --> API: Partner account + org
+
+note right of API: Plan gating: org.MaxApps()\nFREE/STARTER = 1, PRO = unlimited
+API -> DB: COUNT apps WHERE partner_account_id = ?
+DB --> API: Current app count
+alt App count >= MaxApps (plan limit exceeded)
+    API --> App: 403 Forbidden\n{ "error": "app limit reached for plan" }
+end
 
 API -> DB: SELECT FROM apps\nWHERE partner_app_id = ?
 alt App already tracked
@@ -1426,7 +1433,62 @@ alt Multiple orgs, no header
 end
 
 ' ==========================================
-' 23. Daily Catch-Up Sync Flow
+' 23. UUID-Based App Resolution (resolveAppFromRequest)
+' ==========================================
+newpage UUID App Resolution (resolveAppFromRequest)
+
+participant "Frontend" as FE
+participant "Handler" as AppHandler
+participant "app_lookup.go" as AppLookup
+participant "AppRepository" as AppDB
+
+note over FE, AppDB
+  Since ADR-036 (2026-05-08), all app-scoped endpoints
+  require UUID app IDs in URL path. Numeric Shopify IDs
+  are rejected with 400. Used by 13+ handlers.
+end note
+
+== UUID App Resolution (Happy Path) ==
+
+FE -> AppHandler: GET /api/v1/apps/{uuid}/subscriptions
+
+AppHandler -> AppLookup: resolveAppFromRequest(r, partnerRepo, appRepo)
+AppLookup -> AppLookup: appIDStr := chi.URLParam(r, "appID")
+AppLookup -> AppLookup: uuid.Parse(appIDStr)
+alt Valid UUID
+    AppLookup -> AppDB: FindByID(ctx, appID)
+    AppDB --> AppLookup: *entity.App
+    AppLookup --> AppHandler: app, nil
+    AppHandler -> AppHandler: Use app.ID for queries
+else Invalid UUID format
+    AppLookup --> AppHandler: nil, 400 "invalid app ID format"
+    AppHandler --> FE: 400 Bad Request
+else App not found
+    AppDB --> AppLookup: nil / error
+    AppLookup --> AppHandler: nil, 404 "app not found"
+    AppHandler --> FE: 404 Not Found
+end
+
+== Frontend ID Resolution ==
+
+note over FE
+  ShopifyApp model:
+  - id: UUID (from json['uuid'])
+  - shopifyId: numeric (from json['id'], display only)
+  All API calls use app.id (UUID).
+end note
+
+FE -> AppHandler: GET /api/v1/apps\n(list apps for partner account)
+AppHandler --> FE: 200 [{ "uuid": "abc-123", "id": "5001", ... }]
+
+note over FE
+  app.id = "abc-123" (UUID)
+  app.shopifyId = "5001" (display)
+  All subsequent API calls: /apps/abc-123/...
+end note
+
+' ==========================================
+' 24. Daily Catch-Up Sync Flow
 ' ==========================================
 newpage Daily Catch-Up Sync Flow
 

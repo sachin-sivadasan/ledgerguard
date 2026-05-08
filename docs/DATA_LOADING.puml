@@ -1,0 +1,201 @@
+@startuml Flutter Data Loading Lifecycle
+
+title Flutter Frontend — Data Loading Lifecycle (DataLoadingMixin)
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+
+participant "Firebase\nAuth" as Firebase #FFD700
+participant "App\n(app.dart)" as App #E0E0FF
+participant "AuthProvider" as Auth #E0FFE0
+participant "OrgProvider" as Org #E0FFE0
+participant "AppsProvider" as Apps #E0FFE0
+participant "Backend\nAPI" as API #FFE0E0
+
+box "Screen Providers" #F5F5FF
+  participant "DashboardProvider" as Dash
+  participant "SubscriptionProvider" as Sub
+  participant "StoreProvider" as Store
+  participant "TransactionProvider" as Txn
+  participant "EventsProvider" as Evt
+  participant "RiskProvider" as Risk
+  participant "AnalyticsProvider" as Anl
+  participant "EarningsProvider" as Earn
+  participant "InsightsProvider" as Ins
+end box
+
+== Phase 1: Authentication ==
+
+Firebase -> Auth : onAuthStateChanged(user)
+Auth -> Auth : isAuthenticated = true
+Auth --> App : notifyListeners()
+
+== Phase 2: Org Bootstrap (idempotent — no one-shot booleans) ==
+
+App -> Org : loadOrganizations()
+note right of App
+  _onAuthChanged() calls loadOrganizations()
+  directly. Provider's own _isLoading guard
+  prevents concurrent calls. No _orgLoaded boolean.
+end note
+Org -> API : GET /api/v1/orgs
+API --> Org : [{org_id, role, status}]
+Org -> Org : selectOrganization(first.orgId)
+Org -> API : GET /api/v1/orgs/{orgId}
+API --> Org : {id, name, plan}
+Org -> Org : apiClient.setOrgId(orgId)
+Org --> App : notifyListeners()
+
+== Phase 3: Apps Bootstrap (idempotent — no one-shot booleans) ==
+
+App -> Apps : loadApps()
+note right of App
+  _onOrgChanged() calls loadApps()
+  only if currentOrg != null && error == null.
+  No _appsLoaded boolean.
+end note
+Apps -> API : GET /api/v1/apps
+API --> Apps : [{id, name, installs, ...}]
+Apps --> App : notifyListeners()
+
+== Phase 4: Screen Data Loading (DataLoadingMixin — listener-based) ==
+
+note over Dash, Ins #FFFACD
+  **DataLoadingMixin pattern (replaces _wasDemoMode and hasAttemptedLoad):**
+  Each screen mixes in DataLoadingMixin, which:
+  1. In initState(), registers AppsProvider.addListener(_onAppsChanged)
+  2. Listener fires _evaluateAndLoad() on every AppsProvider change
+  3. Detects: initial load, demo→live transition, app switch
+  4. Calls screen's loadData(appId) via postFrameCallback
+  5. Resets on demo mode entry → next live transition re-fires
+  6. retryLoad() clears tracking state for error recovery
+
+  **CancelToken pattern (in every provider):**
+  Each load*() cancels previous in-flight request before starting new one.
+  Silently ignores DioExceptionType.cancel responses.
+end note
+
+group Dashboard (DataLoadingMixin → loadData)
+  Apps --> Dash : listener detects apps available
+  Dash -> Dash : cancelToken?.cancel('Superseded')
+  Dash -> API : GET /api/v1/apps/{appId}/metrics
+  API --> Dash : {mrr, risk, revenue_mix, ...}
+end
+
+group Subscriptions (DataLoadingMixin → loadData)
+  Apps --> Sub : listener detects apps available
+  Sub -> Sub : cancelToken?.cancel('Superseded')
+  Sub -> API : GET /api/v1/apps/{appId}/subscriptions
+  API --> Sub : [{id, shop, plan, status, risk, ...}]
+end
+
+group Stores (DataLoadingMixin → loadData)
+  Apps --> Store : listener detects apps available
+  Store -> Store : cancelToken?.cancel('Superseded')
+  Store -> API : GET /api/v1/apps/{appId}/stores
+  API --> Store : [{domain, name, installedAt, ...}]
+  Store -> API : GET /api/v1/apps/{appId}/subscriptions
+  note right: cascade — also loads subs for store detail
+end
+
+group Transactions (DataLoadingMixin → loadData)
+  Apps --> Txn : listener detects apps available
+  Txn -> Txn : cancelToken?.cancel('Superseded')
+  Txn -> API : GET /api/v1/apps/{appId}/transactions
+  API --> Txn : [{id, date, shop, type, gross, net}]
+end
+
+group Events (DataLoadingMixin → loadData)
+  Apps --> Evt : listener detects apps available
+  Evt -> Evt : cancelToken?.cancel('Superseded')
+  Evt -> API : GET /api/v1/apps/{appId}/events
+  API --> Evt : [{type, shop, occurredAt, ...}]
+end
+
+group Risk (DataLoadingMixin → loadData)
+  Apps --> Risk : listener detects apps available
+  Risk -> Risk : cancelToken?.cancel('Superseded')
+  Risk -> API : GET /api/v1/apps/{appId}/risk/summary
+  API --> Risk : {safe, oneCycle, twoCycles, churned, stores:[]}
+end
+
+group Analytics (DataLoadingMixin → loadData)
+  Apps --> Anl : listener detects apps available
+  Anl -> Anl : cancelToken?.cancel('Superseded')
+  Anl -> API : GET /api/v1/apps/{appId}/metrics
+  API --> Anl : {mrr_trend, cohorts, forecast, ...}
+end
+
+group Earnings (DataLoadingMixin → loadData)
+  Apps --> Earn : listener detects apps available
+  Earn -> Earn : cancelToken?.cancel('Superseded')
+  Earn -> API : GET /api/v1/apps/{appId}/earnings
+  API --> Earn : [{period, gross, net, fees, ...}]
+end
+
+group Insights (DataLoadingMixin → loadData)
+  Apps --> Ins : listener detects apps available
+  Ins -> Ins : cancelToken?.cancel('Superseded')
+  Ins -> API : GET /api/v1/apps/{appId}/insights/daily
+  API --> Ins : [{type, title, body, severity, ...}]
+end
+
+== Error Recovery ==
+
+note over Dash, Ins #FFE0E0
+  **Error handling:**
+  If any provider load fails, screen shows LgErrorState
+  with error message + "Retry" button.
+  Retry calls mixin.retryLoad() → clears _lastLoadedAppId
+  → re-evaluates and loads.
+
+  **Demo mode toggle (DemoModeCoordinator):**
+  Settings screen calls coordinator.switchToLiveMode()
+  which sets demo=false on all 9 providers + AppsProvider,
+  loads apps, then fires all load*() calls with first appId.
+end note
+
+@enduml
+
+' ─────────────────────────────────────────────────────────
+' SCREEN LOAD TRIGGER REFERENCE
+' ─────────────────────────────────────────────────────────
+'
+' PATTERN A — "DataLoadingMixin" (all data screens):
+'   Uses AppsProvider.addListener() in initState.
+'   Listener evaluates: demo→live, app switch, initial load.
+'   Fires loadData(appId) once per state change.
+'   retryLoad() available for error recovery.
+'   Screens: Dashboard, Subscriptions, Stores, Transactions,
+'            Events, Risk, Analytics, Earnings, Insights
+'
+' PATTERN B — "initState only" (AppsScreen):
+'   Calls loadApps() directly in initState postFrameCallback.
+'   No dependency on other providers.
+'
+' PATTERN C — "No load" (Webhooks, Settings, ApiKeys):
+'   Uses mock data only or local state. No API calls.
+'
+' ─────────────────────────────────────────────────────────
+' ERROR SCENARIOS
+' ─────────────────────────────────────────────────────────
+'
+' 1. API call fails:
+'    Provider sets _error, _isLoading = false, notifies.
+'    Screen shows LgErrorState with retry button.
+'    User taps Retry → mixin.retryLoad() → re-evaluates.
+'
+' 2. Request superseded (app switch mid-load):
+'    Old CancelToken cancelled, DioExceptionType.cancel
+'    silently ignored. New request starts fresh.
+'
+' 3. Bootstrap chain error:
+'    app.dart uses idempotent calls — no one-shot booleans.
+'    If loadOrganizations() fails, next auth change retries.
+'    If loadApps() fails, next org change retries.
+'
+' 4. Demo mode toggle:
+'    DemoModeCoordinator.switchToLiveMode() sets demo=false
+'    on all providers + loads apps + loads all screen data.
+'    DataLoadingMixin also detects demo→live via listener.

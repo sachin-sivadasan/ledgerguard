@@ -805,3 +805,23 @@ Every API request paid a "translation tax": frontend sent numeric Shopify app ID
 - ~200 lines of duplicate lookup code deleted
 - Non-UUID app IDs in URL now return 400 "invalid app ID format"
 - External Revenue API consumers unaffected (separate handler with its own GID lookup)
+
+### ADR-037: Plan-Gated App Limits (STARTER=1, PRO=Unlimited)
+**Date:** 2026-05-08
+**Status:** Accepted
+
+**Context:**
+With organizations and plan tiers (FREE, STARTER, PRO) established in ADR-034, needed to enforce app limits per plan tier. Multi-app portfolio features ("All Apps" aggregate views) are only valuable for users with multiple apps.
+
+**Decision:**
+1. `Organization.MaxApps()` — domain entity method returns 1 for FREE/STARTER, 0 (unlimited) for PRO.
+2. `SelectApp` handler checks app count vs limit, returns 403 if exceeded.
+3. Frontend mirrors logic: `OrganizationModel.maxApps`, `isPro`, `canViewAllApps` helpers.
+4. "All Apps" aggregate filter removed from 6 per-entity screens (subscriptions, stores, risk, earnings, transactions, events) — single-app context always.
+5. "All Apps" gated behind PRO on Dashboard and Analytics screens only.
+6. Partner Connect screen disables excess checkboxes for STARTER users with upgrade prompt.
+
+**Consequences:**
+- STARTER users see app-switcher dropdown, never "All Apps" option
+- PRO users get portfolio-level KPIs on Dashboard/Analytics
+- Partner Connect enforces limit at selection time, not just backend

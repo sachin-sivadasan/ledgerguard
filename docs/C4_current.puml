@@ -44,6 +44,7 @@ Container_Boundary(api, "API Server (Go 1.22+)") {
     Component(org_handler, "OrgHandler", "HTTP Handler", "Organization CRUD, members, invitations")
     Component(org_audit_handler, "OrgAuditHandler", "HTTP Handler", "Organization audit log")
     Component(org_context_mw, "OrgContextMiddleware", "Middleware", "Org resolution + role + status check")
+    Component(app_lookup, "AppLookup", "Shared Helper", "resolveAppFromRequest (UUID→FindByID)\nresolvePartnerAccount (org→user fallback)\nUsed by 13+ handlers")
 
     ' Application Layer - IMPLEMENTED
     Component(sync_service, "SyncService", "App Service", "Transaction sync orchestration")
@@ -155,6 +156,13 @@ Container_Boundary(chat_module, "AI Chat") {
     Component(store_health_module, "StoreHealthModule", "Module", "2 tools: check, overview")
     Component(earnings_module, "EarningsModule", "Module", "2 tools: summary, timeline")
     Component(sync_module, "SyncModule", "Module", "2 tools: trigger, status")
+}
+
+' Flutter Frontend (Provider Architecture)
+Container_Boundary(flutter_app, "Flutter Frontend") {
+    Component(data_loading_mixin, "DataLoadingMixin", "Mixin", "Listener-based data loading for 9 screens;\nstale threshold (2 min), auto-refresh on app switch/sync")
+    Component(sync_status_provider, "SyncStatusProvider", "Provider", "Polls sync job status per app;\nadaptive interval (5s syncing / 30s idle)")
+    Component(demo_mode_coordinator, "DemoModeCoordinator", "Coordinator", "Centralizes demo/live mode toggle\nacross 9 data providers")
 }
 
 ' Revenue API Module
@@ -365,6 +373,21 @@ Rel(noop_tracker, event_tracker_if, "Implements")
 Rel(auth_mw, event_tracker_if, "user_signup")
 Rel(app_handler, event_tracker_if, "app_selected")
 Rel(queue_sync_service, event_tracker_if, "sync_started")
+
+' Shared handler helper relationships
+Rel(subscription_handler, app_lookup, "resolveAppFromRequest")
+Rel(transaction_handler, app_lookup, "resolveAppFromRequest")
+Rel(event_handler, app_lookup, "resolveAppFromRequest")
+Rel(store_list_handler, app_lookup, "resolveAppFromRequest")
+Rel(risk_handler, app_lookup, "resolveAppFromRequest")
+Rel(revenue_handler, app_lookup, "resolveAppFromRequest")
+Rel(metrics_handler, app_lookup, "resolveAppFromRequest")
+Rel(app_lookup, app_repo_if, "FindByID (UUID PK lookup)")
+
+' Flutter frontend relationships
+Rel(developer, flutter_app, "Uses")
+Rel(flutter_app, router, "HTTPS/REST")
+Rel(sync_status_provider, queue_sync_handler, "GET /sync/jobs (polling)")
 
 SHOW_LEGEND()
 @enduml

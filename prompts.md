@@ -18,6 +18,47 @@
 
 ## Log
 
+### [2026-05-08] Migrate from Numeric Shopify App IDs to Internal UUIDs
+**Original:**
+> Implement the UUID migration plan: Backend shared resolveAppFromRequest(), frontend UUID as canonical ID, backend UUID-only enforcement, documentation.
+
+**Improved:**
+> Migrate from numeric Shopify app IDs to internal UUIDs across full stack. (1) Create unified `resolveAppFromRequest()` replacing 5 duplicate helpers and 4 duplicate GID constants across 13 handlers; (2) Frontend `ShopifyApp.id` = UUID, add `shopifyId` for display, remove `_idToUuid` mapping hack in SyncStatusProvider; (3) Enforce UUID-only in backend, reject numeric IDs with 400; (4) Update all handler tests to use UUIDs in URL params.
+
+**Result:**
+- ~18 files changed across 3 commits
+- Commits `ee6f1bc`, `9ede232`, `c3b4daa`
+
+### [2026-05-08] Fix Flutter Provider Data-Loading Bugs
+**Original:**
+> Implement the following plan: Fix Flutter Provider Data-Loading Bugs (DataLoadingMixin, CancelToken, LgErrorState, DemoModeCoordinator, bootstrap chain fix, screen migration)
+
+**Improved:**
+> Fix 6 recurring data-loading bugs across the Flutter Provider frontend: (1) Replace side effects in build() with listener-based DataLoadingMixin; (2) Remove fragile _wasDemoMode (7 screens) and hasAttemptedLoad (2 providers) one-shot booleans; (3) Add LgErrorState widget with retry for error recovery; (4) Add CancelToken to ApiClient, all 8 services, and all 9 providers for request cancellation; (5) Fix bootstrap chain in app.dart by removing _orgLoaded/_appsLoaded booleans; (6) Centralize 9 individual setDemoMode() calls with DemoModeCoordinator.
+
+**Result:**
+- 3 new files: `data_loading_mixin.dart`, `lg_error_state.dart`, `demo_mode_coordinator.dart`
+- 30 modified files across api_client, 8 services, 9 providers, 8 screens, app.dart, main.dart, settings_screen
+- Commit `11c0c7b`
+
+### [2026-05-08] Whale Persona (~1M Transactions) + Usage Charges Admin UI
+**Original:**
+> Implement the plan: Add Whale Persona (~1M Transactions) + Usage Charges Admin UI
+
+**Improved:**
+> Add a "Whale Partner" persona (org 1005) to mock-shopify-api for load testing: 5 apps, 50K shops, ~1M transactions generated programmatically from a compact YAML `generated` block. Implement DataStore.expand_generated() with deterministic seeded RNG. Add per-org transaction caching to TransactionResolver. Add usage charges table + form to admin UI (persona.erb). Cap subscriptions table at 200 rows. Add cache invalidation to all data-modifying routes.
+
+**Result:**
+- `mock-shopify-api/data/whale.yml` (NEW) — whale persona definition
+- `mock-shopify-api/data/personas.yml` — org 1005 entry
+- `mock-shopify-api/lib/data_store.rb` — expand_generated(), stats() update
+- `mock-shopify-api/lib/transaction_resolver.rb` — transaction caching
+- `mock-shopify-api/lib/graphql_handler.rb` — invalidate_transaction_cache()
+- `mock-shopify-api/views/persona.erb` — usage charges UI + subscription cap
+- `mock-shopify-api/app.rb` — usage charges route + cache invalidation
+- `IMPLEMENTATION_LOG.md` — entry added
+- `prompts.md` — prompt logged
+
 ### [2026-05-08] Fix Flutter: Org Header Not Sent + Disable Demo Mode by Default
 **Original:**
 > Implement the plan: Fix Flutter org header not sent + disable demo mode by default

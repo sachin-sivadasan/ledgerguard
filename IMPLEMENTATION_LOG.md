@@ -4,6 +4,199 @@ A chronological record of all features implemented with detailed summaries.
 
 ---
 
+## [2026-05-08] Refactor: Migrate from Numeric Shopify App IDs to Internal UUIDs
+
+**Summary:**
+Eliminated the "translation tax" where every API request paid an extra DB lookup: numeric Shopify ID → GID string construction → `FindByPartnerAppID()` → UUID. Now the frontend sends UUIDs directly, and the backend resolves apps via primary key lookup.
+
+**Changes (3 commits):**
+1. **Backend shared helper** — Created `resolveAppFromRequest()` in `app_lookup.go` accepting UUID (fast PK lookup) or numeric (GID fallback). Replaced 5 duplicate app-lookup helpers and 4 duplicate GID prefix constants across 13 handler files. Net deletion: ~200 lines.
+2. **Frontend UUID migration** — `ShopifyApp.id` now reads from `json['uuid']` (internal UUID). Added `shopifyId` for display. Simplified `SyncStatusProvider` by removing `_idToUuid` mapping hack.
+3. **Backend UUID-only enforcement** — Removed numeric fallback from `resolveAppFromRequest()`. Non-UUID app IDs now return 400. Updated all handler tests to use UUIDs in URL params.
+
+**Files changed:** ~18 (13 backend handlers, 4 frontend files, 1 app_lookup.go)
+
+---
+
+## [2026-05-08] Feat: Fix Stale Data — Navigation Reload + Sync Awareness + Manual Refresh
+
+**Summary:**
+Fixed three compounding data-freshness problems in the Flutter frontend: (1) screens kept alive by `StatefulShellRoute.indexedStack` never reloaded when revisited, (2) no visibility into background sync progress after connecting a Shopify app, (3) no way to manually refresh screen data.
+
+**Changes:**
+- **NavigationRefreshNotifier** — new `ChangeNotifier` that fires when the user taps any navigation item (desktop rail, mobile bottom nav, tablet drawer, "More" sheet). Wired into all 4 tap locations in `AppShell`.
+- **DataLoadingMixin staleness** — added `_lastLoadedAt` timestamp and 2-minute stale threshold. On navigation trigger, if data is >2 min old, auto-reloads. Also added `refreshData()` method for manual refresh.
+- **Refresh button** — `LgPage` now accepts `onRefresh` callback. When provided, shows a refresh `IconButton` in the header. Added to all 9 data screens (Dashboard, Subscriptions, Stores, Transactions, Events, Risk, Analytics, Earnings, Insights).
+- **SyncStatusService + SyncStatusProvider** — polls `GET /api/v1/sync/jobs` for active sync jobs. Exposes per-app `AppSyncState` (isSyncing, progress, message, jobId). Supports `triggerSync()` and `cancelSync()`. Adaptive polling: 5s when syncing, 30s when idle.
+- **Apps screen sync UI** — each app card shows: idle state ("Synced X ago" + [Sync Now]), syncing state (progress bar + percentage + [Cancel]), error state ([Retry]).
+- **Sync-aware auto-refresh** — `DataLoadingMixin` listens to `SyncStatusProvider`. When sync transitions syncing→done for the current app, auto-reloads data.
+- **Syncing indicator in header** — `LgPage` reads `SyncStatusProvider` and shows a small "Syncing..." chip with spinner next to the page title when the active app is syncing.
+
+**Files changed:** 16 (3 new + 13 modified)
+
+---
+
+## [2026-05-08] Feat: Paginate Large Data Sets (Transactions, Events, Stores)
+
+**Summary:**
+Added server-side pagination (page/pageSize) to the Transactions, Events, and Stores endpoints, and updated all four Flutter list screens (Transactions, Events, Stores, Subscriptions) to use paginated loading with "Load More" buttons. The Whale persona (5 apps, ~50K shops) was causing the frontend to hang because the backend returned the entire dataset as a single JSON blob and Flutter rendered all items eagerly.
+
+**Problem:**
+Two compounding issues caused the UI to freeze on large datasets:
+1. **Backend returned everything at once** — Transactions, events, and stores endpoints had zero pagination. A single API call could return 50K+ records as one JSON response.
+2. **Flutter rendered all items eagerly** — Screens used `Column + .map().toList()` and `.take(50)` hacks, building all widget trees upfront.
+
+**Baseline Profiling (Before — Whale persona, Stores screen):**
+
+| Metric | Value |
+|--------|-------|
+| Chrome Performance: Total load | **5,756 ms** |
+| Chrome Performance: Scripting | **4,228 ms** (73% of total) |
+| Chrome Performance: Frame time | **583.8 ms** (target: 16ms) |
+| Network transfer (localhost) | **15,837 kB** (~15.5 MB) |
+| Long task on main thread | **~1-2s** continuous block |
+| Heap snapshot | **1.6 MB** (3,731 functions, 2,969 object shapes) |
+
+**After-Fix Profiling (After — Whale persona, Stores screen with pagination):**
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Chrome Performance: Total load | 5,756 ms | 5,507 ms | ~4% faster |
+| Chrome Performance: Scripting | 4,228 ms | 1,689 ms | **60% reduction** |
+| Chrome Performance: Rendering | 20 ms | 34 ms | ~same |
+| Chrome Performance: Painting | — | 21 ms | — |
+| Chrome Performance: System | — | 192 ms | — |
+| Network transfer (localhost) | 15,837 kB | 12,579 kB | **21% reduction** |
+| Chrome Performance: Frame time | 583.8 ms | 174.4 ms (steady-state) | **70% faster** |
+| INP (Interaction to Next Paint) | not measured | 38 ms (good) | — |
+
+**Key Takeaways:**
+- **Scripting dropped 60%** (4,228ms → 1,689ms) — the biggest win. Fewer DOM nodes and JS objects to parse/construct from the smaller paginated JSON payloads.
+- **Network transfer dropped 21%** (15.8 MB → 12.6 MB) — paginated responses send only 20 items instead of 50K+.
+- **Frame times improved 70%** — initial frame 591.7ms, settling to 174.4ms vs the previous 583.8ms sustained frame time.
+- **Total load time only marginally faster** because CDN/cached assets dominate the total; the scripting improvement is the real signal.
+- **INP at 38ms** is well within the "good" threshold (<200ms), confirming the UI is responsive to interactions.
+
+**Changes:**
+
+### Backend (Go)
+1. **Response logger middleware** (`response_logger.go`) — logs method, path, status, duration, and response bytes for every request. Wired into router.
+2. **Transactions pagination** — Added `TransactionFilters`/`TransactionPage` to repository interface, implemented `FindByAppIDPaginated` with SQL `LIMIT/OFFSET + COUNT(*)`, updated handler to parse `page`/`pageSize` query params (default 20, max 100). 3 handler tests.
+3. **Events pagination** — Same pattern: `EventFilters`/`EventPage`, `FindByAppIDPaginated`, paginated handler. 2 handler tests.
+4. **Stores pagination** — Paginated the output after aggregation (stores are computed from subscriptions + transactions). Added `page`/`pageSize`/`search` query params, sorts by domain, slices after risk classification + LTV calc.
+
+### Flutter (Dart)
+5. **`PaginatedResult<T>`** — Generic model class for paginated API responses (`items`, `total`, `page`, `pageSize`, `totalPages`, `hasMore`).
+6. **4 services updated** — `TransactionService`, `EventsService`, `StoreService`, `SubscriptionService` now accept `page`/`pageSize` params and return `PaginatedResult`.
+7. **4 providers updated** — `TransactionProvider`, `EventsProvider`, `StoreProvider`, `SubscriptionProvider` now track `_currentPage`, `_totalPages`, `_totalCount`, `hasMore`, `isLoadingMore`, and expose `loadMore()`. Filters/app-switch reset to page 1.
+8. **4 screens updated** — `TransactionsScreen`, `EventsScreen`, `StoreListScreen`, `SubscriptionListScreen`: removed `.take(50)` hacks, show server-side total count in subtitle, added "Load More" `OutlinedButton` when `hasMore`.
+
+**API Response Format (all 4 endpoints):**
+```json
+{
+  "transactions": [...],
+  "total": 5000,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 250
+}
+```
+
+**Default Page Sizes:**
+| Endpoint | Default | Max |
+|----------|---------|-----|
+| Transactions | 20 | 100 |
+| Events | 20 | 100 |
+| Stores | 20 | 100 |
+| Subscriptions | 25 | 100 |
+
+**Files Changed (25):**
+| Area | Files |
+|------|-------|
+| Backend middleware | `response_logger.go`, `router.go` |
+| Backend transactions | `transaction_repository.go` (interface), `transaction_repository.go` (persistence), `transaction_handler.go`, `transaction_handler_test.go` (new) |
+| Backend events | `app_event_repository.go` (interface), `app_event_repository.go` (persistence), `event_handler.go`, `event_handler_test.go` (new) |
+| Backend stores | `store_handler.go` |
+| Backend mock stubs | 6 test files (interface compliance for `FindByAppIDPaginated`) |
+| Flutter model | `paginated_result.dart` (new) |
+| Flutter services | `transaction_service.dart`, `events_service.dart`, `store_service.dart`, `subscription_service.dart` |
+| Flutter providers | `transaction_provider.dart`, `events_provider.dart`, `store_provider.dart`, `subscription_provider.dart` |
+| Flutter screens | `transactions_screen.dart`, `events_screen.dart`, `store_list_screen.dart`, `subscription_list_screen.dart` |
+
+**Design Decision — "Load More" button over infinite scroll:**
+- Simpler to implement with existing `Column` inside `SingleChildScrollView` layout
+- No scroll controller + threshold detection needed
+- User stays in control of when to load data
+- Can upgrade to infinite scroll later (logged to `future.md`)
+
+---
+
+## [2026-05-08] Fix: Replace Fragile Data-Loading Patterns with DataLoadingMixin
+
+**Summary:**
+Fixed recurring data-loading bugs across the Flutter Provider frontend (`frontend-flutter/`). Eight screens suffered from side effects in `build()`, fragile one-shot booleans (`_wasDemoMode`, `hasAttemptedLoad`), no error recovery, and no request cancellation. Replaced all patterns with a standardized `DataLoadingMixin`, added `CancelToken` support, and centralized demo mode toggling.
+
+**Root Causes Fixed:**
+1. **Side effects in `build()`** — 8 screens triggered API calls via `addPostFrameCallback` inside `build()`, violating Flutter's "build must be pure" rule. Could fire multiple times per frame.
+2. **One-shot booleans** — `_wasDemoMode` (7 screens) and `hasAttemptedLoad` (2 providers) tracked state manually and got permanently stuck after errors.
+3. **No error recovery** — once a load failed, guards prevented retry forever.
+4. **No request cancellation** — switching apps mid-load caused stale data to overwrite new data.
+5. **Bootstrap chain fragility** — `app.dart` used `_orgLoaded`/`_appsLoaded` booleans that never reset on error.
+6. **Demo mode scatter** — 9 individual `setDemoMode()` calls in settings screen.
+
+**Changes:**
+
+1. **`core/mixins/data_loading_mixin.dart`** (NEW) — Listener-based mixin replacing all `_wasDemoMode` and `hasAttemptedLoad` patterns. Detects demo→live transitions, app switches, and initial loads via `AppsProvider.addListener()`. Includes `retryLoad()` for error recovery.
+
+2. **`widgets/lg_error_state.dart`** (NEW) — Reusable error + retry widget matching `LgEmptyState` visual pattern.
+
+3. **`core/demo_mode_coordinator.dart`** (NEW) — Centralizes demo mode toggle across 9 providers + live mode data loading into `setDemoMode()` and `switchToLiveMode()`.
+
+4. **`core/network/api_client.dart`** — Added optional `CancelToken` param to `get()`/`post()`/`put()`/`delete()`.
+
+5. **8 service files** — Added optional `CancelToken` param to all `fetch*()` methods: `metrics_service`, `subscription_service`, `transaction_service`, `store_service`, `earnings_service`, `risk_service`, `events_service`, `insights_service`.
+
+6. **9 provider files** — Added `CancelToken` cancellation pattern: cancel in-flight request before starting new one, silently ignore cancelled requests, removed `_isLoading` guard that prevented retry after errors. Removed `hasAttemptedLoad` from `SubscriptionProvider` and `TransactionProvider`.
+
+7. **`app.dart`** — Removed `_orgLoaded`/`_appsLoaded` one-shot booleans. Replaced with idempotent calls that rely on providers' own loading guards.
+
+8. **8 screen files** — Migrated to `DataLoadingMixin` with `loadData()` override. Added `LgErrorState` with retry. Removed all `_wasDemoMode`, `_maybeLoadData`, `hasAttemptedLoad` code. Zero side effects in `build()`.
+
+9. **`settings_screen.dart`** — Replaced 9 individual `setDemoMode()` calls + 9 `load*()` calls with single `DemoModeCoordinator`.
+
+10. **`main.dart`** — Creates providers as local vars and wires them into `DemoModeCoordinator`. Uses `ChangeNotifierProvider.value()` for all data providers.
+
+**Files:** 3 new + 30 modified (33 total, +532/-307 lines)
+
+---
+
+## [2026-05-08] Feat: Whale Persona (~1M Transactions) + Usage Charges Admin UI
+
+**Summary:**
+Added a "Whale Partner" persona (org 1005) with 5 apps, 50K shops, and ~1M transactions for load testing the sync pipeline. The persona uses a `generated` block in YAML that DataStore expands programmatically at load time (deterministic via seeded RNG). Also added transaction caching to TransactionResolver and a full usage charges UI to the admin panel.
+
+**Changes:**
+
+1. **`mock-shopify-api/data/whale.yml`** (NEW) — Whale persona definition with 5 apps, `generated` block specifying 50K shops with distribution ratios, plan pricing, status mix (75% active, 15% frozen, 10% cancelled), and usage charge templates with `shop_ratio`.
+
+2. **`mock-shopify-api/data/personas.yml`** — Added org 1005 entry.
+
+3. **`mock-shopify-api/data/growing.yml`** + **`power.yml`** — Replaced explicit per-shop usage charge entries with `shop_ratio` templates so usage charges expand across shops proportionally.
+
+4. **`mock-shopify-api/lib/data_store.rb`** — Added `expand_generated()` for whale (generates shops + subscriptions). Added `expand_usage_charges()` that runs for ALL personas: expands `shop_ratio` templates into per-shop entries using app→shop mapping from subscriptions. Each entry gets a random `started_months_ago` (1-10). Updated `stats()` to include `usage_charges` count.
+
+5. **`mock-shopify-api/lib/transaction_resolver.rb`** — Usage charges are now always monthly (aligned to subscription billing cycle, no `frequency` field). `started_months_ago` controls how far back charges go. Added per-org transaction cache. Switched to seeded `Random.new` for deterministic output.
+
+6. **`mock-shopify-api/lib/graphql_handler.rb`** — Added `invalidate_transaction_cache(org_id)` pass-through to TransactionResolver.
+
+7. **`mock-shopify-api/views/persona.erb`** — Added Usage Charges summary card (teal). Capped subscriptions table at 200 rows. Added usage charges table (app/shop/amount range/started columns, capped at 100 rows). Added "Add Usage Charge" form with `started_months_ago`.
+
+8. **`mock-shopify-api/app.rb`** — Added `@usage_charges` to persona GET route. Added `POST /admin/personas/:org_id/usage_charges` route. Added cache invalidation to all data-modifying routes.
+
+**Stats:** Whale generates 50K shops, 50K subs, 5.2K usage charges. Growing: 6 usage charges (30% of app 1 shops). Power: 6 usage charges (25% app 1 + 20% app 2). First whale transaction generation ~14s, cached calls instant.
+
+---
+
 ## [2026-05-08] Fix: Org Header Not Sent + Disable Demo Mode by Default
 
 **Summary:**

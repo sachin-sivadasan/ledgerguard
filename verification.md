@@ -4,6 +4,22 @@ Tracks verification points from each implementation plan. Run these after deploy
 
 ---
 
+## Plan: Migrate from Numeric Shopify App IDs to Internal UUIDs
+**Date:** 2026-05-08
+
+- [x] `go test ./...` — all pass
+- [x] `flutter analyze` — no issues
+- [ ] Login → Dashboard loads (API calls use UUID in path)
+- [ ] Navigate all screens → data loads correctly
+- [ ] App dropdown works → switching apps reloads with UUID
+- [ ] Apps page → "Sync Now" works (UUID used directly, no 400)
+- [ ] Demo mode → toggle off → live data loads
+- [ ] Check network tab: paths show `/apps/{uuid}/subscriptions`
+- [ ] Curl with UUID → 200
+- [ ] Curl with numeric → 400 "invalid app ID format"
+
+---
+
 ## Plan: Remove "All Apps" Filter & Enforce App Limits Per Plan
 **Date:** 2026-05-08
 
@@ -65,3 +81,32 @@ Tracks verification points from each implementation plan. Run these after deploy
 - [ ] Settings → toggle demo ON → mock data shown
 - [ ] Restart app → demo mode stays as last set (SharedPreferences)
 - [ ] Logout → login → orgs reload, header set again
+
+---
+
+## Plan: Fix Stale Data — Navigation Reload + Sync Awareness + Manual Refresh
+**Date:** 2026-05-08
+
+### Commit 1 — Navigation staleness
+- [ ] Navigate to Stores → wait 2+ min → click Dashboard → click Stores → loading + fresh API call
+- [ ] Navigate to Stores → immediately re-click Stores (<2 min) → no reload, cached data instant
+
+### Commit 2 — Refresh button
+- [ ] Every data screen (Dashboard, Subscriptions, Stores, Transactions, Events, Risk, Analytics, Earnings, Insights) shows a refresh icon in the header
+- [ ] Click refresh → loading → fresh data from API
+- [ ] Error state "Retry" still works independently
+
+### Commit 3 — Apps page sync
+- [ ] Apps page shows "Synced X ago" per app
+- [ ] Click "Sync Now" → progress bar appears, polls updates
+- [ ] Click "Cancel" → sync cancelled, idle state restored
+- [ ] Sync completes → "Synced just now" shown
+
+### Commit 4 — Auto-refresh
+- [ ] While sync running, data screens show subtle "Syncing..." next to title
+- [ ] Sync completes → "Syncing..." disappears → page auto-reloads with fresh data
+- [ ] No sync running → no indicator, no extra polling
+
+### Cross-cutting
+- [ ] `flutter analyze` — no issues
+- [ ] Demo mode unaffected — no API calls, no sync polling

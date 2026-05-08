@@ -786,3 +786,22 @@ ADR-034 introduced organizations but all 26 data endpoint call sites still resol
 - Multi-org users must pass `X-Org-Id` header or use URL param
 - All data queries now flow through org membership verification
 - Selected org persists server-side (no client-only storage needed)
+
+### ADR-036: UUID-First App Identification (Deprecate Numeric Shopify IDs)
+**Date:** 2026-05-08
+**Status:** Accepted
+
+**Context:**
+Every API request paid a "translation tax": frontend sent numeric Shopify app ID (e.g., "5001") → backend constructed GID string (`gid://partners/App/5001`) → `FindByPartnerAppID()` (compound index) → finally got UUID for actual queries. Additionally: 5 duplicate lookup helpers, 4 duplicate GID prefix constants, numeric IDs are sequential/guessable, and `SyncStatusProvider` maintained a separate `_idToUuid` mapping hack.
+
+**Decision:**
+1. Frontend uses `ShopifyApp.id` = UUID (from `json['uuid']`), `shopifyId` for display only.
+2. Backend `resolveAppFromRequest()` accepts UUID only — direct `FindByID()` (primary key lookup).
+3. Numeric Shopify IDs kept only for: display labels, Shopify Partner API calls, Revenue API external consumers.
+4. Auth/ownership checks handled by router-level middleware, not in `resolveAppFromRequest()`.
+
+**Consequences:**
+- Every app-scoped endpoint is one PK lookup instead of GID construction + compound index query
+- ~200 lines of duplicate lookup code deleted
+- Non-UUID app IDs in URL now return 400 "invalid app ID format"
+- External Revenue API consumers unaffected (separate handler with its own GID lookup)

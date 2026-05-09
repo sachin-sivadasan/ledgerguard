@@ -2606,3 +2606,42 @@ Complete the org model wiring so all data endpoints resolve ownership via `org_i
 | NEW | `backend/migrations/000038_add_selected_org_to_preferences.down.sql` |
 
 **Tests:** `go build ./...` succeeds, `go test ./...` all pass, `go vet ./...` clean.
+
+---
+
+## [2026-05-09] Events & Webhooks Page Improvements
+
+### Events Page Fixes
+- Added 4 missing `EventType` enum values: `appReactivated`, `appDeactivated`, `subscriptionFrozen`, `subscriptionUnfrozen`
+- Added Shopify Partner API aliases in parser (e.g. `RELATIONSHIP_INSTALLED` → `appInstall`, `SUBSCRIPTION_CHARGE_FROZEN` → `subscriptionFrozen`)
+- Previously unknown types silently fell through to `appInstall` — now properly mapped
+- Added icons/colors/badge labels for all new types in events_screen and store_detail_screen
+- Fixed KPI cards: were counting from type-filtered `events` list (always 0 when filter active), now count from unfiltered `_allEvents`
+- Wired `eventType` query param through EventsService to backend API for server-side filtering
+- Added `_typeToApiFilter` map in EventsProvider to translate enum → Shopify API event type strings
+
+### Webhooks Page Fixes
+- Fixed stale "Today" counts: `mockWebhooks` was a `final` computed at import time — changed to getter so `DateTime.now()` is fresh on each access
+- Added `demoMode` toggle to WebhookProvider; when `!demoMode`, returns empty list (no backend API yet)
+- Wired WebhookProvider into DemoModeCoordinator
+- Added app filter chip (reuses pattern from events_screen)
+- Added time range toggle (Today/Week/Month) matching events_screen pattern
+- KPI cards now adapt to selected time range instead of hardcoded "Today"
+- Success rate metric adapts to selected range (was hardcoded 7d)
+
+### Files Changed
+
+| Action | File |
+|--------|------|
+| MODIFY | `frontend-flutter/lib/models/event_model.dart` |
+| MODIFY | `frontend-flutter/lib/screens/events/events_screen.dart` |
+| MODIFY | `frontend-flutter/lib/screens/stores/store_detail_screen.dart` |
+| MODIFY | `frontend-flutter/lib/providers/events_provider.dart` |
+| MODIFY | `frontend-flutter/lib/services/events_service.dart` |
+| MODIFY | `frontend-flutter/lib/mock_data/mock_webhooks.dart` |
+| MODIFY | `frontend-flutter/lib/providers/webhook_provider.dart` |
+| MODIFY | `frontend-flutter/lib/screens/webhooks/webhooks_screen.dart` |
+| MODIFY | `frontend-flutter/lib/core/demo_mode_coordinator.dart` |
+| MODIFY | `frontend-flutter/lib/main.dart` |
+
+**Tests:** `flutter analyze` — no issues.

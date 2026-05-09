@@ -43,6 +43,7 @@ Postponed ideas and features for later implementation.
 | Per-user rate limiting on Firebase-auth routes | P1 | Backend rate limiter only covers Revenue API (API key routes). Firebase-authenticated routes (`/api/v1/apps`, `/sync`, `/subscriptions`, etc.) have no per-user rate limiting. A leaked Firebase token or malicious script can hammer the backend. Add per-UID token-bucket middleware (e.g., 60 req/min per user) on the main authenticated router group in `router.go`. Reuse existing `InMemoryRateLimitStore` with Firebase UID as key instead of API key ID. |
 | Revert sync window to 12 months | P1 | Transaction & snapshot processors use `AddDate(0, -1, 0)` (1 month) for dev testing. Revert to `AddDate(-1, 0, 0)` for production: `transaction_processor.go:73`, `snapshot_processor.go:56`. |
 | Revert event/status sync subscription limit | P1 | EventProcessor and StatusProcessor are capped to first 10 subscriptions for dev testing. Remove the `if len(subscriptions) > 10` blocks: `event_processor.go:69-72`, `status_processor.go:65-68`. |
+| Flutter Provider → Bloc migration | P3 | The Provider prototype (`frontend-flutter/`) now uses DataLoadingMixin + DemoModeCoordinator pattern. The Bloc frontend (`frontend/app/`) already implements the same patterns properly with events/states, BlocListener for cascading loads, and get_it DI. If Provider prototype becomes primary app, migrate phased: (1) replace ChangeNotifier with Bloc per screen, (2) replace DataLoadingMixin with BlocListener on AppsBloc, (3) replace DemoModeCoordinator with DemoModeBloc events. |
 | Remove `DELETE FROM shops` from ResetAppData | P1 | `shops` is a global cache shared across apps. Currently `ResetAppData` deletes all rows for dev convenience (single app). In production with multiple apps, remove the blanket delete — only clear app-specific tables. File: `admin_repository.go`. |
 | Migrate from stdlib `log` to `zap` logger | P2 | Replace `log.Printf` with `zap.Logger` across the codebase. Benefits: structured fields, log levels (info/warn/error), JSON output for production, better performance. Touches many files — do as a dedicated refactor. |
 | FCM push notifications in Flutter Provider (`frontend-flutter/`) | P2 | Add `firebase_messaging` dependency, request permission, get FCM token, register with `POST /api/v1/devices`, handle foreground/background messages. Backend device registration API already exists. |
@@ -51,6 +52,7 @@ Postponed ideas and features for later implementation.
 | Revenue API: Webhooks for risk state changes | P2 | When a subscription's risk state changes (SAFE → ONE_CYCLE_MISSED → CHURNED), POST to a developer-configured webhook URL. Enables real-time reactions: show in-app payment banners, restrict premium features, trigger dunning emails. Config: `POST /api/v1/api-keys/{id}/webhooks` with URL + events filter. Delivers signed payloads (HMAC) with retry logic. |
 | Revenue API: Subscription list with filters | P2 | `GET /subscriptions?risk_state=ONE_CYCLE_MISSED&status=ACTIVE&limit=50&cursor=...` — list all subscriptions with cursor pagination and filter by risk_state, status, plan_name. Currently external API only supports single/batch lookup by ID or domain. Internal API has list but it's Firebase-auth only. |
 | Revenue API: Revenue summary endpoint | P3 | `GET /revenue/summary` — returns aggregate stats: active_subscriptions, mrr_cents, at_risk_count, total_usage_cents, churned_30d. Single call gives developers a dashboard-ready overview without fetching individual subscriptions. Reads from existing `daily_metrics_snapshot` table. |
+| Real-time sync status via push (MQTT/WebSocket/SSE) | P3 | Replace sync polling (5s interval) with real-time push. Backend already has Redis progress tracking — publish state changes to MQTT topic, WebSocket channel, or SSE stream. Eliminates individual API calls for sync status. Options: MQTT (mqtt_client package, needs broker), WebSocket (backend already has /api/v1/chat WS endpoint — extend or add /sync/ws), SSE (simplest, one-way server-to-client over HTTP, no new infra). |
 
 ### Missing UI Features (from User Personas Analysis)
 
@@ -315,3 +317,17 @@ Add Claude API as a second AI provider running alongside OpenAI. Users choose th
 - Both providers share the same modules, registry, and GraphQL layer
 
 **Implementation Effort:** Medium (Claude client + preferences UI, everything else reused)
+
+---
+
+## Webhooks Backend API + Persistence
+
+Add a real backend API for webhooks instead of relying on mock data. This includes:
+
+- `webhook_events` table to store incoming webhook payloads
+- `POST /api/v1/webhooks/shopify` and `POST /api/v1/webhooks/razorpay` endpoints to receive webhooks
+- `GET /api/v1/apps/:appId/webhooks` list endpoint with pagination, filtering by source/status/date range
+- HMAC signature verification for Shopify webhooks
+- Razorpay webhook signature verification
+- Webhook replay/retry mechanism for failed deliveries
+- Connect WebhookProvider to live API (replace mock data path)

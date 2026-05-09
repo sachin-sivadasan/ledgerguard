@@ -110,3 +110,23 @@ Tracks verification points from each implementation plan. Run these after deploy
 ### Cross-cutting
 - [ ] `flutter analyze` — no issues
 - [ ] Demo mode unaffected — no API calls, no sync polling
+
+---
+
+## [2026-05-09] Events & Webhooks Page Improvements
+
+### Events Page
+- [ ] `flutter analyze` — no issues
+- [ ] Events screen "This Month" → KPI cards show non-zero installs
+- [ ] Set Type filter → list filtered, KPI cards still show unfiltered totals
+- [ ] Network tab: type filter sends `eventType=RELATIONSHIP_INSTALLED` query param
+- [ ] Events with SUBSCRIPTION_FROZEN display "FROZEN" badge (not "INSTALL")
+- [ ] Store detail timeline shows correct badges for new types
+
+### Webhooks Page
+- [ ] `flutter analyze` — no issues
+- [ ] Webhooks KPI "Today" counts refresh correctly
+- [ ] App filter chip filters webhook list
+- [ ] Time range toggle works (Today/Week/Month)
+- [ ] Demo mode off → webhooks list empty
+- [ ] Demo mode on → mock data returns

@@ -1818,3 +1818,18 @@
 - 10 test mocks updated with FindByOrgID stubs
 - 52 files changed, `go build ./...` clean, `go test ./...` all pass
 - Commit: `4021029`
+
+---
+
+### [2026-05-09] Events & Webhooks Page Improvements
+**Original:**
+> Implement the plan: Events & Webhooks Page Improvements
+
+**Improved:**
+> Fix Events page: add 4 missing EventType enum values (appReactivated, appDeactivated, subscriptionFrozen, subscriptionUnfrozen) with Shopify API aliases, add icons/colors/badges for new types, fix KPI cards to count from unfiltered events, wire eventType filter to API. Fix Webhooks page: change mockWebhooks from final to getter for fresh timestamps, add demo mode toggle wired to DemoModeCoordinator, add app filter and time range toggle (Today/Week/Month), make KPI cards respect selected time range.
+
+**Result:**
+- Commit 1: Events page fixes (5 files)
+- Commit 2: Webhooks page fixes (5 files)
+- Commit 3: Documentation (4 files)
+- `flutter analyze` clean

@@ -33,6 +33,8 @@ Update when architecture changes:
 - `docs/ER.puml` – Entity relationships
 - `docs/SEQUENCE.puml` – Key flows (sync, auth, etc.)
 
+**Diagram Audit:** When the user says **"run diagram audit"**, execute the full prompt at `docs/prompts/diagram-audit-prompt.md` — audit all diagrams (PlantUML, Excalidraw, sequence), update outdated ones, create missing ones (backend + frontend-flutter), and log to `prompts.md`.
+
 ### 3. Domain-Driven Design (Go)
 ```
 cmd/server/main.go                    → Entry point only

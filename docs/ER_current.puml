@@ -157,6 +157,12 @@ entity "notification_preferences" as notification_preferences {
   daily_summary_enabled : BOOLEAN <<DEFAULT: TRUE>>
   daily_summary_time : TIME <<DEFAULT: 08:00>>
   slack_webhook_url : TEXT
+  email_enabled : BOOLEAN <<DEFAULT: TRUE>>
+  slack_enabled : BOOLEAN <<DEFAULT: FALSE>>
+  churn_alerts_enabled : BOOLEAN <<DEFAULT: TRUE>>
+  revenue_alerts_enabled : BOOLEAN <<DEFAULT: TRUE>>
+  review_alerts_enabled : BOOLEAN <<DEFAULT: TRUE>>
+  risk_threshold_days : INTEGER <<DEFAULT: 30>>
   created_at : TIMESTAMPTZ
   updated_at : TIMESTAMPTZ
 }
@@ -167,6 +173,11 @@ entity "user_preferences" as user_preferences {
   *user_id : UUID <<FK, UNIQUE>>
   default_app_id : UUID <<FK>>
   selected_org_id : UUID <<FK>>
+  auto_sync : BOOLEAN <<DEFAULT: TRUE>>
+  sync_frequency : VARCHAR(20) <<DEFAULT: Every 6 hours>>
+  workspace_name : VARCHAR(100) <<DEFAULT: My Shopify Apps>>
+  currency : VARCHAR(3) <<DEFAULT: USD>>
+  timezone : VARCHAR(50) <<DEFAULT: America/New_York>>
   primary_kpis : TEXT[]
   secondary_widgets : TEXT[]
   created_at : TIMESTAMPTZ
@@ -502,16 +513,32 @@ note right of daily_insight
   - idx_daily_insight_app_date
 end note
 
+note right of notification_preferences
+  Migration: 000009_create_notification_preferences_table
+  Migration: 000039_extend_notification_preferences
+  - Per-user notification configuration
+  - Channel toggles: email, Slack
+  - Alert category toggles: churn, revenue, review
+  - Risk threshold for alert triggering
+  - Slack webhook integration
+
+  Indexes:
+  - idx_notification_preferences_user_id
+end note
+
 note right of user_preferences
   Migration: 000019_create_user_preferences_table
   Migration: 000026_add_default_app
   Migration: 000038_add_selected_org
+  Migration: 000040_add_sync_workspace_to_preferences
   - Dashboard KPI configuration
   - Widget visibility preferences
   - Per-user customization
   - Default app selection for multi-app users
   - selected_org_id: persists org choice
     across logins and devices
+  - Sync settings: auto_sync, sync_frequency
+  - Display prefs: workspace_name, currency, timezone
 
   Indexes:
   - idx_user_preferences_user_id

@@ -1,0 +1,178 @@
+@startuml
+title 40. Flutter Provider → Service → API Dependency Graph
+
+skinparam componentStyle rectangle
+skinparam componentArrowThickness 2
+skinparam packageBorderThickness 2
+skinparam defaultFontSize 11
+skinparam arrowColor #555555
+
+' ──────────────────────────────────────────────
+'  Providers
+' ──────────────────────────────────────────────
+package "Providers" #LightBlue {
+  [AuthProvider] as AuthP
+  [AppsProvider] as AppsP
+  [DashboardProvider] as DashP
+  [SubscriptionProvider] as SubP
+  [StoreProvider] as StoreP
+  [TransactionProvider] as TxP
+  [EventsProvider] as EventsP
+  [RiskProvider] as RiskP
+  [AnalyticsProvider] as AnalyticsP
+  [EarningsProvider] as EarningsP
+  [InsightsProvider] as InsightsP
+  [SyncStatusProvider] as SyncP
+  [SettingsProvider] as SettingsP
+  [OrganizationProvider] as OrgP
+  [ApiKeyProvider] as ApiKeyP
+  [WebhookProvider] as WebhookP
+}
+
+' ──────────────────────────────────────────────
+'  Services
+' ──────────────────────────────────────────────
+package "Services" #LightGreen {
+  [AppService] as AppSvc
+  [EarningsService] as EarnSvc
+  [EventsService] as EventsSvc
+  [InsightsService] as InsightsSvc
+  [MetricsService] as MetricsSvc
+  [MixpanelService] as MixSvc
+  [OrganizationService] as OrgSvc
+  [RiskService] as RiskSvc
+  [StoreService] as StoreSvc
+  [SubscriptionService] as SubSvc
+  [SyncStatusService] as SyncSvc
+  [TransactionService] as TxSvc
+  [UserPreferencesService] as PrefsSvc
+}
+
+' ──────────────────────────────────────────────
+'  Infrastructure
+' ──────────────────────────────────────────────
+package "Infrastructure" #LightCoral {
+  [ApiClient] as API
+  cloud "Backend REST API\n(Go)" as Backend
+  [Firebase Auth] as FBAuth
+  [AppConfig] as Config
+}
+
+' ──────────────────────────────────────────────
+'  Cross-cutting: DemoModeCoordinator
+' ──────────────────────────────────────────────
+package "Cross-cutting" #Wheat {
+  [DemoModeCoordinator] as Demo
+}
+
+' ══════════════════════════════════════════════
+'  Provider → Service dependencies
+' ══════════════════════════════════════════════
+
+' AuthProvider — uses Firebase Auth directly
+AuthP --> FBAuth
+
+' AppsProvider
+AppsP --> AppSvc
+AppsP --> PrefsSvc
+
+' DashboardProvider
+DashP --> MetricsSvc
+DashP --> PrefsSvc
+
+' SubscriptionProvider
+SubP --> SubSvc
+
+' StoreProvider
+StoreP --> StoreSvc
+StoreP --> SubSvc
+
+' TransactionProvider
+TxP --> TxSvc
+
+' EventsProvider
+EventsP --> EventsSvc
+
+' RiskProvider
+RiskP --> RiskSvc
+
+' AnalyticsProvider
+AnalyticsP --> MetricsSvc
+AnalyticsP --> EarnSvc
+
+' EarningsProvider
+EarningsP --> EarnSvc
+
+' InsightsProvider
+InsightsP --> InsightsSvc
+
+' SyncStatusProvider
+SyncP --> SyncSvc
+
+' SettingsProvider
+SettingsP --> PrefsSvc
+
+' OrganizationProvider
+OrgP --> OrgSvc
+OrgP --> API
+OrgP --> PrefsSvc
+
+' ApiKeyProvider — no service deps
+' WebhookProvider — no service deps
+
+' ══════════════════════════════════════════════
+'  Service → ApiClient
+' ══════════════════════════════════════════════
+AppSvc --> API
+EarnSvc --> API
+EventsSvc --> API
+InsightsSvc --> API
+MetricsSvc --> API
+OrgSvc --> API
+RiskSvc --> API
+StoreSvc --> API
+SubSvc --> API
+SyncSvc --> API
+TxSvc --> API
+PrefsSvc --> API
+
+' MixpanelService does NOT use ApiClient
+note right of MixSvc
+  Does **not** use ApiClient.
+  Sends events to Mixpanel SDK.
+end note
+
+' ══════════════════════════════════════════════
+'  ApiClient → Backend
+' ══════════════════════════════════════════════
+API --> Backend : HTTPS
+Config --> API : base URL
+
+' ══════════════════════════════════════════════
+'  DemoModeCoordinator wraps providers
+' ══════════════════════════════════════════════
+Demo ..> AppsP : wraps
+Demo ..> DashP
+Demo ..> SubP
+Demo ..> StoreP
+Demo ..> TxP
+Demo ..> EventsP
+Demo ..> RiskP
+Demo ..> AnalyticsP
+Demo ..> EarningsP
+Demo ..> InsightsP
+Demo ..> WebhookP
+
+note bottom of Demo
+  Injects mock data into
+  wrapped providers when
+  demo mode is active.
+end note
+
+note bottom of Backend
+  **Backend REST API (Go)**
+  Base URL from AppConfig
+  /api/v1/*
+end note
+
+@enduml

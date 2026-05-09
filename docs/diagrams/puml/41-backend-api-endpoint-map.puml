@@ -1,0 +1,293 @@
+@startuml
+title 41. Backend API Endpoint Map (~85 endpoints)
+
+skinparam componentStyle rectangle
+skinparam packageStyle frame
+skinparam nodesep 20
+skinparam ranksep 16
+skinparam defaultFontSize 11
+skinparam noteFontSize 10
+skinparam packageFontSize 13
+skinparam packageFontStyle bold
+
+left to right direction
+
+legend top left
+  |= Auth Scheme |= Description |
+  | <#White> Public | No authentication |
+  | <#FFDEAD> HMAC | Shopify HMAC signature verification |
+  | <#LightBlue> Auth | Firebase JWT required |
+  | <#LightGreen> Auth + Org | Firebase JWT + org-scoped |
+  | <#Thistle> Auth + Admin | Firebase JWT + admin role |
+  | <#LightCoral> API Key | X-API-Key header |
+  | <#Silver> Internal | X-Internal-Key header |
+endlegend
+
+' ──────────────────────────────────────
+'  PUBLIC
+' ──────────────────────────────────────
+package "Public" as pkg_public #White {
+  component "GET /health" as ep_health
+  component "GET /api/v1/tiers" as ep_tiers
+}
+
+' ──────────────────────────────────────
+'  WEBHOOKS
+' ──────────────────────────────────────
+package "Webhooks  [HMAC]" as pkg_webhooks #FFDEAD {
+  component "POST /webhooks/shopify/" as ep_wh_generic
+  component "POST /webhooks/shopify/installed" as ep_wh_installed
+  component "POST /webhooks/shopify/subscriptions" as ep_wh_subs
+  component "POST /webhooks/shopify/uninstalled" as ep_wh_uninstalled
+  component "POST /webhooks/shopify/billing-failure" as ep_wh_billing
+  component "POST /webhooks/razorpay" as ep_wh_rzp
+}
+
+' ──────────────────────────────────────
+'  USER
+' ──────────────────────────────────────
+package "User  [Auth]" as pkg_user #LightBlue {
+  component "GET /api/v1/me" as ep_me
+}
+
+' ──────────────────────────────────────
+'  USER PREFERENCES
+' ──────────────────────────────────────
+package "User Preferences  [Auth]" as pkg_prefs #LightBlue {
+  component "GET|PUT /api/v1/user/preferences/dashboard" as ep_pref_dash
+  component "GET|PUT /api/v1/user/preferences/default-app" as ep_pref_app
+  component "GET|PUT /api/v1/user/preferences/selected-org" as ep_pref_org
+  component "GET|PUT /api/v1/user/preferences/settings" as ep_pref_settings
+}
+
+' ──────────────────────────────────────
+'  NOTIFICATION PREFERENCES
+' ──────────────────────────────────────
+package "Notification Preferences  [Auth]" as pkg_notifpref #LightBlue {
+  component "GET|PUT /api/v1/users/notification-preferences" as ep_notif_pref
+}
+
+' ──────────────────────────────────────
+'  DEVICES
+' ──────────────────────────────────────
+package "Devices  [Auth]" as pkg_devices #LightBlue {
+  component "POST /api/v1/devices/" as ep_dev_register
+  component "DELETE /api/v1/devices/" as ep_dev_delete
+}
+
+' ──────────────────────────────────────
+'  SHOPIFY INTEGRATION
+' ──────────────────────────────────────
+package "Shopify Integration  [Auth / Admin]" as pkg_shopify #LightBlue {
+  component "GET /api/v1/integrations/shopify/status" as ep_sh_status
+  component "GET /api/v1/integrations/shopify/oauth" as ep_sh_oauth
+  component "GET /api/v1/integrations/shopify/callback" as ep_sh_callback
+  note bottom of ep_sh_callback : Public (no auth)
+  component "POST /api/v1/integrations/shopify/token" as ep_sh_token_post
+  component "GET /api/v1/integrations/shopify/token" as ep_sh_token_get
+  component "DELETE /api/v1/integrations/shopify/token" as ep_sh_token_del
+  note bottom of ep_sh_token_post : Admin only
+}
+
+' ──────────────────────────────────────
+'  APPS (ORG-SCOPED)
+' ──────────────────────────────────────
+package "Apps  [Auth + Org-scoped]" as pkg_apps #LightGreen {
+
+  package "App Selection" as pkg_app_sel {
+    component "GET  /api/v1/apps/available" as ep_apps_avail
+    component "POST /api/v1/apps/select" as ep_apps_select
+    component "GET  /api/v1/apps/" as ep_apps_list
+  }
+
+  package "App Config" as pkg_app_cfg {
+    component "PATCH /api/v1/apps/{id}/tier" as ep_app_tier
+    component "PATCH /api/v1/apps/{id}/store-slug" as ep_app_slug
+    component "GET|POST /api/v1/apps/{id}/install-count" as ep_app_ic
+  }
+
+  package "Metrics" as pkg_app_metrics {
+    component "GET /api/v1/apps/{id}/metrics/latest" as ep_m_latest
+    component "GET /api/v1/apps/{id}/metrics/trend" as ep_m_trend
+    component "GET /api/v1/apps/{id}/metrics/" as ep_m_list
+  }
+
+  package "Subscriptions" as pkg_app_subs {
+    component "GET /api/v1/apps/{id}/subscriptions/summary" as ep_s_summary
+    component "GET /api/v1/apps/{id}/subscriptions/price-stats" as ep_s_price
+    component "GET /api/v1/apps/{id}/subscriptions/" as ep_s_list
+    component "GET /api/v1/apps/{id}/subscriptions/{subId}" as ep_s_detail
+  }
+
+  package "Earnings" as pkg_app_earn {
+    component "GET /api/v1/apps/{id}/earnings" as ep_earn
+    component "GET /api/v1/apps/{id}/earnings/status" as ep_earn_status
+  }
+
+  package "Revenue & Fees" as pkg_app_rev {
+    component "GET /api/v1/apps/{id}/revenue/concentration" as ep_rev_conc
+    component "GET /api/v1/apps/{id}/fees/summary" as ep_fee_sum
+    component "GET /api/v1/apps/{id}/fees/breakdown" as ep_fee_brk
+    component "GET /api/v1/apps/{id}/fees/monthly" as ep_fee_mo
+  }
+
+  package "Stores & Health" as pkg_app_stores {
+    component "GET /api/v1/apps/{id}/stores/{domain}/health" as ep_store_health
+    component "GET /api/v1/apps/{id}/stores" as ep_stores
+  }
+
+  package "Analytics" as pkg_app_analytics {
+    component "GET /api/v1/apps/{id}/transactions" as ep_txn
+    component "GET /api/v1/apps/{id}/events" as ep_events
+    component "GET /api/v1/apps/{id}/forecast" as ep_forecast
+    component "GET /api/v1/apps/{id}/cohorts" as ep_cohorts
+    component "GET /api/v1/apps/{id}/risk/summary" as ep_risk
+    component "GET /api/v1/apps/{id}/insights/daily" as ep_insights
+  }
+
+  package "Reviews" as pkg_app_reviews {
+    component "GET  /api/v1/apps/{id}/reviews" as ep_rev_list
+    component "POST /api/v1/apps/{id}/reviews" as ep_rev_scrape
+  }
+}
+
+' ──────────────────────────────────────
+'  BILLING
+' ──────────────────────────────────────
+package "Billing  [Auth]" as pkg_billing #LightBlue {
+  component "POST /api/v1/billing/checkout" as ep_bill_checkout
+  component "GET  /api/v1/billing/status" as ep_bill_status
+}
+
+' ──────────────────────────────────────
+'  ORGANIZATIONS
+' ──────────────────────────────────────
+package "Organizations  [Auth]" as pkg_orgs #LightBlue {
+
+  package "Org CRUD" as pkg_org_crud {
+    component "POST /api/v1/orgs/" as ep_org_create
+    component "GET  /api/v1/orgs/" as ep_org_list
+    component "GET  /api/v1/orgs/{id}/" as ep_org_get
+    component "PUT  /api/v1/orgs/{id}/" as ep_org_update
+    component "DELETE /api/v1/orgs/{id}/" as ep_org_delete
+  }
+
+  package "Members" as pkg_org_members {
+    component "GET    /api/v1/orgs/{id}/members" as ep_org_members
+    component "DELETE /api/v1/orgs/{id}/members/{userId}" as ep_org_mem_del
+    component "PUT    /api/v1/orgs/{id}/members/{userId}/role" as ep_org_role
+    component "PUT    /api/v1/orgs/{id}/members/{userId}/suspend" as ep_org_suspend
+    component "PUT    /api/v1/orgs/{id}/members/{userId}/unsuspend" as ep_org_unsuspend
+    component "PUT    /api/v1/orgs/{id}/members/{userId}/notifications" as ep_org_notif
+  }
+
+  package "Invitations" as pkg_org_inv {
+    component "POST   /api/v1/orgs/{id}/invitations" as ep_org_inv_create
+    component "DELETE /api/v1/orgs/{id}/invitations" as ep_org_inv_del
+    component "POST   /api/v1/invitations/{token}/accept" as ep_inv_accept
+  }
+
+  package "Org Settings" as pkg_org_settings {
+    component "PUT /api/v1/orgs/{id}/webhooks" as ep_org_wh
+    component "GET /api/v1/orgs/{id}/audit-log" as ep_org_audit
+  }
+}
+
+' ──────────────────────────────────────
+'  SYNC
+' ──────────────────────────────────────
+package "Sync  [Auth + Org-scoped]" as pkg_sync #LightGreen {
+  component "POST /api/v1/sync/" as ep_sync_all
+  component "POST /api/v1/sync/{appID}" as ep_sync_app
+  component "POST /api/v1/sync/enqueue/{appID}" as ep_sync_enqueue
+  component "GET  /api/v1/sync/jobs" as ep_sync_jobs
+  component "GET  /api/v1/sync/jobs/{jobID}" as ep_sync_job
+  component "GET  /api/v1/sync/jobs/{jobID}/progress" as ep_sync_progress
+  component "POST /api/v1/sync/jobs/{jobID}/cancel" as ep_sync_cancel
+}
+
+' ──────────────────────────────────────
+'  CHAT
+' ──────────────────────────────────────
+package "Chat  [Auth, SSE]" as pkg_chat #LightBlue {
+  component "POST /api/v1/chat/" as ep_chat
+  component "GET  /api/v1/chat/modules" as ep_chat_modules
+}
+
+' ──────────────────────────────────────
+'  API KEYS
+' ──────────────────────────────────────
+package "API Keys  [Auth]" as pkg_apikeys #LightBlue {
+  component "GET    /api/v1/api-keys/" as ep_ak_list
+  component "POST   /api/v1/api-keys/" as ep_ak_create
+  component "DELETE /api/v1/api-keys/{id}" as ep_ak_delete
+}
+
+' ──────────────────────────────────────
+'  ADMIN
+' ──────────────────────────────────────
+package "Admin  [Auth + Admin]" as pkg_admin #Thistle {
+  component "GET  /api/v1/admin/users" as ep_adm_users
+  component "GET  /api/v1/admin/onboarding" as ep_adm_onboard
+  component "GET  /api/v1/admin/sync" as ep_adm_sync
+  component "GET  /api/v1/admin/billing" as ep_adm_billing
+  component "DELETE /api/v1/admin/apps/{id}/data" as ep_adm_del_data
+  component "POST   /api/v1/admin/apps/{id}/rebuild-read-model" as ep_adm_rebuild
+  component "POST   /api/v1/admin/notifications/daily-summary" as ep_adm_notif
+  component "POST   /api/v1/admin/sync/daily-catchup" as ep_adm_catchup
+}
+
+' ──────────────────────────────────────
+'  REVENUE API (API KEY AUTH)
+' ──────────────────────────────────────
+package "Revenue API  [API Key]" as pkg_revenue #LightCoral {
+  component "GET  /api/v1/subscriptions/{gid}" as ep_rv_sub
+  component "GET  /api/v1/subscriptions/status" as ep_rv_sub_status
+  component "POST /api/v1/subscriptions/batch" as ep_rv_sub_batch
+  component "GET  /api/v1/usages" as ep_rv_usage
+  component "GET  /api/v1/usages/{gid}" as ep_rv_usage_gid
+  component "POST /api/v1/usages/batch" as ep_rv_usage_batch
+  component "POST /api/v1/graphql" as ep_rv_gql
+}
+
+' ──────────────────────────────────────
+'  INTERNAL
+' ──────────────────────────────────────
+package "Internal  [X-Internal-Key]" as pkg_internal #Silver {
+  component "POST /api/v1/internal/sync/transactions" as ep_int_txn
+  component "POST /api/v1/internal/sync/{appID}" as ep_int_sync_app
+  component "POST /api/v1/internal/sync/daily-catchup" as ep_int_catchup
+}
+
+' ──────────────────────────────────────
+'  GRAPHQL
+' ──────────────────────────────────────
+package "GraphQL  [Auth]" as pkg_gql #LightBlue {
+  component "* /graphql" as ep_gql
+  note bottom of ep_gql
+    GET  = Playground
+    POST = Execute query
+  end note
+}
+
+' ──────────────────────────────────────
+'  LAYOUT HINTS
+' ──────────────────────────────────────
+pkg_public -[hidden]down- pkg_webhooks
+pkg_webhooks -[hidden]down- pkg_user
+pkg_user -[hidden]down- pkg_prefs
+pkg_prefs -[hidden]down- pkg_notifpref
+pkg_notifpref -[hidden]down- pkg_devices
+pkg_devices -[hidden]down- pkg_shopify
+pkg_shopify -[hidden]down- pkg_apps
+pkg_apps -[hidden]down- pkg_billing
+pkg_billing -[hidden]down- pkg_orgs
+pkg_orgs -[hidden]down- pkg_sync
+pkg_sync -[hidden]down- pkg_chat
+pkg_chat -[hidden]down- pkg_apikeys
+pkg_apikeys -[hidden]down- pkg_admin
+pkg_admin -[hidden]down- pkg_revenue
+pkg_revenue -[hidden]down- pkg_internal
+pkg_internal -[hidden]down- pkg_gql
+
+@enduml

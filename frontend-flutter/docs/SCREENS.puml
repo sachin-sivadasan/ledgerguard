@@ -1,0 +1,112 @@
+@startuml LedgerGuard Flutter Screen Flow
+!theme plain
+title LedgerGuard — Flutter (Provider) Screen Flow
+caption Based on GoRouter in frontend-flutter/lib/app.dart
+
+skinparam StateFontSize 12
+skinparam StateFontStyle bold
+skinparam StateBackgroundColor #F8F9FA
+skinparam StateBorderColor #343A40
+skinparam ArrowColor #495057
+skinparam NoteBackgroundColor #FFF3CD
+skinparam NoteBorderColor #FFC107
+
+' ─── Entry ────────────────────────────────────────────────────
+[*] --> AuthGuard
+
+' ─── Auth Guard ───────────────────────────────────────────────
+state AuthGuard <<choice>>
+note right of AuthGuard
+  GoRouter redirect:
+  - Not authenticated + non-auth route -> /login
+  - Authenticated + auth route -> /
+end note
+
+AuthGuard --> AuthScreens : not authenticated
+AuthGuard --> AppShell : authenticated
+
+' ─── Auth Screens (no shell) ──────────────────────────────────
+state "Auth Screens" as AuthScreens {
+  state "/login\nLoginScreen" as Login
+  state "/sign-up\nSignUpScreen" as SignUp
+  state "/forgot-password\nForgotPasswordScreen" as ForgotPw
+
+  Login --> SignUp : Create account
+  SignUp --> Login : Back to login
+  Login --> ForgotPw : Forgot password?
+  ForgotPw --> Login : Back to login
+}
+
+AuthScreens --> AuthGuard : Login success\n(refreshListenable)
+
+' ─── App Shell (StatefulShellRoute.indexedStack) ──────────────
+state "AppShell\n(bottom bar / nav rail)" as AppShell {
+
+  ' ── Primary Navigation ──────────────────────────────────────
+  state "Primary Navigation" as PrimaryNav {
+    state "/\nDashboardScreen" as Dashboard
+    state "/subscriptions\nSubscriptionListScreen" as SubList
+    state "/stores\nStoreListScreen" as StoreList
+    state "/transactions\nTransactionsScreen" as Transactions
+    state "/events\nEventsScreen" as Events
+
+    ' Sub-routes
+    state "/subscriptions/:id\nSubscriptionDetailScreen" as SubDetail
+    state "/stores/:id\nStoreDetailScreen" as StoreDetail
+
+    SubList --> SubDetail : Select subscription
+    SubDetail --> SubList : Back
+    StoreList --> StoreDetail : Select store
+    StoreDetail --> StoreList : Back
+  }
+
+  ' ── Secondary Navigation ────────────────────────────────────
+  state "Secondary Navigation" as SecondaryNav {
+    state "/webhooks\nWebhooksScreen" as Webhooks
+    state "/risk\nRiskScreen" as Risk
+    state "/analytics\nAnalyticsScreen" as Analytics
+    state "/earnings\nEarningsScreen" as Earnings
+    state "/apps\nAppsScreen" as Apps
+    state "/api-keys\nApiKeysScreen" as ApiKeys
+    state "/insights\nInsightsScreen" as Insights
+    state "/settings\nSettingsScreen" as Settings
+
+    note bottom of Analytics
+      Tabs: Revenue, Profit,
+      Cohort, Forecasting, Multi-App
+    end note
+
+    note bottom of Apps
+      Tabs: Apps, Reviews
+    end note
+
+    ' Settings sub-routes
+    state "/settings/connect-shopify\nConnectShopifyScreen" as ConnectShopify
+    state "/settings/team\nTeamScreen" as Team
+    state "/settings/audit-log\nAuditLogScreen" as AuditLog
+
+    Settings --> ConnectShopify : Connect Shopify
+    Settings --> Team : Team management
+    Settings --> AuditLog : Audit log
+    ConnectShopify --> Settings : Back
+    Team --> Settings : Back
+    AuditLog --> Settings : Back
+  }
+
+  ' ── Navigation between sections ─────────────────────────────
+  PrimaryNav -[hidden]-> SecondaryNav
+}
+
+' ─── Logout ───────────────────────────────────────────────────
+AppShell --> AuthGuard : Logout\n(AuthProvider.signOut)
+
+' ─── Legend ───────────────────────────────────────────────────
+legend bottom left
+  |= Symbol |= Meaning |
+  | Primary Navigation | Bottom bar (mobile) / Nav rail top (desktop) |
+  | Secondary Navigation | "More" menu (mobile) / Nav rail bottom (desktop) |
+  | AuthGuard | GoRouter redirect — refreshListenable: AuthProvider |
+  | StatefulShellRoute | indexedStack preserves tab state |
+end legend
+
+@enduml

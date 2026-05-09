@@ -5,9 +5,11 @@ import '../mock_data/mock_reviews.dart';
 import '../models/app_model.dart';
 import '../models/review_model.dart';
 import '../services/app_service.dart';
+import '../services/user_preferences_service.dart';
 
 class AppsProvider extends ChangeNotifier {
   final AppService _appService;
+  final UserPreferencesService? _prefsService;
   static const _demoPrefKey = 'demo_mode';
 
   bool _demoMode = false;
@@ -16,10 +18,13 @@ class AppsProvider extends ChangeNotifier {
 
   List<ShopifyApp> _liveApps = [];
   List<AppReview> _liveReviews = [];
+  String? _selectedAppId;
 
-  AppsProvider(this._appService) {
+  AppsProvider(this._appService, [this._prefsService]) {
     _loadDemoPref();
   }
+
+  String? get selectedAppId => _selectedAppId;
 
   Future<void> _loadDemoPref() async {
     final prefs = await SharedPreferences.getInstance();
@@ -51,11 +56,31 @@ class AppsProvider extends ChangeNotifier {
     try {
       _liveApps = await _appService.fetchApps();
       debugPrint('[AppsProvider] loadApps success – ${_liveApps.length} apps loaded');
+
+      // Resolve selected app from backend preference
+      if (_liveApps.isNotEmpty && _selectedAppId == null) {
+        final savedAppId = await _prefsService?.getDefaultApp();
+        if (savedAppId != null &&
+            _liveApps.any((a) => a.id == savedAppId)) {
+          _selectedAppId = savedAppId;
+        } else {
+          _selectedAppId = _liveApps.first.id;
+          if (_liveApps.length == 1) {
+            _prefsService?.setDefaultApp(_selectedAppId!);
+          }
+        }
+      }
     } catch (e) {
       _error = e.toString();
       debugPrint('[AppsProvider] loadApps error – $e');
     }
     _isLoading = false;
+    notifyListeners();
+  }
+
+  void setSelectedApp(String appId) {
+    _selectedAppId = appId;
+    _prefsService?.setDefaultApp(appId); // fire-and-forget
     notifyListeners();
   }
 

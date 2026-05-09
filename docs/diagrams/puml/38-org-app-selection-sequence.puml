@@ -1,0 +1,85 @@
+@startuml 38-org-app-selection-sequence
+!theme plain
+title Org + App Selection Persistence Flow
+
+actor User
+participant "Flutter App" as App
+participant "OrganizationProvider" as OrgProv
+participant "AppsProvider" as AppsProv
+participant "DataLoadingMixin" as DLM
+participant "UserPreferencesService" as Prefs
+participant "Backend API" as API
+
+== App Launch (Auth Complete) ==
+
+App -> OrgProv : loadOrganizations()
+OrgProv -> API : GET /api/v1/organizations
+API --> OrgProv : memberships[]
+
+OrgProv -> Prefs : getSelectedOrg()
+Prefs -> API : GET /api/v1/user/preferences/selected-org
+API --> Prefs : { selected_org_id }
+Prefs --> OrgProv : savedOrgId
+
+alt savedOrgId exists in memberships
+  OrgProv -> OrgProv : selectOrganization(savedOrgId)
+else fallback
+  OrgProv -> OrgProv : selectOrganization(memberships.first)
+end
+
+OrgProv -> API : GET /api/v1/organizations/{orgId}
+API --> OrgProv : Organization detail
+OrgProv -> OrgProv : setOrgId(X-Org-Id header)
+
+OrgProv -> Prefs : setSelectedOrg(orgId)
+note right: fire-and-forget
+Prefs -> API : PUT /api/v1/user/preferences/selected-org
+
+== Apps Load ==
+
+App -> AppsProv : loadApps()
+AppsProv -> API : GET /api/v1/apps
+API --> AppsProv : apps[]
+
+AppsProv -> Prefs : getDefaultApp()
+Prefs -> API : GET /api/v1/user/preferences/default-app
+API --> Prefs : { default_app_id }
+Prefs --> AppsProv : savedAppId
+
+alt savedAppId exists in apps
+  AppsProv -> AppsProv : _selectedAppId = savedAppId
+else fallback
+  AppsProv -> AppsProv : _selectedAppId = apps.first.id
+  alt single app user
+    AppsProv -> Prefs : setDefaultApp(appId)
+    note right: auto-persist
+    Prefs -> API : PUT /api/v1/user/preferences/default-app
+  end
+end
+
+AppsProv -> DLM : notifyListeners()
+DLM -> DLM : _evaluateAndLoad()
+DLM -> DLM : currentAppId = selectedAppId
+DLM -> App : loadData(currentAppId)
+
+== User Switches Org ==
+
+User -> OrgProv : selectOrganization(newOrgId)
+OrgProv -> API : GET /api/v1/organizations/{newOrgId}
+API --> OrgProv : Organization detail
+OrgProv -> OrgProv : setOrgId(X-Org-Id header)
+OrgProv -> Prefs : setSelectedOrg(newOrgId)
+note right: fire-and-forget
+Prefs -> API : PUT /api/v1/user/preferences/selected-org
+
+== User Switches App ==
+
+User -> AppsProv : setSelectedApp(newAppId)
+AppsProv -> AppsProv : _selectedAppId = newAppId
+AppsProv -> Prefs : setDefaultApp(newAppId)
+note right: fire-and-forget
+Prefs -> API : PUT /api/v1/user/preferences/default-app
+AppsProv -> DLM : notifyListeners()
+DLM -> App : loadData(newAppId)
+
+@enduml

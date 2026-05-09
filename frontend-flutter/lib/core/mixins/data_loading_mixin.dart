@@ -73,8 +73,7 @@ mixin DataLoadingMixin<T extends StatefulWidget> on State<T> {
   void _evaluateAndLoad() {
     final appsProvider = context.read<AppsProvider>();
     final isDemoMode = appsProvider.demoMode;
-    final currentAppId =
-        appsProvider.apps.isNotEmpty ? appsProvider.apps.first.id : null;
+    final currentAppId = appsProvider.selectedAppId;
 
     final wasDemoNowLive = _lastKnownDemoMode == true && !isDemoMode;
     final appChanged =

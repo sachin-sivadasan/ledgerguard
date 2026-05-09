@@ -2,10 +2,12 @@ import 'package:flutter/foundation.dart';
 import '../core/network/api_client.dart';
 import '../models/organization_model.dart';
 import '../services/organization_service.dart';
+import '../services/user_preferences_service.dart';
 
 class OrganizationProvider extends ChangeNotifier {
   final OrganizationService _orgService;
   final ApiClient? _apiClient;
+  final UserPreferencesService? _prefsService;
 
   bool _isLoading = false;
   String? _error;
@@ -23,8 +25,10 @@ class OrganizationProvider extends ChangeNotifier {
   bool _isAuditLoading = false;
   final int _auditTotal = 0;
 
-  OrganizationProvider(this._orgService, {ApiClient? apiClient})
-      : _apiClient = apiClient;
+  OrganizationProvider(this._orgService,
+      {ApiClient? apiClient, UserPreferencesService? prefsService})
+      : _apiClient = apiClient,
+        _prefsService = prefsService;
 
   // --- Getters ---
   bool get isLoading => _isLoading;
@@ -66,9 +70,14 @@ class OrganizationProvider extends ChangeNotifier {
     try {
       _memberships = await _orgService.listOrganizations();
 
-      // Auto-select first org if none selected
+      // Auto-select saved org (or first) if none selected
       if (_currentOrg == null && _memberships.isNotEmpty) {
-        await selectOrganization(_memberships.first.orgId);
+        final savedOrgId = await _prefsService?.getSelectedOrg();
+        final targetOrgId =
+            savedOrgId != null && _memberships.any((m) => m.orgId == savedOrgId)
+                ? savedOrgId
+                : _memberships.first.orgId;
+        await selectOrganization(targetOrgId);
         return; // selectOrganization calls notifyListeners
       }
     } catch (e) {
@@ -89,6 +98,7 @@ class OrganizationProvider extends ChangeNotifier {
     try {
       _currentOrg = await _orgService.getOrganization(orgId);
       _apiClient?.setOrgId(_currentOrg?.id);
+      _prefsService?.setSelectedOrg(orgId); // fire-and-forget
     } catch (e) {
       _error = e.toString();
     }

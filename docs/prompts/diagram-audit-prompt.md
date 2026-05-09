@@ -31,7 +31,10 @@ Ensure `frontend-flutter/` has:
 - Screen flow diagram (equivalent of `frontend/docs/SCREENS.puml` but for the Provider prototype)
 - State management diagram showing Provider → Service → API data flow
 
-### 5. Consistency pass
+### 5. Postman collection
+Verify `backend/postman/LedgerGuard.postman_collection.json` has all current endpoints from `router.go`. Add any missing endpoints and update outdated request params/bodies.
+
+### 6. Consistency pass
 Ensure all diagrams use consistent naming, styling, and participant labels. Verify cross-references between C4, ER, and sequence diagrams are aligned.
 
 ## Output per diagram

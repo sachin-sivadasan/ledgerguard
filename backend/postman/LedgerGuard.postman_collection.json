@@ -746,7 +746,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"time_range\": \"last_month\",\n    \"selected_app_id\": \"{{appID}}\"\n}"
+              "raw": "{\n    \"primary_kpis\": [\"active_mrr\", \"renewal_success_rate\", \"revenue_at_risk\", \"usage_revenue\"],\n    \"secondary_widgets\": [\"mrr_trend\", \"risk_distribution_chart\", \"forecast\", \"revenue_mix_chart\", \"weekly_activity\"]\n}"
             },
             "url": "{{baseUrl}}/api/v1/user/preferences/dashboard"
           }
@@ -780,7 +780,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"app_id\": \"{{appID}}\"\n}"
+              "raw": "{\n    \"default_app_id\": \"{{appID}}\"\n}"
             },
             "url": "{{baseUrl}}/api/v1/user/preferences/default-app"
           }
@@ -814,9 +814,43 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"org_id\": \"{{orgId}}\"\n}"
+              "raw": "{\n    \"selected_org_id\": \"{{orgId}}\"\n}"
             },
             "url": "{{baseUrl}}/api/v1/user/preferences/selected-org"
+          }
+        },
+        {
+          "name": "Get Sync & Workspace Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/user/preferences/settings"
+          }
+        },
+        {
+          "name": "Save Sync & Workspace Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"auto_sync\": true,\n    \"sync_frequency\": \"Every 6 hours\",\n    \"workspace_name\": \"My Shopify Apps\",\n    \"currency\": \"USD\",\n    \"timezone\": \"America/New_York\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/user/preferences/settings"
           }
         }
       ]
@@ -853,7 +887,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"critical_alerts_enabled\": true,\n    \"daily_summary_enabled\": true,\n    \"daily_summary_time\": \"08:00\",\n    \"slack_webhook_url\": \"\"\n}"
+              "raw": "{\n    \"critical_alerts_enabled\": true,\n    \"daily_summary_enabled\": true,\n    \"daily_summary_time\": \"08:00\",\n    \"slack_webhook_url\": \"\",\n    \"email_enabled\": true,\n    \"slack_enabled\": false,\n    \"churn_alerts_enabled\": true,\n    \"revenue_alerts_enabled\": true,\n    \"review_alerts_enabled\": true,\n    \"risk_threshold_days\": 30\n}"
             },
             "url": "{{baseUrl}}/api/v1/users/notification-preferences"
           }
@@ -1889,9 +1923,9 @@
           }
         },
         {
-          "name": "Update Token",
+          "name": "Add/Update Token (POST)",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",

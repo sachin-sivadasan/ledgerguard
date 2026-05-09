@@ -1937,3 +1937,30 @@
 - 1 diagram updated, 3 new diagrams created
 - All current diagrams verified against codebase
 - No deletions, no code changes
+
+---
+
+## Prompt 41: Diagram Audit (second run — Postman focus)
+
+**Date:** 2026-05-09
+
+**Original prompt:** run diagram audit
+
+**Improved prompt:** Re-run diagram audit with new Postman collection step added. Diagrams already current from prior run — focus on Postman gap analysis.
+
+**Postman audit findings:**
+- 2 endpoints missing (GET/PUT /user/preferences/settings)
+- 4 request bodies outdated (dashboard, default-app, selected-org, notification-preferences)
+- 1 ghost route (PUT /integrations/shopify/token — doesn't exist in router)
+
+**Actions taken:**
+1. Added GET + PUT `/user/preferences/settings` requests
+2. Fixed dashboard prefs body (primary_kpis + secondary_widgets)
+3. Fixed default-app body (field renamed to default_app_id)
+4. Fixed selected-org body (field renamed to selected_org_id)
+5. Fixed notification-preferences body (added 6 new fields)
+6. Fixed ghost PUT token → changed to POST (actual method)
+
+**Result:**
+- Postman collection now matches router.go (107 routes, all covered)
+- Valid JSON verified

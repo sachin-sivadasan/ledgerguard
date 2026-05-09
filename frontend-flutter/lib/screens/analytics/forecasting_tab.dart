@@ -18,6 +18,7 @@ class ForecastingTab extends StatelessWidget {
     final forecast = provider.forecast;
     final theme = Theme.of(context);
     final monthFmt = DateFormat('MMM');
+    final forecastResult = provider.forecastResult;
 
     if (forecast.isEmpty) {
       return const LgEmptyState(
@@ -32,6 +33,34 @@ class ForecastingTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Model selector (only show in live mode)
+          if (!provider.demoMode) ...[
+            Row(
+              children: [
+                Text('Model:', style: theme.textTheme.titleSmall),
+                const SizedBox(width: LgSpacing.s200),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'linear', label: Text('Linear')),
+                    ButtonSegment(value: 'exponential', label: Text('Exponential')),
+                  ],
+                  selected: {provider.forecastModel},
+                  onSelectionChanged: (selected) {
+                    provider.setForecastModel(selected.first);
+                  },
+                ),
+                if (forecastResult != null) ...[
+                  const Spacer(),
+                  Text(
+                    '${forecastResult.dataPointsUsed} data points',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: LgSpacing.s400),
+          ],
+
           // Summary card
           LgResponsive(
             mobile: Column(
@@ -41,9 +70,9 @@ class ForecastingTab extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('\$${forecast.first.expected.toStringAsFixed(0)}', style: theme.textTheme.headlineSmall),
+                      Text('\$${forecast.first.expectedDollars.toStringAsFixed(0)}', style: theme.textTheme.headlineSmall),
                       const SizedBox(height: LgSpacing.s100),
-                      Text('Range: \$${forecast.first.pessimistic.toStringAsFixed(0)} – \$${forecast.first.optimistic.toStringAsFixed(0)}', style: theme.textTheme.bodySmall),
+                      Text('Range: \$${forecast.first.pessimisticDollars.toStringAsFixed(0)} – \$${forecast.first.optimisticDollars.toStringAsFixed(0)}', style: theme.textTheme.bodySmall),
                     ],
                   ),
                 ),
@@ -53,9 +82,9 @@ class ForecastingTab extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('\$${forecast.last.expected.toStringAsFixed(0)}', style: theme.textTheme.headlineSmall),
+                      Text('\$${forecast.last.expectedDollars.toStringAsFixed(0)}', style: theme.textTheme.headlineSmall),
                       const SizedBox(height: LgSpacing.s100),
-                      Text('Range: \$${forecast.last.pessimistic.toStringAsFixed(0)} – \$${forecast.last.optimistic.toStringAsFixed(0)}', style: theme.textTheme.bodySmall),
+                      Text('Range: \$${forecast.last.pessimisticDollars.toStringAsFixed(0)} – \$${forecast.last.optimisticDollars.toStringAsFixed(0)}', style: theme.textTheme.bodySmall),
                     ],
                   ),
                 ),
@@ -69,9 +98,9 @@ class ForecastingTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('\$${forecast.first.expected.toStringAsFixed(0)}', style: theme.textTheme.headlineSmall),
+                        Text('\$${forecast.first.expectedDollars.toStringAsFixed(0)}', style: theme.textTheme.headlineSmall),
                         const SizedBox(height: LgSpacing.s100),
-                        Text('Range: \$${forecast.first.pessimistic.toStringAsFixed(0)} – \$${forecast.first.optimistic.toStringAsFixed(0)}', style: theme.textTheme.bodySmall),
+                        Text('Range: \$${forecast.first.pessimisticDollars.toStringAsFixed(0)} – \$${forecast.first.optimisticDollars.toStringAsFixed(0)}', style: theme.textTheme.bodySmall),
                       ],
                     ),
                   ),
@@ -83,9 +112,9 @@ class ForecastingTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('\$${forecast.last.expected.toStringAsFixed(0)}', style: theme.textTheme.headlineSmall),
+                        Text('\$${forecast.last.expectedDollars.toStringAsFixed(0)}', style: theme.textTheme.headlineSmall),
                         const SizedBox(height: LgSpacing.s100),
-                        Text('Range: \$${forecast.last.pessimistic.toStringAsFixed(0)} – \$${forecast.last.optimistic.toStringAsFixed(0)}', style: theme.textTheme.bodySmall),
+                        Text('Range: \$${forecast.last.pessimisticDollars.toStringAsFixed(0)} – \$${forecast.last.optimisticDollars.toStringAsFixed(0)}', style: theme.textTheme.bodySmall),
                       ],
                     ),
                   ),
@@ -128,7 +157,7 @@ class ForecastingTab extends StatelessWidget {
                   lineBarsData: [
                     // Optimistic
                     LineChartBarData(
-                      spots: forecast.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.optimistic)).toList(),
+                      spots: forecast.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.optimisticDollars)).toList(),
                       isCurved: true,
                       color: LgColors.success.withValues(alpha: 0.4),
                       barWidth: 1,
@@ -136,7 +165,7 @@ class ForecastingTab extends StatelessWidget {
                     ),
                     // Expected
                     LineChartBarData(
-                      spots: forecast.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.expected)).toList(),
+                      spots: forecast.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.expectedDollars)).toList(),
                       isCurved: true,
                       color: LgColors.primary,
                       barWidth: 3,
@@ -144,7 +173,7 @@ class ForecastingTab extends StatelessWidget {
                     ),
                     // Pessimistic
                     LineChartBarData(
-                      spots: forecast.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.pessimistic)).toList(),
+                      spots: forecast.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.pessimisticDollars)).toList(),
                       isCurved: true,
                       color: LgColors.critical.withValues(alpha: 0.4),
                       barWidth: 1,

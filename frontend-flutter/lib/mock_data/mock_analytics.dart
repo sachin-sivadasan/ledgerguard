@@ -42,15 +42,15 @@ final mockMrrMovements = <MrrMovement>[
   const MrrMovement(month: 'Mar', newCents: 25000, expansionCents: 11000, contractionCents: 2000, churnedCents: 4000),
 ];
 
-// 12-month forecast
+// 12-month forecast (values in cents, consistent with API)
 final mockForecast = List.generate(12, (i) {
   final date = DateTime(_now.year, _now.month + i + 1);
-  final base = 5800.0 + i * 180;
+  final baseCents = 580000.0 + i * 18000; // $5,800 + $180/mo growth
   return ForecastPoint(
     date: date,
-    optimistic: base * 1.15,
-    expected: base,
-    pessimistic: base * 0.85,
+    optimistic: baseCents * 1.15,
+    expected: baseCents,
+    pessimistic: baseCents * 0.85,
   );
 });
 

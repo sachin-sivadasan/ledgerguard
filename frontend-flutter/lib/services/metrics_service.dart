@@ -155,4 +155,58 @@ class MetricsService {
       return [];
     }
   }
+
+  Future<ForecastResult?> fetchForecast(String appId,
+      {int months = 12,
+      String model = 'linear',
+      CancelToken? cancelToken}) async {
+    try {
+      final response = await _client.get(
+        '/api/v1/apps/$appId/forecast',
+        queryParameters: {'months': months, 'model': model},
+        cancelToken: cancelToken,
+      );
+      return ForecastResult.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return null;
+      debugPrint(
+          '[MetricsService] fetchForecast error: ${e.response?.statusCode}');
+      return null;
+    }
+  }
+
+  Future<List<CohortData>> fetchCohorts(String appId,
+      {int months = 6, CancelToken? cancelToken}) async {
+    try {
+      final response = await _client.get(
+        '/api/v1/apps/$appId/cohorts',
+        queryParameters: {'months': months},
+        cancelToken: cancelToken,
+      );
+      final list = response.data['cohorts'] as List<dynamic>? ?? [];
+      return list
+          .map((e) => CohortData.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return [];
+      debugPrint(
+          '[MetricsService] fetchCohorts error: ${e.response?.statusCode}');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchAppComparison(
+      {CancelToken? cancelToken}) async {
+    try {
+      final response = await _client.get('/api/v1/metrics/aggregate',
+          cancelToken: cancelToken);
+      final apps = response.data['apps'] as List<dynamic>? ?? [];
+      return apps.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return [];
+      debugPrint(
+          '[MetricsService] fetchAppComparison error: ${e.response?.statusCode}');
+      return [];
+    }
+  }
 }

@@ -20,11 +20,16 @@ class AnalyticsProvider extends ChangeNotifier {
   DashboardMetrics? _liveMetrics;
   List<MrrMovement>? _liveMrrMovements;
   List<ForecastPoint>? _liveForecast;
+  ForecastResult? _forecastResult;
+  String _forecastModel = 'linear';
   List<ExpenseBreakdown>? _liveExpenses;
   List<CohortData>? _liveCohorts;
   List<ShopifyApp>? _liveApps;
 
   AnalyticsProvider(this._metricsService);
+
+  String get forecastModel => _forecastModel;
+  ForecastResult? get forecastResult => _forecastResult;
 
   bool get demoMode => _demoMode;
   bool get isLoading => _isLoading;
@@ -60,13 +65,15 @@ class AnalyticsProvider extends ChangeNotifier {
     try {
       _liveMetrics = await _metricsService.fetchMetrics(appId,
           cancelToken: _cancelToken);
-      // Load MRR movements in parallel (non-blocking)
+      // Load secondary data in parallel (non-blocking)
       _metricsService
           .fetchMrrMovements(appId, cancelToken: _cancelToken)
           .then((movements) {
         _liveMrrMovements = movements;
         notifyListeners();
       });
+      _loadForecast(appId);
+      _loadCohorts(appId);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) return;
       _error = e.message;
@@ -75,6 +82,31 @@ class AnalyticsProvider extends ChangeNotifier {
     }
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> _loadForecast(String appId) async {
+    final result = await _metricsService.fetchForecast(appId,
+        model: _forecastModel, cancelToken: _cancelToken);
+    if (result != null) {
+      _forecastResult = result;
+      _liveForecast = result.points;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _loadCohorts(String appId) async {
+    final cohorts = await _metricsService.fetchCohorts(appId,
+        cancelToken: _cancelToken);
+    _liveCohorts = cohorts;
+    notifyListeners();
+  }
+
+  void setForecastModel(String model) {
+    _forecastModel = model;
+    notifyListeners();
+    if (!_demoMode && _selectedAppId != null) {
+      _loadForecast(_selectedAppId!);
+    }
   }
 
   // Revenue tab

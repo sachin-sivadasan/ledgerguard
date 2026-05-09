@@ -109,6 +109,45 @@ class ForecastPoint {
     required this.expected,
     required this.pessimistic,
   });
+
+  factory ForecastPoint.fromJson(Map<String, dynamic> json) {
+    return ForecastPoint(
+      date: DateTime.parse(
+          json['date'] as String? ?? DateTime.now().toIso8601String()),
+      expected: (json['expected_cents'] as num?)?.toDouble() ?? 0,
+      optimistic: (json['optimistic_cents'] as num?)?.toDouble() ?? 0,
+      pessimistic: (json['pessimistic_cents'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  // Convert from cents to dollars for display
+  double get expectedDollars => expected / 100;
+  double get optimisticDollars => optimistic / 100;
+  double get pessimisticDollars => pessimistic / 100;
+}
+
+class ForecastResult {
+  final String model;
+  final int dataPointsUsed;
+  final List<ForecastPoint> points;
+
+  const ForecastResult({
+    required this.model,
+    required this.dataPointsUsed,
+    required this.points,
+  });
+
+  factory ForecastResult.fromJson(Map<String, dynamic> json) {
+    return ForecastResult(
+      model: json['model'] as String? ?? 'linear',
+      dataPointsUsed: json['data_points_used'] as int? ?? 0,
+      points: (json['forecast'] as List<dynamic>?)
+              ?.map(
+                  (e) => ForecastPoint.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
 }
 
 class CohortData {
@@ -121,6 +160,17 @@ class CohortData {
     required this.initialStores,
     required this.retentionPcts,
   });
+
+  factory CohortData.fromJson(Map<String, dynamic> json) {
+    return CohortData(
+      cohortMonth: json['cohort_month'] as String? ?? '',
+      initialStores: json['initial_stores'] as int? ?? 0,
+      retentionPcts: (json['retention_pcts'] as List<dynamic>?)
+              ?.map((e) => (e as num).toDouble())
+              .toList() ??
+          [],
+    );
+  }
 }
 
 class ExpenseBreakdown {

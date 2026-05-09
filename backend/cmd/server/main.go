@@ -284,7 +284,7 @@ func run() error {
 
 		// Wire shop brand fetcher for logo sync
 		if shopRepo != nil {
-			storefrontClient := external.NewShopifyStorefrontClient()
+			storefrontClient := external.NewShopifyStorefrontClient(cfg.Shopify.StorefrontBaseURL)
 			syncService = syncService.WithShopBrandFetcher(storefrontClient, shopRepo)
 			log.Println("Shop brand fetcher initialized")
 		}
@@ -366,8 +366,15 @@ func run() error {
 	// Initialize event handler
 	var eventHandler *handler.EventHandler
 	if appEventRepo != nil && partnerRepo != nil && appRepo != nil {
-		eventHandler = handler.NewEventHandler(appEventRepo, partnerRepo, appRepo)
+		eventHandler = handler.NewEventHandler(appEventRepo, partnerRepo, appRepo, subscriptionRepo)
 		log.Println("Event handler initialized")
+	}
+
+	// Initialize forecast handler
+	var forecastHandler *handler.ForecastHandler
+	if snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
+		forecastHandler = handler.NewForecastHandler(snapshotRepo, appRepo, partnerRepo)
+		log.Println("Forecast handler initialized")
 	}
 
 	// Initialize risk handler
@@ -608,7 +615,7 @@ func run() error {
 				syncJobRepo, lockManager, progressTracker,
 			))
 			processorRegistry.Register(processors.NewStoreProcessor(
-				external.NewShopifyStorefrontClient(), shopRepo, subscriptionRepo,
+				external.NewShopifyStorefrontClient(cfg.Shopify.StorefrontBaseURL), shopRepo, subscriptionRepo,
 				appRepo, partnerRepo, encryptor,
 				syncJobRepo, lockManager, progressTracker,
 			))
@@ -768,6 +775,7 @@ func run() error {
 		TransactionHandler:              transactionHandler,
 		StoreHandler:                    storeHandler,
 		EventHandler:                    eventHandler,
+		ForecastHandler:                 forecastHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,
 		OrgAuditHandler:                 orgAuditHandler,

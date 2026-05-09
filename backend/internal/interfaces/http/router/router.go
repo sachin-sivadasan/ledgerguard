@@ -4,9 +4,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/handler"
+	lgmw "github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 	apikeyhandler "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/handler"
 )
 
@@ -36,6 +37,7 @@ type Config struct {
 	TransactionHandler              *handler.TransactionHandler
 	StoreHandler                    *handler.StoreHandler
 	EventHandler                    *handler.EventHandler
+	ForecastHandler                 *handler.ForecastHandler
 	RiskHandler                     *handler.RiskHandler
 	OrgHandler                      *handler.OrgHandler
 	OrgAuditHandler                 *handler.OrgAuditHandler
@@ -68,9 +70,10 @@ func New(cfg Config) *chi.Mux {
 		MaxAge:           300,
 	}))
 
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.RequestID)
+	r.Use(chimw.Logger)
+	r.Use(chimw.Recoverer)
+	r.Use(chimw.RequestID)
+	r.Use(lgmw.ResponseLogger)
 
 	// Public routes
 	r.Get("/health", cfg.HealthHandler.Health)
@@ -233,6 +236,11 @@ func New(cfg Config) *chi.Mux {
 				// Event list route
 				if cfg.EventHandler != nil {
 					r.Get("/{appID}/events", cfg.EventHandler.List)
+				}
+
+				// Forecast route
+				if cfg.ForecastHandler != nil {
+					r.Get("/{appID}/forecast", cfg.ForecastHandler.GetForecast)
 				}
 
 				// Risk summary route

@@ -53,6 +53,8 @@ Postponed ideas and features for later implementation.
 | Revenue API: Subscription list with filters | P2 | `GET /subscriptions?risk_state=ONE_CYCLE_MISSED&status=ACTIVE&limit=50&cursor=...` — list all subscriptions with cursor pagination and filter by risk_state, status, plan_name. Currently external API only supports single/batch lookup by ID or domain. Internal API has list but it's Firebase-auth only. |
 | Revenue API: Revenue summary endpoint | P3 | `GET /revenue/summary` — returns aggregate stats: active_subscriptions, mrr_cents, at_risk_count, total_usage_cents, churned_30d. Single call gives developers a dashboard-ready overview without fetching individual subscriptions. Reads from existing `daily_metrics_snapshot` table. |
 | Real-time sync status via push (MQTT/WebSocket/SSE) | P3 | Replace sync polling (5s interval) with real-time push. Backend already has Redis progress tracking — publish state changes to MQTT topic, WebSocket channel, or SSE stream. Eliminates individual API calls for sync status. Options: MQTT (mqtt_client package, needs broker), WebSocket (backend already has /api/v1/chat WS endpoint — extend or add /sync/ws), SSE (simplest, one-way server-to-client over HTTP, no new infra). |
+| Settings: Move all customization to sub-pages | P3 | Each settings card (Notifications, Sync, Workspace) gets its own sub-page like Dashboard. Cleaner main settings page with only navigation tiles. |
+| Settings: Collapsible sections | P3 | Replace cards with `ExpansionTile` widgets. All settings stay on one page but sections collapse/expand. Saves vertical space without adding navigation. |
 
 ### Missing UI Features (from User Personas Analysis)
 
@@ -333,3 +335,4 @@ Add a real backend API for webhooks instead of relying on mock data. This includ
 - Razorpay webhook signature verification
 - Webhook replay/retry mechanism for failed deliveries
 - Connect WebhookProvider to live API (replace mock data path)
+- **Dynamic KPI Registry via Admin Panel** — Admin page to manage available KPIs/widgets with status (active/coming_soon/requested). Users see "Coming Soon" badge on not-yet-available metrics. If a user requests a feature, admin enables it for them. Requires backend KPI definition table + admin API + dynamic frontend registry replacing the hardcoded `kAllKpis`/`kAllWidgets`.

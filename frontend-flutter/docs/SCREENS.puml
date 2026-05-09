@@ -81,13 +81,16 @@ state "AppShell\n(bottom bar / nav rail)" as AppShell {
     end note
 
     ' Settings sub-routes
+    state "/settings/dashboard\nDashboardSettingsScreen" as DashSettings
     state "/settings/connect-shopify\nConnectShopifyScreen" as ConnectShopify
     state "/settings/team\nTeamScreen" as Team
     state "/settings/audit-log\nAuditLogScreen" as AuditLog
 
+    Settings --> DashSettings : Customize Dashboard
     Settings --> ConnectShopify : Connect Shopify
     Settings --> Team : Team management
     Settings --> AuditLog : Audit log
+    DashSettings --> Settings : Back
     ConnectShopify --> Settings : Back
     Team --> Settings : Back
     AuditLog --> Settings : Back

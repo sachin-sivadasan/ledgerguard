@@ -17,6 +17,7 @@ import 'screens/earnings/earnings_screen.dart';
 import 'screens/insights/insights_screen.dart';
 import 'screens/risk/risk_screen.dart';
 import 'screens/settings/connect_shopify_screen.dart';
+import 'screens/settings/dashboard_settings_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/stores/store_detail_screen.dart';
 import 'screens/team/audit_log_screen.dart';
@@ -164,6 +165,10 @@ class _AppState extends State<App> {
                   path: '/settings',
                   builder: (c, s) => const SettingsScreen(),
                   routes: [
+                    GoRoute(
+                      path: 'dashboard',
+                      builder: (c, s) => const DashboardSettingsScreen(),
+                    ),
                     GoRoute(
                       path: 'connect-shopify',
                       builder: (c, s) => const ConnectShopifyScreen(),

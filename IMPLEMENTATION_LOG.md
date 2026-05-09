@@ -4,6 +4,22 @@ A chronological record of all features implemented with detailed summaries.
 
 ---
 
+## [2026-05-09] Feat: Move Dashboard Customization to Settings Sub-Page
+
+**Summary:**
+Extracted the Dashboard customization card (~50 lines of KPI + widget checkboxes) from the main Settings page into a dedicated `/settings/dashboard` sub-page. The Settings page now shows a compact navigation ListTile instead of inline checkboxes, matching the existing pattern used by Team, Audit Log, and Connect Shopify sub-pages.
+
+**Changes:**
+- **DashboardSettingsScreen** (NEW) — `StatelessWidget` using `LgPage` with back navigation to `/settings`. Contains all KPI and widget checkbox logic previously inline in `settings_screen.dart`.
+- **SettingsScreen** — Replaced 50-line Dashboard `LgCard` with a single `ListTile` navigating to `/settings/dashboard`. Removed `DashboardProvider` watch and `dashboard_registry.dart` import.
+- **app.dart** — Added `GoRoute(path: 'dashboard')` under `/settings` routes.
+- **SCREENS.puml** — Added `DashboardSettingsScreen` node with transitions.
+- **future.md** — Logged 2 rejected alternatives (all sub-pages, collapsible sections).
+
+**Files changed:** 5 (1 new, 4 modified)
+
+---
+
 ## [2026-05-09] Feat: Persist Org + Default App Selection via Backend Preferences
 
 **Summary:**

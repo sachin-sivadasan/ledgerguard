@@ -1964,3 +1964,18 @@
 **Result:**
 - Postman collection now matches router.go (107 routes, all covered)
 - Valid JSON verified
+
+---
+
+### [2026-05-09] Move Dashboard Customization to Settings Sub-Page
+
+**Original:**
+> Move the Dashboard card (KPI + widget checkboxes) out of the main settings page into a /settings/dashboard sub-page, matching the Team/AuditLog/ConnectShopify pattern. Log rejected alternatives to future.md.
+
+**Improved:**
+> Extract the ~50-line Dashboard customization card from `settings_screen.dart` into a new `DashboardSettingsScreen` at `/settings/dashboard`. Replace inline checkboxes with a navigation ListTile. Register GoRoute. Update SCREENS.puml. Log two rejected alternatives (all sub-pages, collapsible sections) to `future.md`.
+
+**Result:**
+- 1 new file: `dashboard_settings_screen.dart`
+- 4 modified: `settings_screen.dart`, `app.dart`, `SCREENS.puml`, `future.md`
+- `flutter analyze` — no issues

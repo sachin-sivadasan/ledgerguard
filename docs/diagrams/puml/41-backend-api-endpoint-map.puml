@@ -1,5 +1,5 @@
 @startuml
-title 41. Backend API Endpoint Map (~85 endpoints)
+title 41. Backend API Endpoint Map (~107 endpoints)
 
 skinparam componentStyle rectangle
 skinparam packageStyle frame
@@ -103,7 +103,8 @@ package "Apps  [Auth + Org-scoped]" as pkg_apps #LightGreen {
   package "App Config" as pkg_app_cfg {
     component "PATCH /api/v1/apps/{id}/tier" as ep_app_tier
     component "PATCH /api/v1/apps/{id}/store-slug" as ep_app_slug
-    component "GET|POST /api/v1/apps/{id}/install-count" as ep_app_ic
+    component "GET  /api/v1/apps/{id}/install-count" as ep_app_ic
+    component "POST /api/v1/apps/{id}/refresh-install-count" as ep_app_ric
   }
 
   package "Metrics" as pkg_app_metrics {
@@ -136,6 +137,11 @@ package "Apps  [Auth + Org-scoped]" as pkg_apps #LightGreen {
     component "GET /api/v1/apps/{id}/stores" as ep_stores
   }
 
+  package "Aggregate Metrics" as pkg_agg_metrics {
+    component "GET /api/v1/metrics/aggregate" as ep_m_agg
+    note bottom of ep_m_agg : Across all apps (org-scoped)
+  }
+
   package "Analytics" as pkg_app_analytics {
     component "GET /api/v1/apps/{id}/transactions" as ep_txn
     component "GET /api/v1/apps/{id}/events" as ep_events
@@ -147,7 +153,7 @@ package "Apps  [Auth + Org-scoped]" as pkg_apps #LightGreen {
 
   package "Reviews" as pkg_app_reviews {
     component "GET  /api/v1/apps/{id}/reviews" as ep_rev_list
-    component "POST /api/v1/apps/{id}/reviews" as ep_rev_scrape
+    component "POST /api/v1/apps/{id}/reviews/scrape" as ep_rev_scrape
   }
 }
 
@@ -183,7 +189,7 @@ package "Organizations  [Auth]" as pkg_orgs #LightBlue {
 
   package "Invitations" as pkg_org_inv {
     component "POST   /api/v1/orgs/{id}/invitations" as ep_org_inv_create
-    component "DELETE /api/v1/orgs/{id}/invitations" as ep_org_inv_del
+    component "DELETE /api/v1/orgs/{orgId}/invitations/{id}" as ep_org_inv_del
     component "POST   /api/v1/invitations/{token}/accept" as ep_inv_accept
   }
 
@@ -255,7 +261,7 @@ package "Revenue API  [API Key]" as pkg_revenue #LightCoral {
 ' ──────────────────────────────────────
 package "Internal  [X-Internal-Key]" as pkg_internal #Silver {
   component "POST /api/v1/internal/sync/transactions" as ep_int_txn
-  component "POST /api/v1/internal/sync/{appID}" as ep_int_sync_app
+  component "POST /api/v1/internal/sync/transactions/{appID}" as ep_int_sync_app
   component "POST /api/v1/internal/sync/daily-catchup" as ep_int_catchup
 }
 

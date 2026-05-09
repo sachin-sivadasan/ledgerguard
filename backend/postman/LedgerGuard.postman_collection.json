@@ -35,6 +35,10 @@
       "value": ""
     },
     {
+      "key": "usageID",
+      "value": ""
+    },
+    {
       "key": "domain",
       "value": ""
     },
@@ -49,24 +53,19 @@
       "description": "Organization UUID — set after Create Organization"
     },
     {
-      "key": "memberId",
+      "key": "userId",
       "value": "",
-      "description": "Org member UUID — set manually from List Members response"
+      "description": "Org member Firebase UID — set manually from List Members response"
     },
     {
-      "key": "invitationId",
+      "key": "id",
       "value": "",
-      "description": "Invitation UUID — auto-set after Invite Member"
+      "description": "Generic UUID — used for invitation ID (auto-set after Invite Member) or API Key ID"
     },
     {
-      "key": "invitationToken",
+      "key": "token",
       "value": "",
       "description": "Invitation token — auto-set after Invite Member"
-    },
-    {
-      "key": "apiKeyId",
-      "value": "",
-      "description": "API Key UUID — set manually from List API Keys response"
     }
   ],
   "item": [
@@ -1063,6 +1062,19 @@
             },
             "url": "{{baseUrl}}/graphql"
           }
+        },
+        {
+          "name": "GraphQL Playground",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/graphql"
+          }
         }
       ]
     },
@@ -1113,7 +1125,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/api-keys/{{apiKeyId}}"
+            "url": "{{baseUrl}}/api/v1/api-keys/{{id}}"
           }
         }
       ]
@@ -1264,7 +1276,7 @@
                 "value": "{{apiKey}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/subscriptions/28262727727"
+            "url": "{{baseUrl}}/api/v1/subscriptions/{{subscriptionID}}"
           }
         },
         {
@@ -1306,7 +1318,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"ids\": [\n        \"28262727727\",\n        \"28262727728\"\n    ]\n}"
+              "raw": "{\n    \"ids\": [\n        \"{{subscriptionID}}\"\n    ]\n}"
             },
             "url": "{{baseUrl}}/api/v1/subscriptions/batch"
           }
@@ -1321,7 +1333,7 @@
                 "value": "{{apiKey}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/usages/690933138"
+            "url": "{{baseUrl}}/api/v1/usages/{{usageID}}"
           }
         },
         {
@@ -1335,13 +1347,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/usages?subscription_id=28262727727",
+              "raw": "{{baseUrl}}/api/v1/usages?subscription_id={{subscriptionID}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "usages"],
               "query": [
                 {
                   "key": "subscription_id",
-                  "value": "28262727727"
+                  "value": "{{subscriptionID}}"
                 }
               ]
             }
@@ -1363,7 +1375,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"ids\": [\n        \"690933138\",\n        \"690933139\"\n    ]\n}"
+              "raw": "{\n    \"ids\": [\n        \"{{usageID}}\"\n    ]\n}"
             },
             "url": "{{baseUrl}}/api/v1/usages/batch"
           }
@@ -1510,8 +1522,8 @@
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "    var json = pm.response.json();",
-                  "    if (json.id) { pm.collectionVariables.set('invitationId', json.id); }",
-                  "    if (json.token) { pm.collectionVariables.set('invitationToken', json.token); }",
+                  "    if (json.id) { pm.collectionVariables.set('id', json.id); }",
+                  "    if (json.token) { pm.collectionVariables.set('token', json.token); }",
                   "}"
                 ]
               }
@@ -1546,7 +1558,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/invitations/{{invitationToken}}/accept"
+            "url": "{{baseUrl}}/api/v1/invitations/{{token}}/accept"
           }
         },
         {
@@ -1559,7 +1571,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/invitations/{{invitationId}}"
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/invitations/{{id}}"
           }
         },
         {
@@ -1580,7 +1592,7 @@
               "mode": "raw",
               "raw": "{\n    \"role\": \"ADMIN\"\n}"
             },
-            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{memberId}}/role"
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{userId}}/role"
           }
         },
         {
@@ -1593,7 +1605,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{memberId}}/suspend"
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{userId}}/suspend"
           }
         },
         {
@@ -1606,7 +1618,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{memberId}}/unsuspend"
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{userId}}/unsuspend"
           }
         },
         {
@@ -1619,7 +1631,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{memberId}}"
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{userId}}"
           }
         },
         {
@@ -1640,7 +1652,7 @@
               "mode": "raw",
               "raw": "{\n    \"email\": true,\n    \"push\": true,\n    \"events\": [\"churn_alert\", \"sync_complete\"]\n}"
             },
-            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{memberId}}/notifications"
+            "url": "{{baseUrl}}/api/v1/orgs/{{orgId}}/members/{{userId}}/notifications"
           }
         },
         {

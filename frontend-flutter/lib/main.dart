@@ -67,7 +67,7 @@ void main() async {
   final transactionProvider = TransactionProvider(transactionService);
   final eventsProvider = EventsProvider(eventsService);
   final riskProvider = RiskProvider(riskService);
-  final analyticsProvider = AnalyticsProvider(metricsService);
+  final analyticsProvider = AnalyticsProvider(metricsService, earningsService);
   final earningsProvider = EarningsProvider(earningsService);
   final insightsProvider = InsightsProvider(insightsService);
   final webhookProvider = WebhookProvider();

@@ -5,10 +5,12 @@ import '../mock_data/mock_apps.dart';
 import '../mock_data/mock_subscriptions.dart';
 import '../models/analytics_model.dart';
 import '../models/app_model.dart';
+import '../services/earnings_service.dart';
 import '../services/metrics_service.dart';
 
 class AnalyticsProvider extends ChangeNotifier {
   final MetricsService _metricsService;
+  final EarningsService? _earningsService;
 
   bool _demoMode = false;
   bool _isLoading = false;
@@ -26,7 +28,7 @@ class AnalyticsProvider extends ChangeNotifier {
   List<CohortData>? _liveCohorts;
   List<ShopifyApp>? _liveApps;
 
-  AnalyticsProvider(this._metricsService);
+  AnalyticsProvider(this._metricsService, [this._earningsService]);
 
   String get forecastModel => _forecastModel;
   ForecastResult? get forecastResult => _forecastResult;
@@ -74,6 +76,7 @@ class AnalyticsProvider extends ChangeNotifier {
       });
       _loadForecast(appId);
       _loadCohorts(appId);
+      _loadExpenses(appId);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) return;
       _error = e.message;
@@ -98,6 +101,14 @@ class AnalyticsProvider extends ChangeNotifier {
     final cohorts = await _metricsService.fetchCohorts(appId,
         cancelToken: _cancelToken);
     _liveCohorts = cohorts;
+    notifyListeners();
+  }
+
+  Future<void> _loadExpenses(String appId) async {
+    if (_earningsService == null) return;
+    final expenses = await _earningsService.fetchMonthlyProfit(appId,
+        cancelToken: _cancelToken);
+    _liveExpenses = expenses;
     notifyListeners();
   }
 

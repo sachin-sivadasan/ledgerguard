@@ -1,9 +1,11 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/dashboard_registry.dart';
 import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/dashboard_provider.dart';
+import '../../providers/earnings_provider.dart';
 import '../../providers/organization_provider.dart';
 import '../../services/mixpanel_service.dart';
 import '../../theme/app_colors.dart';
@@ -29,7 +31,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<MixpanelService>().trackDashboardViewed();
+      if (mounted) {
+        context.read<MixpanelService>().trackDashboardViewed();
+        context.read<DashboardProvider>().loadDashboardPreferences();
+      }
     });
   }
 
@@ -46,6 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final hasApps = appsList.isNotEmpty;
     final theme = Theme.of(context);
     final showAppFilter = appsList.length > 1;
+    final activeWidgets = dp.secondaryWidgets;
 
     if (!hasApps) {
       return LgPage(
@@ -155,76 +161,105 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
           const SizedBox(height: LgSpacing.s400),
 
-          // KPI cards
+          // KPI cards (dynamic from preferences)
           LgMetricGrid(
             children: [
-              LgMetricCard(label: 'Monthly Recurring Revenue', value: dp.mrrFormatted, trend: '+4.2%', trendPositive: true, icon: Icons.attach_money),
-              LgMetricCard(label: 'Renewal Rate', value: '${dp.renewalRate.toStringAsFixed(1)}%', trend: '+1.3%', trendPositive: true, icon: Icons.autorenew),
-              LgMetricCard(label: 'Revenue at Risk', value: dp.revenueAtRiskFormatted, trend: '-\$120', trendPositive: true, icon: Icons.warning_amber),
-              LgMetricCard(label: 'Usage Revenue', value: dp.usageRevenueFormatted, trend: '+18%', trendPositive: true, icon: Icons.trending_up),
+              for (final kpiId in dp.primaryKpis)
+                if (lookupKpi(kpiId) case final def?)
+                  LgMetricCard(
+                    label: def.label,
+                    value: def.valueGetter(dp),
+                    trend: def.trend,
+                    trendPositive: def.trendPositive,
+                    icon: def.icon,
+                  ),
             ],
           ),
           const SizedBox(height: LgSpacing.s600),
 
-          // MRR trend + Risk distribution
-          LgResponsive(
-            mobile: Column(
-              children: [
-                LgCard(
-                  title: 'MRR Trend (12 months)',
-                  child: SizedBox(height: 200, child: _MrrChart(snapshots: dp.mrrTrend)),
+          // Row 1: MRR Trend + Risk Distribution (only if active)
+          if (activeWidgets.contains('mrr_trend') || activeWidgets.contains('risk_distribution_chart'))
+            ...[
+              LgResponsive(
+                mobile: Column(
+                  children: [
+                    if (activeWidgets.contains('mrr_trend'))
+                      LgCard(
+                        title: 'MRR Trend (12 months)',
+                        child: SizedBox(height: 200, child: _MrrChart(snapshots: dp.mrrTrend)),
+                      ),
+                    if (activeWidgets.contains('mrr_trend') && activeWidgets.contains('risk_distribution_chart'))
+                      const SizedBox(height: LgSpacing.s400),
+                    if (activeWidgets.contains('risk_distribution_chart'))
+                      LgCard(
+                        title: 'Risk Distribution',
+                        child: SizedBox(height: 200, child: _RiskDonut(dist: dp.riskDistribution)),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: LgSpacing.s400),
-                LgCard(
-                  title: 'Risk Distribution',
-                  child: SizedBox(height: 200, child: _RiskDonut(dist: dp.riskDistribution)),
+                desktop: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (activeWidgets.contains('mrr_trend'))
+                      Expanded(
+                        flex: 2,
+                        child: LgCard(
+                          title: 'MRR Trend (12 months)',
+                          child: SizedBox(height: 250, child: _MrrChart(snapshots: dp.mrrTrend)),
+                        ),
+                      ),
+                    if (activeWidgets.contains('mrr_trend') && activeWidgets.contains('risk_distribution_chart'))
+                      const SizedBox(width: LgSpacing.s400),
+                    if (activeWidgets.contains('risk_distribution_chart'))
+                      Expanded(
+                        child: LgCard(
+                          title: 'Risk Distribution',
+                          child: SizedBox(height: 250, child: _RiskDonut(dist: dp.riskDistribution)),
+                        ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
-            desktop: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: LgCard(
-                    title: 'MRR Trend (12 months)',
-                    child: SizedBox(height: 250, child: _MrrChart(snapshots: dp.mrrTrend)),
-                  ),
-                ),
-                const SizedBox(width: LgSpacing.s400),
-                Expanded(
-                  child: LgCard(
-                    title: 'Risk Distribution',
-                    child: SizedBox(height: 250, child: _RiskDonut(dist: dp.riskDistribution)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: LgSpacing.s600),
+              ),
+              const SizedBox(height: LgSpacing.s600),
+            ],
 
-          // Bottom row
-          LgResponsive(
-            mobile: Column(
-              children: [
-                _ForecastCard(dp: dp, theme: theme),
-                const SizedBox(height: LgSpacing.s400),
-                _RevenueMixCard(dp: dp),
-                const SizedBox(height: LgSpacing.s400),
-                _WeeklyActivityCard(title: dp.activityTitle, activity: dp.activity),
-              ],
-            ),
-            desktop: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _ForecastCard(dp: dp, theme: theme)),
-                const SizedBox(width: LgSpacing.s400),
-                Expanded(child: _RevenueMixCard(dp: dp)),
-                const SizedBox(width: LgSpacing.s400),
-                Expanded(child: _WeeklyActivityCard(title: dp.activityTitle, activity: dp.activity)),
-              ],
-            ),
-          ),
+          // Row 2: Forecast + Revenue Mix + Weekly Activity + Earnings (only if active)
+          if (activeWidgets.contains('forecast') || activeWidgets.contains('revenue_mix_chart') || activeWidgets.contains('weekly_activity') || activeWidgets.contains('earnings_timeline'))
+            Builder(builder: (context) {
+              final row2Widgets = <Widget>[];
+              if (activeWidgets.contains('forecast')) {
+                row2Widgets.add(_ForecastCard(dp: dp, theme: theme));
+              }
+              if (activeWidgets.contains('revenue_mix_chart')) {
+                row2Widgets.add(_RevenueMixCard(dp: dp));
+              }
+              if (activeWidgets.contains('weekly_activity')) {
+                row2Widgets.add(_WeeklyActivityCard(title: dp.activityTitle, activity: dp.activity));
+              }
+              if (activeWidgets.contains('earnings_timeline')) {
+                row2Widgets.add(_EarningsOverviewCard(ep: context.watch<EarningsProvider>()));
+              }
+
+              return LgResponsive(
+                mobile: Column(
+                  children: [
+                    for (int i = 0; i < row2Widgets.length; i++) ...[
+                      row2Widgets[i],
+                      if (i < row2Widgets.length - 1) const SizedBox(height: LgSpacing.s400),
+                    ],
+                  ],
+                ),
+                desktop: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (int i = 0; i < row2Widgets.length; i++) ...[
+                      Expanded(child: row2Widgets[i]),
+                      if (i < row2Widgets.length - 1) const SizedBox(width: LgSpacing.s400),
+                    ],
+                  ],
+                ),
+              );
+            }),
         ],
       ),
     );
@@ -425,6 +460,46 @@ class _WeeklyActivityCard extends StatelessWidget {
           );
         }).toList(),
       ),
+    );
+  }
+}
+
+class _EarningsOverviewCard extends StatelessWidget {
+  final EarningsProvider ep;
+  const _EarningsOverviewCard({required this.ep});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return LgCard(
+      title: 'Earnings Overview',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _EarningsRow('Total Earned', ep.totalEarned, theme),
+          const SizedBox(height: LgSpacing.s200),
+          _EarningsRow('Pending', ep.pendingAmount, theme),
+          const SizedBox(height: LgSpacing.s200),
+          _EarningsRow('Available', ep.availableAmount, theme),
+        ],
+      ),
+    );
+  }
+}
+
+class _EarningsRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final ThemeData theme;
+  const _EarningsRow(this.label, this.value, this.theme);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+        Text(value, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+      ],
     );
   }
 }

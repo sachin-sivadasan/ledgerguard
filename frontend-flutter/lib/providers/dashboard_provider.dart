@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../core/dashboard_registry.dart';
 import '../mock_data/mock_analytics.dart';
 import '../mock_data/mock_events.dart';
 import '../mock_data/mock_insights.dart';
@@ -9,12 +10,14 @@ import '../models/event_model.dart';
 import '../models/insight_model.dart';
 import '../models/subscription_model.dart';
 import '../services/metrics_service.dart';
+import '../services/user_preferences_service.dart';
 import '../widgets/lg_risk_badge.dart';
 
 enum DashboardTimeRange { thisWeek, thisMonth, lastMonth, threeMonths }
 
 class DashboardProvider extends ChangeNotifier {
   final MetricsService _metricsService;
+  final UserPreferencesService? _prefsService;
 
   bool _demoMode = false;
   bool _isLoading = false;
@@ -25,13 +28,35 @@ class DashboardProvider extends ChangeNotifier {
 
   DashboardMetrics? _metrics;
 
-  DashboardProvider(this._metricsService);
+  List<String> _primaryKpis = List.of(kDefaultKpiIds);
+  List<String> _secondaryWidgets = List.of(kDefaultWidgetIds);
+
+  DashboardProvider(this._metricsService, [this._prefsService]);
 
   bool get demoMode => _demoMode;
   bool get isLoading => _isLoading;
   String? get error => _error;
   String? get selectedAppId => _selectedAppId;
   DashboardTimeRange get timeRange => _timeRange;
+  List<String> get primaryKpis => _primaryKpis;
+  List<String> get secondaryWidgets => _secondaryWidgets;
+
+  Future<void> loadDashboardPreferences() async {
+    final prefs = await _prefsService?.getDashboardPreferences();
+    if (prefs != null) {
+      _primaryKpis = prefs.primaryKpis;
+      _secondaryWidgets = prefs.secondaryWidgets;
+      notifyListeners();
+    }
+  }
+
+  void saveDashboardPreferences(
+      List<String> kpis, List<String> widgets) {
+    _primaryKpis = kpis;
+    _secondaryWidgets = widgets;
+    notifyListeners();
+    _prefsService?.saveDashboardPreferences(kpis, widgets);
+  }
 
   void setDemoMode(bool value) {
     _demoMode = value;
@@ -126,6 +151,9 @@ class DashboardProvider extends ChangeNotifier {
 
   String get usageRevenueFormatted =>
       '\$${(usageRevenueCents / 100).toStringAsFixed(0)}';
+
+  String get totalRevenueFormatted =>
+      '\$${((mrrCents + usageRevenueCents) / 100).toStringAsFixed(0)}';
 
   Map<String, int> get activity {
     if (!_demoMode) return {};

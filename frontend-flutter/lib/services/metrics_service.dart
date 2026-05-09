@@ -101,6 +101,31 @@ class MetricsService {
     }
   }
 
+  /// Fetches MRR trend data from the trend API with optional granularity.
+  /// Returns a list of MrrSnapshots suitable for charting.
+  Future<List<MrrSnapshot>> fetchMrrTrend(String appId,
+      {int months = 6,
+      String granularity = 'weekly',
+      CancelToken? cancelToken}) async {
+    try {
+      final response = await _client.get(
+        '/api/v1/apps/$appId/metrics/trend',
+        queryParameters: {'months': months, 'granularity': granularity},
+        cancelToken: cancelToken,
+      );
+      final data = response.data as Map<String, dynamic>;
+      final snapshots = data['snapshots'] as List<dynamic>? ?? [];
+      return snapshots
+          .map((e) => MrrSnapshot.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return [];
+      debugPrint(
+          '[MetricsService] fetchMrrTrend error: ${e.response?.statusCode}');
+      return [];
+    }
+  }
+
   /// Fetches a historical snapshot for a specific date.
   Future<DashboardMetrics?> fetchSnapshotForDate(String appId, DateTime date,
       {CancelToken? cancelToken}) async {

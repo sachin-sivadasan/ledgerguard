@@ -2,6 +2,8 @@ package persistence
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -57,6 +59,66 @@ func (r *PostgresDailyMetricsSnapshotRepository) Upsert(ctx context.Context, sna
 		snapshot.UpdatedAt,
 	)
 
+	return err
+}
+
+// UpsertBatch upserts multiple snapshots in batches of 50 using multi-row INSERT.
+func (r *PostgresDailyMetricsSnapshotRepository) UpsertBatch(ctx context.Context, snapshots []*entity.DailyMetricsSnapshot) error {
+	const batchSize = 50
+	for i := 0; i < len(snapshots); i += batchSize {
+		end := i + batchSize
+		if end > len(snapshots) {
+			end = len(snapshots)
+		}
+		if err := r.upsertChunk(ctx, snapshots[i:end]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *PostgresDailyMetricsSnapshotRepository) upsertChunk(ctx context.Context, snapshots []*entity.DailyMetricsSnapshot) error {
+	if len(snapshots) == 0 {
+		return nil
+	}
+
+	var sb strings.Builder
+	sb.WriteString(`INSERT INTO daily_metrics_snapshot (
+		id, app_id, date, active_mrr_cents, revenue_at_risk_cents,
+		usage_revenue_cents, total_revenue_cents, renewal_success_rate,
+		safe_count, one_cycle_missed_count, two_cycles_missed_count,
+		churned_count, total_subscriptions, created_at, updated_at
+	) VALUES `)
+
+	args := make([]any, 0, len(snapshots)*15)
+	for i, s := range snapshots {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		base := i * 15
+		sb.WriteString(fmt.Sprintf("($%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d)",
+			base+1, base+2, base+3, base+4, base+5, base+6, base+7, base+8,
+			base+9, base+10, base+11, base+12, base+13, base+14, base+15))
+		args = append(args, s.ID, s.AppID, s.Date, s.ActiveMRRCents, s.RevenueAtRiskCents,
+			s.UsageRevenueCents, s.TotalRevenueCents, s.RenewalSuccessRate,
+			s.SafeCount, s.OneCycleMissedCount, s.TwoCyclesMissedCount,
+			s.ChurnedCount, s.TotalSubscriptions, s.CreatedAt, s.UpdatedAt)
+	}
+
+	sb.WriteString(` ON CONFLICT (app_id, date) DO UPDATE SET
+		active_mrr_cents = EXCLUDED.active_mrr_cents,
+		revenue_at_risk_cents = EXCLUDED.revenue_at_risk_cents,
+		usage_revenue_cents = EXCLUDED.usage_revenue_cents,
+		total_revenue_cents = EXCLUDED.total_revenue_cents,
+		renewal_success_rate = EXCLUDED.renewal_success_rate,
+		safe_count = EXCLUDED.safe_count,
+		one_cycle_missed_count = EXCLUDED.one_cycle_missed_count,
+		two_cycles_missed_count = EXCLUDED.two_cycles_missed_count,
+		churned_count = EXCLUDED.churned_count,
+		total_subscriptions = EXCLUDED.total_subscriptions,
+		updated_at = EXCLUDED.updated_at`)
+
+	_, err := r.pool.Exec(ctx, sb.String(), args...)
 	return err
 }
 

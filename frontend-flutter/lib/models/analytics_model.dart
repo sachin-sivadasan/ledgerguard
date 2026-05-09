@@ -10,7 +10,9 @@ class MrrSnapshot {
     return MrrSnapshot(
       date: DateTime.parse(
           json['date'] as String? ?? DateTime.now().toIso8601String()),
-      mrrCents: json['mrr_cents'] as int? ?? 0,
+      mrrCents: (json['mrr_cents'] as int?) ??
+          (json['active_mrr_cents'] as int?) ??
+          0,
     );
   }
 }

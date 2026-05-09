@@ -196,6 +196,7 @@ func New(cfg Config) *chi.Mux {
 				// Metrics routes (appID is numeric, backend adds gid://partners/App/ prefix)
 				if cfg.MetricsHandler != nil {
 					r.Get("/{appID}/metrics/latest", cfg.MetricsHandler.GetLatestMetrics)
+					r.Get("/{appID}/metrics/trend", cfg.MetricsHandler.GetMetricsTrend)
 					r.Get("/{appID}/metrics", cfg.MetricsHandler.GetMetricsByPeriod)
 				}
 

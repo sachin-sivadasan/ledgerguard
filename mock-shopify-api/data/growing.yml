@@ -147,9 +147,7 @@ subscriptions:
   - { app_index: 1, shop_index: 49, plan_name: "Growth", price: "39.99", interval: "EVERY_30_DAYS", status: "active" }
 
 usage_charges:
-  - { app_index: 1, shop_index: 30, amount_range: [5.00, 50.00], frequency: "weekly" }
-  - { app_index: 1, shop_index: 31, amount_range: [10.00, 80.00], frequency: "weekly" }
-  - { app_index: 1, shop_index: 32, amount_range: [3.00, 25.00], frequency: "weekly" }
+  - { app_index: 1, amount_range: [5.00, 80.00], shop_ratio: 0.30 }
 
 events:
   - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 0, days_ago: 360 }

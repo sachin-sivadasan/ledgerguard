@@ -25,7 +25,7 @@ class _InsightsScreenState extends State<InsightsScreen>
     with DataLoadingMixin {
   @override
   void loadData(String appId) {
-    context.read<InsightsProvider>().loadInsights(appId);
+    context.read<InsightsProvider>().setSelectedApp(appId);
   }
 
   @override
@@ -56,12 +56,20 @@ class _InsightsScreenState extends State<InsightsScreen>
       );
     }
 
+    if (provider.isLoading && provider.insights.isEmpty) {
+      return LgPage(
+        title: 'AI Insights',
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final theme = Theme.of(context);
     final dateFmt = DateFormat('MMM d, h:mm a');
 
     return LgPage(
       title: 'AI Insights',
       subtitle: 'Daily briefs and revenue chat',
+      onRefresh: refreshData,
       child: LgResponsive(
         mobile: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

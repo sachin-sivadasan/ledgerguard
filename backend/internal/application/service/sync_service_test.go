@@ -70,6 +70,9 @@ func (m *mockTransactionRepo) FindByDomain(ctx context.Context, appID uuid.UUID,
 func (m *mockTransactionRepo) GetEarningsSummaryByDomain(ctx context.Context, appID uuid.UUID, domain string) (*repository.EarningsSummary, error) {
 	return &repository.EarningsSummary{}, nil
 }
+func (m *mockTransactionRepo) FindByAppIDPaginated(ctx context.Context, appID uuid.UUID, filters repository.TransactionFilters) (*repository.TransactionPage, error) {
+	return &repository.TransactionPage{}, nil
+}
 
 type mockAppRepoForSync struct {
 	app *entity.App
@@ -204,6 +207,7 @@ func TestSyncService_SyncApp_Success(t *testing.T) {
 		{
 			ID:              uuid.New(),
 			AppID:           appID,
+			PartnerAppGID:   "gid://partners/App/123",
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
@@ -214,6 +218,7 @@ func TestSyncService_SyncApp_Success(t *testing.T) {
 		{
 			ID:              uuid.New(),
 			AppID:           appID,
+			PartnerAppGID:   "gid://partners/App/123",
 			ShopifyGID:      "gid://shopify/Transaction/2",
 			MyshopifyDomain: "store2.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeUsage,

@@ -28,21 +28,24 @@ Repo -> DB: INSERT INTO daily_metrics_snapshots\n  (app_id, date, ...)\nON CONFL
 DB --> Repo: OK
 Repo --> Ledger: OK
 
-== Historical Backfill (Monthly) ==
+== Historical Backfill (Daily, Optimized O(n log n)) ==
 
-Ledger -> Ledger: Find date range\nfrom transactions
+Ledger -> Ledger: Sort transactions by date\n(once, O(n log n))
+Ledger -> Ledger: Find date range\nfrom earliest tx to latest
 
-loop For each month in range
-  Ledger -> Ledger: Filter txs up to\nend-of-month
-  Ledger -> Ledger: Rebuild subscriptions\nfrom filtered txs
-  Ledger -> Ledger: Filter txs for\ncurrent month only
+loop For each day in range (pointer advancement)
+  Ledger -> Ledger: Advance txPtr —\nappend txs up to current date\n(each tx visited exactly once)
+  Ledger -> Ledger: Rebuild subscriptions\nfrom cumulative txs
+  Ledger -> Ledger: Filter trailing 30-day\nwindow for revenue
 
-  Ledger -> Metrics: ComputeAllMetrics(\n  appID, subs, monthTxs, date)
+  Ledger -> Metrics: ComputeAllMetrics(\n  appID, subs, windowTxs, date)
   Metrics --> Ledger: DailyMetricsSnapshot
 
-  Ledger -> Repo: Upsert(snapshot)
-  Repo -> DB: INSERT ON CONFLICT UPDATE
-  DB --> Repo: OK
+  Ledger -> Ledger: Collect snapshot in memory
 end
+
+Ledger -> Repo: UpsertBatch(snapshots[])
+Repo -> DB: Multi-row INSERT\n(batches of 50)\nON CONFLICT UPDATE
+DB --> Repo: OK
 
 @enduml

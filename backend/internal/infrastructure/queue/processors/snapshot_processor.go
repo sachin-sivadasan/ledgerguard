@@ -52,8 +52,7 @@ func (p *SnapshotProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 	p.progress.Update(ctx, payload.JobID, queue.Progress{Message: "Loading transactions for snapshots..."})
 
 	now := time.Now().UTC()
-	// DEV LIMIT: 1-month window for faster testing (revert to AddDate(-1, 0, 0) for production)
-	from := now.AddDate(0, -1, 0)
+	from := now.AddDate(-1, 0, 0) // 12-month window
 
 	transactions, err := p.txRepo.FindByAppID(ctx, payload.AppID, from, now)
 	if err != nil {

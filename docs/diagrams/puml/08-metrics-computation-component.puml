@@ -38,12 +38,22 @@ note right of ME
   Renewal Rate = SAFE / total subs
 end note
 
-Snap --> SR : Upsert()
-SR --> DB : INSERT ON CONFLICT UPDATE
+Snap --> SR : Upsert() / UpsertBatch()
+SR --> DB : INSERT ON CONFLICT UPDATE\n(batches of 50 for backfill)
 
 MH --> Agg : BuildMetrics(appID, range)
 Agg --> SR : FindByAppIDAndRange()
 SR --> Agg : snapshots[]
+Agg --> Agg : DownsampleSnapshots(\n  granularity)
 Agg --> MH : aggregated response
+
+note bottom of Agg
+  **Trend API (ADR-041):**
+  GetTrendSnapshots() fetches daily
+  snapshots and downsamples to
+  DAILY / WEEKLY / MONTHLY
+  by picking last snapshot per period.
+  No separate tables needed.
+end note
 
 @enduml

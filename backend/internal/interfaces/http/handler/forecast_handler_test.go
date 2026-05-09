@@ -22,6 +22,9 @@ type mockSnapshotRepoForForecast struct {
 func (m *mockSnapshotRepoForForecast) Upsert(ctx context.Context, s *entity.DailyMetricsSnapshot) error {
 	return nil
 }
+func (m *mockSnapshotRepoForForecast) UpsertBatch(ctx context.Context, snapshots []*entity.DailyMetricsSnapshot) error {
+	return nil
+}
 func (m *mockSnapshotRepoForForecast) FindByAppIDAndDate(ctx context.Context, appID uuid.UUID, date time.Time) (*entity.DailyMetricsSnapshot, error) {
 	return nil, nil
 }

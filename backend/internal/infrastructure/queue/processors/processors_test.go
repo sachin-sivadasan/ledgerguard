@@ -218,6 +218,9 @@ func (m *mockTransactionRepo) FindByDomain(_ context.Context, _ uuid.UUID, _ str
 func (m *mockTransactionRepo) GetEarningsSummaryByDomain(_ context.Context, _ uuid.UUID, _ string) (*repository.EarningsSummary, error) {
 	return nil, nil
 }
+func (m *mockTransactionRepo) FindByAppIDPaginated(_ context.Context, _ uuid.UUID, _ repository.TransactionFilters) (*repository.TransactionPage, error) {
+	return &repository.TransactionPage{}, nil
+}
 
 // --- LedgerRebuilder ---
 
@@ -262,6 +265,9 @@ func (m *mockAppEventRepo) FindByAppAndShop(_ context.Context, _ uuid.UUID, _ st
 }
 func (m *mockAppEventRepo) FindByAppID(_ context.Context, _ uuid.UUID) ([]*entity.AppEvent, error) {
 	return nil, nil
+}
+func (m *mockAppEventRepo) FindByAppIDPaginated(_ context.Context, _ uuid.UUID, _ repository.EventFilters) (*repository.EventPage, error) {
+	return &repository.EventPage{}, nil
 }
 
 // --- SubscriptionRepo ---
@@ -452,8 +458,8 @@ func TestTransactionProcessor_Success(t *testing.T) {
 
 	fetcher := &mockTransactionFetcher{
 		transactions: []*entity.Transaction{
-			{ID: uuid.New(), AppID: appID, ShopifyGID: "tx1"},
-			{ID: uuid.New(), AppID: appID, ShopifyGID: "tx2"},
+			{ID: uuid.New(), AppID: appID, PartnerAppGID: "gid://partners/App/123", ShopifyGID: "tx1"},
+			{ID: uuid.New(), AppID: appID, PartnerAppGID: "gid://partners/App/123", ShopifyGID: "tx2"},
 		},
 	}
 

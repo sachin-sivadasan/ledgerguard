@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../core/navigation/navigation_refresh_notifier.dart';
 import '../theme/app_breakpoints.dart';
 import '../theme/app_colors.dart';
 import '../widgets/org_switcher.dart';
@@ -67,6 +69,7 @@ class AppShell extends StatelessWidget {
         onTap: (index) {
           if (index < 4) {
             navigationShell.goBranch(_bottomNavBranches[index]);
+            context.read<NavigationRefreshNotifier>().triggerRefreshCheck();
           } else {
             _showMoreSheet(context);
           }
@@ -124,6 +127,7 @@ class AppShell extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(ctx);
                   navigationShell.goBranch(branchIndex);
+                  context.read<NavigationRefreshNotifier>().triggerRefreshCheck();
                 },
               );
             }).toList(),
@@ -179,7 +183,10 @@ class AppShell extends StatelessWidget {
                   final selected = navigationShell.currentIndex == e.key;
                   final d = e.value;
                   return InkWell(
-                    onTap: () => navigationShell.goBranch(e.key),
+                    onTap: () {
+                      navigationShell.goBranch(e.key);
+                      context.read<NavigationRefreshNotifier>().triggerRefreshCheck();
+                    },
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -263,6 +270,7 @@ class AppShell extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(context);
                   navigationShell.goBranch(e.key);
+                  context.read<NavigationRefreshNotifier>().triggerRefreshCheck();
                 },
               )),
         ],

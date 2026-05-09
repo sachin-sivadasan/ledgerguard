@@ -3,6 +3,9 @@ package persistence
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -195,6 +198,99 @@ func (r *PostgresTransactionRepository) FindByAppID(ctx context.Context, appID u
 	}
 
 	return transactions, rows.Err()
+}
+
+func (r *PostgresTransactionRepository) FindByAppIDPaginated(ctx context.Context, appID uuid.UUID, filters repository.TransactionFilters) (*repository.TransactionPage, error) {
+	var conditions []string
+	var args []interface{}
+	argNum := 1
+
+	conditions = append(conditions, fmt.Sprintf("app_id = $%d", argNum))
+	args = append(args, appID)
+	argNum++
+
+	if !filters.From.IsZero() {
+		conditions = append(conditions, fmt.Sprintf("transaction_date >= $%d", argNum))
+		args = append(args, filters.From)
+		argNum++
+	}
+	if !filters.To.IsZero() {
+		conditions = append(conditions, fmt.Sprintf("transaction_date <= $%d", argNum))
+		args = append(args, filters.To)
+		argNum++
+	}
+	if filters.ChargeType != "" {
+		conditions = append(conditions, fmt.Sprintf("charge_type = $%d", argNum))
+		args = append(args, filters.ChargeType)
+		argNum++
+	}
+
+	whereClause := strings.Join(conditions, " AND ")
+
+	page := filters.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := filters.PageSize
+	if pageSize < 1 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	offset := (page - 1) * pageSize
+
+	// Count total
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM transactions WHERE %s", whereClause)
+	var total int
+	err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, fmt.Errorf("count query failed: %w", err)
+	}
+
+	// Fetch page
+	query := fmt.Sprintf(`
+		SELECT id, app_id, shopify_gid, myshopify_domain, shop_name, charge_type,
+		       COALESCE(gross_amount_cents, 0), COALESCE(shopify_fee_cents, 0),
+		       COALESCE(processing_fee_cents, 0), COALESCE(tax_on_fees_cents, 0),
+		       COALESCE(net_amount_cents, amount_cents), currency, transaction_date, created_at,
+		       created_date, available_date, earnings_status,
+		       shopify_shop_gid, shop_plan, subscription_gid, subscription_status,
+		       subscription_period_end, billing_interval
+		FROM transactions
+		WHERE %s
+		ORDER BY transaction_date DESC
+		LIMIT $%d OFFSET $%d
+	`, whereClause, argNum, argNum+1)
+	args = append(args, pageSize, offset)
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select query failed: %w", err)
+	}
+	defer rows.Close()
+
+	var transactions []*entity.Transaction
+	for rows.Next() {
+		tx, err := r.scanTransaction(rows)
+		if err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, tx)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	totalPages := int(math.Ceil(float64(total) / float64(pageSize)))
+
+	return &repository.TransactionPage{
+		Transactions: transactions,
+		Total:        total,
+		Page:         page,
+		PageSize:     pageSize,
+		TotalPages:   totalPages,
+	}, nil
 }
 
 // scanTransaction scans a row into a Transaction entity

@@ -1848,3 +1848,16 @@
 - 15 commits across all 6 phases
 - ~50 files changed (backend + frontend)
 - All Go tests pass, `flutter analyze` clean
+
+### [2026-05-09] Snapshot Strategy — Daily Backfill, Query-Time Aggregation & Trend API
+**Original:**
+> Implement the following plan: [Snapshot Strategy — Daily Backfill, Query-Time Aggregation & Trend API with 5 phases, 8 commits]
+
+**Improved:**
+> Implement ADR-041: single daily table with query-time downsampling. (1) Fix DEV LIMIT in snapshot_processor.go (1m → 12m). (2) Optimize `BackfillHistoricalSnapshots` from O(365×n) to O(n log n) with sort-once + pointer advancement + UpsertBatch. (3) Add Granularity value object (DAILY/WEEKLY/MONTHLY) + DownsampleSnapshots (picks last snapshot per period). (4) Create REST `GET /apps/{appID}/metrics/trend?granularity=weekly` + enhance GraphQL `metricsTrend` with granularity enum. (5) Wire Flutter frontend to trend API with weekly granularity for Revenue tab chart. (6) Update docs: ADR-041, DATABASE_SCHEMA, TAD, IMPLEMENTATION_LOG, future.md, verification, prompts.
+
+**Result:**
+- 19 files changed across backend + frontend
+- 9 new tests (4 backfill optimization + 5 downsampling)
+- All Go tests pass, flutter analyze clean
+- ADR-041 documented in DECISIONS.md

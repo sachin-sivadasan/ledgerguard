@@ -88,6 +88,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     return LgPage(
       title: 'Dashboard',
       subtitle: 'Revenue intelligence overview',
+      onRefresh: refreshData,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

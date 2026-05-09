@@ -865,3 +865,32 @@ Created `AppComparison` model in `analytics_model.dart` matching the backend `Ap
 - Clean type separation: `ShopifyApp` for app management, `AppComparison` for analytics comparison
 - Multi-app tab now shows relevant metrics (MRR, at-risk, subscriptions) instead of install counts/ratings
 - Demo mode still works by converting mock data to the same model
+
+---
+
+### ADR-041: Single Daily Table with Query-Time Downsampling
+**Date:** 2026-05-09
+**Status:** Accepted
+
+**Context:**
+`BackfillHistoricalSnapshots` was changed from monthly to daily granularity so users get ~365 daily snapshots on first sync (forecasting needs 90+). This raised questions: should we have separate daily/weekly/monthly tables? How to optimize the O(365*n) backfill? How should the UI consume different granularities?
+
+**Decision:**
+**No new tables.** 365 rows/year/app is trivial for PostgreSQL. Weekly and monthly views are derived at query time using `DownsampleSnapshots()` which picks the last snapshot in each period (end-of-week or end-of-month). A new `GET /api/v1/apps/{appID}/metrics/trend?granularity=weekly` endpoint and GraphQL `metricsTrend(granularity: WEEKLY)` parameter expose this to consumers.
+
+**Why NOT separate tables:**
+- Dual-write complexity (sync must write to 2-3 tables, failures create inconsistencies)
+- CLAUDE.md mandates daily as the atomic unit ("Store daily snapshot")
+- No storage pressure (365 rows/year is negligible)
+- Schema changes require migrations for minimal benefit
+
+**Backfill optimization:** Sorted transactions once O(n log n), then pointer-based advancement — each transaction visited exactly once. Combined with `UpsertBatch` for batch DB writes (365 → ~7 round-trips of 50).
+
+**Future extensibility:** If query-time downsampling becomes a bottleneck at scale (1000+ apps, 3+ years), add a `frequency` column and pre-compute weekly/monthly rollup rows in the same table. Backward compatible — all existing rows get `frequency = 'daily'`.
+
+**Consequences:**
+- Single source of truth — daily snapshots serve all granularities
+- No migration needed — same table, same schema
+- Backfill performance: O(n log n + 365*k) instead of O(365*n)
+- Frontend Revenue tab uses weekly granularity for cleaner chart (~26 points vs ~180)
+- Forecasting still uses raw daily data (unchanged)

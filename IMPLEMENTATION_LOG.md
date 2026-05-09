@@ -2700,3 +2700,48 @@ Connected all 5 analytics tabs (Revenue, Forecasting, Profit & Expense, Cohorts,
 | feat: add 30-day earnings outlook and fee savings | 5c | 1 |
 
 **Tests:** `go test ./internal/domain/service/... ./internal/interfaces/http/handler/...` — all pass. `flutter analyze` — no issues.
+
+---
+
+## [2026-05-09] Snapshot Strategy — Daily Backfill, Query-Time Aggregation & Trend API
+
+**Commit:** fix + feat + docs across 5 phases (ADR-041)
+
+**Summary:**
+Optimized snapshot backfill from O(365×n) to O(n log n), added query-time downsampling for weekly/monthly granularity, and created a REST + GraphQL trend API. Decision: single daily table serves all granularities — no separate weekly/monthly tables.
+
+**Implemented:**
+
+1. **Fix DEV LIMIT** — `snapshot_processor.go` transaction window changed from 1 month to 12 months
+2. **Optimized Backfill** — Sort transactions once, pointer-based advancement (each tx visited once). `UpsertBatch` writes 365 snapshots in ~7 DB round-trips (batches of 50)
+3. **Granularity Value Object** — `valueobject/granularity.go` with DAILY/WEEKLY/MONTHLY constants + ParseGranularity
+4. **DownsampleSnapshots** — Picks last snapshot per period (end-of-week via ISOWeek, end-of-month). `GetTrendSnapshots` on MetricsAggregationService
+5. **REST Trend API** — `GET /api/v1/apps/{appID}/metrics/trend?months=6&granularity=weekly` returns `{granularity, data_points, snapshots}`
+6. **GraphQL Granularity** — `metricsTrend(granularity: WEEKLY)` enum parameter on schema + chat module tool
+7. **Frontend Wiring** — `MetricsService.fetchMrrTrend()` calls trend API with weekly granularity; Revenue tab chart prefers trend data
+
+**Files changed:**
+
+| File | Change |
+|------|--------|
+| `infrastructure/queue/processors/snapshot_processor.go` | Fix 1m → 12m transaction window |
+| `domain/repository/daily_metrics_snapshot_repository.go` | Add `UpsertBatch` to interface |
+| `infrastructure/persistence/daily_metrics_snapshot_repository.go` | Implement `UpsertBatch` with chunked multi-row INSERT |
+| `domain/service/ledger_service.go` | Optimized `BackfillHistoricalSnapshots` |
+| `domain/service/ledger_service_test.go` | 4 new backfill tests + mock snapshot repo |
+| `domain/valueobject/granularity.go` | NEW — Granularity value object |
+| `application/service/metrics_aggregation_service.go` | `DownsampleSnapshots` + `GetTrendSnapshots` |
+| `application/service/metrics_aggregation_service_test.go` | 5 downsample tests |
+| `interfaces/http/handler/metrics.go` | `GetMetricsTrend` handler + TrendProvider |
+| `interfaces/http/router/router.go` | Route: `/{appID}/metrics/trend` |
+| `cmd/server/main.go` | Wire TrendProvider |
+| `chat/graphql/schema.graphql` | Granularity enum |
+| `chat/graphql/helpers.go` | NEW — moved helpers from resolvers |
+| `chat/graphql/schema.resolvers.go` | Granularity parameter |
+| `chat/modules/metrics/tools.go` | granularity param on get_metrics_trend |
+| `chat/modules/metrics/executor.go` | Pass granularity variable |
+| `frontend-flutter/lib/services/metrics_service.dart` | `fetchMrrTrend()` |
+| `frontend-flutter/lib/providers/analytics_provider.dart` | Weekly trend fetch + getter |
+| `frontend-flutter/lib/models/analytics_model.dart` | Accept `active_mrr_cents` key |
+
+**Tests:** `go test ./...` — all pass. 9 new tests (4 backfill + 5 downsample).

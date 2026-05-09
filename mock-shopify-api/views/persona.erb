@@ -23,6 +23,10 @@
     <div class="label">Cancelled</div>
     <div class="stat" style="color:#dc3545;"><%= @stats[:cancelled] %></div>
   </div>
+  <div class="card">
+    <div class="label">Usage Charges</div>
+    <div class="stat" style="color:#17a2b8;"><%= @stats[:usage_charges] %></div>
+  </div>
 </div>
 
 <!-- Apps -->
@@ -148,7 +152,7 @@
     </tr>
   </thead>
   <tbody>
-    <% @subscriptions.each_with_index do |sub, idx| %>
+    <% @subscriptions.first(200).each_with_index do |sub, idx| %>
       <% app = @apps[sub['app_index']] rescue nil %>
       <% shop = @shops[sub['shop_index']] rescue nil %>
       <tr>
@@ -173,6 +177,9 @@
           </form>
         </td>
       </tr>
+    <% end %>
+    <% if @subscriptions.length > 200 %>
+      <tr><td colspan="8" style="text-align:center; color:#999;">... and <%= @subscriptions.length - 200 %> more subscriptions</td></tr>
     <% end %>
   </tbody>
 </table>
@@ -209,6 +216,64 @@
           <option value="frozen">frozen</option>
           <option value="cancelled">cancelled</option>
         </select>
+      </div>
+      <div class="form-group" style="flex:0; align-self:flex-end;">
+        <button type="submit" class="btn btn-primary">Add</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Usage Charges -->
+<h2>Usage Charges (<%= @usage_charges.length %>)</h2>
+<table>
+  <thead><tr><th>#</th><th>App</th><th>Shop</th><th>Amount Range</th><th>Started</th></tr></thead>
+  <tbody>
+    <% @usage_charges.first(100).each_with_index do |uc, i| %>
+      <% app = @apps[uc['app_index']] rescue nil %>
+      <% shop = @shops[uc['shop_index']] rescue nil %>
+      <tr>
+        <td><%= i %></td>
+        <td><%= app ? app['name'] : "App #{uc['app_index']}" %></td>
+        <td class="truncate"><%= shop ? shop['domain'] : "Shop #{uc['shop_index']}" %></td>
+        <td>$<%= uc['amount_range'][0] %> – $<%= uc['amount_range'][1] %></td>
+        <td><%= uc['started_months_ago'] ? "#{uc['started_months_ago']}mo ago" : '-' %></td>
+      </tr>
+    <% end %>
+    <% if @usage_charges.length > 100 %>
+      <tr><td colspan="5" style="text-align:center; color:#999;">... and <%= @usage_charges.length - 100 %> more usage charges</td></tr>
+    <% end %>
+  </tbody>
+</table>
+
+<!-- Add Usage Charge Form -->
+<div class="panel">
+  <h3>Add Usage Charge</h3>
+  <form action="/admin/personas/<%= @org_id %>/usage_charges" method="post">
+    <div class="form-row">
+      <div class="form-group">
+        <label>App</label>
+        <select name="app_index" required>
+          <% @apps.each_with_index do |app, i| %>
+            <option value="<%= i %>"><%= i %>: <%= app['name'] %></option>
+          <% end %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Shop Index</label>
+        <input type="number" name="shop_index" value="0" min="0" max="<%= @shops.length - 1 %>" required>
+      </div>
+      <div class="form-group">
+        <label>Min Amount</label>
+        <input type="text" name="min_amount" placeholder="5.00" value="5.00" required>
+      </div>
+      <div class="form-group">
+        <label>Max Amount</label>
+        <input type="text" name="max_amount" placeholder="50.00" value="50.00" required>
+      </div>
+      <div class="form-group">
+        <label>Started (months ago)</label>
+        <input type="number" name="started_months_ago" value="3" min="1" max="12" required>
       </div>
       <div class="form-group" style="flex:0; align-self:flex-end;">
         <button type="submit" class="btn btn-primary">Add</button>

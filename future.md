@@ -41,7 +41,7 @@ Postponed ideas and features for later implementation.
 | Per-shop event sync API | P3 | Add dedicated endpoint `POST /api/v1/sync/enqueue/{appID}?type=event_sync&shop={shopGID}` to trigger event sync for a single shop. Useful for on-demand refresh after a specific store event without running full event_sync across all subscriptions. Pass shopGID via payload to EventProcessor; if set, skip iteration and fetch events for that shop only. |
 | Normalize GID casing at ingestion (Select App) | P2 | Currently `PrepareProcessorContext` has a defensive fix to normalize `gid://partners/app/` → `gid://partners/App/`. The proper fix: validate and normalize the GID in the `POST /apps/select` handler at ingestion time, and run a one-time DB migration to fix existing lowercase GIDs. Remove the defensive fix from `processor_context.go` after migration. |
 | Per-user rate limiting on Firebase-auth routes | P1 | Backend rate limiter only covers Revenue API (API key routes). Firebase-authenticated routes (`/api/v1/apps`, `/sync`, `/subscriptions`, etc.) have no per-user rate limiting. A leaked Firebase token or malicious script can hammer the backend. Add per-UID token-bucket middleware (e.g., 60 req/min per user) on the main authenticated router group in `router.go`. Reuse existing `InMemoryRateLimitStore` with Firebase UID as key instead of API key ID. |
-| Revert sync window to 12 months | P1 | Transaction & snapshot processors use `AddDate(0, -1, 0)` (1 month) for dev testing. Revert to `AddDate(-1, 0, 0)` for production: `transaction_processor.go:73`, `snapshot_processor.go:56`. |
+| ~~Revert sync window to 12 months~~ | ~~P1~~ | ✅ Done (2026-05-09). Snapshot processor fixed to `AddDate(-1, 0, 0)`. Transaction processor still needs revert — see `transaction_processor.go:73`. |
 | Revert event/status sync subscription limit | P1 | EventProcessor and StatusProcessor are capped to first 10 subscriptions for dev testing. Remove the `if len(subscriptions) > 10` blocks: `event_processor.go:69-72`, `status_processor.go:65-68`. |
 | Flutter Provider → Bloc migration | P3 | The Provider prototype (`frontend-flutter/`) now uses DataLoadingMixin + DemoModeCoordinator pattern. The Bloc frontend (`frontend/app/`) already implements the same patterns properly with events/states, BlocListener for cascading loads, and get_it DI. If Provider prototype becomes primary app, migrate phased: (1) replace ChangeNotifier with Bloc per screen, (2) replace DataLoadingMixin with BlocListener on AppsBloc, (3) replace DemoModeCoordinator with DemoModeBloc events. |
 | Remove `DELETE FROM shops` from ResetAppData | P1 | `shops` is a global cache shared across apps. Currently `ResetAppData` deletes all rows for dev convenience (single app). In production with multiple apps, remove the blanket delete — only clear app-specific tables. File: `admin_repository.go`. |
@@ -65,8 +65,8 @@ Cross-referenced 15 user personas (`docs/USER_PERSONAS.md`) with existing Flutte
 
 **Reporting & Export (P7: Agency, P8: Finance, P11: Investor, P15: Growth)**
 | PDF/CSV export buttons on dashboard & metrics | P2 | Add export action to: dashboard KPI cards, subscription list, earnings timeline, fee breakdown, metrics by period. Use `pdf` and `csv` Flutter packages. No backend changes — frontend formats existing API data into downloadable files. Unlocks Investor (due diligence) and Finance (reconciliation) personas. |
-| Revenue concentration analysis screen | P3 | "Top 10 Stores by Revenue" view showing revenue distribution. Table: store domain, MRR contribution, % of total, risk state. Highlight single-store dependency risk. Backend: aggregate query on transactions grouped by shop domain. |
-| Historical data browser (12-month snapshots) | P3 | Calendar-based or timeline view to browse daily_metrics_snapshots across 12 months. Select any date to see that day's MRR, churn, installs. Compare two dates side-by-side. Backend data exists (`daily_metrics_snapshot` table), needs UI. |
+| ~~Revenue concentration analysis screen~~ | ~~P3~~ | ✅ Done (2026-05-08). Top stores by revenue on Revenue tab (live mode). |
+| ~~Historical data browser (12-month snapshots)~~ | ~~P3~~ | ✅ Done (2026-05-08). Date picker + snapshot comparison on Analytics page. |
 
 **Notifications & Digests (P4: Notification-Only, P14: Side-Project Dev)**
 | Weekly email digest toggle in notification settings | P2 | Add "Weekly Digest" option (day + time picker) alongside existing daily summary. Backend: needs new `weekly_digest_enabled` + `weekly_digest_day` fields in notification_preferences table + scheduler logic. Frontend: toggle + day picker in notification settings page. |
@@ -120,6 +120,8 @@ All items resolved. See "Completed" section above.
 
 ## Ideas (Unvalidated)
 
+- **Snapshot gap detection** — Detect missing daily snapshots and alert/backfill automatically
+- **Materialized views at scale** — When query-time downsampling bottlenecks at 1000+ apps with 3+ years data, add `frequency` column to `daily_metrics_snapshot` table (DAILY/WEEKLY/MONTHLY) and pre-compute rollups during sync. See ADR-041 "Future Extensibility" section in DECISIONS.md
 -
 
 ---

@@ -56,6 +56,9 @@ func (m *mockTxRepoForLedger) FindByDomain(ctx context.Context, appID uuid.UUID,
 func (m *mockTxRepoForLedger) GetEarningsSummaryByDomain(ctx context.Context, appID uuid.UUID, domain string) (*repository.EarningsSummary, error) {
 	return &repository.EarningsSummary{}, nil
 }
+func (m *mockTxRepoForLedger) FindByAppIDPaginated(ctx context.Context, appID uuid.UUID, filters repository.TransactionFilters) (*repository.TransactionPage, error) {
+	return &repository.TransactionPage{}, nil
+}
 
 type mockSubRepoForLedger struct {
 	subscriptions []*entity.Subscription
@@ -461,6 +464,38 @@ func TestLedgerService_RebuildFromTransactions_NoTransactions(t *testing.T) {
 	}
 }
 
+// --- Mock snapshot repo for backfill tests ---
+
+type mockSnapshotRepoForLedger struct {
+	snapshots []*entity.DailyMetricsSnapshot
+	err       error
+}
+
+func (m *mockSnapshotRepoForLedger) Upsert(ctx context.Context, snapshot *entity.DailyMetricsSnapshot) error {
+	m.snapshots = append(m.snapshots, snapshot)
+	return m.err
+}
+
+func (m *mockSnapshotRepoForLedger) UpsertBatch(ctx context.Context, snapshots []*entity.DailyMetricsSnapshot) error {
+	m.snapshots = append(m.snapshots, snapshots...)
+	return m.err
+}
+
+func (m *mockSnapshotRepoForLedger) FindByAppIDAndDate(ctx context.Context, appID uuid.UUID, date time.Time) (*entity.DailyMetricsSnapshot, error) {
+	return nil, m.err
+}
+
+func (m *mockSnapshotRepoForLedger) FindByAppIDRange(ctx context.Context, appID uuid.UUID, from, to time.Time) ([]*entity.DailyMetricsSnapshot, error) {
+	return m.snapshots, m.err
+}
+
+func (m *mockSnapshotRepoForLedger) FindLatestByAppID(ctx context.Context, appID uuid.UUID) (*entity.DailyMetricsSnapshot, error) {
+	if len(m.snapshots) == 0 {
+		return nil, m.err
+	}
+	return m.snapshots[len(m.snapshots)-1], m.err
+}
+
 func TestLedgerService_DetectsBillingInterval_Annual(t *testing.T) {
 	appID := uuid.New()
 	now := time.Date(2026, 2, 26, 12, 0, 0, 0, time.UTC)
@@ -510,5 +545,133 @@ func TestLedgerService_DetectsBillingInterval_Annual(t *testing.T) {
 	expectedMRR := int64(29900 / 12)
 	if sub.MRRCents() != expectedMRR {
 		t.Errorf("expected MRR %d, got %d", expectedMRR, sub.MRRCents())
+	}
+}
+
+func TestBackfillOptimized_HandlesUnsortedInput(t *testing.T) {
+	appID := uuid.New()
+	now := time.Date(2026, 3, 5, 12, 0, 0, 0, time.UTC)
+
+	// Deliberately unsorted transactions
+	transactions := []*entity.Transaction{
+		{ID: uuid.New(), AppID: appID, ShopifyGID: "gid://3", MyshopifyDomain: "store1.myshopify.com", ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2999, Currency: "USD", TransactionDate: now.AddDate(0, 0, -5)},
+		{ID: uuid.New(), AppID: appID, ShopifyGID: "gid://1", MyshopifyDomain: "store1.myshopify.com", ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2999, Currency: "USD", TransactionDate: now.AddDate(0, 0, -15)},
+		{ID: uuid.New(), AppID: appID, ShopifyGID: "gid://2", MyshopifyDomain: "store1.myshopify.com", ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2999, Currency: "USD", TransactionDate: now.AddDate(0, 0, -10)},
+	}
+
+	txRepo := &mockTxRepoForLedger{transactions: transactions}
+	subRepo := &mockSubRepoForLedger{}
+	snapshotRepo := &mockSnapshotRepoForLedger{}
+
+	svc := NewLedgerService(txRepo, subRepo).WithSnapshotRepository(snapshotRepo)
+
+	count, err := svc.BackfillHistoricalSnapshots(context.Background(), appID, transactions)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should create snapshots for each day from earliest to latest (16 days: -15 to 0 inclusive)
+	expectedDays := 11 // days -15 through -5 inclusive
+	if count != expectedDays {
+		t.Errorf("expected %d snapshots, got %d", expectedDays, count)
+	}
+
+	// Snapshots should be in chronological order
+	for i := 1; i < len(snapshotRepo.snapshots); i++ {
+		if snapshotRepo.snapshots[i].Date.Before(snapshotRepo.snapshots[i-1].Date) {
+			t.Errorf("snapshots not in order: %v before %v", snapshotRepo.snapshots[i].Date, snapshotRepo.snapshots[i-1].Date)
+		}
+	}
+}
+
+func TestBackfillOptimized_SkipsFutureDates(t *testing.T) {
+	appID := uuid.New()
+	now := time.Now().UTC()
+	future := now.AddDate(0, 0, 10)
+
+	transactions := []*entity.Transaction{
+		{ID: uuid.New(), AppID: appID, ShopifyGID: "gid://1", MyshopifyDomain: "store1.myshopify.com", ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2999, Currency: "USD", TransactionDate: now.AddDate(0, 0, -2)},
+		{ID: uuid.New(), AppID: appID, ShopifyGID: "gid://2", MyshopifyDomain: "store1.myshopify.com", ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2999, Currency: "USD", TransactionDate: future},
+	}
+
+	txRepo := &mockTxRepoForLedger{transactions: transactions}
+	subRepo := &mockSubRepoForLedger{}
+	snapshotRepo := &mockSnapshotRepoForLedger{}
+
+	svc := NewLedgerService(txRepo, subRepo).WithSnapshotRepository(snapshotRepo)
+
+	count, err := svc.BackfillHistoricalSnapshots(context.Background(), appID, transactions)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should NOT include future dates
+	for _, snap := range snapshotRepo.snapshots {
+		if snap.Date.After(now) {
+			t.Errorf("snapshot created for future date: %v", snap.Date)
+		}
+	}
+
+	// Should have 3 snapshots (-2, -1, today)
+	if count != 3 {
+		t.Errorf("expected 3 snapshots, got %d", count)
+	}
+}
+
+func TestBackfillOptimized_EmptyTransactions(t *testing.T) {
+	appID := uuid.New()
+
+	txRepo := &mockTxRepoForLedger{}
+	subRepo := &mockSubRepoForLedger{}
+	snapshotRepo := &mockSnapshotRepoForLedger{}
+
+	svc := NewLedgerService(txRepo, subRepo).WithSnapshotRepository(snapshotRepo)
+
+	count, err := svc.BackfillHistoricalSnapshots(context.Background(), appID, []*entity.Transaction{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if count != 0 {
+		t.Errorf("expected 0 snapshots for empty transactions, got %d", count)
+	}
+}
+
+func TestBackfillOptimized_ProducesSameResults(t *testing.T) {
+	appID := uuid.New()
+	now := time.Date(2026, 3, 5, 12, 0, 0, 0, time.UTC)
+
+	transactions := []*entity.Transaction{
+		{ID: uuid.New(), AppID: appID, ShopifyGID: "gid://1", MyshopifyDomain: "store1.myshopify.com", ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2999, Currency: "USD", TransactionDate: now.AddDate(0, 0, -3)},
+		{ID: uuid.New(), AppID: appID, ShopifyGID: "gid://2", MyshopifyDomain: "store2.myshopify.com", ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 4999, Currency: "USD", TransactionDate: now.AddDate(0, 0, -1)},
+	}
+
+	// Run backfill twice with same input
+	snapshotRepo1 := &mockSnapshotRepoForLedger{}
+	svc1 := NewLedgerService(&mockTxRepoForLedger{transactions: transactions}, &mockSubRepoForLedger{}).WithSnapshotRepository(snapshotRepo1)
+	count1, err1 := svc1.BackfillHistoricalSnapshots(context.Background(), appID, transactions)
+
+	snapshotRepo2 := &mockSnapshotRepoForLedger{}
+	svc2 := NewLedgerService(&mockTxRepoForLedger{transactions: transactions}, &mockSubRepoForLedger{}).WithSnapshotRepository(snapshotRepo2)
+	count2, err2 := svc2.BackfillHistoricalSnapshots(context.Background(), appID, transactions)
+
+	if err1 != nil || err2 != nil {
+		t.Fatalf("unexpected errors: %v, %v", err1, err2)
+	}
+
+	if count1 != count2 {
+		t.Fatalf("non-deterministic count: %d vs %d", count1, count2)
+	}
+
+	// Compare snapshot MRR values
+	for i := 0; i < len(snapshotRepo1.snapshots); i++ {
+		s1 := snapshotRepo1.snapshots[i]
+		s2 := snapshotRepo2.snapshots[i]
+		if s1.ActiveMRRCents != s2.ActiveMRRCents {
+			t.Errorf("day %d: MRR mismatch %d vs %d", i, s1.ActiveMRRCents, s2.ActiveMRRCents)
+		}
+		if !s1.Date.Equal(s2.Date) {
+			t.Errorf("day %d: date mismatch %v vs %v", i, s1.Date, s2.Date)
+		}
 	}
 }

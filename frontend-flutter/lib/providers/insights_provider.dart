@@ -19,6 +19,7 @@ class InsightsProvider extends ChangeNotifier {
   bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
+  String? _selectedAppId;
   CancelToken? _cancelToken;
 
   final List<ChatMessage> _messages = [];
@@ -29,10 +30,19 @@ class InsightsProvider extends ChangeNotifier {
   bool get demoMode => _demoMode;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  String? get selectedAppId => _selectedAppId;
 
   void setDemoMode(bool value) {
     _demoMode = value;
     notifyListeners();
+  }
+
+  void setSelectedApp(String? appId) {
+    _selectedAppId = appId;
+    notifyListeners();
+    if (!_demoMode && appId != null) {
+      loadInsights(appId);
+    }
   }
 
   Future<void> loadInsights(String appId) async {

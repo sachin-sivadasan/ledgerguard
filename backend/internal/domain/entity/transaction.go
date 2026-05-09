@@ -23,6 +23,7 @@ type Transaction struct {
 	MyshopifyDomain string
 	ShopName        string // Human-readable shop name from Shopify
 	ShopifyShopGID  string // Shopify shop GID (gid://shopify/Shop/xxx)
+	PartnerAppGID   string // Shopify partner app GID from API response (gid://partners/App/xxx)
 	ShopPlan        string // Shop's Shopify plan (Basic, Shopify, Advanced, Plus)
 	ChargeType      valueobject.ChargeType
 	GrossAmountCents   int64 // What the merchant paid (from Shopify Partner API)
@@ -155,4 +156,20 @@ func (t *Transaction) UpdateEarningsStatus(now time.Time) {
 	} else {
 		t.EarningsStatus = EarningsStatusAvailable
 	}
+}
+
+// FilterTransactionsByApp returns only transactions whose PartnerAppGID matches
+// the given partnerAppGID. The Shopify Partner API returns transactions for all
+// apps in the org, so callers must filter to the requested app.
+func FilterTransactionsByApp(txns []*Transaction, partnerAppGID string) []*Transaction {
+	if partnerAppGID == "" {
+		return txns
+	}
+	filtered := make([]*Transaction, 0, len(txns))
+	for _, tx := range txns {
+		if tx.PartnerAppGID == partnerAppGID {
+			filtered = append(filtered, tx)
+		}
+	}
+	return filtered
 }

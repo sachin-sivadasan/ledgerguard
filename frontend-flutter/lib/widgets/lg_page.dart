@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/apps_provider.dart';
+import '../providers/sync_status_provider.dart';
 import '../theme/app_breakpoints.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
 class LgPageAction {
@@ -17,6 +21,7 @@ class LgPage extends StatelessWidget {
   final LgPageAction? primaryAction;
   final List<LgPageAction> secondaryActions;
   final VoidCallback? backAction;
+  final VoidCallback? onRefresh;
   final Widget child;
   final bool scrollable;
 
@@ -27,6 +32,7 @@ class LgPage extends StatelessWidget {
     this.primaryAction,
     this.secondaryActions = const [],
     this.backAction,
+    this.onRefresh,
     required this.child,
     this.scrollable = true,
   });
@@ -39,6 +45,15 @@ class LgPage extends StatelessWidget {
       LgDeviceType.tablet => LgSpacing.s400,
       LgDeviceType.desktop => LgSpacing.s600,
     };
+
+    // Check if current app is syncing
+    final appsProvider = context.watch<AppsProvider>();
+    final syncProvider = context.watch<SyncStatusProvider>();
+    final activeAppId =
+        appsProvider.apps.isNotEmpty ? appsProvider.apps.first.id : null;
+    final isSyncing = activeAppId != null &&
+        syncProvider.getState(activeAppId).isSyncing;
+
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 1200),
@@ -62,7 +77,29 @@ class LgPage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(title, style: theme.textTheme.headlineSmall),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(title, style: theme.textTheme.headlineSmall),
+                            ),
+                            if (isSyncing) ...[
+                              const SizedBox(width: LgSpacing.s300),
+                              const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Syncing...',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: LgColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                         if (subtitle != null) ...[
                           const SizedBox(height: LgSpacing.s100),
                           Text(subtitle!, style: theme.textTheme.bodySmall),
@@ -70,6 +107,12 @@ class LgPage extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (onRefresh != null)
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Refresh',
+                      onPressed: onRefresh,
+                    ),
                   ...secondaryActions.map((a) => Padding(
                         padding: const EdgeInsets.only(left: LgSpacing.s200),
                         child: OutlinedButton(

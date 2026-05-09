@@ -40,7 +40,7 @@ Ledger --> Sync: LedgerRebuildResult
 deactivate Ledger
 
 Sync -> Ledger: BackfillHistoricalSnapshots(appID, allTxs)
-note right of Ledger: Monthly snapshots\nfor historical data
+note right of Ledger: Daily snapshots (365/year)\nO(n log n) sort + pointer\nUpsertBatch (batches of 50)
 
 opt EventFetcher configured
   Sync -> Events: enrichSubscriptionStatus()

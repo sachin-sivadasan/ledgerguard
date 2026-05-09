@@ -19,6 +19,7 @@ class AnalyticsProvider extends ChangeNotifier {
   CancelToken? _cancelToken;
 
   DashboardMetrics? _liveMetrics;
+  List<MrrSnapshot>? _liveMrrTrend;
   List<MrrMovement>? _liveMrrMovements;
   List<ForecastPoint>? _liveForecast;
   ForecastResult? _forecastResult;
@@ -78,6 +79,14 @@ class AnalyticsProvider extends ChangeNotifier {
         _liveMrrMovements = movements;
         notifyListeners();
       });
+      // Load MRR trend with weekly granularity for cleaner chart
+      _metricsService
+          .fetchMrrTrend(appId,
+              months: 6, granularity: 'weekly', cancelToken: _cancelToken)
+          .then((trend) {
+        _liveMrrTrend = trend;
+        notifyListeners();
+      });
       _loadForecast(appId);
       _loadCohorts(appId);
       _loadExpenses(appId);
@@ -95,8 +104,10 @@ class AnalyticsProvider extends ChangeNotifier {
 
   Future<void> _loadForecast(String appId) async {
     _forecastError = null;
+    debugPrint('[AnalyticsProvider] _loadForecast called for $appId (model: $_forecastModel)');
     final (result, error) = await _metricsService.fetchForecast(appId,
         model: _forecastModel, cancelToken: _cancelToken);
+    debugPrint('[AnalyticsProvider] forecast result: ${result != null ? '${result.points.length} points' : 'null'}, error: $error');
     if (result != null) {
       _forecastResult = result;
       _liveForecast = result.points;
@@ -168,7 +179,13 @@ class AnalyticsProvider extends ChangeNotifier {
   }
 
   List<MrrSnapshot> get mrrSnapshots {
-    if (!_demoMode) return _liveMetrics?.mrrTrend ?? [];
+    if (!_demoMode) {
+      // Prefer dedicated trend API (weekly granularity, cleaner chart)
+      if (_liveMrrTrend != null && _liveMrrTrend!.isNotEmpty) {
+        return _liveMrrTrend!;
+      }
+      return _liveMetrics?.mrrTrend ?? [];
+    }
     return mockMrrSnapshots;
   }
 

@@ -171,3 +171,30 @@ Tracks verification points from each implementation plan. Run these after deploy
 - [ ] Comparison card shows current vs historical MRR with % change
 - [ ] Earnings page shows upcoming 30-day earnings timeline
 - [ ] Earnings page shows fee savings card
+
+---
+
+## Plan: Snapshot Strategy — Daily Backfill, Query-Time Aggregation & Trend API
+**Date:** 2026-05-09
+
+### DEV LIMIT Fix
+- [ ] `snapshot_processor.go` uses `AddDate(-1, 0, 0)` (12 months)
+- [ ] `go test ./internal/infrastructure/queue/processors/...` passes
+
+### Backfill Optimization
+- [ ] Transactions sorted once before day loop
+- [ ] Each transaction visited exactly once (pointer advancement)
+- [ ] `UpsertBatch` added to repository interface + persistence
+- [ ] All mock repos updated with `UpsertBatch`
+- [ ] Tests: optimized backfill matches original output
+- [ ] `go test ./internal/domain/service/...` passes
+
+### Granularity API
+- [ ] `DownsampleSnapshots` picks last snapshot per period
+- [ ] REST: `GET /apps/{appID}/metrics/trend?granularity=weekly` returns ~26 points for 6m
+- [ ] GraphQL: `metricsTrend(granularity: WEEKLY)` works
+- [ ] `go test ./...` passes
+
+### Frontend
+- [ ] Revenue tab chart uses weekly granularity (cleaner trend line)
+- [ ] Forecasting tab still uses raw daily data (unchanged)

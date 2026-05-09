@@ -71,6 +71,9 @@ func (m *mockSyncTransactionRepo) FindByDomain(ctx context.Context, appID uuid.U
 func (m *mockSyncTransactionRepo) GetEarningsSummaryByDomain(ctx context.Context, appID uuid.UUID, domain string) (*repository.EarningsSummary, error) {
 	return &repository.EarningsSummary{}, nil
 }
+func (m *mockSyncTransactionRepo) FindByAppIDPaginated(ctx context.Context, appID uuid.UUID, filters repository.TransactionFilters) (*repository.TransactionPage, error) {
+	return &repository.TransactionPage{}, nil
+}
 
 type mockSyncAppRepo struct {
 	app  *entity.App

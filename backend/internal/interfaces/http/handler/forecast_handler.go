@@ -80,13 +80,22 @@ func (h *ForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	writeInsufficientData := func() {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":       "insufficient data for forecasting",
+			"data_points": len(snapshots),
+			"required":    service.MinDataPointsForForecast,
+		})
+	}
+
 	var result interface{}
 	switch model {
 	case service.ForecastModelLinear:
 		forecast, err := h.engine.LinearRegressionForecast(snapshots, months, app.ID)
 		if err == service.ErrInsufficientData {
-			writeJSONError(w, http.StatusUnprocessableEntity,
-				"insufficient data for forecasting — need at least 90 daily snapshots")
+			writeInsufficientData()
 			return
 		}
 		if err != nil {
@@ -97,8 +106,7 @@ func (h *ForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request) {
 	case service.ForecastModelExponential:
 		forecast, err := h.engine.ExponentialSmoothingForecast(snapshots, months, alpha, app.ID)
 		if err == service.ErrInsufficientData {
-			writeJSONError(w, http.StatusUnprocessableEntity,
-				"insufficient data for forecasting — need at least 90 daily snapshots")
+			writeInsufficientData()
 			return
 		}
 		if err != nil {

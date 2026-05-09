@@ -106,7 +106,12 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 
 		for _, ev := range events {
 			rawData, _ := json.Marshal(ev)
-			allEvents = append(allEvents, entity.NewAppEvent(payload.AppID, sub.ShopifyShopGID, ev.Type, ev.OccurredAt, rawData))
+			// Store myshopify domain for display; fall back to GID if domain is empty
+			shopIdentifier := sub.ShopifyShopGID
+			if sub.MyshopifyDomain != "" {
+				shopIdentifier = sub.MyshopifyDomain
+			}
+			allEvents = append(allEvents, entity.NewAppEvent(payload.AppID, shopIdentifier, ev.Type, ev.OccurredAt, rawData))
 		}
 
 		completed++

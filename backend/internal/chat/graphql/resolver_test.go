@@ -93,6 +93,9 @@ func (m *mockTransactionRepo) FindByDomain(ctx context.Context, appID uuid.UUID,
 func (m *mockTransactionRepo) GetEarningsSummaryByDomain(ctx context.Context, appID uuid.UUID, domain string) (*repository.EarningsSummary, error) {
 	return nil, nil
 }
+func (m *mockTransactionRepo) FindByAppIDPaginated(ctx context.Context, appID uuid.UUID, filters repository.TransactionFilters) (*repository.TransactionPage, error) {
+	return &repository.TransactionPage{Transactions: m.transactions, Total: len(m.transactions), Page: 1, PageSize: 20, TotalPages: 1}, m.err
+}
 
 type mockSnapshotRepo struct {
 	snapshot  *entity.DailyMetricsSnapshot
@@ -101,6 +104,9 @@ type mockSnapshotRepo struct {
 }
 
 func (m *mockSnapshotRepo) Upsert(ctx context.Context, s *entity.DailyMetricsSnapshot) error {
+	return nil
+}
+func (m *mockSnapshotRepo) UpsertBatch(ctx context.Context, snapshots []*entity.DailyMetricsSnapshot) error {
 	return nil
 }
 func (m *mockSnapshotRepo) FindByAppIDAndDate(ctx context.Context, appID uuid.UUID, date time.Time) (*entity.DailyMetricsSnapshot, error) {
@@ -359,7 +365,7 @@ func TestMetricsTrend_ReturnsSnapshots(t *testing.T) {
 	})
 
 	months := 3
-	result, err := resolver.MetricsTrend(context.Background(), appID.String(), &months)
+	result, err := resolver.MetricsTrend(context.Background(), appID.String(), &months, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

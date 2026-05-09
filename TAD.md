@@ -152,6 +152,18 @@ Infrastructure (PostgreSQL, Firebase, Shopify API implementations)
          ▼
 ┌─────────────────┐
 │ SnapshotService │ (Daily, immutable)
+│                 │
+│ - Backfill 365d │
+│ - UpsertBatch   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   Trend API     │
+│                 │
+│ - Downsample    │
+│ - DAILY/WEEKLY/ │
+│   MONTHLY       │
 └────────┬────────┘
          │
          ▼

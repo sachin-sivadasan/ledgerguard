@@ -95,7 +95,7 @@ func TestEventHandler_List_DefaultPage(t *testing.T) {
 	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
 	appRepo := &mockAppRepoForSub{app: app}
 
-	handler := NewEventHandler(eventRepo, partnerRepo, appRepo)
+	handler := NewEventHandler(eventRepo, partnerRepo, appRepo, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/events", nil)
 	req = withURLParam(req, "appID", appID.String())
@@ -142,7 +142,7 @@ func TestEventHandler_List_CustomPage(t *testing.T) {
 	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
 	appRepo := &mockAppRepoForSub{app: app}
 
-	handler := NewEventHandler(eventRepo, partnerRepo, appRepo)
+	handler := NewEventHandler(eventRepo, partnerRepo, appRepo, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/events?page=2&pageSize=10", nil)
 	req = withURLParam(req, "appID", appID.String())

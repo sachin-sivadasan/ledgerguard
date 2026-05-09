@@ -4,12 +4,19 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
+	"sync/atomic"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue"
 )
+
+// storeBrandWorkers controls concurrent HTTP fetches.
+// Bounded by: mock server throughput (single-threaded Ruby) and
+// DB pool (25 max conns shared with other handlers/workers).
+const storeBrandWorkers = 10
 
 // StoreProcessor handles store_sync jobs (fetch shop brand data/logos)
 type StoreProcessor struct {
@@ -51,7 +58,6 @@ func NewStoreProcessor(
 func (p *StoreProcessor) Type() string { return entity.SyncJobTypeStoreSync }
 
 func (p *StoreProcessor) Process(ctx context.Context, payload *queue.SyncJobPayload) error {
-	// We don't need the access token for storefront brand fetching, but validate the app exists
 	_, err := p.appRepo.FindByID(ctx, payload.AppID)
 	if err != nil {
 		return fmt.Errorf("failed to find app %s: %w", payload.AppID, err)
@@ -94,40 +100,74 @@ func (p *StoreProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 		}
 	}
 
+	if len(newDomains) == 0 {
+		p.progress.ForceUpdate(ctx, payload.JobID, queue.Progress{Message: "All shop brands already fetched"})
+		return nil
+	}
+
 	p.progress.Update(ctx, payload.JobID, queue.Progress{
 		Total:   len(newDomains),
 		Message: fmt.Sprintf("Fetching brand data for %d new domains...", len(newDomains)),
 	})
 
-	fetched := 0
-	for i, domain := range newDomains {
-		if cancelled, _ := p.lockManager.IsCancelled(ctx, payload.JobID); cancelled {
-			return fmt.Errorf("job cancelled")
+	// Use concurrent workers for large domain lists (whale persona: 50K shops)
+	var fetched atomic.Int32
+	var completed atomic.Int32
+	sem := make(chan struct{}, storeBrandWorkers)
+	var wg sync.WaitGroup
+
+	for _, domain := range newDomains {
+		select {
+		case <-ctx.Done():
+			wg.Wait()
+			return ctx.Err()
+		default:
 		}
 
-		shop, err := p.brandFetcher.FetchBrand(ctx, domain)
-		if err != nil {
-			continue // Not critical
+		if int(completed.Load())%500 == 0 {
+			if cancelled, _ := p.lockManager.IsCancelled(ctx, payload.JobID); cancelled {
+				wg.Wait()
+				return fmt.Errorf("job cancelled")
+			}
 		}
 
-		if err := p.shopRepo.Upsert(ctx, shop); err != nil {
-			continue
-		}
-		fetched++
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(d string) {
+			defer wg.Done()
+			defer func() { <-sem }()
 
-		p.progress.Update(ctx, payload.JobID, queue.Progress{
-			Total:     len(newDomains),
-			Completed: i + 1,
-			Message:   fmt.Sprintf("Fetched %d/%d shop brands", i+1, len(newDomains)),
-		})
+			shop, err := p.brandFetcher.FetchBrand(ctx, d)
+			if err != nil {
+				completed.Add(1)
+				return
+			}
+			if err := p.shopRepo.Upsert(ctx, shop); err != nil {
+				completed.Add(1)
+				return
+			}
+			fetched.Add(1)
+			done := int(completed.Add(1))
+
+			if done%500 == 0 || done == len(newDomains) {
+				p.progress.Update(ctx, payload.JobID, queue.Progress{
+					Total:     len(newDomains),
+					Completed: done,
+					Message:   fmt.Sprintf("Fetched %d/%d shop brands (%d successful)", done, len(newDomains), fetched.Load()),
+				})
+			}
+		}(domain)
 	}
 
+	wg.Wait()
+
+	totalFetched := int(fetched.Load())
 	p.progress.ForceUpdate(ctx, payload.JobID, queue.Progress{
 		Total:     len(newDomains),
 		Completed: len(newDomains),
-		Message:   fmt.Sprintf("Fetched %d shop brands", fetched),
+		Message:   fmt.Sprintf("Fetched %d shop brands", totalFetched),
 	})
 
-	log.Printf("[queue] StoreProcessor: fetched %d brands for app %s (job %s)", fetched, payload.AppID, payload.JobID)
+	log.Printf("[queue] StoreProcessor: fetched %d/%d brands for app %s (job %s)", totalFetched, len(newDomains), payload.AppID, payload.JobID)
 	return nil
 }

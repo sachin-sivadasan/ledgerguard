@@ -24,7 +24,17 @@ class ForecastingTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Model selector — always visible
+          // Empty state with specific error message
+          if (forecast.isEmpty) ...[
+            LgEmptyState(
+              icon: Icons.timeline,
+              heading: 'Forecasting not yet available',
+              description: provider.forecastError ??
+                  'Revenue forecasting requires sufficient historical data. Check back after a few billing cycles.',
+            ),
+          ] else ...[
+
+          // Model selector — only when data available
           Row(
             children: [
               Text('Model:', style: theme.textTheme.titleSmall),
@@ -50,16 +60,6 @@ class ForecastingTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: LgSpacing.s400),
-
-          // Empty state with specific error message
-          if (forecast.isEmpty) ...[
-            LgEmptyState(
-              icon: Icons.timeline,
-              heading: 'Forecasting not yet available',
-              description: provider.forecastError ??
-                  'Revenue forecasting requires sufficient historical data. Check back after a few billing cycles.',
-            ),
-          ] else ...[
 
           // Summary card
           LgResponsive(

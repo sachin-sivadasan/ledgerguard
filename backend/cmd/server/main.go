@@ -246,6 +246,7 @@ func run() error {
 		metricsEngine := domainservice.NewMetricsEngine()
 		metricsAggregator := appservice.NewMetricsAggregationService(snapshotRepo, txRepo, metricsEngine)
 		metricsHandler = handler.NewMetricsHandler(metricsAggregator, appRepo, partnerRepo)
+		metricsHandler.SetTrendProvider(metricsAggregator)
 		log.Println("Metrics handler initialized with aggregation service")
 	} else {
 		// Fallback to handler without aggregator (will use mock data)
@@ -335,7 +336,7 @@ func run() error {
 	var revenueHandler *handler.RevenueHandler
 	if db != nil && partnerRepo != nil && appRepo != nil {
 		revenueRepo := persistence.NewPostgresRevenueRepository(db.Pool)
-		revenueSvc := appservice.NewRevenueMetricsService(revenueRepo)
+		revenueSvc := appservice.NewRevenueMetricsServiceWithTransactions(revenueRepo, txRepo)
 		revenueHandler = handler.NewRevenueHandler(revenueSvc, partnerRepo, appRepo)
 		log.Println("Revenue handler initialized")
 	}

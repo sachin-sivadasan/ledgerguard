@@ -15,3 +15,7 @@ personas:
     file: churning.yml
     name: "Churning Developer"
     description: "1 app, 40 stores, heavy churn"
+  "1005":
+    file: whale.yml
+    name: "Whale Partner"
+    description: "5 apps, 50K stores, ~1M transactions"

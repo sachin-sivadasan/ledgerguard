@@ -70,10 +70,14 @@ class _SubscriptionListScreenState extends State<SubscriptionListScreen>
     final dateFmt = DateFormat('MMM d, y');
     final appsList = context.watch<AppsProvider>().apps;
     final showAppFilter = appsList.length > 1;
+    final totalLabel = provider.demoMode
+        ? '${subs.length} subscriptions'
+        : '${provider.totalCount} subscriptions';
 
     return LgPage(
       title: 'Subscriptions',
-      subtitle: '${subs.length} subscriptions',
+      subtitle: totalLabel,
+      onRefresh: refreshData,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -207,6 +211,20 @@ class _SubscriptionListScreenState extends State<SubscriptionListScreen>
               }).toList(),
             ),
           ),
+
+          // Load More
+          if (provider.hasMore && !provider.demoMode)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: LgSpacing.s400),
+              child: Center(
+                child: provider.isLoadingMore
+                    ? const CircularProgressIndicator()
+                    : OutlinedButton(
+                        onPressed: provider.loadMore,
+                        child: const Text('Load More'),
+                      ),
+              ),
+            ),
         ],
       ),
     );

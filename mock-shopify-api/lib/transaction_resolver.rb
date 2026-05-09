@@ -6,12 +6,25 @@ class TransactionResolver
 
   def initialize(data_store)
     @store = data_store
+    @cache = {} # org_id → { transactions: [...], generated_at: Time }
+  end
+
+  # Invalidate cached transactions for a persona (call after data changes)
+  def invalidate_cache(org_id)
+    @cache.delete(org_id.to_s)
   end
 
   # Resolve transactions query with pagination and date filters
   # Returns Shopify Partner API compatible response
-  def resolve(org_id, first: 100, after: nil, created_at_min: nil, created_at_max: nil)
+  def resolve(org_id, first: 100, after: nil, created_at_min: nil, created_at_max: nil, app_id: nil)
     transactions = generate_transactions(org_id, created_at_min, created_at_max)
+
+    # Filter by app if specified (real Shopify API returns only the requested app's data)
+    if app_id
+      transactions = transactions.select { |t| t[:node]['app'] && t[:node]['app']['id'] == app_id }
+      # Re-assign cursors after filtering
+      transactions.each_with_index { |t, i| t[:cursor] = "cursor_#{i}" }
+    end
 
     # Handle cursor-based pagination
     start_index = 0
@@ -48,6 +61,14 @@ class TransactionResolver
   private
 
   def generate_transactions(org_id, created_at_min, created_at_max)
+    cache_key = org_id.to_s
+    no_date_filter = created_at_min.nil? && created_at_max.nil?
+
+    # Return cached full-range results if available
+    if no_date_filter && @cache[cache_key]
+      return @cache[cache_key][:transactions]
+    end
+
     transactions = []
     now = Time.now
 
@@ -59,6 +80,9 @@ class TransactionResolver
     subs = @store.subscriptions(org_id)
     usage = @store.usage_charges(org_id)
 
+    # Use seeded RNG for deterministic output per org
+    rng = Random.new(org_id.to_i * 7919)
+
     # Generate subscription transactions (monthly charges)
     subs.each_with_index do |sub, idx|
       app = apps[sub['app_index']] rescue nil
@@ -68,10 +92,13 @@ class TransactionResolver
       price = sub['price'].to_f
       charge_id = "gid://partners/AppSubscriptionCharge/#{900000 + idx}"
 
+      # Deterministic "last charge" offset per subscription
+      last_charge_offset = 1 + (rng.rand(25))
+
       # Generate monthly charges going back from now
       if sub['status'] == 'active'
         # Active: charges every 30 days up to now
-        charge_date = now - (rand(1..25) * 86400) # Last charge within 25 days
+        charge_date = now - (last_charge_offset * 86400)
         12.times do |month|
           t = charge_date - (month * 30 * 86400)
           break if t < min_time
@@ -128,30 +155,29 @@ class TransactionResolver
       end
     end
 
-    # Generate usage charges
+    # Generate usage charges (monthly, aligned to subscription billing cycle)
     usage.each_with_index do |uc, idx|
       app = apps[uc['app_index']] rescue nil
       shop = shops[uc['shop_index']] rescue nil
       next unless app && shop
 
       min_amt, max_amt = uc['amount_range']
-      freq_days = case uc['frequency']
-                  when 'daily' then 1
-                  when 'weekly' then 7
-                  when 'biweekly' then 14
-                  when 'monthly' then 30
-                  else 7
-                  end
 
-      charge_date = now - (rand(1..freq_days) * 86400)
-      52.times do |week|
-        t = charge_date - (week * freq_days * 86400)
-        break if t < min_time
+      # Usage charges are billed monthly. started_months_ago controls how far back.
+      started_months_ago = uc['started_months_ago'] || 12
+      earliest_usage = now - (started_months_ago * 30 * 86400)
+      effective_min = [min_time, earliest_usage].max
+
+      charge_offset = 1 + rng.rand(25)
+      charge_date = now - (charge_offset * 86400)
+      started_months_ago.times do |month|
+        t = charge_date - (month * 30 * 86400)
+        break if t < effective_min
         next if t > max_time
 
-        amount = (min_amt + rand * (max_amt - min_amt)).round(2)
+        amount = (min_amt + rng.rand * (max_amt - min_amt)).round(2)
         transactions << build_usage_sale(
-          id: 500000 + idx * 100 + week,
+          id: 500000 + idx * 100 + month,
           app: app,
           shop: shop,
           amount: amount,
@@ -166,6 +192,11 @@ class TransactionResolver
     # Assign cursors
     transactions.each_with_index do |t, i|
       t[:cursor] = "cursor_#{i}"
+    end
+
+    # Cache full-range results
+    if no_date_filter
+      @cache[cache_key] = { transactions: transactions, generated_at: Time.now }
     end
 
     transactions

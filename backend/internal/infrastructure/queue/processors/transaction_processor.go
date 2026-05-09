@@ -90,6 +90,7 @@ func (p *TransactionProcessor) Process(ctx context.Context, payload *queue.SyncJ
 	}
 
 	fetchCtx := external.WithOrganizationID(ctx, pCtx.OrganizationID)
+	fetchCtx = external.WithPartnerAppGID(fetchCtx, pCtx.App.PartnerAppID)
 
 	transactions, err := p.fetcher.FetchTransactions(fetchCtx, pCtx.AccessToken, payload.AppID, from, now)
 	if err != nil {

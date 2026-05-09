@@ -524,6 +524,10 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 	if cursor != "" {
 		variables["after"] = cursor
 	}
+	// Pass app GID so the API returns only this app's transactions
+	if appGID := c.getPartnerAppGID(ctx); appGID != "" {
+		variables["appId"] = appGID
+	}
 
 	url := fmt.Sprintf("%s/%s/api/2025-07/graphql.json", c.baseURL, organizationID)
 
@@ -661,8 +665,9 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 		transactionDate,
 	)
 
-	// Add shop details
+	// Add shop details and source app GID for per-app filtering
 	tx.ShopifyShopGID = shopGID
+	tx.PartnerAppGID = node.App.ID
 
 	// chargeId for AppSubscriptionSale is the subscription GID (gid://shopify/AppSubscription/...)
 	if node.ChargeID != "" {
@@ -726,10 +731,25 @@ func (c *ShopifyPartnerClient) getOrganizationID(ctx context.Context) string {
 type contextKey string
 
 const organizationIDKey contextKey = "organizationID"
+const partnerAppGIDKey contextKey = "partnerAppGID"
 
 // WithOrganizationID returns a new context with the organization ID set
 func WithOrganizationID(ctx context.Context, orgID string) context.Context {
 	return context.WithValue(ctx, organizationIDKey, orgID)
+}
+
+// WithPartnerAppGID returns a new context with the partner app GID set
+// (e.g. "gid://partners/App/2001") so the API query can filter by app
+func WithPartnerAppGID(ctx context.Context, gid string) context.Context {
+	return context.WithValue(ctx, partnerAppGIDKey, gid)
+}
+
+// getPartnerAppGID retrieves the partner app GID from context
+func (c *ShopifyPartnerClient) getPartnerAppGID(ctx context.Context) string {
+	if gid, ok := ctx.Value(partnerAppGIDKey).(string); ok {
+		return gid
+	}
+	return ""
 }
 
 // AppEvent represents an app lifecycle event from the Partner API

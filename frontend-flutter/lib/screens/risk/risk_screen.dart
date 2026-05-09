@@ -69,6 +69,7 @@ class _RiskScreenState extends State<RiskScreen>
     return LgPage(
       title: 'Risk Breakdown',
       subtitle: 'Subscription risk funnel and recovery playbooks',
+      onRefresh: refreshData,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -68,10 +68,14 @@ class _TransactionsScreenState extends State<TransactionsScreen>
     final txns = provider.transactions;
     final dateFmt = DateFormat('MMM d, y');
     final theme = Theme.of(context);
+    final totalLabel = provider.demoMode
+        ? '${txns.length} transactions'
+        : '${provider.totalCount} transactions';
 
     return LgPage(
       title: 'Transactions',
-      subtitle: '${txns.length} transactions',
+      subtitle: totalLabel,
+      onRefresh: refreshData,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: () {}),
       ],
@@ -87,10 +91,11 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                 value: provider.typeFilter,
                 onChanged: provider.setTypeFilter,
               ),
-              _AppFilter(
-                value: provider.selectedAppId,
-                onChanged: provider.setSelectedApp,
-              ),
+              if (context.watch<AppsProvider>().apps.length > 1)
+                _AppFilter(
+                  value: provider.selectedAppId,
+                  onChanged: provider.setSelectedApp,
+                ),
               if (provider.typeFilter != null)
                 TextButton(onPressed: provider.clearFilters, child: const Text('Clear')),
             ],
@@ -128,14 +133,6 @@ class _TransactionsScreenState extends State<TransactionsScreen>
           ),
           const SizedBox(height: LgSpacing.s300),
 
-          // Pagination label
-          if (txns.length > 50)
-            Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: Text('Showing 50 of ${txns.length} transactions',
-                  style: TextStyle(fontSize: 12, color: LgColors.textSecondary)),
-            ),
-
           // Empty filter state
           if (txns.isEmpty)
             Padding(
@@ -164,7 +161,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                 LgColumn(title: 'Gross', numeric: true),
                 LgColumn(title: 'Net', numeric: true),
               ],
-              rows: txns.take(50).map((txn) {
+              rows: txns.map((txn) {
                 return DataRow(cells: [
                   DataCell(Text(dateFmt.format(txn.date))),
                   DataCell(Text(txn.shopDomain.replaceAll('.myshopify.com', ''))),
@@ -176,6 +173,20 @@ class _TransactionsScreenState extends State<TransactionsScreen>
               }).toList(),
             ),
           ),
+
+          // Load More
+          if (provider.hasMore && !provider.demoMode)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: LgSpacing.s400),
+              child: Center(
+                child: provider.isLoadingMore
+                    ? const CircularProgressIndicator()
+                    : OutlinedButton(
+                        onPressed: provider.loadMore,
+                        child: const Text('Load More'),
+                      ),
+              ),
+            ),
         ],
       ),
     );

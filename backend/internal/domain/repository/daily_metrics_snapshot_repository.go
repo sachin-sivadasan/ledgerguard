@@ -14,6 +14,10 @@ type DailyMetricsSnapshotRepository interface {
 	// Uses ON CONFLICT (app_id, date) DO UPDATE for idempotency
 	Upsert(ctx context.Context, snapshot *entity.DailyMetricsSnapshot) error
 
+	// UpsertBatch creates or updates multiple snapshots in a single batch operation.
+	// Reduces round-trips for backfill (365 snapshots → ~7 batches of 50).
+	UpsertBatch(ctx context.Context, snapshots []*entity.DailyMetricsSnapshot) error
+
 	// FindByAppIDAndDate retrieves a snapshot for a specific app and date
 	FindByAppIDAndDate(ctx context.Context, appID uuid.UUID, date time.Time) (*entity.DailyMetricsSnapshot, error)
 

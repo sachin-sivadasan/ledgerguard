@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -136,4 +137,64 @@ func (s *MetricsAggregationService) GetPeriodMetricsWithPreset(
 ) (*entity.PeriodMetrics, error) {
 	dateRange := valueobject.DateRangeForPreset(preset, now)
 	return s.GetPeriodMetrics(ctx, appID, dateRange)
+}
+
+// GetTrendSnapshots fetches daily snapshots for a date range and downsamples
+// to the requested granularity.
+func (s *MetricsAggregationService) GetTrendSnapshots(
+	ctx context.Context,
+	appID uuid.UUID,
+	from, to time.Time,
+	granularity valueobject.Granularity,
+) ([]*entity.DailyMetricsSnapshot, error) {
+	snapshots, err := s.snapshotRepo.FindByAppIDRange(ctx, appID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	return DownsampleSnapshots(snapshots, granularity), nil
+}
+
+// DownsampleSnapshots reduces daily snapshots to the requested granularity
+// by picking the last snapshot in each period (end-of-week / end-of-month).
+// For daily granularity, returns snapshots unchanged.
+func DownsampleSnapshots(snapshots []*entity.DailyMetricsSnapshot, g valueobject.Granularity) []*entity.DailyMetricsSnapshot {
+	if g == valueobject.GranularityDaily || len(snapshots) == 0 {
+		return snapshots
+	}
+
+	var result []*entity.DailyMetricsSnapshot
+	var currentPeriodKey string
+	var lastInPeriod *entity.DailyMetricsSnapshot
+
+	for _, snap := range snapshots {
+		key := periodKey(snap.Date, g)
+		if key != currentPeriodKey {
+			// New period — flush previous
+			if lastInPeriod != nil {
+				result = append(result, lastInPeriod)
+			}
+			currentPeriodKey = key
+		}
+		lastInPeriod = snap
+	}
+
+	// Flush final period
+	if lastInPeriod != nil {
+		result = append(result, lastInPeriod)
+	}
+
+	return result
+}
+
+// periodKey returns a string key that groups dates into periods.
+func periodKey(date time.Time, g valueobject.Granularity) string {
+	switch g {
+	case valueobject.GranularityWeekly:
+		year, week := date.ISOWeek()
+		return fmt.Sprintf("%d-W%02d", year, week)
+	case valueobject.GranularityMonthly:
+		return date.Format("2006-01")
+	default:
+		return date.Format("2006-01-02")
+	}
 }

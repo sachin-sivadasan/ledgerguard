@@ -50,8 +50,9 @@ func (e *executor) getLatestMetrics(ctx context.Context, call chat.ToolCall) cha
 }
 
 type trendArgs struct {
-	AppID  string `json:"app_id"`
-	Months *int   `json:"months,omitempty"`
+	AppID       string  `json:"app_id"`
+	Months      *int    `json:"months,omitempty"`
+	Granularity *string `json:"granularity,omitempty"`
 }
 
 func (e *executor) getMetricsTrend(ctx context.Context, call chat.ToolCall) chat.ToolResult {
@@ -64,9 +65,12 @@ func (e *executor) getMetricsTrend(ctx context.Context, call chat.ToolCall) chat
 	if args.Months != nil {
 		vars["months"] = *args.Months
 	}
+	if args.Granularity != nil {
+		vars["granularity"] = *args.Granularity
+	}
 
-	query := `query($appId: ID!, $months: Int) {
-		metricsTrend(appId: $appId, months: $months) {
+	query := `query($appId: ID!, $months: Int, $granularity: Granularity) {
+		metricsTrend(appId: $appId, months: $months, granularity: $granularity) {
 			date activeMrrCents renewalSuccessRate revenueAtRiskCents safeCount churnedCount
 		}
 	}`

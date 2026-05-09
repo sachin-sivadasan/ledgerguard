@@ -65,10 +65,14 @@ class _StoreListScreenState extends State<StoreListScreen>
     final theme = Theme.of(context);
     final appsList = context.watch<AppsProvider>().apps;
     final showAppFilter = appsList.length > 1;
+    final totalLabel = provider.demoMode
+        ? '${stores.length} stores'
+        : '${provider.totalCount} stores';
 
     return LgPage(
       title: 'Stores',
-      subtitle: '${stores.length} stores',
+      subtitle: totalLabel,
+      onRefresh: refreshData,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -152,6 +156,20 @@ class _StoreListScreenState extends State<StoreListScreen>
               );
             },
           ),
+
+          // Load More
+          if (provider.hasMore && !provider.demoMode)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: LgSpacing.s400),
+              child: Center(
+                child: provider.isLoadingMore
+                    ? const CircularProgressIndicator()
+                    : OutlinedButton(
+                        onPressed: provider.loadMore,
+                        child: const Text('Load More'),
+                      ),
+              ),
+            ),
         ],
       ),
     );

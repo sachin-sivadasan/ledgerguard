@@ -304,11 +304,8 @@ subscriptions:
   - { app_index: 3, shop_index: 155, plan_name: "Pro", price: "29.99", interval: "EVERY_30_DAYS", status: "active" }
 
 usage_charges:
-  - { app_index: 1, shop_index: 50, amount_range: [10.00, 100.00], frequency: "weekly" }
-  - { app_index: 1, shop_index: 51, amount_range: [5.00, 60.00], frequency: "weekly" }
-  - { app_index: 1, shop_index: 52, amount_range: [15.00, 120.00], frequency: "weekly" }
-  - { app_index: 2, shop_index: 100, amount_range: [20.00, 200.00], frequency: "biweekly" }
-  - { app_index: 2, shop_index: 101, amount_range: [10.00, 80.00], frequency: "biweekly" }
+  - { app_index: 1, amount_range: [5.00, 120.00], shop_ratio: 0.25 }
+  - { app_index: 2, amount_range: [10.00, 200.00], shop_ratio: 0.20 }
 
 events:
   - { type: "RELATIONSHIP_INSTALLED", app_index: 0, shop_index: 0, days_ago: 360 }

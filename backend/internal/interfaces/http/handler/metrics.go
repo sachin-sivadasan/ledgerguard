@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,11 +21,17 @@ type MetricsAggregator interface {
 	GetPeriodMetrics(ctx context.Context, appID uuid.UUID, dateRange valueobject.DateRange) (*entity.PeriodMetrics, error)
 }
 
+// TrendProvider provides downsampled snapshot trends
+type TrendProvider interface {
+	GetTrendSnapshots(ctx context.Context, appID uuid.UUID, from, to time.Time, granularity valueobject.Granularity) ([]*entity.DailyMetricsSnapshot, error)
+}
+
 type MetricsHandler struct {
-	aggregator  MetricsAggregator
-	appRepo     repository.AppRepository
-	partnerRepo repository.PartnerAccountRepository
-	tracker     domainservice.EventTracker
+	aggregator    MetricsAggregator
+	trendProvider TrendProvider
+	appRepo       repository.AppRepository
+	partnerRepo   repository.PartnerAccountRepository
+	tracker       domainservice.EventTracker
 }
 
 // SetTracker sets the event tracker for dashboard view events.
@@ -42,6 +49,11 @@ func NewMetricsHandler(
 		appRepo:     appRepo,
 		partnerRepo: partnerRepo,
 	}
+}
+
+// SetTrendProvider sets the trend provider for the trend endpoint.
+func (h *MetricsHandler) SetTrendProvider(tp TrendProvider) {
+	h.trendProvider = tp
 }
 
 // GetLatestMetrics returns the latest metrics for an app.
@@ -84,6 +96,90 @@ func (h *MetricsHandler) GetLatestMetrics(w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(metrics)
+}
+
+// trendSnapshotResponse represents a single snapshot in the trend response
+type trendSnapshotResponse struct {
+	Date                 string  `json:"date"`
+	ActiveMRRCents       int64   `json:"active_mrr_cents"`
+	RevenueAtRiskCents   int64   `json:"revenue_at_risk_cents"`
+	UsageRevenueCents    int64   `json:"usage_revenue_cents"`
+	TotalRevenueCents    int64   `json:"total_revenue_cents"`
+	RenewalSuccessRate   float64 `json:"renewal_success_rate"`
+	SafeCount            int     `json:"safe_count"`
+	OneCycleMissedCount  int     `json:"one_cycle_missed_count"`
+	TwoCyclesMissedCount int     `json:"two_cycles_missed_count"`
+	ChurnedCount         int     `json:"churned_count"`
+	TotalSubscriptions   int     `json:"total_subscriptions"`
+}
+
+// GetMetricsTrend returns time-series snapshots with optional granularity downsampling.
+// GET /api/v1/apps/{appID}/metrics/trend?months=6&granularity=daily
+func (h *MetricsHandler) GetMetricsTrend(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
+		return
+	}
+
+	if h.trendProvider == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "trend provider not configured")
+		return
+	}
+
+	// Parse months (1-12, default 6)
+	months := 6
+	if m := r.URL.Query().Get("months"); m != "" {
+		if parsed, err := strconv.Atoi(m); err == nil && parsed >= 1 && parsed <= 12 {
+			months = parsed
+		}
+	}
+
+	// Parse granularity
+	granularity := valueobject.ParseGranularity(r.URL.Query().Get("granularity"))
+
+	now := time.Now().UTC()
+	from := now.AddDate(0, -months, 0)
+
+	snapshots, err := h.trendProvider.GetTrendSnapshots(r.Context(), app.ID, from, now, granularity)
+	if err != nil {
+		log.Printf("Failed to get trend snapshots for app %s: %v", app.ID, err)
+		writeJSONError(w, http.StatusInternalServerError, "failed to fetch trend data")
+		return
+	}
+
+	// Build response
+	data := make([]trendSnapshotResponse, 0, len(snapshots))
+	for _, s := range snapshots {
+		data = append(data, trendSnapshotResponse{
+			Date:                 s.Date.Format("2006-01-02"),
+			ActiveMRRCents:       s.ActiveMRRCents,
+			RevenueAtRiskCents:   s.RevenueAtRiskCents,
+			UsageRevenueCents:    s.UsageRevenueCents,
+			TotalRevenueCents:    s.TotalRevenueCents,
+			RenewalSuccessRate:   s.RenewalSuccessRate,
+			SafeCount:            s.SafeCount,
+			OneCycleMissedCount:  s.OneCycleMissedCount,
+			TwoCyclesMissedCount: s.TwoCyclesMissedCount,
+			ChurnedCount:         s.ChurnedCount,
+			TotalSubscriptions:   s.TotalSubscriptions,
+		})
+	}
+
+	resp := map[string]any{
+		"granularity": granularity.String(),
+		"data_points": len(data),
+		"snapshots":   data,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }
 
 // metricsResponse represents the JSON response for period metrics

@@ -146,7 +146,7 @@ Subscription lifecycle events for churn analysis and auditing.
 - `idx_subscription_events_churn` - Find churn events (WHERE to_risk_state = 'CHURNED')
 
 ### daily_metrics_snapshot
-Immutable daily KPI snapshots.
+Immutable daily KPI snapshots. **Single table serves all granularities** (daily/weekly/monthly) — weekly and monthly views are derived at query time via `DownsampleSnapshots()` which picks the last snapshot per period. No separate tables needed (see ADR-041 in DECISIONS.md).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
@@ -539,6 +539,7 @@ CREATE TRIGGER notification_preferences_updated_at
 2. **Encryption:** `encrypted_access_token` uses AES-256-GCM with app-level master key
 3. **Soft Delete:** Implemented for subscriptions via `deleted_at` column; use `tracking_enabled` for apps
 4. **Retention:** Transactions kept for 12 months; snapshots kept permanently
+6. **Granularity:** `daily_metrics_snapshot` stores daily rows only. Weekly/monthly views are computed at query time via `DownsampleSnapshots()` (ADR-041). ~365 rows/year/app is trivial for PostgreSQL. `UpsertBatch` writes snapshots in multi-row batches of 50 for efficient backfill.
 5. **Timezone:** All timestamps in UTC (TIMESTAMPTZ)
 
 ---

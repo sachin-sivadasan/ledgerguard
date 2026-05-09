@@ -22,6 +22,10 @@ func (m *mockSnapshotRepo) Upsert(ctx context.Context, snapshot *entity.DailyMet
 	return m.err
 }
 
+func (m *mockSnapshotRepo) UpsertBatch(ctx context.Context, snapshots []*entity.DailyMetricsSnapshot) error {
+	return m.err
+}
+
 func (m *mockSnapshotRepo) FindByAppIDAndDate(ctx context.Context, appID uuid.UUID, date time.Time) (*entity.DailyMetricsSnapshot, error) {
 	for _, s := range m.snapshots {
 		if s.AppID == appID && s.Date.Equal(date) {
@@ -103,6 +107,9 @@ func (m *mockTxRepo) FindByDomain(ctx context.Context, appID uuid.UUID, domain s
 
 func (m *mockTxRepo) GetEarningsSummaryByDomain(ctx context.Context, appID uuid.UUID, domain string) (*repository.EarningsSummary, error) {
 	return &repository.EarningsSummary{}, nil
+}
+func (m *mockTxRepo) FindByAppIDPaginated(ctx context.Context, appID uuid.UUID, filters repository.TransactionFilters) (*repository.TransactionPage, error) {
+	return &repository.TransactionPage{}, nil
 }
 
 // Helper to create a snapshot with all fields
@@ -331,6 +338,112 @@ func TestGetPeriodMetricsWithPreset(t *testing.T) {
 	// Usage revenue should come from transactions
 	if result.Current.UsageRevenueCents != 5000 {
 		t.Errorf("expected UsageRevenue 5000, got %d", result.Current.UsageRevenueCents)
+	}
+}
+
+func TestDownsample_Weekly(t *testing.T) {
+	appID := uuid.New()
+
+	// Create 30 daily snapshots
+	snapshots := make([]*entity.DailyMetricsSnapshot, 30)
+	for i := 0; i < 30; i++ {
+		date := time.Date(2026, 3, 1+i, 0, 0, 0, 0, time.UTC)
+		s := entity.NewDailyMetricsSnapshot(appID, date)
+		s.SetMetrics(int64(100000+i*1000), 0, 0, 0, 0.9, 10, 0, 0, 0)
+		snapshots[i] = s
+	}
+
+	result := DownsampleSnapshots(snapshots, valueobject.GranularityWeekly)
+
+	// 30 days spans ~4-5 ISO weeks
+	if len(result) < 4 || len(result) > 6 {
+		t.Errorf("expected 4-6 weekly snapshots from 30 daily, got %d", len(result))
+	}
+
+	// Each weekly snapshot should be the last day in its ISO week
+	for i := 1; i < len(result); i++ {
+		if !result[i].Date.After(result[i-1].Date) {
+			t.Errorf("weekly snapshots not in order: %v not after %v", result[i].Date, result[i-1].Date)
+		}
+	}
+}
+
+func TestDownsample_Monthly(t *testing.T) {
+	appID := uuid.New()
+
+	// Create 90 daily snapshots spanning 3 months
+	snapshots := make([]*entity.DailyMetricsSnapshot, 0)
+	for i := 0; i < 90; i++ {
+		date := time.Date(2026, 1, 1+i, 0, 0, 0, 0, time.UTC)
+		s := entity.NewDailyMetricsSnapshot(appID, date)
+		s.SetMetrics(int64(100000+i*1000), 0, 0, 0, 0.9, 10, 0, 0, 0)
+		snapshots = append(snapshots, s)
+	}
+
+	result := DownsampleSnapshots(snapshots, valueobject.GranularityMonthly)
+
+	// 90 days from Jan 1 → 3 months (Jan, Feb, Mar + possibly Apr)
+	if len(result) < 3 || len(result) > 4 {
+		t.Errorf("expected 3-4 monthly snapshots from 90 daily, got %d", len(result))
+	}
+}
+
+func TestDownsample_Daily(t *testing.T) {
+	appID := uuid.New()
+	snapshots := []*entity.DailyMetricsSnapshot{
+		func() *entity.DailyMetricsSnapshot {
+			s := entity.NewDailyMetricsSnapshot(appID, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+			s.SetMetrics(100000, 0, 0, 0, 0.9, 10, 0, 0, 0)
+			return s
+		}(),
+		func() *entity.DailyMetricsSnapshot {
+			s := entity.NewDailyMetricsSnapshot(appID, time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC))
+			s.SetMetrics(100000, 0, 0, 0, 0.9, 10, 0, 0, 0)
+			return s
+		}(),
+	}
+
+	result := DownsampleSnapshots(snapshots, valueobject.GranularityDaily)
+
+	if len(result) != 2 {
+		t.Errorf("expected 2 daily snapshots (passthrough), got %d", len(result))
+	}
+}
+
+func TestDownsample_Empty(t *testing.T) {
+	result := DownsampleSnapshots(nil, valueobject.GranularityWeekly)
+	if len(result) != 0 {
+		t.Errorf("expected 0 for empty input, got %d", len(result))
+	}
+
+	result = DownsampleSnapshots([]*entity.DailyMetricsSnapshot{}, valueobject.GranularityMonthly)
+	if len(result) != 0 {
+		t.Errorf("expected 0 for empty slice, got %d", len(result))
+	}
+}
+
+func TestDownsample_PicksLastInPeriod(t *testing.T) {
+	appID := uuid.New()
+
+	// Create snapshots for a single month with increasing MRR
+	snapshots := make([]*entity.DailyMetricsSnapshot, 0)
+	for i := 1; i <= 31; i++ {
+		date := time.Date(2026, 1, i, 0, 0, 0, 0, time.UTC)
+		s := entity.NewDailyMetricsSnapshot(appID, date)
+		s.SetMetrics(int64(i*1000), 0, 0, 0, 0.9, 10, 0, 0, 0)
+		snapshots = append(snapshots, s)
+	}
+
+	result := DownsampleSnapshots(snapshots, valueobject.GranularityMonthly)
+
+	// Single month → 1 snapshot
+	if len(result) != 1 {
+		t.Fatalf("expected 1 monthly snapshot, got %d", len(result))
+	}
+
+	// Should pick the last day (Jan 31), which has MRR = 31000
+	if result[0].ActiveMRRCents != 31000 {
+		t.Errorf("expected last-of-month MRR 31000, got %d", result[0].ActiveMRRCents)
 	}
 }
 

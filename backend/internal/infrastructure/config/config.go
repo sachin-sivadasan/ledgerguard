@@ -73,12 +73,13 @@ type FirebaseConfig struct {
 }
 
 type ShopifyConfig struct {
-	ClientID      string  `yaml:"client_id"`
-	ClientSecret  string  `yaml:"client_secret"`
-	RedirectURI   string  `yaml:"redirect_uri"`
-	Scopes        string  `yaml:"scopes"`
-	RateLimitRPS  float64 `yaml:"rate_limit_rps"`  // Requests per second for Partner API (default: 3)
-	PartnerAPIURL string  `yaml:"partner_api_url"` // Override base URL (for mock server)
+	ClientID          string  `yaml:"client_id"`
+	ClientSecret      string  `yaml:"client_secret"`
+	RedirectURI       string  `yaml:"redirect_uri"`
+	Scopes            string  `yaml:"scopes"`
+	RateLimitRPS      float64 `yaml:"rate_limit_rps"`      // Requests per second for Partner API (default: 3)
+	PartnerAPIURL     string  `yaml:"partner_api_url"`     // Override base URL (for mock server)
+	StorefrontBaseURL string  `yaml:"storefront_base_url"` // Override storefront URL (for mock server)
 }
 
 type EncryptionConfig struct {

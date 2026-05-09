@@ -18,13 +18,15 @@ const storefrontAPIVersion = "2026-01"
 // ShopifyStorefrontClient fetches public brand data from Shopify Storefront API
 type ShopifyStorefrontClient struct {
 	httpClient *http.Client
+	baseURL    string // empty = real Shopify, set = mock/proxy server
 }
 
-func NewShopifyStorefrontClient() *ShopifyStorefrontClient {
+func NewShopifyStorefrontClient(baseURL string) *ShopifyStorefrontClient {
 	return &ShopifyStorefrontClient{
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
+		baseURL: baseURL,
 	}
 }
 
@@ -79,7 +81,12 @@ type storefrontResponse struct {
 // FetchBrand fetches brand data for a shop from the public Storefront API.
 // Returns a Shop entity populated with brand info. On failure, returns an empty Shop (no logo).
 func (c *ShopifyStorefrontClient) FetchBrand(ctx context.Context, myshopifyDomain string) (*entity.Shop, error) {
-	url := fmt.Sprintf("https://%s/api/%s/graphql.json", myshopifyDomain, storefrontAPIVersion)
+	var url string
+	if c.baseURL != "" {
+		url = fmt.Sprintf("%s/%s/graphql.json", c.baseURL, myshopifyDomain)
+	} else {
+		url = fmt.Sprintf("https://%s/api/%s/graphql.json", myshopifyDomain, storefrontAPIVersion)
+	}
 
 	body, err := json.Marshal(map[string]string{
 		"query": storefrontBrandQuery,

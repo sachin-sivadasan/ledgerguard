@@ -8,6 +8,24 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 )
 
+// TransactionFilters holds pagination and filter params for transactions.
+type TransactionFilters struct {
+	From       time.Time
+	To         time.Time
+	ChargeType string // optional filter
+	Page       int
+	PageSize   int
+}
+
+// TransactionPage is a paginated result set of transactions.
+type TransactionPage struct {
+	Transactions []*entity.Transaction
+	Total        int
+	Page         int
+	PageSize     int
+	TotalPages   int
+}
+
 // EarningsSummary contains aggregated earnings by status
 type EarningsSummary struct {
 	PendingCents   int64
@@ -45,6 +63,9 @@ type TransactionRepository interface {
 
 	// GetUpcomingAvailability returns earnings becoming available in the next N days
 	GetUpcomingAvailability(ctx context.Context, appID uuid.UUID, days int) ([]EarningsByDate, error)
+
+	// FindByAppIDPaginated returns a paginated set of transactions for an app.
+	FindByAppIDPaginated(ctx context.Context, appID uuid.UUID, filters TransactionFilters) (*TransactionPage, error)
 
 	// FindByDomain returns transactions for a specific store domain within an app
 	FindByDomain(ctx context.Context, appID uuid.UUID, domain string, from, to time.Time) ([]*entity.Transaction, error)

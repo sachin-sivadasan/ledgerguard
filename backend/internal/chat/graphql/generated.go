@@ -115,7 +115,7 @@ type ComplexityRoot struct {
 		Apps          func(childComplexity int) int
 		Earnings      func(childComplexity int, appID string) int
 		Metrics       func(childComplexity int, appID string) int
-		MetricsTrend  func(childComplexity int, appID string, months *int) int
+		MetricsTrend  func(childComplexity int, appID string, months *int, granularity *Granularity) int
 		RiskSummary   func(childComplexity int, appID string) int
 		StoreHealth   func(childComplexity int, appID string, domain string) int
 		Subscription  func(childComplexity int, id string) int
@@ -167,7 +167,7 @@ type QueryResolver interface {
 	Subscriptions(ctx context.Context, appID string, riskState *RiskState, status *AppSubscriptionStatus, domain *string, limit *int, offset *int) (*AppSubscriptionConnection, error)
 	Subscription(ctx context.Context, id string) (*AppSubscription, error)
 	Metrics(ctx context.Context, appID string) (*Metrics, error)
-	MetricsTrend(ctx context.Context, appID string, months *int) ([]*DailySnapshot, error)
+	MetricsTrend(ctx context.Context, appID string, months *int, granularity *Granularity) ([]*DailySnapshot, error)
 	StoreHealth(ctx context.Context, appID string, domain string) (*StoreHealth, error)
 	Earnings(ctx context.Context, appID string) (*Earnings, error)
 	Transactions(ctx context.Context, appID string, chargeType *ChargeType, domain *string, startDate *time.Time, endDate *time.Time, limit *int, offset *int) (*TransactionConnection, error)
@@ -559,7 +559,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.MetricsTrend(childComplexity, args["appId"].(string), args["months"].(*int)), true
+		return e.ComplexityRoot.Query.MetricsTrend(childComplexity, args["appId"].(string), args["months"].(*int), args["granularity"].(*Granularity)), true
 	case "Query.riskSummary":
 		if e.ComplexityRoot.Query.RiskSummary == nil {
 			break
@@ -925,6 +925,11 @@ func (ec *executionContext) field_Query_metricsTrend_args(ctx context.Context, r
 		return nil, err
 	}
 	args["months"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "granularity", ec.unmarshalOGranularity2ᚖgithubᚗcomᚋsachinᚑsivadasanᚋledgerguardᚋinternalᚋchatᚋgraphqlᚐGranularity)
+	if err != nil {
+		return nil, err
+	}
+	args["granularity"] = arg2
 	return args, nil
 }
 
@@ -2835,7 +2840,7 @@ func (ec *executionContext) _Query_metricsTrend(ctx context.Context, field graph
 		ec.fieldContext_Query_metricsTrend,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().MetricsTrend(ctx, fc.Args["appId"].(string), fc.Args["months"].(*int))
+			return ec.Resolvers.Query().MetricsTrend(ctx, fc.Args["appId"].(string), fc.Args["months"].(*int), fc.Args["granularity"].(*Granularity))
 		},
 		nil,
 		ec.marshalNDailySnapshot2ᚕᚖgithubᚗcomᚋsachinᚑsivadasanᚋledgerguardᚋinternalᚋchatᚋgraphqlᚐDailySnapshotᚄ,
@@ -7585,6 +7590,22 @@ func (ec *executionContext) marshalODateTime2ᚖtimeᚐTime(ctx context.Context,
 	_ = ctx
 	res := graphql.MarshalTime(*v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOGranularity2ᚖgithubᚗcomᚋsachinᚑsivadasanᚋledgerguardᚋinternalᚋchatᚋgraphqlᚐGranularity(ctx context.Context, v any) (*Granularity, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(Granularity)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOGranularity2ᚖgithubᚗcomᚋsachinᚑsivadasanᚋledgerguardᚋinternalᚋchatᚋgraphqlᚐGranularity(ctx context.Context, sel ast.SelectionSet, v *Granularity) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v any) (*int, error) {

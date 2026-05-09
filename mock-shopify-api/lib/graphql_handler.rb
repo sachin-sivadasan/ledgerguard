@@ -8,6 +8,11 @@ class GraphQLHandler
     @store = data_store
   end
 
+  # Invalidate transaction cache for a persona (call after data changes)
+  def invalidate_transaction_cache(org_id)
+    @transaction_resolver.invalidate_cache(org_id)
+  end
+
   def handle(org_id, query, variables = {})
     query = query.to_s.strip
 
@@ -29,6 +34,7 @@ class GraphQLHandler
     after = extract_string(query, 'after') || variables['after']
     created_at_min = extract_string(query, 'createdAtMin') || variables['createdAtMin']
     created_at_max = extract_string(query, 'createdAtMax') || variables['createdAtMax']
+    app_id = extract_gid(query, 'appId') || variables['appId']
 
     # Check if this is a discovery query (no date filters)
     if created_at_min.nil? && created_at_max.nil? && !query.include?('createdAtMin')
@@ -39,7 +45,8 @@ class GraphQLHandler
         first: first,
         after: after,
         created_at_min: created_at_min,
-        created_at_max: created_at_max
+        created_at_max: created_at_max,
+        app_id: app_id
       )
     end
   end

@@ -168,10 +168,11 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 	from := now.AddDate(-1, 0, 0) // 12 months ago
 	to := now
 
-	// Add organization ID to context for the Partner API client
+	// Add organization ID and app GID to context for the Partner API client
 	fetchCtx := external.WithOrganizationID(ctx, partnerAccount.PartnerID)
+	fetchCtx = external.WithPartnerAppGID(fetchCtx, app.PartnerAppID)
 
-	// Fetch transactions from Partner API
+	// Fetch transactions from Partner API (filtered by app)
 	transactions, err := s.fetcher.FetchTransactions(fetchCtx, string(accessToken), appID, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch transactions: %w", err)

@@ -21,12 +21,13 @@ func toolDefinitions() []chat.ToolDefinition {
 		},
 		{
 			Name:        "get_metrics_trend",
-			Description: "Get historical metrics trend from daily snapshots over a period of months.",
+			Description: "Get historical metrics trend from daily snapshots over a period of months. Supports granularity downsampling (daily/weekly/monthly).",
 			Parameters: json.RawMessage(`{
 				"type": "object",
 				"properties": {
 					"app_id": {"type": "string", "description": "The app UUID"},
-					"months": {"type": "integer", "description": "Number of months of history (default 6)"}
+					"months": {"type": "integer", "description": "Number of months of history (default 6)"},
+					"granularity": {"type": "string", "enum": ["DAILY", "WEEKLY", "MONTHLY"], "description": "Time granularity (default DAILY)"}
 				},
 				"required": ["app_id"]
 			}`),

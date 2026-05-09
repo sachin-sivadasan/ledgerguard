@@ -302,6 +302,63 @@ func (e ChargeType) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type Granularity string
+
+const (
+	GranularityDaily   Granularity = "DAILY"
+	GranularityWeekly  Granularity = "WEEKLY"
+	GranularityMonthly Granularity = "MONTHLY"
+)
+
+var AllGranularity = []Granularity{
+	GranularityDaily,
+	GranularityWeekly,
+	GranularityMonthly,
+}
+
+func (e Granularity) IsValid() bool {
+	switch e {
+	case GranularityDaily, GranularityWeekly, GranularityMonthly:
+		return true
+	}
+	return false
+}
+
+func (e Granularity) String() string {
+	return string(e)
+}
+
+func (e *Granularity) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = Granularity(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid Granularity", str)
+	}
+	return nil
+}
+
+func (e Granularity) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *Granularity) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e Granularity) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type RiskState string
 
 const (

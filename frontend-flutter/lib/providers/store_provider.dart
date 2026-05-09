@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_stores.dart';
@@ -13,21 +15,30 @@ class StoreProvider extends ChangeNotifier {
 
   bool _demoMode = false;
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   String? _error;
   String _searchQuery = '';
   String? _selectedAppId;
   CancelToken? _cancelToken;
+  Timer? _searchDebounce;
 
   List<Store> _liveStores = [];
   final List<Subscription> _liveStoreSubscriptions = [];
+  int _currentPage = 1;
+  int _totalPages = 1;
+  int _totalCount = 0;
+  static const int _pageSize = 20;
 
   StoreProvider(this._storeService, this._subscriptionService);
 
   bool get demoMode => _demoMode;
   bool get isLoading => _isLoading;
+  bool get isLoadingMore => _isLoadingMore;
   String? get error => _error;
   String get searchQuery => _searchQuery;
   String? get selectedAppId => _selectedAppId;
+  bool get hasMore => _currentPage < _totalPages;
+  int get totalCount => _totalCount;
 
   void setDemoMode(bool value) {
     _demoMode = value;
@@ -48,15 +59,31 @@ class StoreProvider extends ChangeNotifier {
     _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
+    _currentPage = 1;
+    _liveStores = [];
     notifyListeners();
     try {
-      _liveStores = await _storeService.fetchStores(appId,
-          cancelToken: _cancelToken);
-      final subs = await _subscriptionService.fetchSubscriptions(appId,
-          cancelToken: _cancelToken);
+      final result = await _storeService.fetchStores(
+        appId,
+        page: 1,
+        pageSize: _pageSize,
+        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+        cancelToken: _cancelToken,
+      );
+      _liveStores = result.items;
+      _totalCount = result.total;
+      _totalPages = result.totalPages;
+      _currentPage = result.page;
+
+      final subsResult = await _subscriptionService.fetchSubscriptions(
+        appId,
+        page: 1,
+        pageSize: 100,
+        cancelToken: _cancelToken,
+      );
       _liveStoreSubscriptions
         ..clear()
-        ..addAll(subs);
+        ..addAll(subsResult.items);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) return;
       _error = e.message;
@@ -67,16 +94,42 @@ class StoreProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadMore() async {
+    if (_demoMode || _isLoadingMore || !hasMore || _selectedAppId == null) {
+      return;
+    }
+    _isLoadingMore = true;
+    notifyListeners();
+    try {
+      final result = await _storeService.fetchStores(
+        _selectedAppId!,
+        page: _currentPage + 1,
+        pageSize: _pageSize,
+        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+      );
+      _liveStores.addAll(result.items);
+      _currentPage = result.page;
+      _totalPages = result.totalPages;
+      _totalCount = result.total;
+    } catch (e) {
+      debugPrint('[StoreProvider] loadMore error: $e');
+    }
+    _isLoadingMore = false;
+    notifyListeners();
+  }
+
   List<Store> get stores {
     var list = _demoMode ? mockStores.toList() : _liveStores.toList();
 
-    if (_selectedAppId != null) {
+    // Only filter by app in demo mode — live data is already fetched per-app
+    if (_selectedAppId != null && _demoMode) {
       list = list
           .where((s) => s.installedAppIds.contains(_selectedAppId))
           .toList();
     }
 
-    if (_searchQuery.isNotEmpty) {
+    // Client-side search only in demo mode — live mode uses server-side search
+    if (_searchQuery.isNotEmpty && _demoMode) {
       final q = _searchQuery.toLowerCase();
       list =
           list.where((s) => s.shopDomain.toLowerCase().contains(q)).toList();
@@ -108,5 +161,11 @@ class StoreProvider extends ChangeNotifier {
   void setSearch(String query) {
     _searchQuery = query;
     notifyListeners();
+    if (!_demoMode && _selectedAppId != null) {
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+        loadStores(_selectedAppId!);
+      });
+    }
   }
 }

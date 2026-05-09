@@ -53,6 +53,7 @@ class MockShopifyAPI < Sinatra::Base
     @shops = settings.data_store.shops(org_id)
     @subscriptions = settings.data_store.subscriptions(org_id)
     @events = settings.data_store.events(org_id)
+    @usage_charges = settings.data_store.usage_charges(org_id)
     @stats = settings.data_store.stats(org_id)
     @org_id = org_id
     erb :persona
@@ -90,6 +91,7 @@ class MockShopifyAPI < Sinatra::Base
       'days_ago' => 0
     }
 
+    settings.graphql_handler.invalidate_transaction_cache(org_id)
     settings.data_store.save_persona(org_id)
     redirect "/admin/personas/#{org_id}"
   end
@@ -111,6 +113,7 @@ class MockShopifyAPI < Sinatra::Base
     sub['last_charge_days_ago'] = params[:last_charge_days_ago].to_i if params[:last_charge_days_ago].to_s != ''
 
     data['subscriptions'] << sub
+    settings.graphql_handler.invalidate_transaction_cache(org_id)
     settings.data_store.save_persona(org_id)
     redirect "/admin/personas/#{org_id}"
   end
@@ -128,6 +131,7 @@ class MockShopifyAPI < Sinatra::Base
     sub['status'] = params[:status]
     sub['last_charge_days_ago'] = params[:last_charge_days_ago].to_i if params[:last_charge_days_ago].to_s != ''
 
+    settings.graphql_handler.invalidate_transaction_cache(org_id)
     settings.data_store.save_persona(org_id)
     redirect "/admin/personas/#{org_id}"
   end
@@ -144,6 +148,27 @@ class MockShopifyAPI < Sinatra::Base
       'shop_index' => params[:shop_index].to_i,
       'days_ago' => params[:days_ago].to_i
     }
+    settings.data_store.save_persona(org_id)
+    redirect "/admin/personas/#{org_id}"
+  end
+
+  # Add a usage charge
+  post '/admin/personas/:org_id/usage_charges' do
+    org_id = params[:org_id]
+    data = settings.data_store.persona_data(org_id)
+    halt 404, "Persona not found" unless data
+
+    data['usage_charges'] ||= []
+    data['usage_charges'] << {
+      'app_index' => params[:app_index].to_i,
+      'shop_index' => params[:shop_index].to_i,
+      'amount_range' => [params[:min_amount].to_f, params[:max_amount].to_f],
+      'started_months_ago' => (params[:started_months_ago] || 3).to_i
+    }
+
+    # Invalidate transaction cache since usage charges changed
+    settings.graphql_handler.invalidate_transaction_cache(org_id)
+
     settings.data_store.save_persona(org_id)
     redirect "/admin/personas/#{org_id}"
   end
@@ -218,6 +243,33 @@ class MockShopifyAPI < Sinatra::Base
     else
       redirect '/admin/webhooks'
     end
+  end
+
+  # ─── Storefront Brand API (mock) ──────────────────────────────────
+
+  # POST /storefront/:domain/graphql.json
+  # Returns mock brand data for any domain — avoids real HTTP calls during dev
+  post '/storefront/:domain/graphql.json' do
+    content_type :json
+    domain = params[:domain]
+    shop_number = domain.scan(/\d+/).first || '0'
+    shop_name = domain.gsub('.myshopify.com', '').split('-').map(&:capitalize).join(' ')
+
+    {
+      data: {
+        shop: {
+          id: "gid://shopify/Shop/#{shop_number}",
+          name: shop_name,
+          brand: {
+            logo: { image: nil },
+            squareLogo: { image: nil },
+            coverImage: { image: nil }
+          },
+          primaryDomain: { host: domain.gsub('.myshopify.com', '.com') },
+          paymentSettings: { countryCode: 'US', currencyCode: 'USD' }
+        }
+      }
+    }.to_json
   end
 
   # ─── Health check ──────────────────────────────────────────────────

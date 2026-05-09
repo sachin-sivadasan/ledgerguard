@@ -302,66 +302,75 @@ func (s *LedgerService) SeparateRevenue(transactions []*entity.Transaction) (rec
 	return recurring, usage
 }
 
-// BackfillHistoricalSnapshots creates daily snapshots for each month in the transaction history
-// This should be called after syncing transactions to populate historical metrics
+// BackfillHistoricalSnapshots creates daily snapshots from the transaction history.
+// This enables forecasting from day one — a user with 12 months of Shopify data
+// gets ~365 daily snapshots immediately, well above the 90-point forecasting minimum.
+//
+// Optimized: O(n log n + 365*k) where k = avg domains per day, instead of O(365*n).
+// Sorts transactions once, then uses pointer-based advancement so each tx is visited once.
+// Collects snapshots in memory and batch-upserts at the end.
 func (s *LedgerService) BackfillHistoricalSnapshots(ctx context.Context, appID uuid.UUID, transactions []*entity.Transaction) (int, error) {
 	if s.snapshotRepo == nil || s.metrics == nil || len(transactions) == 0 {
 		return 0, nil
 	}
 
-	// Find date range from transactions
-	var earliest, latest time.Time
-	for _, tx := range transactions {
-		if earliest.IsZero() || tx.TransactionDate.Before(earliest) {
-			earliest = tx.TransactionDate
-		}
-		if latest.IsZero() || tx.TransactionDate.After(latest) {
-			latest = tx.TransactionDate
-		}
-	}
+	// 1. Sort transactions by date once: O(n log n)
+	sorted := make([]*entity.Transaction, len(transactions))
+	copy(sorted, transactions)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].TransactionDate.Before(sorted[j].TransactionDate)
+	})
 
-	// Create snapshots for the last day of each month
-	snapshotsCreated := 0
-	current := time.Date(earliest.Year(), earliest.Month(), 1, 0, 0, 0, 0, time.UTC)
+	earliest := sorted[0].TransactionDate
+	latest := sorted[len(sorted)-1].TransactionDate
+
+	// 2. Pointer-based advancement through sorted transactions
 	today := time.Now().UTC()
+	current := time.Date(earliest.Year(), earliest.Month(), earliest.Day(), 0, 0, 0, 0, time.UTC)
+	txPtr := 0
+	allTxsSoFar := make([]*entity.Transaction, 0, len(sorted))
+	var batch []*entity.DailyMetricsSnapshot
 
-	for current.Before(latest) || current.Equal(latest) {
-		// Get end of month
-		endOfMonth := time.Date(current.Year(), current.Month()+1, 0, 23, 59, 59, 0, time.UTC)
-
-		// Don't create snapshots for future dates
-		snapshotDate := endOfMonth
+	for !current.After(latest) {
+		snapshotDate := current
 		if snapshotDate.After(today) {
-			snapshotDate = today
+			break
 		}
 
-		// Filter transactions up to this date
-		txsUpToDate := s.filterTransactionsUpTo(transactions, snapshotDate)
-		if len(txsUpToDate) == 0 {
-			current = current.AddDate(0, 1, 0)
+		// Advance pointer — each tx is visited exactly once across all days
+		endOfDay := time.Date(snapshotDate.Year(), snapshotDate.Month(), snapshotDate.Day(), 23, 59, 59, 999999999, time.UTC)
+		for txPtr < len(sorted) && !sorted[txPtr].TransactionDate.After(endOfDay) {
+			allTxsSoFar = append(allTxsSoFar, sorted[txPtr])
+			txPtr++
+		}
+
+		if len(allTxsSoFar) == 0 {
+			current = current.AddDate(0, 0, 1)
 			continue
 		}
 
-		// Build subscriptions from transactions up to this date
-		byDomain := s.groupTransactionsByDomain(txsUpToDate)
+		// Rebuild subscriptions from cumulative slice
+		byDomain := s.groupTransactionsByDomain(allTxsSoFar)
 		subscriptions := s.rebuildSubscriptions(appID, byDomain, snapshotDate)
 
-		// Filter transactions for just this month (for revenue calculation)
-		startOfMonth := time.Date(current.Year(), current.Month(), 1, 0, 0, 0, 0, time.UTC)
-		txsThisMonth := s.filterTransactionsInRange(transactions, startOfMonth, endOfMonth)
+		// Revenue: trailing 30-day window
+		windowStart := snapshotDate.AddDate(0, 0, -30)
+		txsInWindow := s.filterTransactionsInRange(allTxsSoFar, windowStart, snapshotDate)
 
-		// Compute and store snapshot
-		snapshot := s.metrics.ComputeAllMetrics(appID, subscriptions, txsThisMonth, snapshotDate)
-		if err := s.snapshotRepo.Upsert(ctx, snapshot); err != nil {
-			return snapshotsCreated, err
-		}
-		snapshotsCreated++
+		snapshot := s.metrics.ComputeAllMetrics(appID, subscriptions, txsInWindow, snapshotDate)
+		batch = append(batch, snapshot)
 
-		// Move to next month
-		current = current.AddDate(0, 1, 0)
+		current = current.AddDate(0, 0, 1)
 	}
 
-	return snapshotsCreated, nil
+	// 3. Batch upsert all snapshots
+	if len(batch) > 0 {
+		if err := s.snapshotRepo.UpsertBatch(ctx, batch); err != nil {
+			return 0, err
+		}
+	}
+
+	return len(batch), nil
 }
 
 // filterTransactionsUpTo returns transactions on or before the given date

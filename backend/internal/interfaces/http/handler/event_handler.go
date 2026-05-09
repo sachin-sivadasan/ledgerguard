@@ -14,17 +14,20 @@ type EventHandler struct {
 	appEventRepo repository.AppEventRepository
 	partnerRepo  repository.PartnerAccountRepository
 	appRepo      repository.AppRepository
+	subRepo      repository.SubscriptionRepository
 }
 
 func NewEventHandler(
 	appEventRepo repository.AppEventRepository,
 	partnerRepo repository.PartnerAccountRepository,
 	appRepo repository.AppRepository,
+	subRepo repository.SubscriptionRepository,
 ) *EventHandler {
 	return &EventHandler{
 		appEventRepo: appEventRepo,
 		partnerRepo:  partnerRepo,
 		appRepo:      appRepo,
+		subRepo:      subRepo,
 	}
 }
 
@@ -59,11 +62,27 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 			filters.PageSize = parsed
 		}
 	}
+	if s := r.URL.Query().Get("since"); s != "" {
+		if parsed, err := time.Parse(time.RFC3339, s); err == nil {
+			filters.Since = parsed
+		}
+	}
 
 	result, err := h.appEventRepo.FindByAppIDPaginated(r.Context(), app.ID, filters)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to fetch events")
 		return
+	}
+
+	// Build GID→domain map for resolving shop identifiers
+	gidToDomain := make(map[string]string)
+	if h.subRepo != nil {
+		subs, _ := h.subRepo.FindByAppID(r.Context(), app.ID)
+		for _, sub := range subs {
+			if sub.ShopifyShopGID != "" && sub.MyshopifyDomain != "" {
+				gidToDomain[sub.ShopifyShopGID] = sub.MyshopifyDomain
+			}
+		}
 	}
 
 	type eventJSON struct {
@@ -79,14 +98,23 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 	items := make([]eventJSON, 0, len(result.Events))
 	for _, ev := range result.Events {
 		mappedType := mapEventType(ev.EventType)
-		title, desc := eventTitleDescription(mappedType, ev.ShopifyShopGID)
+
+		// Resolve shop identifier: use stored domain, or look up GID→domain
+		domain := ev.ShopifyShopGID
+		if d, ok := gidToDomain[domain]; ok {
+			domain = d
+		} else {
+			domain = extractDomainFromGID(domain)
+		}
+
+		title, desc := eventTitleDescription(mappedType, domain)
 
 		items = append(items, eventJSON{
 			ID:          ev.ID.String(),
 			Date:        ev.OccurredAt.Format(time.RFC3339),
 			Type:        mappedType,
 			AppID:       app.ID.String(),
-			StoreDomain: extractDomainFromGID(ev.ShopifyShopGID),
+			StoreDomain: domain,
 			Title:       title,
 			Description: desc,
 		})

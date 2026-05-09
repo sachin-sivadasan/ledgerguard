@@ -13,7 +13,7 @@ type Query {
 
   # Metrics
   metrics(appId: ID!): Metrics!
-  metricsTrend(appId: ID!, months: Int = 6): [DailySnapshot!]!
+  metricsTrend(appId: ID!, months: Int = 6, granularity: Granularity = DAILY): [DailySnapshot!]!
 
   # Store Health
   storeHealth(appId: ID!, domain: String!): StoreHealth!
@@ -179,6 +179,12 @@ enum ChargeType {
   USAGE
   ONE_TIME
   REFUND
+}
+
+enum Granularity {
+  DAILY
+  WEEKLY
+  MONTHLY
 }
 
 scalar DateTime

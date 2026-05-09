@@ -20,46 +20,46 @@ class ForecastingTab extends StatelessWidget {
     final monthFmt = DateFormat('MMM');
     final forecastResult = provider.forecastResult;
 
-    if (forecast.isEmpty) {
-      return const LgEmptyState(
-        icon: Icons.timeline,
-        heading: 'Forecasting not yet available',
-        description:
-            'Revenue forecasting requires sufficient historical data. Check back after a few billing cycles.',
-      );
-    }
-
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Model selector (only show in live mode)
-          if (!provider.demoMode) ...[
-            Row(
-              children: [
-                Text('Model:', style: theme.textTheme.titleSmall),
-                const SizedBox(width: LgSpacing.s200),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'linear', label: Text('Linear')),
-                    ButtonSegment(value: 'exponential', label: Text('Exponential')),
-                  ],
-                  selected: {provider.forecastModel},
-                  onSelectionChanged: (selected) {
-                    provider.setForecastModel(selected.first);
-                  },
-                ),
-                if (forecastResult != null) ...[
-                  const Spacer(),
-                  Text(
-                    '${forecastResult.dataPointsUsed} data points',
-                    style: theme.textTheme.bodySmall,
-                  ),
+          // Model selector — always visible
+          Row(
+            children: [
+              Text('Model:', style: theme.textTheme.titleSmall),
+              const SizedBox(width: LgSpacing.s200),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'linear', label: Text('Linear')),
+                  ButtonSegment(
+                      value: 'exponential', label: Text('Exponential')),
                 ],
+                selected: {provider.forecastModel},
+                onSelectionChanged: (selected) {
+                  provider.setForecastModel(selected.first);
+                },
+              ),
+              if (forecastResult != null) ...[
+                const Spacer(),
+                Text(
+                  '${forecastResult.dataPointsUsed} data points',
+                  style: theme.textTheme.bodySmall,
+                ),
               ],
+            ],
+          ),
+          const SizedBox(height: LgSpacing.s400),
+
+          // Empty state with specific error message
+          if (forecast.isEmpty) ...[
+            LgEmptyState(
+              icon: Icons.timeline,
+              heading: 'Forecasting not yet available',
+              description: provider.forecastError ??
+                  'Revenue forecasting requires sufficient historical data. Check back after a few billing cycles.',
             ),
-            const SizedBox(height: LgSpacing.s400),
-          ],
+          ] else ...[
 
           // Summary card
           LgResponsive(
@@ -200,6 +200,8 @@ class ForecastingTab extends StatelessWidget {
               _Legend('Pessimistic', LgColors.critical),
             ],
           ),
+
+          ], // end of else (forecast not empty)
         ],
       ),
     );

@@ -23,6 +23,7 @@ class AnalyticsProvider extends ChangeNotifier {
   List<ForecastPoint>? _liveForecast;
   ForecastResult? _forecastResult;
   String _forecastModel = 'linear';
+  String? _forecastError;
   List<ExpenseBreakdown>? _liveExpenses;
   List<CohortData>? _liveCohorts;
   List<AppComparison>? _liveApps;
@@ -34,6 +35,7 @@ class AnalyticsProvider extends ChangeNotifier {
 
   String get forecastModel => _forecastModel;
   ForecastResult? get forecastResult => _forecastResult;
+  String? get forecastError => _forecastError;
 
   bool get demoMode => _demoMode;
   bool get isLoading => _isLoading;
@@ -92,13 +94,17 @@ class AnalyticsProvider extends ChangeNotifier {
   }
 
   Future<void> _loadForecast(String appId) async {
-    final result = await _metricsService.fetchForecast(appId,
+    _forecastError = null;
+    final (result, error) = await _metricsService.fetchForecast(appId,
         model: _forecastModel, cancelToken: _cancelToken);
     if (result != null) {
       _forecastResult = result;
       _liveForecast = result.points;
-      notifyListeners();
+      _forecastError = null;
+    } else if (error != null) {
+      _forecastError = error;
     }
+    notifyListeners();
   }
 
   Future<void> _loadCohorts(String appId) async {

@@ -177,7 +177,9 @@ class MetricsService {
     }
   }
 
-  Future<ForecastResult?> fetchForecast(String appId,
+  /// Returns (result, errorMessage). On success, error is null.
+  /// On failure (e.g. insufficient data), result is null and error explains why.
+  Future<(ForecastResult?, String?)> fetchForecast(String appId,
       {int months = 12,
       String model = 'linear',
       CancelToken? cancelToken}) async {
@@ -187,12 +189,21 @@ class MetricsService {
         queryParameters: {'months': months, 'model': model},
         cancelToken: cancelToken,
       );
-      return ForecastResult.fromJson(response.data as Map<String, dynamic>);
+      return (ForecastResult.fromJson(response.data as Map<String, dynamic>), null);
     } on DioException catch (e) {
-      if (e.type == DioExceptionType.cancel) return null;
+      if (e.type == DioExceptionType.cancel) return (null, null);
       debugPrint(
           '[MetricsService] fetchForecast error: ${e.response?.statusCode}');
-      return null;
+      // Extract meaningful error from 422 response
+      if (e.response?.statusCode == 422) {
+        final data = e.response?.data;
+        if (data is Map) {
+          final dataPoints = data['data_points'] as int? ?? 0;
+          final required = data['required'] as int? ?? 90;
+          return (null, 'Need $required+ daily snapshots for forecasting (have $dataPoints). Data accumulates automatically over time.');
+        }
+      }
+      return (null, 'Failed to load forecast data');
     }
   }
 

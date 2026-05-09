@@ -1,0 +1,224 @@
+@startuml
+title 43. LedgerGuard — Position in Shopify Ecosystem (v2 — clean layout)
+caption How LedgerGuard connects to Shopify's platform for revenue intelligence
+
+top to bottom direction
+
+skinparam componentStyle rectangle
+skinparam packageStyle frame
+skinparam defaultFontSize 11
+skinparam noteFontSize 9
+skinparam nodesep 20
+skinparam ranksep 30
+
+legend top right
+  |= Arrow |= Flow Type |
+  | <color:#5C6AC4>——></color> | API call (data fetch) |
+  | <color:#059669>——></color> | Money flow |
+  | <color:#D97706>--></color> | Data sync / push |
+  | <color:#DC2626>..></color> | Auth flow |
+  | <color:#6B7280>--></color> | Webhook event |
+  |<#E8E0FF> Shaded |= LedgerGuard components |
+endlegend
+
+' ══════════════════════════════════════════════
+'  LAYER 1 — Commerce
+' ══════════════════════════════════════════════
+
+actor "Merchant\n(Shop Owner)" as merchant
+actor "Online Buyer" as buyer
+
+package "Shopify Commerce" as pkg_commerce #F0F1FF {
+  component "Shopify Admin" as admin
+  component "Online Store\n(Theme)" as online_store
+  component "Checkout\n+ Shop Pay" as checkout
+  component "POS" as pos
+  component "Shopify Payments\n(Stripe)" as shopify_payments
+}
+
+buyer -[hidden]right- merchant
+
+' ══════════════════════════════════════════════
+'  LAYER 2 — Partner & Billing
+' ══════════════════════════════════════════════
+
+package "Partner Infrastructure" as pkg_partner #F0F1FF {
+  component "Partner\nDashboard" as partner_dash
+  component "App Store" as app_store
+  component "App Billing\n(recurring, usage,\none-time charges)" as app_billing
+  component "Revenue Share\n(80% dev / 20% Shopify\nor tiered)" as rev_share
+}
+
+package "App Developer's App" as pkg_dev_app #FFFFF0 {
+  component "Embedded App\n(merchant-facing)" as dev_app
+  component "Theme Extension" as theme_ext
+}
+
+' ══════════════════════════════════════════════
+'  LAYER 3 — APIs
+' ══════════════════════════════════════════════
+
+package "Shopify APIs (used by LedgerGuard)" as pkg_apis #E8F5E9 {
+  component "Partner API\n(GraphQL)" as partner_api
+  component "Admin API\n(REST + GraphQL)" as admin_api
+  component "Storefront API" as storefront_api
+  component "Webhooks" as webhooks
+}
+
+' ══════════════════════════════════════════════
+'  LAYER 4 — LEDGERGUARD
+' ══════════════════════════════════════════════
+
+package "LedgerGuard Platform" as pkg_lg #E8E0FF {
+
+  package "Data Ingestion" as pkg_ingest {
+    component "Sync Pipeline\n(12-month window)" as sync #D4C8FF
+    component "Webhook Receiver\n(install, uninstall,\nbilling-failure)" as wh_receiver #D4C8FF
+    component "Review Scraper\n(App Store reviews)" as scraper #D4C8FF
+  }
+
+  package "Core Engine" as pkg_engine {
+    component "Ledger Service\n(immutable txn store\n+ deterministic rebuild)" as ledger #D4C8FF
+    component "Risk Engine\n(Safe → 1-Cycle →\n2-Cycles → Churned)" as risk #D4C8FF
+    component "Metrics Engine\n(MRR, renewal rate,\nusage, at-risk $)" as metrics #D4C8FF
+    component "Earnings Calculator\n(fees, tiers,\npending → available)" as earnings #D4C8FF
+    component "Forecasting Engine\n(linear regression +\nexponential smoothing)" as forecast #D4C8FF
+  }
+
+  package "Outputs" as pkg_outputs {
+    component "Dashboard\n(Flutter web + mobile)" as dashboard #D4C8FF
+    component "AI Chat\n(OpenAI + GraphQL)" as ai_chat #D4C8FF
+    component "Revenue API\n(API Key auth\nfor external devs)" as rev_api #D4C8FF
+    component "Daily Snapshots\n(permanent audit trail)" as snapshots #D4C8FF
+    component "Notifications\n(FCM, Slack, email)" as notifications #D4C8FF
+  }
+}
+
+' ══════════════════════════════════════════════
+'  LAYER 5 — Users & Competitors
+' ══════════════════════════════════════════════
+
+package "LedgerGuard Users" as pkg_lg_users #FFFFF0 {
+  actor "App Developer\n(primary user)" as lg_dev
+  actor "Agency /\nPortfolio Manager" as lg_agency
+  actor "Finance /\nAccounting" as lg_finance
+  actor "External Dev\n(Revenue API\nconsumer)" as lg_ext_dev
+}
+
+package "Competing / Complementary Tools" as pkg_competitors #FFF0F0 {
+  component "Baremetrics" as baremetrics
+  component "ChartMogul" as chartmogul
+  component "Shopify Partner\nDashboard\n(basic analytics)" as partner_analytics
+}
+
+' ══════════════════════════════════════════════
+'  LAYOUT HINTS
+' ══════════════════════════════════════════════
+
+pkg_commerce -[hidden]down- pkg_partner
+pkg_partner -[hidden]down- pkg_apis
+pkg_apis -[hidden]down- pkg_lg
+pkg_lg -[hidden]down- pkg_lg_users
+
+pkg_ingest -[hidden]down- pkg_engine
+pkg_engine -[hidden]down- pkg_outputs
+
+pkg_lg_users -[hidden]right- pkg_competitors
+
+' ══════════════════════════════════════════════
+'  ALL ARROWS (after all declarations)
+' ══════════════════════════════════════════════
+
+' ── Layer 1: Commerce (money flow) ──
+buyer -[#059669]-> checkout : purchases $
+checkout -[#059669]-> shopify_payments : processes payment
+shopify_payments -[#059669]-> merchant : merchant payout
+merchant -[#5C6AC4]-> admin : manages store
+
+' ── Layer 2: Partner billing ──
+merchant -[#059669]-> app_billing : app subscription fee
+app_billing -[#059669]-> rev_share : Shopify takes cut
+rev_share -[#059669,bold]-> partner_dash : **developer earnings**\n(this is what\nLedgerGuard tracks)
+merchant -[#5C6AC4]-> dev_app : uses installed app
+dev_app -[#5C6AC4]-> admin_api : app functionality
+
+' ── Layer 2 → 3: API connections ──
+partner_dash --> partner_api : earnings data
+admin --> admin_api : internal
+admin -[#6B7280,dashed]-> webhooks : events
+
+' ── Layer 3 → 4: LedgerGuard ingestion ──
+sync -[#5C6AC4,bold]-> partner_api : **fetch transactions,**\n**subscriptions, events**\n**(12-month window)**
+wh_receiver -[#6B7280,dashed]-> webhooks : receive install/\nuninstall/billing events
+scraper -[#D97706,dashed]-> app_store : scrape app reviews
+sync -[#D97706,dashed]-> storefront_api : fetch store brands\n(logos, shop data)
+
+' ── Layer 4: Internal processing pipeline ──
+sync -[#5C6AC4]-> ledger : raw txns
+ledger -[#5C6AC4]-> risk : subscription status
+ledger -[#5C6AC4]-> metrics : aggregated data
+ledger -[#5C6AC4]-> earnings : fee calculations
+metrics -[#5C6AC4]-> forecast : historical trends
+metrics -[#5C6AC4]-> snapshots : daily upsert
+
+' ── Layer 4: Outputs ──
+dashboard -[#5C6AC4]-> ai_chat : natural language\nqueries
+dashboard -[#D97706,dashed]-> notifications : alerts (churn,\nbilling, reviews)
+
+' ── Layer 5: User access ──
+lg_dev -[#5C6AC4]-> dashboard : **revenue intelligence**
+lg_agency -[#5C6AC4]-> dashboard : multi-app portfolio
+lg_finance -[#5C6AC4]-> dashboard : reconciliation
+lg_ext_dev -[#5C6AC4]-> rev_api : programmatic access
+
+' ── Auth & partner ──
+lg_dev -[#5C6AC4]-> partner_dash : views earnings
+lg_dev -[#DC2626,dashed]..> partner_dash : OAuth 2.0\n(connect Shopify)
+lg_dev -[#5C6AC4]-> app_store : publishes app
+
+' ── Competitors comparison ──
+baremetrics -[#D97706,dashed]-> partner_api : same data source
+chartmogul -[#D97706,dashed]-> partner_api
+partner_analytics -[#5C6AC4]-> partner_dash : basic built-in
+
+' ══════════════════════════════════════════════
+'  ANNOTATIONS
+' ══════════════════════════════════════════════
+
+note left of sync
+  **Sync Strategy:**
+  1. Fetch 12 months of txns
+  2. Store raw (immutable)
+  3. Rebuild ledger from scratch
+  4. Recalculate risk states
+  5. Compute KPIs
+  6. Store daily snapshot
+end note
+
+note right of rev_share
+  **Revenue Share Tiers:**
+  - First $1M/yr: 0% (Small Dev)
+  - Next threshold: 15%
+  - Standard: 20%
+  - Large dev: 15%
+end note
+
+note right of risk
+  **Risk Classification:**
+  ACTIVE → Safe
+  ≤30 days late → Safe
+  31-60 days → 1-Cycle Missed
+  61-90 days → 2-Cycles Missed
+  >90 days → Churned
+end note
+
+note right of rev_api
+  External API for devs
+  to build on LedgerGuard:
+  - Subscription status
+  - Usage charges
+  - Risk states
+  - Batch lookups
+end note
+
+@enduml

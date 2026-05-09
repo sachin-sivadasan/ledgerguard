@@ -62,6 +62,11 @@
       "key": "invitationToken",
       "value": "",
       "description": "Invitation token — auto-set after Invite Member"
+    },
+    {
+      "key": "apiKeyId",
+      "value": "",
+      "description": "API Key UUID — set manually from List API Keys response"
     }
   ],
   "item": [
@@ -305,6 +310,35 @@
           }
         },
         {
+          "name": "Get Metrics Trend",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/metrics/trend?months=6&granularity=weekly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "apps", "{{appID}}", "metrics", "trend"],
+              "query": [
+                {
+                  "key": "months",
+                  "value": "6",
+                  "description": "Number of months (1-12, default 6)"
+                },
+                {
+                  "key": "granularity",
+                  "value": "weekly",
+                  "description": "daily, weekly, or monthly"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "Get Aggregate Metrics (All Apps)",
           "request": {
             "method": "GET",
@@ -485,6 +519,30 @@
           }
         },
         {
+          "name": "Get Monthly Profit Breakdown",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/fees/monthly?months=6",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "apps", "{{appID}}", "fees", "monthly"],
+              "query": [
+                {
+                  "key": "months",
+                  "value": "6",
+                  "description": "Number of months (default 6)"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "List Available Tiers (Public)",
           "request": {
             "method": "GET",
@@ -586,7 +644,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/sync/{{appUUID}}"
+            "url": "{{baseUrl}}/api/v1/sync/{{appID}}"
           }
         },
         {
@@ -599,7 +657,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/sync/enqueue/{{appUUID}}"
+            "url": "{{baseUrl}}/api/v1/sync/enqueue/{{appID}}"
           }
         },
         {
@@ -1021,7 +1079,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/api-keys/KEY_ID_HERE"
+            "url": "{{baseUrl}}/api/v1/api-keys/{{apiKeyId}}"
           }
         }
       ]
@@ -1091,7 +1149,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/admin/apps/{{appUUID}}/data"
+            "url": "{{baseUrl}}/api/v1/admin/apps/{{appID}}/data"
           }
         },
         {
@@ -1117,7 +1175,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/admin/apps/{{appUUID}}/rebuild-read-model"
+            "url": "{{baseUrl}}/api/v1/admin/apps/{{appID}}/rebuild-read-model"
           }
         },
         {
@@ -1597,6 +1655,455 @@
                 }
               ]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 - Analytics (Advanced)",
+      "description": "Advanced analytics endpoints: transactions, stores, forecast, cohorts, risk, revenue concentration.",
+      "item": [
+        {
+          "name": "List Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/transactions?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "apps", "{{appID}}", "transactions"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "charge_type",
+                  "value": "RECURRING",
+                  "disabled": true
+                },
+                {
+                  "key": "domain",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Stores",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/stores?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "apps", "{{appID}}", "stores"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List App Events",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/events?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "apps", "{{appID}}", "events"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                },
+                {
+                  "key": "since",
+                  "value": "2026-01-01T00:00:00Z",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Forecast",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/forecast?months=12&model=linear",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "apps", "{{appID}}", "forecast"],
+              "query": [
+                {
+                  "key": "months",
+                  "value": "12",
+                  "description": "Forecast horizon (default 12)"
+                },
+                {
+                  "key": "model",
+                  "value": "linear",
+                  "description": "linear or exponential"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Cohort Retention",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/cohorts?months=6",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "apps", "{{appID}}", "cohorts"],
+              "query": [
+                {
+                  "key": "months",
+                  "value": "6"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Risk Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/risk/summary"
+          }
+        },
+        {
+          "name": "Get Revenue Concentration",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/revenue/concentration?top=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "apps", "{{appID}}", "revenue", "concentration"],
+              "query": [
+                {
+                  "key": "top",
+                  "value": "10",
+                  "description": "Number of top stores (default 10)"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 - Shopify Token Management",
+      "description": "Manage Shopify Partner API access tokens.",
+      "item": [
+        {
+          "name": "Get Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/integrations/shopify/token"
+          }
+        },
+        {
+          "name": "Save Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"access_token\": \"prtapi_...\",\n    \"organization_id\": \"12345\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/integrations/shopify/token"
+          }
+        },
+        {
+          "name": "Update Token",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"access_token\": \"prtapi_...\",\n    \"organization_id\": \"12345\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/integrations/shopify/token"
+          }
+        },
+        {
+          "name": "Delete Token",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/integrations/shopify/token"
+          }
+        },
+        {
+          "name": "OAuth Callback",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integrations/shopify/callback?code=AUTH_CODE&state=STATE",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "integrations", "shopify", "callback"],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "AUTH_CODE"
+                },
+                {
+                  "key": "state",
+                  "value": "STATE"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 - Webhooks",
+      "description": "Webhook endpoints for Shopify and Razorpay event processing. These are called by external services, not by users directly.",
+      "item": [
+        {
+          "name": "Shopify Webhook (Generic)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Hmac-Sha256",
+                "value": "test-hmac"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"topic\": \"app/uninstalled\",\n    \"data\": {}\n}"
+            },
+            "url": "{{baseUrl}}/webhooks/shopify"
+          }
+        },
+        {
+          "name": "Shopify App Installed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"app_subscription\": {\n        \"admin_graphql_api_id\": \"gid://shopify/AppSubscription/123\"\n    }\n}"
+            },
+            "url": "{{baseUrl}}/webhooks/shopify/installed"
+          }
+        },
+        {
+          "name": "Shopify Subscription Update",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"app_subscription\": {\n        \"admin_graphql_api_id\": \"gid://shopify/AppSubscription/123\",\n        \"status\": \"ACTIVE\"\n    }\n}"
+            },
+            "url": "{{baseUrl}}/webhooks/shopify/subscriptions"
+          }
+        },
+        {
+          "name": "Shopify App Uninstalled",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"myshopify_domain\": \"example.myshopify.com\"\n}"
+            },
+            "url": "{{baseUrl}}/webhooks/shopify/uninstalled"
+          }
+        },
+        {
+          "name": "Shopify Billing Failure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"app_subscription\": {\n        \"admin_graphql_api_id\": \"gid://shopify/AppSubscription/123\"\n    }\n}"
+            },
+            "url": "{{baseUrl}}/webhooks/shopify/billing-failure"
+          }
+        },
+        {
+          "name": "Razorpay Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"event\": \"subscription.charged\",\n    \"payload\": {\n        \"subscription\": {\n            \"entity\": {\n                \"id\": \"sub_test123\"\n            }\n        }\n    }\n}"
+            },
+            "url": "{{baseUrl}}/webhooks/razorpay"
+          }
+        }
+      ]
+    },
+    {
+      "name": "23 - Internal Sync",
+      "description": "Internal sync endpoints for server-to-server use.",
+      "item": [
+        {
+          "name": "Sync Transactions (All Apps)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/internal/sync/transactions"
+          }
+        },
+        {
+          "name": "Sync Transactions (Single App)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/internal/sync/transactions/{{appID}}"
+          }
+        },
+        {
+          "name": "Daily Catchup Sync",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/internal/sync/daily-catchup"
           }
         }
       ]

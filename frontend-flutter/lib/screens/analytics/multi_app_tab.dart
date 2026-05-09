@@ -5,6 +5,7 @@ import '../../theme/app_breakpoints.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
+import '../../widgets/lg_empty_state.dart';
 
 class MultiAppTab extends StatelessWidget {
   const MultiAppTab({super.key});
@@ -16,6 +17,15 @@ class MultiAppTab extends StatelessWidget {
     final mrrMap = provider.appMrrCents();
     final subMap = provider.appSubCount();
     final theme = Theme.of(context);
+
+    if (apps.isEmpty) {
+      return const LgEmptyState(
+        icon: Icons.apps,
+        heading: 'Multi-app comparison not yet available',
+        description:
+            'Connect multiple Shopify apps to compare performance across your portfolio.',
+      );
+    }
 
     return SingleChildScrollView(
       child: Column(

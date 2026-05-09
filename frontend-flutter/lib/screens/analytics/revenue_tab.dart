@@ -6,6 +6,7 @@ import '../../theme/app_breakpoints.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
+import '../../widgets/lg_empty_state.dart';
 
 class RevenueTab extends StatelessWidget {
   const RevenueTab({super.key});
@@ -46,6 +47,14 @@ class RevenueTab extends StatelessWidget {
           const SizedBox(height: LgSpacing.s600),
 
           // MRR movement chart
+          if (movements.isEmpty)
+            const LgEmptyState(
+              icon: Icons.swap_vert,
+              heading: 'MRR movement data not yet available',
+              description:
+                  'MRR movements (new, expansion, contraction, churn) will appear once sufficient billing data is collected.',
+            )
+          else
           LgCard(
             title: 'MRR Movement',
             child: Column(

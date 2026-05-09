@@ -7,6 +7,7 @@ import '../../theme/app_breakpoints.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
+import '../../widgets/lg_empty_state.dart';
 
 class ForecastingTab extends StatelessWidget {
   const ForecastingTab({super.key});
@@ -17,6 +18,15 @@ class ForecastingTab extends StatelessWidget {
     final forecast = provider.forecast;
     final theme = Theme.of(context);
     final monthFmt = DateFormat('MMM');
+
+    if (forecast.isEmpty) {
+      return const LgEmptyState(
+        icon: Icons.timeline,
+        heading: 'Forecasting not yet available',
+        description:
+            'Revenue forecasting requires sufficient historical data. Check back after a few billing cycles.',
+      );
+    }
 
     return SingleChildScrollView(
       child: Column(

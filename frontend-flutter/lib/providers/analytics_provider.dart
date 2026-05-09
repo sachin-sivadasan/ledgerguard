@@ -18,6 +18,11 @@ class AnalyticsProvider extends ChangeNotifier {
   CancelToken? _cancelToken;
 
   DashboardMetrics? _liveMetrics;
+  List<MrrMovement>? _liveMrrMovements;
+  List<ForecastPoint>? _liveForecast;
+  List<ExpenseBreakdown>? _liveExpenses;
+  List<CohortData>? _liveCohorts;
+  List<ShopifyApp>? _liveApps;
 
   AnalyticsProvider(this._metricsService);
 
@@ -71,7 +76,10 @@ class AnalyticsProvider extends ChangeNotifier {
     return mockMrrSnapshots;
   }
 
-  List<MrrMovement> get mrrMovements => mockMrrMovements;
+  List<MrrMovement> get mrrMovements {
+    if (!_demoMode) return _liveMrrMovements ?? [];
+    return mockMrrMovements;
+  }
 
   RevenueMix get revenueMix {
     if (!_demoMode) {
@@ -83,27 +91,41 @@ class AnalyticsProvider extends ChangeNotifier {
   }
 
   // Forecasting tab
-  List<ForecastPoint> get forecast => mockForecast;
+  List<ForecastPoint> get forecast {
+    if (!_demoMode) return _liveForecast ?? [];
+    return mockForecast;
+  }
 
   // Profit tab
-  List<ExpenseBreakdown> get expenses => mockExpenses;
+  List<ExpenseBreakdown> get expenses {
+    if (!_demoMode) return _liveExpenses ?? [];
+    return mockExpenses;
+  }
+
   double get avgProfitMargin {
-    if (mockExpenses.isEmpty) return 0;
-    return mockExpenses
-            .map((e) => e.profitMarginPct)
-            .reduce((a, b) => a + b) /
-        mockExpenses.length;
+    final data = expenses;
+    if (data.isEmpty) return 0;
+    return data.map((e) => e.profitMarginPct).reduce((a, b) => a + b) /
+        data.length;
   }
 
   // Cohorts tab
-  List<CohortData> get cohorts => mockCohorts;
+  List<CohortData> get cohorts {
+    if (!_demoMode) return _liveCohorts ?? [];
+    return mockCohorts;
+  }
 
   // Multi-app tab
-  List<ShopifyApp> get apps => mockApps;
+  List<ShopifyApp> get apps {
+    if (!_demoMode) return _liveApps ?? [];
+    return mockApps;
+  }
 
   Map<String, int> appMrrCents() {
+    final appList = apps;
+    if (!_demoMode) return {};
     final map = <String, int>{};
-    for (final app in mockApps) {
+    for (final app in appList) {
       map[app.id] = mockSubscriptions
           .where((s) => s.appId == app.id)
           .fold<int>(0, (sum, s) => sum + s.priceCents);
@@ -112,8 +134,10 @@ class AnalyticsProvider extends ChangeNotifier {
   }
 
   Map<String, int> appSubCount() {
+    final appList = apps;
+    if (!_demoMode) return {};
     final map = <String, int>{};
-    for (final app in mockApps) {
+    for (final app in appList) {
       map[app.id] =
           mockSubscriptions.where((s) => s.appId == app.id).length;
     }

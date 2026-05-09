@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/analytics_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/lg_card.dart';
+import '../../widgets/lg_empty_state.dart';
 
 class CohortTab extends StatelessWidget {
   const CohortTab({super.key});
@@ -11,6 +12,16 @@ class CohortTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<AnalyticsProvider>();
     final cohorts = provider.cohorts;
+
+    if (cohorts.isEmpty) {
+      return const LgEmptyState(
+        icon: Icons.group_work,
+        heading: 'Cohort data not yet available',
+        description:
+            'Cohort retention analysis requires at least two months of subscription data.',
+      );
+    }
+
     final maxMonths = cohorts.fold<int>(0, (m, c) => c.retentionPcts.length > m ? c.retentionPcts.length : m);
 
     return SingleChildScrollView(

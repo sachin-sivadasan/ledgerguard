@@ -6,6 +6,7 @@ import '../../theme/app_breakpoints.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
+import '../../widgets/lg_empty_state.dart';
 
 class ProfitTab extends StatelessWidget {
   const ProfitTab({super.key});
@@ -15,6 +16,15 @@ class ProfitTab extends StatelessWidget {
     final provider = context.watch<AnalyticsProvider>();
     final expenses = provider.expenses;
     final theme = Theme.of(context);
+
+    if (expenses.isEmpty) {
+      return const LgEmptyState(
+        icon: Icons.account_balance,
+        heading: 'Profit data not yet available',
+        description:
+            'Profit and expense breakdown will appear once transactions are processed.',
+      );
+    }
 
     return SingleChildScrollView(
       child: Column(

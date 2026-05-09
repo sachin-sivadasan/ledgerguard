@@ -130,3 +130,44 @@ Tracks verification points from each implementation plan. Run these after deploy
 - [ ] Time range toggle works (Today/Week/Month)
 - [ ] Demo mode off → webhooks list empty
 - [ ] Demo mode on → mock data returns
+
+---
+
+## Plan: Analytics & Earnings — Complete Wiring & Missing Features
+**Date:** 2026-05-09
+
+### Phase 1 — Mock data fix
+- [ ] `flutter analyze` — no issues
+- [ ] Live mode + Forecasting tab → shows empty state (not mock numbers)
+- [ ] Demo mode + Forecasting tab → shows mock data as before
+- [ ] Same for Cohorts, Profit, Multi-App tabs
+
+### Phase 2 — Earnings API wiring + MRR movements
+- [ ] Fees & Tiers tab shows tiers from `GET /api/v1/tiers` (not hardcoded)
+- [ ] Fee calculator calls `/fees/breakdown` API
+- [ ] Earnings status shows pending/available/paidOut from API
+- [ ] Fee summary shows savings vs default tier
+- [ ] Revenue tab MRR movement chart shows live data
+
+### Phase 3 — Backend endpoints
+- [ ] `go test ./...` passes
+- [ ] `GET /api/v1/apps/{appID}/forecast?model=linear` returns 12 forecast points
+- [ ] `GET /api/v1/apps/{appID}/forecast?model=exponential` returns 12 forecast points
+- [ ] `GET /api/v1/apps/{appID}/cohorts` returns cohort retention data
+- [ ] `GET /api/v1/apps/{appID}/fees/monthly` returns monthly P&L breakdown
+- [ ] `GET /api/v1/apps/{appID}/revenue/concentration` returns top stores
+- [ ] Insufficient data (< 90 snapshots) returns 422 for forecast
+
+### Phase 4 — Frontend wiring
+- [ ] Forecasting tab shows live forecast with model toggle (Linear/Exponential)
+- [ ] Switching models re-fetches data from API
+- [ ] Cohorts tab shows live retention heatmap
+- [ ] Profit tab shows live monthly P&L from fees API
+- [ ] Multi-App tab shows live per-app comparison from aggregate API
+
+### Phase 5 — Enhancements
+- [ ] Revenue tab shows top stores by revenue (live mode only)
+- [ ] Date picker on Analytics page loads historical snapshot
+- [ ] Comparison card shows current vs historical MRR with % change
+- [ ] Earnings page shows upcoming 30-day earnings timeline
+- [ ] Earnings page shows fee savings card

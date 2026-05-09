@@ -1833,3 +1833,18 @@
 - Commit 2: Webhooks page fixes (5 files)
 - Commit 3: Documentation (4 files)
 - `flutter analyze` clean
+
+---
+
+### [2026-05-09] Analytics & Earnings — Complete Wiring & Missing Features
+
+**Original:**
+> Implement the following plan: [Analytics & Earnings — Complete Wiring & Missing Features Plan with 6 phases, 15 commits]
+
+**Improved:**
+> Implement the 6-phase plan to (1) fix the P1 mock-data-leaking bug in all 5 analytics tabs, (2) wire existing backend APIs to earnings page tiers/fee-calculator/status and to MRR movements, (3) build 4 new backend endpoints (forecasting engine with linear+exponential models, cohort retention, monthly profit P&L, revenue concentration), (4) wire all new endpoints to their frontend analytics tabs with model selector/empty states, (5) add 3 enhancements (revenue concentration, historical snapshot browser, 30-day earnings outlook), (6) update documentation. Execute in dependency order: Phase 1 → 2a → 2b → 3a-3d (parallel) → 4a-4d → 5a-5c → 6.
+
+**Result:**
+- 15 commits across all 6 phases
+- ~50 files changed (backend + frontend)
+- All Go tests pass, `flutter analyze` clean

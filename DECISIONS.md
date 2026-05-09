@@ -825,3 +825,43 @@ With organizations and plan tiers (FREE, STARTER, PRO) established in ADR-034, n
 - STARTER users see app-switcher dropdown, never "All Apps" option
 - PRO users get portfolio-level KPIs on Dashboard/Analytics
 - Partner Connect enforces limit at selection time, not just backend
+
+---
+
+### ADR-039: Forecasting Model Selection (Linear + Exponential)
+**Date:** 2026-05-09
+**Status:** Accepted
+
+**Context:**
+Revenue forecasting needed for the Analytics Forecasting tab. Must handle various MRR trajectories (growing, flat, declining) and provide confidence bands.
+
+**Decision:**
+Implemented two forecasting models in `ForecastingEngine`:
+1. **Linear Regression (OLS)**: Fits ordinary least-squares line through daily MRR values. Simple, interpretable, works well for steady growth. Confidence bands: ±15%.
+2. **Holt's Exponential Smoothing**: Double exponential smoothing with level + trend components. More responsive to recent changes. Alpha parameter (0.1–0.9, default 0.3) controls smoothing factor. Confidence bands widen over time (5% + 2%/month).
+
+Both require minimum 90 data points. Frontend provides a toggle (SegmentedButton) to switch between models, which re-fetches from the API.
+
+**Consequences:**
+- Users can choose the model that best fits their revenue pattern
+- Linear is the default (more conservative, easier to understand)
+- Exponential responds faster to trend changes but can overfit to noise
+- Confidence bands give visual indication of forecast uncertainty
+- No database storage needed — forecasts computed on-demand from daily snapshots
+
+---
+
+### ADR-040: AppComparison Model for Multi-App Analytics
+**Date:** 2026-05-09
+**Status:** Accepted
+
+**Context:**
+The Multi-App analytics tab used `ShopifyApp` model (with installCount, avgRating) for display, but the backend aggregate API returns different fields (mrrCents, atRiskCents, subscriptionCount, renewalRate). Needed a clean separation.
+
+**Decision:**
+Created `AppComparison` model in `analytics_model.dart` matching the backend `AppMetricsSummary` response shape. In demo mode, mock `ShopifyApp` data is converted to `AppComparison` objects. This removed the dependency on `mockApps` and `mockSubscriptions` imports for the live data path.
+
+**Consequences:**
+- Clean type separation: `ShopifyApp` for app management, `AppComparison` for analytics comparison
+- Multi-app tab now shows relevant metrics (MRR, at-risk, subscriptions) instead of install counts/ratings
+- Demo mode still works by converting mock data to the same model

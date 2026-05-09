@@ -2645,3 +2645,58 @@ Complete the org model wiring so all data endpoints resolve ownership via `org_i
 | MODIFY | `frontend-flutter/lib/main.dart` |
 
 **Tests:** `flutter analyze` — no issues.
+
+---
+
+## [2026-05-09] Feat: Analytics & Earnings — Complete Backend Wiring + Missing Features
+
+**Summary:**
+Connected all 5 analytics tabs (Revenue, Forecasting, Profit & Expense, Cohorts, Multi-App) and the Earnings page to their backend APIs. Fixed a P1 bug where 8 of 10 analytics getters returned mock data regardless of demo mode. Built 4 new backend endpoints (forecasting, cohorts, monthly profit, revenue concentration). Added 3 enhancement features (historical snapshot browser, revenue concentration, 30-day earnings outlook).
+
+**Phase 1 — P1 Bug Fix:**
+- Guarded all analytics provider getters with `_demoMode` check
+- Added `LgEmptyState` widgets to all 5 tab files for live mode with no data
+- Mock data no longer leaks into live mode
+
+**Phase 2 — Wire Existing APIs:**
+- Earnings page: wired `/api/v1/tiers`, `/fees/breakdown`, `/fees/summary`, `/earnings/status`
+- Added new models: `FeeBreakdownResponse`, `TierFeeBreakdown`, `FeeSummary`, `EarningsStatus`
+- Revenue tab: wired MRR movements via multi-period metrics queries
+
+**Phase 3 — New Backend Endpoints:**
+- **ForecastingEngine** (`forecasting_engine.go`): Linear regression (OLS) and Holt's exponential smoothing models with ±15% confidence bands. Minimum 90 data points required.
+- **Forecast API** (`GET /apps/{appID}/forecast?model=linear|exponential&months=12`): Returns forecast points with expected/optimistic/pessimistic cents.
+- **Cohort Analysis** (`GET /apps/{appID}/cohorts?months=6`): Groups subscriptions by creation month, calculates retention percentages per cohort.
+- **Monthly Profit** (`GET /apps/{appID}/fees/monthly?months=6`): Monthly P&L breakdown using existing fee verification service.
+- **Revenue Concentration** (`GET /apps/{appID}/revenue/concentration?top=10`): Top stores by revenue with percentage of total.
+
+**Phase 4 — Frontend Wiring:**
+- Forecasting tab: model selector toggle (Linear/Exponential SegmentedButton), data points used display
+- Cohorts tab: wired to backend cohort endpoint (already had empty state from Phase 1)
+- Profit tab: expenses loaded from `/fees/monthly` via EarningsService
+- Multi-App tab: new `AppComparison` model, wired to `/metrics/aggregate`, removed dependency on mock ShopifyApp
+
+**Phase 5 — Enhancements:**
+- **Revenue Concentration**: Top stores card in Revenue tab showing revenue distribution
+- **Historical Snapshot Browser**: Date picker in analytics header, comparison card showing current vs historical MRR with % change
+- **Earnings Improvements**: "Upcoming 30 Days" section and "Fee Savings" card in Earnings tab
+
+**Changes (15 commits):**
+
+| Commit | Phase | Files |
+|--------|-------|-------|
+| fix: guard analytics getters with demoMode | 1 | 6 |
+| feat: wire earnings tiers, fee calculator, earnings status | 2a | 5 |
+| feat: wire MRR movements to backend period metrics | 2b | 3 |
+| feat: add ForecastingEngine (linear + exponential) | 3a | 3 |
+| feat: add GET /apps/{appID}/forecast endpoint | 3b | 4 |
+| feat: add cohort retention analysis endpoint | 3c | 4 |
+| feat: add monthly profit breakdown endpoint | 3d | 2 |
+| feat: wire forecasting tab with model selection | 4a | 5 |
+| feat: wire profit tab to backend fees/monthly | 4c | 2 |
+| feat: wire multi-app tab to aggregate API | 4d | 4 |
+| feat: add revenue concentration analysis | 5a | 7 |
+| feat: add historical snapshot browser | 5b | 3 |
+| feat: add 30-day earnings outlook and fee savings | 5c | 1 |
+
+**Tests:** `go test ./internal/domain/service/... ./internal/interfaces/http/handler/...` — all pass. `flutter analyze` — no issues.

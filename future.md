@@ -13,7 +13,7 @@ Postponed ideas and features for later implementation.
 | AI Chat + Internal GraphQL | P2 | OpenAI-powered chat widget; GraphQL as query layer; AIClient interface for provider swap |
 | Public GraphQL Developer API | P3 | Promote internal GraphQL to public API for external devs (after AI chat ships) |
 | Claude API as Parallel Provider | P3 | Add Claude alongside OpenAI — user picks preferred AI provider in settings |
-| Revenue forecasting | P2 | ML-based prediction |
+| ~~Revenue forecasting~~ | ~~P2~~ | ~~Done — Linear regression + exponential smoothing in ForecastingEngine (2026-05-09)~~ |
 | Anomaly detection | P2 | Alert on unusual patterns |
 | Stripe integration | P3 | Non-Shopify revenue |
 | Native mobile app | P3 | iOS/Android standalone |

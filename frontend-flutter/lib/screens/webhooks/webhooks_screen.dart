@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/webhook_model.dart';
 import '../../providers/apps_provider.dart';
+import '../../providers/events_provider.dart' show TimeRange;
 import '../../providers/webhook_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -45,12 +46,24 @@ class WebhooksScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Time range toggle
+          SegmentedButton<TimeRange>(
+            segments: const [
+              ButtonSegment(value: TimeRange.today, label: Text('Today')),
+              ButtonSegment(value: TimeRange.thisWeek, label: Text('This Week')),
+              ButtonSegment(value: TimeRange.thisMonth, label: Text('This Month')),
+            ],
+            selected: {provider.timeRange},
+            onSelectionChanged: (s) => provider.setTimeRange(s.first),
+          ),
+          const SizedBox(height: LgSpacing.s400),
+
           // KPI cards
           LgMetricGrid(
             children: [
-              LgMetricCard(label: 'Webhooks Today', value: '${provider.totalToday}', icon: Icons.webhook),
-              LgMetricCard(label: 'Failed Today', value: '${provider.failedToday}', icon: Icons.error_outline),
-              LgMetricCard(label: '7d Success Rate', value: provider.successRate7d, icon: Icons.check_circle_outline),
+              LgMetricCard(label: 'Webhooks ${_rangeLabel(provider.timeRange)}', value: '${provider.totalInRange}', icon: Icons.webhook),
+              LgMetricCard(label: 'Failed ${_rangeLabel(provider.timeRange)}', value: '${provider.failedInRange}', icon: Icons.error_outline),
+              LgMetricCard(label: 'Success Rate', value: provider.successRate, icon: Icons.check_circle_outline),
             ],
           ),
           const SizedBox(height: LgSpacing.s600),
@@ -68,8 +81,14 @@ class WebhooksScreen extends StatelessWidget {
                 value: provider.statusFilter,
                 onChanged: provider.setStatusFilter,
               ),
+              if (context.watch<AppsProvider>().apps.length > 1)
+                _AppFilter(
+                  value: provider.selectedAppId,
+                  onChanged: provider.setSelectedApp,
+                ),
               if (provider.sourceFilter != null ||
-                  provider.statusFilter != null)
+                  provider.statusFilter != null ||
+                  provider.selectedAppId != null)
                 TextButton(
                     onPressed: provider.clearFilters,
                     child: const Text('Clear')),
@@ -186,6 +205,12 @@ class WebhooksScreen extends StatelessWidget {
   }
 }
 
+String _rangeLabel(TimeRange range) => switch (range) {
+      TimeRange.today => 'Today',
+      TimeRange.thisWeek => 'This Week',
+      TimeRange.thisMonth => 'This Month',
+    };
+
 class _SourceFilter extends StatelessWidget {
   final WebhookSource? value;
   final ValueChanged<WebhookSource?> onChanged;
@@ -233,6 +258,31 @@ class _StatusFilter extends StatelessWidget {
         label: Text(value != null
             ? (value == WebhookStatus.success ? 'Success' : 'Failed')
             : 'Status'),
+        deleteIcon: value != null ? const Icon(Icons.close, size: 14) : null,
+        onDeleted: value != null ? () => onChanged(null) : null,
+      ),
+    );
+  }
+}
+
+class _AppFilter extends StatelessWidget {
+  final String? value;
+  final ValueChanged<String?> onChanged;
+  const _AppFilter({this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final apps = context.watch<AppsProvider>().apps;
+    return PopupMenuButton<String?>(
+      onSelected: onChanged,
+      itemBuilder: (ctx) => [
+        const PopupMenuItem(value: null, child: Text('All Apps')),
+        ...apps.map((app) => PopupMenuItem(value: app.id, child: Text(app.name))),
+      ],
+      child: Chip(
+        label: Text(value != null
+            ? apps.firstWhere((a) => a.id == value, orElse: () => apps.first).name
+            : 'App'),
         deleteIcon: value != null ? const Icon(Icons.close, size: 14) : null,
         onDeleted: value != null ? () => onChanged(null) : null,
       ),

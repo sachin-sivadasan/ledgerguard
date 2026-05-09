@@ -8,6 +8,7 @@ import '../providers/risk_provider.dart';
 import '../providers/store_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/webhook_provider.dart';
 
 /// Centralizes the demo mode toggle so settings_screen doesn't need to
 /// enumerate every provider individually.
@@ -22,6 +23,7 @@ class DemoModeCoordinator {
   final AnalyticsProvider _analyticsProvider;
   final EarningsProvider _earningsProvider;
   final InsightsProvider _insightsProvider;
+  final WebhookProvider _webhookProvider;
 
   DemoModeCoordinator({
     required AppsProvider appsProvider,
@@ -34,6 +36,7 @@ class DemoModeCoordinator {
     required AnalyticsProvider analyticsProvider,
     required EarningsProvider earningsProvider,
     required InsightsProvider insightsProvider,
+    required WebhookProvider webhookProvider,
   })  : _appsProvider = appsProvider,
         _dashboardProvider = dashboardProvider,
         _subscriptionProvider = subscriptionProvider,
@@ -43,7 +46,8 @@ class DemoModeCoordinator {
         _riskProvider = riskProvider,
         _analyticsProvider = analyticsProvider,
         _earningsProvider = earningsProvider,
-        _insightsProvider = insightsProvider;
+        _insightsProvider = insightsProvider,
+        _webhookProvider = webhookProvider;
 
   /// Set demo mode on all providers at once.
   void setDemoMode(bool value) {
@@ -57,6 +61,7 @@ class DemoModeCoordinator {
     _analyticsProvider.setDemoMode(value);
     _earningsProvider.setDemoMode(value);
     _insightsProvider.setDemoMode(value);
+    _webhookProvider.setDemoMode(value);
   }
 
   /// Toggle to live mode: set demo off, load apps, then load all screen data.
@@ -66,15 +71,15 @@ class DemoModeCoordinator {
     final apps = _appsProvider.apps;
     if (apps.isNotEmpty) {
       final appId = apps.first.id;
-      _dashboardProvider.loadMetrics(appId);
-      _subscriptionProvider.loadSubscriptions(appId);
-      _storeProvider.loadStores(appId);
-      _transactionProvider.loadTransactions(appId);
-      _eventsProvider.loadEvents(appId);
-      _riskProvider.loadRiskSummary(appId);
-      _analyticsProvider.loadAnalytics(appId);
-      _earningsProvider.loadEarnings(appId);
-      _insightsProvider.loadInsights(appId);
+      _dashboardProvider.setSelectedApp(appId);
+      _subscriptionProvider.setSelectedApp(appId);
+      _storeProvider.setSelectedApp(appId);
+      _transactionProvider.setSelectedApp(appId);
+      _eventsProvider.setSelectedApp(appId);
+      _riskProvider.setSelectedApp(appId);
+      _analyticsProvider.setSelectedApp(appId);
+      _earningsProvider.setSelectedApp(appId);
+      _insightsProvider.setSelectedApp(appId);
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'core/config/app_config.dart';
 import 'core/demo_mode_coordinator.dart';
+import 'core/navigation/navigation_refresh_notifier.dart';
 import 'core/network/api_client.dart';
 import 'firebase_options.dart';
 import 'providers/analytics_provider.dart';
@@ -19,6 +20,7 @@ import 'providers/risk_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/store_provider.dart';
 import 'providers/subscription_provider.dart';
+import 'providers/sync_status_provider.dart';
 import 'providers/transaction_provider.dart';
 import 'providers/organization_provider.dart';
 import 'providers/webhook_provider.dart';
@@ -32,6 +34,7 @@ import 'services/risk_service.dart';
 import 'services/store_service.dart';
 import 'services/subscription_service.dart';
 import 'services/organization_service.dart';
+import 'services/sync_status_service.dart';
 import 'services/transaction_service.dart';
 
 void main() async {
@@ -54,6 +57,7 @@ void main() async {
   final insightsService = InsightsService(apiClient);
   final storeService = StoreService(apiClient);
   final organizationService = OrganizationService(apiClient);
+  final syncStatusService = SyncStatusService(apiClient);
 
   // Create providers (kept as local vars for coordinator wiring)
   final appsProvider = AppsProvider(appService);
@@ -66,6 +70,7 @@ void main() async {
   final analyticsProvider = AnalyticsProvider(metricsService);
   final earningsProvider = EarningsProvider(earningsService);
   final insightsProvider = InsightsProvider(insightsService);
+  final webhookProvider = WebhookProvider();
 
   final demoCoordinator = DemoModeCoordinator(
     appsProvider: appsProvider,
@@ -78,6 +83,7 @@ void main() async {
     analyticsProvider: analyticsProvider,
     earningsProvider: earningsProvider,
     insightsProvider: insightsProvider,
+    webhookProvider: webhookProvider,
   );
 
   runApp(
@@ -86,19 +92,21 @@ void main() async {
         Provider<MixpanelService>.value(value: mixpanel),
         Provider<ApiClient>.value(value: apiClient),
         Provider<DemoModeCoordinator>.value(value: demoCoordinator),
+        ChangeNotifierProvider(create: (_) => NavigationRefreshNotifier()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider.value(value: dashboardProvider),
         ChangeNotifierProvider.value(value: subscriptionProvider),
         ChangeNotifierProvider.value(value: storeProvider),
         ChangeNotifierProvider.value(value: transactionProvider),
         ChangeNotifierProvider.value(value: eventsProvider),
-        ChangeNotifierProvider(create: (_) => WebhookProvider()),
+        ChangeNotifierProvider.value(value: webhookProvider),
         ChangeNotifierProvider.value(value: riskProvider),
         ChangeNotifierProvider.value(value: analyticsProvider),
         ChangeNotifierProvider.value(value: earningsProvider),
         ChangeNotifierProvider.value(value: appsProvider),
         ChangeNotifierProvider(create: (_) => ApiKeyProvider()),
         ChangeNotifierProvider.value(value: insightsProvider),
+        ChangeNotifierProvider(create: (_) => SyncStatusProvider(syncStatusService)),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(
             create: (_) => OrganizationProvider(organizationService,

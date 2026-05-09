@@ -60,6 +60,13 @@ class AnalyticsProvider extends ChangeNotifier {
     try {
       _liveMetrics = await _metricsService.fetchMetrics(appId,
           cancelToken: _cancelToken);
+      // Load MRR movements in parallel (non-blocking)
+      _metricsService
+          .fetchMrrMovements(appId, cancelToken: _cancelToken)
+          .then((movements) {
+        _liveMrrMovements = movements;
+        notifyListeners();
+      });
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) return;
       _error = e.message;

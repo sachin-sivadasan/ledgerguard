@@ -83,6 +83,16 @@ class MrrMovement {
     required this.churnedCents,
   });
 
+  factory MrrMovement.fromJson(Map<String, dynamic> json) {
+    return MrrMovement(
+      month: json['month'] as String? ?? '',
+      newCents: json['new_cents'] as int? ?? 0,
+      expansionCents: json['expansion_cents'] as int? ?? 0,
+      contractionCents: json['contraction_cents'] as int? ?? 0,
+      churnedCents: json['churned_cents'] as int? ?? 0,
+    );
+  }
+
   int get netCents =>
       newCents + expansionCents - contractionCents - churnedCents;
 }

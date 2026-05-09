@@ -100,4 +100,59 @@ class MetricsService {
       );
     }
   }
+
+  /// Fetches MRR movements by querying metrics for each of the last N months
+  /// and computing deltas between periods.
+  Future<List<MrrMovement>> fetchMrrMovements(String appId,
+      {int months = 6, CancelToken? cancelToken}) async {
+    try {
+      final now = DateTime.now();
+      final movements = <MrrMovement>[];
+      int? prevMrr;
+
+      for (var i = months; i >= 0; i--) {
+        final monthStart = DateTime(now.year, now.month - i, 1);
+        final monthEnd = DateTime(now.year, now.month - i + 1, 0);
+        final startStr =
+            '${monthStart.year}-${monthStart.month.toString().padLeft(2, '0')}-${monthStart.day.toString().padLeft(2, '0')}';
+        final endStr =
+            '${monthEnd.year}-${monthEnd.month.toString().padLeft(2, '0')}-${monthEnd.day.toString().padLeft(2, '0')}';
+
+        final response = await _client.get(
+          '/api/v1/apps/$appId/metrics',
+          queryParameters: {'start': startStr, 'end': endStr},
+          cancelToken: cancelToken,
+        );
+        final data = response.data as Map<String, dynamic>;
+        final current = data['current'] as Map<String, dynamic>? ?? data;
+        final currentMrr =
+            (current['active_mrr_cents'] as num?)?.toInt() ??
+                (current['mrr_cents'] as num?)?.toInt() ??
+                0;
+
+        if (prevMrr != null && i < months) {
+          final delta = currentMrr - prevMrr;
+          const monthNames = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+          ];
+          final monthLabel = monthNames[monthStart.month - 1];
+          movements.add(MrrMovement(
+            month: monthLabel,
+            newCents: delta > 0 ? delta : 0,
+            expansionCents: 0,
+            contractionCents: delta < 0 ? -delta : 0,
+            churnedCents: 0,
+          ));
+        }
+        prevMrr = currentMrr;
+      }
+      return movements;
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return [];
+      debugPrint(
+          '[MetricsService] fetchMrrMovements error: ${e.response?.statusCode}');
+      return [];
+    }
+  }
 }

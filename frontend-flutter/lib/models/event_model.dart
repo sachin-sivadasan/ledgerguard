@@ -1,8 +1,12 @@
 enum EventType {
   appInstall,
   appUninstall,
+  appReactivated,
+  appDeactivated,
   subscriptionActivated,
   subscriptionCancelled,
+  subscriptionFrozen,
+  subscriptionUnfrozen,
   planUpgrade,
   planDowngrade,
   billingFailure,
@@ -52,13 +56,29 @@ class AppEvent {
   static EventType _parseEventType(String s) {
     switch (s.toUpperCase()) {
       case 'APP_INSTALL':
+      case 'RELATIONSHIP_INSTALLED':
         return EventType.appInstall;
       case 'APP_UNINSTALL':
+      case 'RELATIONSHIP_UNINSTALLED':
         return EventType.appUninstall;
+      case 'APP_REACTIVATED':
+      case 'RELATIONSHIP_REACTIVATED':
+        return EventType.appReactivated;
+      case 'APP_DEACTIVATED':
+      case 'RELATIONSHIP_DEACTIVATED':
+        return EventType.appDeactivated;
       case 'SUBSCRIPTION_ACTIVATED':
+      case 'SUBSCRIPTION_CHARGE_ACCEPTED':
         return EventType.subscriptionActivated;
       case 'SUBSCRIPTION_CANCELLED':
+      case 'SUBSCRIPTION_CHARGE_CANCELED':
         return EventType.subscriptionCancelled;
+      case 'SUBSCRIPTION_FROZEN':
+      case 'SUBSCRIPTION_CHARGE_FROZEN':
+        return EventType.subscriptionFrozen;
+      case 'SUBSCRIPTION_UNFROZEN':
+      case 'SUBSCRIPTION_CHARGE_UNFROZEN':
+        return EventType.subscriptionUnfrozen;
       case 'PLAN_UPGRADE':
         return EventType.planUpgrade;
       case 'PLAN_DOWNGRADE':

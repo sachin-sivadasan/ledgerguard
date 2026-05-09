@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../mock_data/mock_events.dart';
@@ -11,25 +13,45 @@ class EventsProvider extends ChangeNotifier {
 
   bool _demoMode = false;
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   String? _error;
   CancelToken? _cancelToken;
+  Timer? _storeSearchDebounce;
 
   EventType? _typeFilter;
-  String? _appFilter;
+  String? _selectedAppId;
   String? _storeFilter;
   TimeRange _timeRange = TimeRange.thisWeek;
 
   List<AppEvent> _liveEvents = [];
+  int _currentPage = 1;
+  int _totalPages = 1;
+  int _totalCount = 0;
+  static const int _pageSize = 20;
+
+  static const _typeToApiFilter = {
+    EventType.appInstall: 'RELATIONSHIP_INSTALLED',
+    EventType.appUninstall: 'RELATIONSHIP_UNINSTALLED',
+    EventType.appReactivated: 'RELATIONSHIP_REACTIVATED',
+    EventType.appDeactivated: 'RELATIONSHIP_DEACTIVATED',
+    EventType.subscriptionActivated: 'SUBSCRIPTION_CHARGE_ACCEPTED',
+    EventType.subscriptionCancelled: 'SUBSCRIPTION_CHARGE_CANCELED',
+    EventType.subscriptionFrozen: 'SUBSCRIPTION_CHARGE_FROZEN',
+    EventType.subscriptionUnfrozen: 'SUBSCRIPTION_CHARGE_UNFROZEN',
+  };
 
   EventsProvider(this._eventsService);
 
   bool get demoMode => _demoMode;
   bool get isLoading => _isLoading;
+  bool get isLoadingMore => _isLoadingMore;
   String? get error => _error;
   EventType? get typeFilter => _typeFilter;
-  String? get appFilter => _appFilter;
+  String? get selectedAppId => _selectedAppId;
   String? get storeFilter => _storeFilter;
   TimeRange get timeRange => _timeRange;
+  bool get hasMore => _currentPage < _totalPages;
+  int get totalCount => _totalCount;
 
   void setDemoMode(bool value) {
     _demoMode = value;
@@ -42,10 +64,23 @@ class EventsProvider extends ChangeNotifier {
     _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
+    _currentPage = 1;
+    _liveEvents = [];
     notifyListeners();
     try {
-      _liveEvents = await _eventsService.fetchEvents(appId,
-          cancelToken: _cancelToken);
+      final result = await _eventsService.fetchEvents(
+        appId,
+        page: 1,
+        pageSize: _pageSize,
+        storeDomain: _storeFilter != null && _storeFilter!.isNotEmpty ? _storeFilter : null,
+        eventType: _typeFilter != null ? _typeToApiFilter[_typeFilter!] : null,
+        since: _startOfRange(),
+        cancelToken: _cancelToken,
+      );
+      _liveEvents = result.items;
+      _totalCount = result.total;
+      _totalPages = result.totalPages;
+      _currentPage = result.page;
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) return;
       _error = e.message;
@@ -53,6 +88,32 @@ class EventsProvider extends ChangeNotifier {
       _error = e.toString();
     }
     _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadMore() async {
+    if (_demoMode || _isLoadingMore || !hasMore || _selectedAppId == null) {
+      return;
+    }
+    _isLoadingMore = true;
+    notifyListeners();
+    try {
+      final result = await _eventsService.fetchEvents(
+        _selectedAppId!,
+        page: _currentPage + 1,
+        pageSize: _pageSize,
+        storeDomain: _storeFilter != null && _storeFilter!.isNotEmpty ? _storeFilter : null,
+        eventType: _typeFilter != null ? _typeToApiFilter[_typeFilter!] : null,
+        since: _startOfRange(),
+      );
+      _liveEvents.addAll(result.items);
+      _currentPage = result.page;
+      _totalPages = result.totalPages;
+      _totalCount = result.total;
+    } catch (e) {
+      debugPrint('[EventsProvider] loadMore error: $e');
+    }
+    _isLoadingMore = false;
     notifyListeners();
   }
 
@@ -65,10 +126,12 @@ class EventsProvider extends ChangeNotifier {
     if (_typeFilter != null) {
       list = list.where((e) => e.type == _typeFilter).toList();
     }
-    if (_appFilter != null) {
-      list = list.where((e) => e.appId == _appFilter).toList();
+    // Only filter by app in demo mode — live data is already fetched per-app
+    if (_selectedAppId != null && _demoMode) {
+      list = list.where((e) => e.appId == _selectedAppId).toList();
     }
-    if (_storeFilter != null) {
+    // Client-side store filter only in demo mode — live mode uses server-side filter
+    if (_storeFilter != null && _demoMode) {
       list = list
           .where((e) => e.storeDomain.contains(_storeFilter!))
           .toList();
@@ -78,7 +141,7 @@ class EventsProvider extends ChangeNotifier {
     return list;
   }
 
-  int get totalEvents => events.length;
+  int get totalEvents => _demoMode ? events.length : _totalCount;
 
   DateTime _startOfRange() {
     final now = DateTime.now();
@@ -91,7 +154,7 @@ class EventsProvider extends ChangeNotifier {
 
   int _countInRange(EventType type) {
     final cutoff = _startOfRange();
-    return events
+    return _allEvents
         .where((e) => e.type == type && e.date.isAfter(cutoff))
         .length;
   }
@@ -103,7 +166,11 @@ class EventsProvider extends ChangeNotifier {
 
   void setTimeRange(TimeRange range) {
     _timeRange = range;
-    notifyListeners();
+    if (!_demoMode && _selectedAppId != null) {
+      loadEvents(_selectedAppId!);
+    } else {
+      notifyListeners();
+    }
   }
 
   List<AppEvent> get recentEvents => events.take(5).toList();
@@ -145,11 +212,14 @@ class EventsProvider extends ChangeNotifier {
 
   void setTypeFilter(EventType? type) {
     _typeFilter = type;
+    if (!_demoMode && _selectedAppId != null) {
+      loadEvents(_selectedAppId!);
+    }
     notifyListeners();
   }
 
-  void setAppFilter(String? appId) {
-    _appFilter = appId;
+  void setSelectedApp(String? appId) {
+    _selectedAppId = appId;
     notifyListeners();
     if (!_demoMode && appId != null) {
       loadEvents(appId);
@@ -159,12 +229,20 @@ class EventsProvider extends ChangeNotifier {
   void setStoreFilter(String? store) {
     _storeFilter = store;
     notifyListeners();
+    if (!_demoMode && _selectedAppId != null) {
+      _storeSearchDebounce?.cancel();
+      _storeSearchDebounce = Timer(const Duration(milliseconds: 300), () {
+        loadEvents(_selectedAppId!);
+      });
+    }
   }
 
   void clearFilters() {
     _typeFilter = null;
-    _appFilter = null;
     _storeFilter = null;
+    if (!_demoMode && _selectedAppId != null) {
+      loadEvents(_selectedAppId!);
+    }
     notifyListeners();
   }
 }

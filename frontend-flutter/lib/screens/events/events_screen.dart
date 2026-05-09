@@ -15,6 +15,7 @@ import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_metric_card.dart';
 import '../../widgets/lg_metric_grid.dart';
 import '../../widgets/lg_page.dart';
+import '../../widgets/lg_search_field.dart';
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
@@ -67,10 +68,14 @@ class _EventsScreenState extends State<EventsScreen>
     final events = provider.events;
     final dateFmt = DateFormat('MMM d, y – h:mm a');
     final theme = Theme.of(context);
+    final totalLabel = provider.demoMode
+        ? '${events.length} events'
+        : '${provider.totalCount} events';
 
     return LgPage(
       title: 'Events',
-      subtitle: '${events.length} events',
+      subtitle: totalLabel,
+      onRefresh: refreshData,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -106,13 +111,15 @@ class _EventsScreenState extends State<EventsScreen>
                 value: provider.typeFilter,
                 onChanged: provider.setTypeFilter,
               ),
-              _AppFilter(
-                value: provider.selectedAppId,
-                onChanged: provider.setSelectedApp,
-              ),
-              _StoreFilter(
-                value: provider.storeFilter,
-                onChanged: provider.setStoreFilter,
+              if (context.watch<AppsProvider>().apps.length > 1)
+                _AppFilter(
+                  value: provider.selectedAppId,
+                  onChanged: provider.setSelectedApp,
+                ),
+              LgSearchField(
+                value: provider.storeFilter ?? '',
+                onChanged: (v) => provider.setStoreFilter(v.isEmpty ? null : v),
+                hintText: 'Search by store...',
               ),
               if (provider.typeFilter != null ||
                   provider.storeFilter != null)
@@ -122,14 +129,6 @@ class _EventsScreenState extends State<EventsScreen>
             ],
           ),
           const SizedBox(height: LgSpacing.s300),
-
-          // Pagination label
-          if (events.length > 50)
-            Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: Text('Showing 50 of ${events.length} events',
-                  style: TextStyle(fontSize: 12, color: LgColors.textSecondary)),
-            ),
 
           // Empty filter state
           if (events.isEmpty)
@@ -148,7 +147,7 @@ class _EventsScreenState extends State<EventsScreen>
             ),
 
           // Event list
-          ...events.take(50).map((event) {
+          ...events.map((event) {
             return Padding(
               padding: const EdgeInsets.only(bottom: LgSpacing.s300),
               child: LgCard(
@@ -205,6 +204,20 @@ class _EventsScreenState extends State<EventsScreen>
               ),
             );
           }),
+
+          // Load More
+          if (provider.hasMore && !provider.demoMode)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: LgSpacing.s400),
+              child: Center(
+                child: provider.isLoadingMore
+                    ? const CircularProgressIndicator()
+                    : OutlinedButton(
+                        onPressed: provider.loadMore,
+                        child: const Text('Load More'),
+                      ),
+              ),
+            ),
         ],
       ),
     );
@@ -220,8 +233,12 @@ String _rangeLabel(TimeRange range) => switch (range) {
 IconData _eventIcon(EventType type) => switch (type) {
       EventType.appInstall => Icons.download,
       EventType.appUninstall => Icons.delete_outline,
+      EventType.appReactivated => Icons.refresh,
+      EventType.appDeactivated => Icons.pause_circle_outline,
       EventType.subscriptionActivated => Icons.check_circle_outline,
       EventType.subscriptionCancelled => Icons.cancel_outlined,
+      EventType.subscriptionFrozen => Icons.ac_unit,
+      EventType.subscriptionUnfrozen => Icons.whatshot,
       EventType.planUpgrade => Icons.arrow_upward,
       EventType.planDowngrade => Icons.arrow_downward,
       EventType.billingFailure => Icons.error_outline,
@@ -234,8 +251,12 @@ IconData _eventIcon(EventType type) => switch (type) {
 Color _eventColor(EventType type) => switch (type) {
       EventType.appInstall => LgColors.success,
       EventType.appUninstall => LgColors.critical,
+      EventType.appReactivated => LgColors.success,
+      EventType.appDeactivated => LgColors.warning,
       EventType.subscriptionActivated => LgColors.success,
       EventType.subscriptionCancelled => LgColors.critical,
+      EventType.subscriptionFrozen => LgColors.warning,
+      EventType.subscriptionUnfrozen => LgColors.success,
       EventType.planUpgrade => LgColors.info,
       EventType.planDowngrade => LgColors.warning,
       EventType.billingFailure => LgColors.critical,
@@ -248,8 +269,12 @@ Color _eventColor(EventType type) => switch (type) {
 String _eventBadgeLabel(EventType type) => switch (type) {
       EventType.appInstall => 'INSTALL',
       EventType.appUninstall => 'UNINSTALL',
+      EventType.appReactivated => 'REACTIVATED',
+      EventType.appDeactivated => 'DEACTIVATED',
       EventType.subscriptionActivated => 'ACTIVATED',
       EventType.subscriptionCancelled => 'CANCELLED',
+      EventType.subscriptionFrozen => 'FROZEN',
+      EventType.subscriptionUnfrozen => 'UNFROZEN',
       EventType.planUpgrade => 'UPGRADE',
       EventType.planDowngrade => 'DOWNGRADE',
       EventType.billingFailure => 'BILLING FAIL',
@@ -262,8 +287,12 @@ String _eventBadgeLabel(EventType type) => switch (type) {
 BadgeTone _eventBadgeTone(EventType type) => switch (type) {
       EventType.appInstall => BadgeTone.success,
       EventType.appUninstall => BadgeTone.critical,
+      EventType.appReactivated => BadgeTone.success,
+      EventType.appDeactivated => BadgeTone.warning,
       EventType.subscriptionActivated => BadgeTone.success,
       EventType.subscriptionCancelled => BadgeTone.critical,
+      EventType.subscriptionFrozen => BadgeTone.warning,
+      EventType.subscriptionUnfrozen => BadgeTone.success,
       EventType.planUpgrade => BadgeTone.info,
       EventType.planDowngrade => BadgeTone.warning,
       EventType.billingFailure => BadgeTone.critical,
@@ -318,31 +347,3 @@ class _AppFilter extends StatelessWidget {
   }
 }
 
-class _StoreFilter extends StatelessWidget {
-  final String? value;
-  final ValueChanged<String?> onChanged;
-  const _StoreFilter({this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String?>(
-      onSelected: onChanged,
-      itemBuilder: (ctx) => [
-        const PopupMenuItem(value: null, child: Text('All Stores')),
-        const PopupMenuItem(value: 'acme-store', child: Text('acme-store')),
-        const PopupMenuItem(value: 'bright-gadgets', child: Text('bright-gadgets')),
-        const PopupMenuItem(value: 'eco-shop', child: Text('eco-shop')),
-        const PopupMenuItem(value: 'daily-deals', child: Text('daily-deals')),
-        const PopupMenuItem(value: 'fresh-foods', child: Text('fresh-foods')),
-        const PopupMenuItem(value: 'glow-beauty', child: Text('glow-beauty')),
-        const PopupMenuItem(value: 'alpha-outlet', child: Text('alpha-outlet')),
-        const PopupMenuItem(value: 'beta-mart', child: Text('beta-mart')),
-      ],
-      child: Chip(
-        label: Text(value ?? 'Store'),
-        deleteIcon: value != null ? const Icon(Icons.close, size: 14) : null,
-        onDeleted: value != null ? () => onChanged(null) : null,
-      ),
-    );
-  }
-}

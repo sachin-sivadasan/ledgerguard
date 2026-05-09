@@ -27,6 +27,8 @@ class AnalyticsProvider extends ChangeNotifier {
   List<CohortData>? _liveCohorts;
   List<AppComparison>? _liveApps;
   RevenueConcentration? _revenueConcentration;
+  DateTime? _snapshotDate;
+  DashboardMetrics? _snapshotMetrics;
 
   AnalyticsProvider(this._metricsService, [this._earningsService]);
 
@@ -133,6 +135,23 @@ class AnalyticsProvider extends ChangeNotifier {
     notifyListeners();
     if (!_demoMode && _selectedAppId != null) {
       _loadForecast(_selectedAppId!);
+    }
+  }
+
+  // Historical snapshot
+  DateTime? get snapshotDate => _snapshotDate;
+  DashboardMetrics? get snapshotMetrics => _snapshotMetrics;
+
+  Future<void> setSnapshotDate(DateTime? date) async {
+    _snapshotDate = date;
+    _snapshotMetrics = null;
+    notifyListeners();
+    if (date != null && _selectedAppId != null && !_demoMode) {
+      final metrics = await _metricsService.fetchSnapshotForDate(
+          _selectedAppId!, date,
+          cancelToken: _cancelToken);
+      _snapshotMetrics = metrics;
+      notifyListeners();
     }
   }
 

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/analytics_provider.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/organization_provider.dart';
+import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../widgets/lg_card.dart';
 import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
@@ -70,6 +73,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     return LgPage(
       title: 'Analytics',
       subtitle: 'Revenue analysis and forecasting',
+      onRefresh: refreshData,
       scrollable: false,
       child: DefaultTabController(
         length: 5,
@@ -113,6 +117,55 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               ),
               const SizedBox(height: LgSpacing.s300),
             ],
+            // Historical snapshot date picker (live mode only)
+            if (!provider.demoMode) ...[
+              Row(
+                children: [
+                  ActionChip(
+                    avatar: const Icon(Icons.calendar_today, size: 16),
+                    label: Text(provider.snapshotDate != null
+                        ? DateFormat('MMM d, yyyy')
+                            .format(provider.snapshotDate!)
+                        : 'Compare to date'),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: provider.snapshotDate ??
+                            DateTime.now()
+                                .subtract(const Duration(days: 30)),
+                        firstDate: DateTime.now()
+                            .subtract(const Duration(days: 365)),
+                        lastDate: DateTime.now(),
+                      );
+                      provider.setSnapshotDate(picked);
+                    },
+                  ),
+                  if (provider.snapshotDate != null) ...[
+                    const SizedBox(width: LgSpacing.s200),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 16),
+                      onPressed: () =>
+                          provider.setSnapshotDate(null),
+                      tooltip: 'Clear comparison',
+                      iconSize: 16,
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ],
+              ),
+              if (provider.snapshotMetrics != null) ...[
+                const SizedBox(height: LgSpacing.s300),
+                _SnapshotComparisonCard(
+                  current: provider.mrrSnapshots.isNotEmpty
+                      ? provider.mrrSnapshots.last.mrrCents
+                      : 0,
+                  snapshot: provider.snapshotMetrics!.mrrCents,
+                  snapshotDate: provider.snapshotDate!,
+                ),
+              ],
+              const SizedBox(height: LgSpacing.s300),
+            ],
             const TabBar(
               isScrollable: true,
               tabAlignment: TabAlignment.start,
@@ -139,6 +192,86 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SnapshotComparisonCard extends StatelessWidget {
+  final int current;
+  final int snapshot;
+  final DateTime snapshotDate;
+
+  const _SnapshotComparisonCard({
+    required this.current,
+    required this.snapshot,
+    required this.snapshotDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final delta = current - snapshot;
+    final pctChange =
+        snapshot > 0 ? (delta / snapshot * 100) : 0.0;
+    final isPositive = delta >= 0;
+    final theme = Theme.of(context);
+
+    return LgCard(
+      title:
+          'MRR vs ${DateFormat('MMM d').format(snapshotDate)}',
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Current',
+                  style: theme.textTheme.bodySmall),
+              Text('\$${(current / 100).toStringAsFixed(0)}',
+                  style: theme.textTheme.titleMedium),
+            ],
+          ),
+          const SizedBox(width: LgSpacing.s600),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(DateFormat('MMM d').format(snapshotDate),
+                  style: theme.textTheme.bodySmall),
+              Text('\$${(snapshot / 100).toStringAsFixed(0)}',
+                  style: theme.textTheme.titleMedium),
+            ],
+          ),
+          const SizedBox(width: LgSpacing.s600),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Change',
+                  style: theme.textTheme.bodySmall),
+              Row(
+                children: [
+                  Icon(
+                    isPositive
+                        ? Icons.trending_up
+                        : Icons.trending_down,
+                    size: 16,
+                    color: isPositive
+                        ? LgColors.success
+                        : LgColors.critical,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${isPositive ? '+' : ''}${pctChange.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: isPositive
+                          ? LgColors.success
+                          : LgColors.critical,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

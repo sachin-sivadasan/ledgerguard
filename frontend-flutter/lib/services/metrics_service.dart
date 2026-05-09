@@ -101,6 +101,27 @@ class MetricsService {
     }
   }
 
+  /// Fetches a historical snapshot for a specific date.
+  Future<DashboardMetrics?> fetchSnapshotForDate(String appId, DateTime date,
+      {CancelToken? cancelToken}) async {
+    try {
+      final dateStr =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final response = await _client.get(
+        '/api/v1/apps/$appId/metrics',
+        queryParameters: {'start': dateStr, 'end': dateStr},
+        cancelToken: cancelToken,
+      );
+      return DashboardMetrics.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return null;
+      debugPrint(
+          '[MetricsService] fetchSnapshotForDate error: ${e.response?.statusCode}');
+      return null;
+    }
+  }
+
   /// Fetches MRR movements by querying metrics for each of the last N months
   /// and computing deltas between periods.
   Future<List<MrrMovement>> fetchMrrMovements(String appId,

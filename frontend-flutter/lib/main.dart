@@ -36,6 +36,7 @@ import 'services/subscription_service.dart';
 import 'services/organization_service.dart';
 import 'services/sync_status_service.dart';
 import 'services/transaction_service.dart';
+import 'services/user_preferences_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,10 +59,11 @@ void main() async {
   final storeService = StoreService(apiClient);
   final organizationService = OrganizationService(apiClient);
   final syncStatusService = SyncStatusService(apiClient);
+  final userPreferencesService = UserPreferencesService(apiClient);
 
   // Create providers (kept as local vars for coordinator wiring)
-  final appsProvider = AppsProvider(appService);
-  final dashboardProvider = DashboardProvider(metricsService);
+  final appsProvider = AppsProvider(appService, userPreferencesService);
+  final dashboardProvider = DashboardProvider(metricsService, userPreferencesService);
   final subscriptionProvider = SubscriptionProvider(subscriptionService);
   final storeProvider = StoreProvider(storeService, subscriptionService);
   final transactionProvider = TransactionProvider(transactionService);
@@ -107,10 +109,11 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ApiKeyProvider()),
         ChangeNotifierProvider.value(value: insightsProvider),
         ChangeNotifierProvider(create: (_) => SyncStatusProvider(syncStatusService)),
-        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider(userPreferencesService)),
         ChangeNotifierProvider(
             create: (_) => OrganizationProvider(organizationService,
-                apiClient: apiClient)),
+                apiClient: apiClient,
+                prefsService: userPreferencesService)),
       ],
       child: const App(),
     ),

@@ -24,8 +24,10 @@ func NewPostgresNotificationPreferencesRepository(pool *pgxpool.Pool) *PostgresN
 
 func (r *PostgresNotificationPreferencesRepository) Create(ctx context.Context, prefs *entity.NotificationPreferences) error {
 	query := `
-		INSERT INTO notification_preferences (id, user_id, critical_enabled, daily_summary_enabled, daily_summary_time, slack_webhook_url, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO notification_preferences (id, user_id, critical_enabled, daily_summary_enabled, daily_summary_time, slack_webhook_url,
+			email_enabled, slack_enabled, churn_alerts_enabled, revenue_alerts_enabled, review_alerts_enabled, risk_threshold_days,
+			created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -35,6 +37,12 @@ func (r *PostgresNotificationPreferencesRepository) Create(ctx context.Context, 
 		prefs.DailySummaryEnabled,
 		prefs.DailySummaryTime.Format("15:04:05"),
 		prefs.SlackWebhookURL,
+		prefs.EmailEnabled,
+		prefs.SlackEnabled,
+		prefs.ChurnAlertsEnabled,
+		prefs.RevenueAlertsEnabled,
+		prefs.ReviewAlertsEnabled,
+		prefs.RiskThresholdDays,
 		prefs.CreatedAt,
 		prefs.UpdatedAt,
 	)
@@ -44,7 +52,9 @@ func (r *PostgresNotificationPreferencesRepository) Create(ctx context.Context, 
 
 func (r *PostgresNotificationPreferencesRepository) FindByUserID(ctx context.Context, userID uuid.UUID) (*entity.NotificationPreferences, error) {
 	query := `
-		SELECT id, user_id, critical_enabled, daily_summary_enabled, daily_summary_time, slack_webhook_url, created_at, updated_at
+		SELECT id, user_id, critical_enabled, daily_summary_enabled, daily_summary_time, slack_webhook_url,
+			email_enabled, slack_enabled, churn_alerts_enabled, revenue_alerts_enabled, review_alerts_enabled, risk_threshold_days,
+			created_at, updated_at
 		FROM notification_preferences
 		WHERE user_id = $1
 	`
@@ -60,6 +70,12 @@ func (r *PostgresNotificationPreferencesRepository) FindByUserID(ctx context.Con
 		&prefs.DailySummaryEnabled,
 		&summaryTime,
 		&slackURL,
+		&prefs.EmailEnabled,
+		&prefs.SlackEnabled,
+		&prefs.ChurnAlertsEnabled,
+		&prefs.RevenueAlertsEnabled,
+		&prefs.ReviewAlertsEnabled,
+		&prefs.RiskThresholdDays,
 		&prefs.CreatedAt,
 		&prefs.UpdatedAt,
 	)
@@ -83,7 +99,9 @@ func (r *PostgresNotificationPreferencesRepository) FindByUserID(ctx context.Con
 func (r *PostgresNotificationPreferencesRepository) Update(ctx context.Context, prefs *entity.NotificationPreferences) error {
 	query := `
 		UPDATE notification_preferences
-		SET critical_enabled = $2, daily_summary_enabled = $3, daily_summary_time = $4, slack_webhook_url = $5, updated_at = $6
+		SET critical_enabled = $2, daily_summary_enabled = $3, daily_summary_time = $4, slack_webhook_url = $5,
+			email_enabled = $6, slack_enabled = $7, churn_alerts_enabled = $8, revenue_alerts_enabled = $9,
+			review_alerts_enabled = $10, risk_threshold_days = $11, updated_at = $12
 		WHERE user_id = $1
 	`
 
@@ -93,6 +111,12 @@ func (r *PostgresNotificationPreferencesRepository) Update(ctx context.Context, 
 		prefs.DailySummaryEnabled,
 		prefs.DailySummaryTime.Format("15:04:05"),
 		prefs.SlackWebhookURL,
+		prefs.EmailEnabled,
+		prefs.SlackEnabled,
+		prefs.ChurnAlertsEnabled,
+		prefs.RevenueAlertsEnabled,
+		prefs.ReviewAlertsEnabled,
+		prefs.RiskThresholdDays,
 		prefs.UpdatedAt,
 	)
 
@@ -109,13 +133,21 @@ func (r *PostgresNotificationPreferencesRepository) Update(ctx context.Context, 
 
 func (r *PostgresNotificationPreferencesRepository) Upsert(ctx context.Context, prefs *entity.NotificationPreferences) error {
 	query := `
-		INSERT INTO notification_preferences (id, user_id, critical_enabled, daily_summary_enabled, daily_summary_time, slack_webhook_url, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO notification_preferences (id, user_id, critical_enabled, daily_summary_enabled, daily_summary_time, slack_webhook_url,
+			email_enabled, slack_enabled, churn_alerts_enabled, revenue_alerts_enabled, review_alerts_enabled, risk_threshold_days,
+			created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		ON CONFLICT (user_id) DO UPDATE SET
 			critical_enabled = EXCLUDED.critical_enabled,
 			daily_summary_enabled = EXCLUDED.daily_summary_enabled,
 			daily_summary_time = EXCLUDED.daily_summary_time,
 			slack_webhook_url = EXCLUDED.slack_webhook_url,
+			email_enabled = EXCLUDED.email_enabled,
+			slack_enabled = EXCLUDED.slack_enabled,
+			churn_alerts_enabled = EXCLUDED.churn_alerts_enabled,
+			revenue_alerts_enabled = EXCLUDED.revenue_alerts_enabled,
+			review_alerts_enabled = EXCLUDED.review_alerts_enabled,
+			risk_threshold_days = EXCLUDED.risk_threshold_days,
 			updated_at = EXCLUDED.updated_at
 	`
 
@@ -126,6 +158,12 @@ func (r *PostgresNotificationPreferencesRepository) Upsert(ctx context.Context, 
 		prefs.DailySummaryEnabled,
 		prefs.DailySummaryTime.Format("15:04:05"),
 		prefs.SlackWebhookURL,
+		prefs.EmailEnabled,
+		prefs.SlackEnabled,
+		prefs.ChurnAlertsEnabled,
+		prefs.RevenueAlertsEnabled,
+		prefs.ReviewAlertsEnabled,
+		prefs.RiskThresholdDays,
 		prefs.CreatedAt,
 		prefs.UpdatedAt,
 	)

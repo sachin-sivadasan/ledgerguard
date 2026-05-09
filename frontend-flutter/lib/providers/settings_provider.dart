@@ -1,6 +1,16 @@
 import 'package:flutter/foundation.dart';
 
+import '../services/user_preferences_service.dart';
+
 class SettingsProvider extends ChangeNotifier {
+  final UserPreferencesService? _prefsService;
+
+  SettingsProvider([this._prefsService]);
+
+  // Loading state
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+
   // Notification preferences
   bool _emailAlerts = true;
   bool _slackAlerts = false;
@@ -30,15 +40,134 @@ class SettingsProvider extends ChangeNotifier {
   String get currency => _currency;
   String get timezone => _timezone;
 
-  void setEmailAlerts(bool v) { _emailAlerts = v; notifyListeners(); }
-  void setSlackAlerts(bool v) { _slackAlerts = v; notifyListeners(); }
-  void setChurnAlerts(bool v) { _churnAlerts = v; notifyListeners(); }
-  void setRevenueAlerts(bool v) { _revenueAlerts = v; notifyListeners(); }
-  void setReviewAlerts(bool v) { _reviewAlerts = v; notifyListeners(); }
-  void setRiskThresholdDays(int v) { _riskThresholdDays = v; notifyListeners(); }
-  void setSyncFrequency(String v) { _syncFrequency = v; notifyListeners(); }
-  void setAutoSync(bool v) { _autoSync = v; notifyListeners(); }
-  void setWorkspaceName(String v) { _workspaceName = v; notifyListeners(); }
-  void setCurrency(String v) { _currency = v; notifyListeners(); }
-  void setTimezone(String v) { _timezone = v; notifyListeners(); }
+  /// Load all preferences from the backend API
+  Future<void> loadPreferences() async {
+    if (_prefsService == null) return;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final results = await Future.wait([
+        _prefsService.getNotificationPreferences(),
+        _prefsService.getSyncWorkspacePreferences(),
+      ]);
+
+      final notifPrefs = results[0] as NotificationPrefs?;
+      if (notifPrefs != null) {
+        _emailAlerts = notifPrefs.emailEnabled;
+        _slackAlerts = notifPrefs.slackEnabled;
+        _churnAlerts = notifPrefs.churnAlertsEnabled;
+        _revenueAlerts = notifPrefs.revenueAlertsEnabled;
+        _reviewAlerts = notifPrefs.reviewAlertsEnabled;
+        _riskThresholdDays = notifPrefs.riskThresholdDays;
+      }
+
+      final swPrefs = results[1] as SyncWorkspacePrefs?;
+      if (swPrefs != null) {
+        _autoSync = swPrefs.autoSync;
+        _syncFrequency = swPrefs.syncFrequency;
+        _workspaceName = swPrefs.workspaceName;
+        _currency = swPrefs.currency;
+        _timezone = swPrefs.timezone;
+      }
+    } catch (e) {
+      debugPrint('[SettingsProvider] loadPreferences error: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // --- Notification setters (optimistic + fire-and-forget save) ---
+
+  void setEmailAlerts(bool v) {
+    _emailAlerts = v;
+    notifyListeners();
+    _saveNotificationPreferences();
+  }
+
+  void setSlackAlerts(bool v) {
+    _slackAlerts = v;
+    notifyListeners();
+    _saveNotificationPreferences();
+  }
+
+  void setChurnAlerts(bool v) {
+    _churnAlerts = v;
+    notifyListeners();
+    _saveNotificationPreferences();
+  }
+
+  void setRevenueAlerts(bool v) {
+    _revenueAlerts = v;
+    notifyListeners();
+    _saveNotificationPreferences();
+  }
+
+  void setReviewAlerts(bool v) {
+    _reviewAlerts = v;
+    notifyListeners();
+    _saveNotificationPreferences();
+  }
+
+  void setRiskThresholdDays(int v) {
+    _riskThresholdDays = v;
+    notifyListeners();
+    _saveNotificationPreferences();
+  }
+
+  // --- Sync/workspace setters (optimistic + fire-and-forget save) ---
+
+  void setSyncFrequency(String v) {
+    _syncFrequency = v;
+    notifyListeners();
+    _saveSyncWorkspacePreferences();
+  }
+
+  void setAutoSync(bool v) {
+    _autoSync = v;
+    notifyListeners();
+    _saveSyncWorkspacePreferences();
+  }
+
+  void setWorkspaceName(String v) {
+    _workspaceName = v;
+    notifyListeners();
+    _saveSyncWorkspacePreferences();
+  }
+
+  void setCurrency(String v) {
+    _currency = v;
+    notifyListeners();
+    _saveSyncWorkspacePreferences();
+  }
+
+  void setTimezone(String v) {
+    _timezone = v;
+    notifyListeners();
+    _saveSyncWorkspacePreferences();
+  }
+
+  // --- Private save helpers ---
+
+  void _saveNotificationPreferences() {
+    _prefsService?.saveNotificationPreferences(NotificationPrefs(
+      emailEnabled: _emailAlerts,
+      slackEnabled: _slackAlerts,
+      churnAlertsEnabled: _churnAlerts,
+      revenueAlertsEnabled: _revenueAlerts,
+      reviewAlertsEnabled: _reviewAlerts,
+      riskThresholdDays: _riskThresholdDays,
+    ));
+  }
+
+  void _saveSyncWorkspacePreferences() {
+    _prefsService?.saveSyncWorkspacePreferences(SyncWorkspacePrefs(
+      autoSync: _autoSync,
+      syncFrequency: _syncFrequency,
+      workspaceName: _workspaceName,
+      currency: _currency,
+      timezone: _timezone,
+    ));
+  }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/dashboard_registry.dart';
 import '../../core/demo_mode_coordinator.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/dashboard_provider.dart';
 import '../../providers/organization_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../theme/app_colors.dart';
@@ -11,14 +13,28 @@ import '../../theme/app_spacing.dart';
 import '../../widgets/lg_card.dart';
 import '../../widgets/lg_page.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SettingsProvider>().loadPreferences();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SettingsProvider>();
     final appsProvider = context.watch<AppsProvider>();
     final auth = context.watch<AuthProvider>();
+    final dp = context.watch<DashboardProvider>();
 
     return LgPage(
       title: 'Settings',
@@ -41,6 +57,60 @@ class SettingsScreen extends StatelessWidget {
                   await coordinator.switchToLiveMode();
                 }
               },
+            ),
+          ),
+          const SizedBox(height: LgSpacing.s600),
+
+          // Dashboard customization
+          LgCard(
+            title: 'Dashboard',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const ListTile(
+                  title: Text('Primary KPIs'),
+                  subtitle: Text('Choose up to 4 metrics'),
+                ),
+                for (final kpi in kAllKpis)
+                  CheckboxListTile(
+                    title: Text(kpi.label),
+                    value: dp.primaryKpis.contains(kpi.id),
+                    onChanged: (v) {
+                      final current = List<String>.from(dp.primaryKpis);
+                      if (v == true) {
+                        if (current.length >= 4) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Maximum 4 KPIs')),
+                          );
+                          return;
+                        }
+                        current.add(kpi.id);
+                      } else {
+                        current.remove(kpi.id);
+                      }
+                      dp.saveDashboardPreferences(current, dp.secondaryWidgets);
+                    },
+                  ),
+                const Divider(),
+                const ListTile(
+                  title: Text('Secondary Widgets'),
+                  subtitle: Text('Toggle dashboard widgets'),
+                ),
+                for (final w in kAllWidgets)
+                  CheckboxListTile(
+                    title: Text(w.label),
+                    value: dp.secondaryWidgets.contains(w.id),
+                    onChanged: (v) {
+                      final current = List<String>.from(dp.secondaryWidgets);
+                      if (v == true) {
+                        current.add(w.id);
+                      } else {
+                        current.remove(w.id);
+                      }
+                      dp.saveDashboardPreferences(dp.primaryKpis, current);
+                    },
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: LgSpacing.s600),

@@ -18,6 +18,18 @@
 
 ## Log
 
+### [2026-05-09] Persist Org + Default App Selection via Backend Preferences
+**Original:**
+> Wire backend user_preferences endpoints (selected-org, default-app) to frontend OrganizationProvider and AppsProvider so selection persists across sessions.
+
+**Improved:**
+> Wire frontend providers to backend `user_preferences` table for org/app persistence. (1) Create `UserPreferencesService` with GET/PUT for selected-org and default-app; (2) `OrganizationProvider.loadOrganizations()` resolves saved org before auto-selecting first; (3) `AppsProvider.loadApps()` resolves saved app, adds `selectedAppId` getter and `setSelectedApp()` method; (4) `DataLoadingMixin` uses `selectedAppId` instead of `apps.first.id`; (5) Wire service in `main.dart`; (6) PlantUML sequence diagram.
+
+**Result:**
+- 7 files changed (1 new service, 1 new diagram, 5 modified)
+
+---
+
 ### [2026-05-08] Migrate from Numeric Shopify App IDs to Internal UUIDs
 **Original:**
 > Implement the UUID migration plan: Backend shared resolveAppFromRequest(), frontend UUID as canonical ID, backend UUID-only enforcement, documentation.
@@ -1861,3 +1873,67 @@
 - 9 new tests (4 backfill optimization + 5 downsampling)
 - All Go tests pass, flutter analyze clean
 - ADR-041 documented in DECISIONS.md
+
+---
+
+### [2026-05-09] Wire Dashboard Preferences — Dynamic KPIs + Widgets via Backend API
+**Original:**
+> Implement the plan: Wire Dashboard Preferences — Dynamic KPIs + Widgets via Backend API
+
+**Improved:**
+> Implement end-to-end dashboard customization: (1) Fix backend `defaultPreferences()` to match current dashboard layout, (2) Add `getDashboardPreferences()` / `saveDashboardPreferences()` to `UserPreferencesService`, (3) Create a KPI + widget registry mapping IDs to rendering config, (4) Make `DashboardProvider` load/save prefs and expose `primaryKpis`/`secondaryWidgets`, (5) Replace hardcoded dashboard cards with dynamic registry-based rendering including new `_EarningsOverviewCard`, (6) Add Dashboard Customization section in Settings with checkbox toggles (max 4 KPIs enforced), (7) Wire `userPreferencesService` into `DashboardProvider` in `main.dart`.
+
+**Result:**
+- 7 files changed (1 new registry, 6 modified)
+- Backend defaults aligned to actual dashboard
+- Dashboard renders KPIs and widgets dynamically from user preferences
+- Settings screen allows toggling KPIs (max 4) and secondary widgets
+- flutter analyze: 0 issues, backend builds clean
+
+---
+
+## Prompt 39: Wire Settings Preferences — Notification, Sync & Workspace via Backend API
+
+**Date:** 2026-05-09
+
+**Original prompt:** Wire Settings Preferences — Notification, Sync & Workspace via Backend API (detailed plan with 10 phases, gap analysis, migration SQL, endpoint specs, frontend wiring)
+
+**Improved prompt:** Implement full-stack wiring of Settings page preferences to backend API: extend notification_preferences table with 6 new columns (migration 000039), add sync/workspace columns to user_preferences (migration 000040), update backend entity/repo/handler, add GET/PUT settings endpoints, wire frontend SettingsProvider to API with optimistic updates, create PlantUML sequence diagram, update all documentation.
+
+**Result:**
+- 18 files changed (6 new, 12 modified)
+- 2 migrations (000039, 000040) adding 11 new columns across 2 tables
+- Backend: entity + repo + handler updated, 2 new endpoints registered
+- Frontend: service methods + SettingsProvider wired to API + screen loads on open
+- PlantUML sequence diagram created
+- go build: clean, flutter analyze: 0 issues
+
+---
+
+## Prompt 40: Diagram Audit & Update
+
+**Date:** 2026-05-09
+
+**Original prompt:** run diagram audit
+
+**Improved prompt:** Execute `docs/prompts/diagram-audit-prompt.md` — audit all architecture diagrams (PlantUML, Excalidraw, sequence), update outdated ones, create missing diagrams for backend and frontend-flutter.
+
+**Audit findings:**
+- `C4_current.puml` — CURRENT (393 lines)
+- `ER_current.puml` — OUTDATED (missing migrations 000039/000040 columns)
+- `SEQUENCE_current.puml` — CURRENT (22 flows, 1563 lines)
+- 35 feature diagrams (01–39) — ALL CURRENT
+- 12 excalidraw files — UNKNOWN (binary format)
+- `frontend-flutter/docs/MOBILE_NAVIGATION.puml` — CURRENT
+- `frontend/docs/SCREENS.puml` — OUTDATED (Bloc version, not active)
+
+**Actions taken:**
+1. **Updated** `docs/ER_current.puml` — Added 6 notification_preferences columns + 5 user_preferences columns from migrations 000039/000040
+2. **Created** `frontend-flutter/docs/SCREENS.puml` — Full screen flow diagram (auth screens, AppShell, 13 navigation branches, sub-routes)
+3. **Created** `docs/diagrams/puml/40-flutter-provider-service-graph.puml` — Provider → Service → API dependency graph (16 providers, 13 services, DemoModeCoordinator)
+4. **Created** `docs/diagrams/puml/41-backend-api-endpoint-map.puml` — All ~85 REST endpoints grouped by domain, color-coded by auth scheme
+
+**Result:**
+- 1 diagram updated, 3 new diagrams created
+- All current diagrams verified against codebase
+- No deletions, no code changes

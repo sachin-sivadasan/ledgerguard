@@ -1,0 +1,67 @@
+@startuml 39-settings-preferences-sequence
+
+title Settings Preferences — Load & Toggle Flows
+
+actor User
+participant "Settings\nScreen" as UI
+participant "Settings\nProvider" as SP
+participant "UserPreferences\nService" as SVC
+participant "Backend API" as API
+database "PostgreSQL" as DB
+
+== Flow 1: Load Preferences on Screen Open ==
+
+User -> UI : Navigate to Settings
+UI -> SP : loadPreferences()
+SP -> SP : isLoading = true
+
+par Parallel GET
+  SP -> SVC : getNotificationPreferences()
+  SVC -> API : GET /api/v1/users/notification-preferences
+  API -> DB : SELECT FROM notification_preferences
+  DB --> API : row (or empty)
+  API --> SVC : JSON response
+  SVC --> SP : NotificationPrefs?
+else
+  SP -> SVC : getSyncWorkspacePreferences()
+  SVC -> API : GET /api/v1/user/preferences/settings
+  API -> DB : SELECT FROM user_preferences
+  DB --> API : row (or empty)
+  API --> SVC : JSON response
+  SVC --> SP : SyncWorkspacePrefs?
+end
+
+SP -> SP : Apply loaded values\n(fallback to defaults if null)
+SP -> SP : isLoading = false
+SP -> UI : notifyListeners()
+UI -> User : Render with saved values
+
+== Flow 2: Toggle Setting (e.g. Email Alerts OFF) ==
+
+User -> UI : Toggle Email Alerts OFF
+UI -> SP : setEmailAlerts(false)
+SP -> SP : _emailAlerts = false\n(optimistic update)
+SP -> UI : notifyListeners()
+UI -> User : UI reflects OFF immediately
+
+SP ->> SVC : saveNotificationPreferences()\n(fire-and-forget)
+SVC -> API : PUT /api/v1/users/notification-preferences
+API -> DB : UPSERT notification_preferences
+DB --> API : OK
+API --> SVC : 200 OK
+
+== Flow 3: Change Sync Frequency ==
+
+User -> UI : Select "Every 12 hours"
+UI -> SP : setSyncFrequency("Every 12 hours")
+SP -> SP : _syncFrequency = "Every 12 hours"\n(optimistic update)
+SP -> UI : notifyListeners()
+UI -> User : Dropdown shows new value
+
+SP ->> SVC : saveSyncWorkspacePreferences()\n(fire-and-forget)
+SVC -> API : PUT /api/v1/user/preferences/settings
+API -> DB : UPSERT user_preferences
+DB --> API : OK
+API --> SVC : 200 OK
+
+@enduml

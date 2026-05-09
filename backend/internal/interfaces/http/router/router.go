@@ -121,6 +121,8 @@ func New(cfg Config) *chi.Mux {
 				r.Put("/default-app", cfg.UserPreferencesHandler.SetDefaultApp)
 				r.Get("/selected-org", cfg.UserPreferencesHandler.GetSelectedOrg)
 				r.Put("/selected-org", cfg.UserPreferencesHandler.SetSelectedOrg)
+				r.Get("/settings", cfg.UserPreferencesHandler.GetSyncWorkspacePreferences)
+				r.Put("/settings", cfg.UserPreferencesHandler.SaveSyncWorkspacePreferences)
 			})
 		}
 

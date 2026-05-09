@@ -4,6 +4,23 @@ A chronological record of all features implemented with detailed summaries.
 
 ---
 
+## [2026-05-09] Feat: Persist Org + Default App Selection via Backend Preferences
+
+**Summary:**
+Wired frontend providers to the backend `user_preferences` table so org and app selection persists across sessions/devices. Previously `OrganizationProvider` always picked `memberships.first` and `DataLoadingMixin` always picked `apps.first` — now both resolve from GET `/api/v1/user/preferences/selected-org` and `/default-app` on startup, and persist via PUT on user switch.
+
+**Changes:**
+- **UserPreferencesService** (NEW) — Calls GET/PUT for `selected-org` and `default-app`. All errors silently caught (preferences are best-effort).
+- **OrganizationProvider** — Accepts optional `UserPreferencesService`. `loadOrganizations()` fetches saved org before auto-selecting. `selectOrganization()` fires-and-forgets a PUT to persist.
+- **AppsProvider** — Accepts optional `UserPreferencesService`. `loadApps()` fetches saved app ID after loading apps. New `selectedAppId` getter and `setSelectedApp()` method. Single-app users auto-persist on first load.
+- **DataLoadingMixin** — `_evaluateAndLoad()` uses `appsProvider.selectedAppId` instead of `apps.first.id`.
+- **main.dart** — Creates `UserPreferencesService` and passes to both providers.
+- **PlantUML diagram** — `docs/diagrams/puml/38-org-app-selection-sequence.puml`
+
+**Files changed:** 7 (1 new service, 1 new diagram, 5 modified)
+
+---
+
 ## [2026-05-08] Refactor: Migrate from Numeric Shopify App IDs to Internal UUIDs
 
 **Summary:**
@@ -2745,3 +2762,73 @@ Optimized snapshot backfill from O(365×n) to O(n log n), added query-time downs
 | `frontend-flutter/lib/models/analytics_model.dart` | Accept `active_mrr_cents` key |
 
 **Tests:** `go test ./...` — all pass. 9 new tests (4 backfill + 5 downsample).
+
+---
+
+## [2026-05-09] Feat: Wire Dashboard Preferences — Dynamic KPIs + Widgets via Backend API
+
+**Summary:**
+Dashboard KPI cards and secondary widgets are now rendered dynamically from user preferences stored in the backend. Users can customize which 4 KPIs appear as primary cards and which secondary widgets are shown, via a new Dashboard section in Settings. Preferences persist across sessions via `GET/PUT /api/v1/user/preferences/dashboard`.
+
+**Changes:**
+- **Backend `defaultPreferences()`** — Updated defaults to match actual dashboard (`active_mrr`, `renewal_success_rate`, `revenue_at_risk`, `usage_revenue` for KPIs; `mrr_trend`, `risk_distribution_chart`, `forecast`, `revenue_mix_chart`, `weekly_activity` for widgets).
+- **UserPreferencesService** — Added `getDashboardPreferences()` and `saveDashboardPreferences()` methods + `DashboardPrefs` data class.
+- **dashboard_registry.dart** (NEW) — Static registry with `KpiDefinition` and `WidgetDefinition` classes, `kAllKpis` (6 available), `kAllWidgets` (6 available), `kDefaultKpiIds`/`kDefaultWidgetIds` lists, and `lookupKpi()` helper.
+- **DashboardProvider** — Accepts optional `UserPreferencesService`. Manages `primaryKpis` and `secondaryWidgets` lists with `loadDashboardPreferences()` (from API) and `saveDashboardPreferences()` (optimistic update + fire-and-forget PUT). Added `totalRevenueFormatted` getter.
+- **DashboardScreen** — KPI cards rendered via registry loop instead of 4 hardcoded cards. Secondary widgets conditionally rendered based on `dp.secondaryWidgets`. New `_EarningsOverviewCard` widget for `earnings_timeline` (Total Earned, Pending, Available from EarningsProvider). Loads preferences on initState.
+- **SettingsScreen** — New "Dashboard" LgCard between Developer and Organization with CheckboxListTiles for all KPIs (max 4 enforced with snackbar) and all widgets.
+- **main.dart** — Passes `userPreferencesService` to `DashboardProvider` constructor.
+
+**Files changed:** 7 (1 new, 6 modified)
+
+| File | Action |
+|------|--------|
+| `backend/internal/interfaces/http/handler/user_preferences.go` | Modified defaults |
+| `frontend-flutter/lib/services/user_preferences_service.dart` | Added dashboard methods + DashboardPrefs |
+| `frontend-flutter/lib/core/dashboard_registry.dart` | NEW — KPI/widget registry |
+| `frontend-flutter/lib/providers/dashboard_provider.dart` | Prefs loading/saving, totalRevenueFormatted |
+| `frontend-flutter/lib/screens/dashboard/dashboard_screen.dart` | Dynamic rendering |
+| `frontend-flutter/lib/screens/settings/settings_screen.dart` | Dashboard customization section |
+| `frontend-flutter/lib/main.dart` | Wired prefsService to DashboardProvider |
+
+---
+
+## Wire Settings Preferences — Notification, Sync & Workspace via Backend API
+
+**Date:** 2026-05-09
+**Scope:** Full-stack wiring of Settings preferences (notification, sync, workspace) to backend API
+
+### Problem
+Settings page had 11 settings across 3 cards (Notification, Sync, Workspace) — all local-only in SettingsProvider with hardcoded defaults, lost on page refresh. Backend had a `notification_preferences` table with a different schema (only 4 columns), and no sync/workspace columns in `user_preferences`.
+
+### Solution
+1. **Migration 000039** — Extended `notification_preferences` with 6 new columns: `email_enabled`, `slack_enabled`, `churn_alerts_enabled`, `revenue_alerts_enabled`, `review_alerts_enabled`, `risk_threshold_days`
+2. **Migration 000040** — Added 5 sync/workspace columns to `user_preferences`: `auto_sync`, `sync_frequency`, `workspace_name`, `currency`, `timezone`
+3. **Backend entity + repo + handler** — Updated `NotificationPreferences` entity with 6 new fields, updated all SQL in repository (Create, FindByUserID, Update, Upsert), expanded request/response structs in handler
+4. **New endpoints** — Added `GET/PUT /api/v1/user/preferences/settings` for sync/workspace prefs
+5. **Frontend service** — Added `NotificationPrefs`, `SyncWorkspacePrefs` data classes and 4 API methods to `UserPreferencesService`
+6. **SettingsProvider** — Now accepts `UserPreferencesService`, loads prefs on demand, each setter does optimistic update + fire-and-forget PUT
+7. **Settings screen** — Converted to `StatefulWidget`, calls `loadPreferences()` in `initState`
+
+### Files Changed (18 files: 6 new, 12 modified)
+
+| File | Change |
+|------|--------|
+| `backend/migrations/000039_extend_notification_preferences.up.sql` | NEW |
+| `backend/migrations/000039_extend_notification_preferences.down.sql` | NEW |
+| `backend/migrations/000040_add_sync_workspace_to_preferences.up.sql` | NEW |
+| `backend/migrations/000040_add_sync_workspace_to_preferences.down.sql` | NEW |
+| `backend/internal/domain/entity/notification_preferences.go` | +6 fields to struct + defaults |
+| `backend/internal/infrastructure/persistence/notification_preferences_repository.go` | All SQL updated for new columns |
+| `backend/internal/interfaces/http/handler/notification_preferences.go` | Expanded req/resp structs |
+| `backend/internal/interfaces/http/handler/user_preferences.go` | +5 struct fields, +findByUserID cols, +2 endpoints, +upsertSyncWorkspace |
+| `backend/internal/interfaces/http/router/router.go` | Registered GET/PUT settings routes |
+| `frontend-flutter/lib/services/user_preferences_service.dart` | +2 data classes, +4 API methods |
+| `frontend-flutter/lib/providers/settings_provider.dart` | Wired to API, load/save, optimistic updates |
+| `frontend-flutter/lib/main.dart` | Passed userPreferencesService to SettingsProvider |
+| `frontend-flutter/lib/screens/settings/settings_screen.dart` | StatefulWidget, loadPreferences on init |
+| `docs/diagrams/puml/39-settings-preferences-sequence.puml` | NEW — sequence diagram |
+| `DATABASE_SCHEMA.md` | New migration entries |
+| `IMPLEMENTATION_LOG.md` | This entry |
+| `verification.md` | Verification checklist |
+| `prompts.md` | Prompt log |

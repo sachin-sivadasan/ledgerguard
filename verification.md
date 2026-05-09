@@ -4,6 +4,20 @@ Tracks verification points from each implementation plan. Run these after deploy
 
 ---
 
+## Plan: Persist Org + Default App Selection via Backend Preferences
+**Date:** 2026-05-09
+
+- [x] `flutter analyze` — no issues
+- [ ] Fresh app launch → calls GET selected-org, uses saved org (not always first)
+- [ ] Fresh app launch → calls GET default-app, loads saved app data
+- [ ] Single-app user → auto-persists default app on first load
+- [ ] Switch org via OrgSwitcher → PUT selected-org fires, app reloads with new org
+- [ ] Switch app via PopupMenuButton → PUT default-app fires
+- [ ] Backend preference failure → gracefully falls back to first org/app
+- [ ] Refresh/new device → preserved org + app selection
+
+---
+
 ## Plan: Migrate from Numeric Shopify App IDs to Internal UUIDs
 **Date:** 2026-05-08
 
@@ -198,3 +212,34 @@ Tracks verification points from each implementation plan. Run these after deploy
 ### Frontend
 - [ ] Revenue tab chart uses weekly granularity (cleaner trend line)
 - [ ] Forecasting tab still uses raw daily data (unchanged)
+
+---
+
+## Plan: Wire Dashboard Preferences — Dynamic KPIs + Widgets via Backend API
+**Date:** 2026-05-09
+
+- [x] `go build ./...` — passes (backend default change)
+- [x] `flutter analyze` — no issues
+- [ ] Fresh load → GET /user/preferences/dashboard called → dashboard renders saved prefs
+- [ ] No saved prefs → dashboard looks identical to current (defaults match)
+- [ ] Settings → Dashboard section shows KPI checkboxes + widget toggles
+- [ ] Toggle a KPI off → PUT fires → dashboard updates immediately
+- [ ] Add a KPI (5th) → blocked with snackbar "Maximum 4 KPIs"
+- [ ] Toggle secondary widget off → card disappears from dashboard
+- [ ] Refresh page → preferences persist (loaded from backend)
+- [ ] Backend failure → falls back to frontend defaults gracefully
+
+---
+
+## Wire Settings Preferences — Notification, Sync & Workspace via Backend API (2026-05-09)
+
+- [x] `go build ./...` — passes
+- [x] `flutter analyze` — no issues
+- [ ] Fresh Settings load → GET notification-preferences + GET settings called
+- [ ] All toggles reflect saved state after refresh
+- [ ] Toggle Email Alerts OFF → PUT fires → survives page refresh
+- [ ] Change Risk Threshold slider → PUT fires → value persists
+- [ ] Change Sync Frequency → PUT fires → value persists
+- [ ] Change Currency → PUT fires → persists
+- [ ] Backend down → settings fall back to local defaults gracefully
+- [ ] Sequence diagram renders correctly

@@ -67,14 +67,20 @@ func (h *NotificationPreferencesHandler) SaveNotificationPreferences(w http.Resp
 
 	now := time.Now().UTC()
 	prefs := &entity.NotificationPreferences{
-		ID:                  uuid.New(),
-		UserID:              user.ID,
-		CriticalEnabled:     req.CriticalAlertsEnabled,
-		DailySummaryEnabled: req.DailySummaryEnabled,
-		DailySummaryTime:    summaryTime,
-		SlackWebhookURL:     req.SlackWebhookURL,
-		CreatedAt:           now,
-		UpdatedAt:           now,
+		ID:                   uuid.New(),
+		UserID:               user.ID,
+		CriticalEnabled:      req.CriticalAlertsEnabled,
+		DailySummaryEnabled:  req.DailySummaryEnabled,
+		DailySummaryTime:     summaryTime,
+		SlackWebhookURL:      req.SlackWebhookURL,
+		EmailEnabled:         req.EmailEnabled,
+		SlackEnabled:         req.SlackEnabled,
+		ChurnAlertsEnabled:   req.ChurnAlertsEnabled,
+		RevenueAlertsEnabled: req.RevenueAlertsEnabled,
+		ReviewAlertsEnabled:  req.ReviewAlertsEnabled,
+		RiskThresholdDays:    req.RiskThresholdDays,
+		CreatedAt:            now,
+		UpdatedAt:            now,
 	}
 
 	if err := h.repo.Upsert(r.Context(), prefs); err != nil {
@@ -90,8 +96,14 @@ func (h *NotificationPreferencesHandler) SaveNotificationPreferences(w http.Resp
 type NotificationPreferencesRequest struct {
 	CriticalAlertsEnabled bool   `json:"critical_alerts_enabled"`
 	DailySummaryEnabled   bool   `json:"daily_summary_enabled"`
-	DailySummaryTime      string `json:"daily_summary_time"`    // HH:MM format
+	DailySummaryTime      string `json:"daily_summary_time"` // HH:MM format
 	SlackWebhookURL       string `json:"slack_webhook_url"`
+	EmailEnabled          bool   `json:"email_enabled"`
+	SlackEnabled          bool   `json:"slack_enabled"`
+	ChurnAlertsEnabled    bool   `json:"churn_alerts_enabled"`
+	RevenueAlertsEnabled  bool   `json:"revenue_alerts_enabled"`
+	ReviewAlertsEnabled   bool   `json:"review_alerts_enabled"`
+	RiskThresholdDays     int    `json:"risk_threshold_days"`
 }
 
 // NotificationPreferencesResponse represents the response for notification preferences
@@ -100,6 +112,12 @@ type NotificationPreferencesResponse struct {
 	DailySummaryEnabled   bool   `json:"daily_summary_enabled"`
 	DailySummaryTime      string `json:"daily_summary_time"` // HH:MM format
 	SlackWebhookURL       string `json:"slack_webhook_url"`
+	EmailEnabled          bool   `json:"email_enabled"`
+	SlackEnabled          bool   `json:"slack_enabled"`
+	ChurnAlertsEnabled    bool   `json:"churn_alerts_enabled"`
+	RevenueAlertsEnabled  bool   `json:"revenue_alerts_enabled"`
+	ReviewAlertsEnabled   bool   `json:"review_alerts_enabled"`
+	RiskThresholdDays     int    `json:"risk_threshold_days"`
 }
 
 func toNotificationPreferencesResponse(prefs *entity.NotificationPreferences) NotificationPreferencesResponse {
@@ -108,6 +126,12 @@ func toNotificationPreferencesResponse(prefs *entity.NotificationPreferences) No
 		DailySummaryEnabled:   prefs.DailySummaryEnabled,
 		DailySummaryTime:      prefs.DailySummaryTime.Format("15:04"),
 		SlackWebhookURL:       prefs.SlackWebhookURL,
+		EmailEnabled:          prefs.EmailEnabled,
+		SlackEnabled:          prefs.SlackEnabled,
+		ChurnAlertsEnabled:    prefs.ChurnAlertsEnabled,
+		RevenueAlertsEnabled:  prefs.RevenueAlertsEnabled,
+		ReviewAlertsEnabled:   prefs.ReviewAlertsEnabled,
+		RiskThresholdDays:     prefs.RiskThresholdDays,
 	}
 }
 

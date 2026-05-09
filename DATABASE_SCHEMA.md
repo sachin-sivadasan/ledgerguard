@@ -739,3 +739,34 @@ Organization-scoped audit trail for member lifecycle and org actions.
 | Column | Type | Notes |
 |--------|------|-------|
 | org_id | UUID | FK → organizations(id) ON DELETE CASCADE, nullable until backfill |
+
+---
+
+## Migration 000039 — `extend_notification_preferences`
+
+Extend notification_preferences with frontend settings fields.
+
+### notification_preferences — new columns
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| email_enabled | BOOLEAN | TRUE | Email delivery for all alert types |
+| slack_enabled | BOOLEAN | FALSE | Slack delivery toggle |
+| churn_alerts_enabled | BOOLEAN | TRUE | Alert on subscription risk transitions |
+| revenue_alerts_enabled | BOOLEAN | TRUE | Daily revenue summary alerts |
+| review_alerts_enabled | BOOLEAN | TRUE | New app store review alerts |
+| risk_threshold_days | INTEGER | 30 | Alert after N days overdue (7–90) |
+
+---
+
+## Migration 000040 — `add_sync_workspace_to_preferences`
+
+Add sync schedule and workspace settings to user_preferences.
+
+### user_preferences — new columns
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| auto_sync | BOOLEAN | TRUE | Automatically sync partner data |
+| sync_frequency | VARCHAR(20) | 'Every 6 hours' | Sync interval |
+| workspace_name | VARCHAR(100) | 'My Shopify Apps' | Display name for workspace |
+| currency | VARCHAR(3) | 'USD' | Revenue display currency |
+| timezone | VARCHAR(50) | 'America/New_York' | Schedule-based features TZ |

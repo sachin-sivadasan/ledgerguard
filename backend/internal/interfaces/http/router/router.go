@@ -37,6 +37,7 @@ type Config struct {
 	TransactionHandler              *handler.TransactionHandler
 	StoreHandler                    *handler.StoreHandler
 	EventHandler                    *handler.EventHandler
+	CohortHandler                   *handler.CohortHandler
 	ForecastHandler                 *handler.ForecastHandler
 	RiskHandler                     *handler.RiskHandler
 	OrgHandler                      *handler.OrgHandler
@@ -241,6 +242,11 @@ func New(cfg Config) *chi.Mux {
 				// Forecast route
 				if cfg.ForecastHandler != nil {
 					r.Get("/{appID}/forecast", cfg.ForecastHandler.GetForecast)
+				}
+
+				// Cohort retention route
+				if cfg.CohortHandler != nil {
+					r.Get("/{appID}/cohorts", cfg.CohortHandler.GetCohorts)
 				}
 
 				// Risk summary route

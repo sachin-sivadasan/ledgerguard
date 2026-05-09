@@ -370,6 +370,13 @@ func run() error {
 		log.Println("Event handler initialized")
 	}
 
+	// Initialize cohort handler
+	var cohortHandler *handler.CohortHandler
+	if subscriptionRepo != nil && appRepo != nil && partnerRepo != nil {
+		cohortHandler = handler.NewCohortHandler(subscriptionRepo, appRepo, partnerRepo)
+		log.Println("Cohort handler initialized")
+	}
+
 	// Initialize forecast handler
 	var forecastHandler *handler.ForecastHandler
 	if snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -775,6 +782,7 @@ func run() error {
 		TransactionHandler:              transactionHandler,
 		StoreHandler:                    storeHandler,
 		EventHandler:                    eventHandler,
+		CohortHandler:                   cohortHandler,
 		ForecastHandler:                 forecastHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,

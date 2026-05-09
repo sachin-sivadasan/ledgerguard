@@ -173,6 +173,56 @@ class CohortData {
   }
 }
 
+class StoreRevenue {
+  final String domain;
+  final String shopName;
+  final int revenueCents;
+  final int transactionCount;
+  final double pctOfTotal;
+
+  const StoreRevenue({
+    required this.domain,
+    required this.shopName,
+    required this.revenueCents,
+    required this.transactionCount,
+    required this.pctOfTotal,
+  });
+
+  double get revenueDollars => revenueCents / 100;
+
+  factory StoreRevenue.fromJson(Map<String, dynamic> json) {
+    return StoreRevenue(
+      domain: json['domain'] as String? ?? '',
+      shopName: json['shop_name'] as String? ?? '',
+      revenueCents: (json['revenue_cents'] as num?)?.toInt() ?? 0,
+      transactionCount: (json['transaction_count'] as num?)?.toInt() ?? 0,
+      pctOfTotal: (json['pct_of_total'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+class RevenueConcentration {
+  final int totalRevenueCents;
+  final List<StoreRevenue> stores;
+
+  const RevenueConcentration({
+    required this.totalRevenueCents,
+    required this.stores,
+  });
+
+  factory RevenueConcentration.fromJson(Map<String, dynamic> json) {
+    return RevenueConcentration(
+      totalRevenueCents:
+          (json['total_revenue_cents'] as num?)?.toInt() ?? 0,
+      stores: (json['stores'] as List<dynamic>?)
+              ?.map(
+                  (e) => StoreRevenue.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+}
+
 class AppComparison {
   final String id;
   final String name;

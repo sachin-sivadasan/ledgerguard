@@ -123,6 +123,58 @@ func (h *RevenueHandler) GetEarnings(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(metrics)
 }
 
+// GetRevenueConcentration handles GET /api/v1/apps/{appID}/revenue/concentration?top=10
+// Returns top stores by revenue for the app
+func (h *RevenueHandler) GetRevenueConcentration(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	user := middleware.UserFromContext(ctx)
+	if user == nil {
+		writeJSONErrorResponse(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeJSONErrorResponse(w, lookupErr.statusCode, lookupErr.message)
+		return
+	}
+
+	// Parse params
+	limit := 10
+	if topStr := r.URL.Query().Get("top"); topStr != "" {
+		if parsed, err := json.Number(topStr).Int64(); err == nil && parsed >= 1 && parsed <= 100 {
+			limit = int(parsed)
+		}
+	}
+
+	// Default to last 90 days
+	now := time.Now()
+	start := now.AddDate(0, -3, 0)
+	end := now
+
+	if startStr := r.URL.Query().Get("start"); startStr != "" {
+		if parsed, err := time.Parse("2006-01-02", startStr); err == nil {
+			start = parsed
+		}
+	}
+	if endStr := r.URL.Query().Get("end"); endStr != "" {
+		if parsed, err := time.Parse("2006-01-02", endStr); err == nil {
+			end = parsed.Add(24*time.Hour - time.Second)
+		}
+	}
+
+	result, err := h.revenueService.GetRevenueConcentration(ctx, app.ID, start, end, limit)
+	if err != nil {
+		log.Printf("GetRevenueConcentration: failed for app %s: %v", app.ID, err)
+		writeJSONErrorResponse(w, http.StatusInternalServerError, "failed to compute revenue concentration")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
 func writeJSONErrorResponse(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

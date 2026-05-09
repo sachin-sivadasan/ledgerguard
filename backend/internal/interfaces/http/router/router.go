@@ -211,6 +211,7 @@ func New(cfg Config) *chi.Mux {
 				if cfg.RevenueHandler != nil {
 					r.Get("/{appID}/earnings", cfg.RevenueHandler.GetEarnings)
 					r.Get("/{appID}/earnings/status", cfg.RevenueHandler.GetEarningsStatus)
+					r.Get("/{appID}/revenue/concentration", cfg.RevenueHandler.GetRevenueConcentration)
 				}
 
 				// Fee breakdown routes

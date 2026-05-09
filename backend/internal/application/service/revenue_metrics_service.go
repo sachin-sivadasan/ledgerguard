@@ -172,6 +172,100 @@ func (s *RevenueMetricsService) GetEarningsStatus(ctx context.Context, appID uui
 	return response, nil
 }
 
+// StoreRevenue represents revenue for a single store
+type StoreRevenue struct {
+	Domain           string  `json:"domain"`
+	ShopName         string  `json:"shop_name"`
+	RevenueCents     int64   `json:"revenue_cents"`
+	TransactionCount int     `json:"transaction_count"`
+	PctOfTotal       float64 `json:"pct_of_total"`
+}
+
+// RevenueConcentrationResponse represents the concentration analysis
+type RevenueConcentrationResponse struct {
+	TotalRevenueCents int64          `json:"total_revenue_cents"`
+	Stores            []StoreRevenue `json:"stores"`
+}
+
+// GetRevenueConcentration returns top stores by revenue for an app
+func (s *RevenueMetricsService) GetRevenueConcentration(
+	ctx context.Context,
+	appID uuid.UUID,
+	start, end time.Time,
+	limit int,
+) (*RevenueConcentrationResponse, error) {
+	if s.transactionRepo == nil {
+		return nil, ErrTransactionRepoRequired
+	}
+
+	transactions, err := s.transactionRepo.FindByAppID(ctx, appID, start, end)
+	if err != nil {
+		return nil, err
+	}
+
+	// Group by domain
+	type domainAgg struct {
+		shopName string
+		revenue  int64
+		count    int
+	}
+	byDomain := make(map[string]*domainAgg)
+	var totalRevenue int64
+
+	for _, tx := range transactions {
+		if tx.NetAmountCents <= 0 {
+			continue
+		}
+		domain := tx.MyshopifyDomain
+		if domain == "" {
+			domain = "unknown"
+		}
+		agg, ok := byDomain[domain]
+		if !ok {
+			agg = &domainAgg{shopName: tx.ShopName}
+			byDomain[domain] = agg
+		}
+		agg.revenue += tx.NetAmountCents
+		agg.count++
+		totalRevenue += tx.NetAmountCents
+	}
+
+	// Sort by revenue descending
+	stores := make([]StoreRevenue, 0, len(byDomain))
+	for domain, agg := range byDomain {
+		var pct float64
+		if totalRevenue > 0 {
+			pct = float64(agg.revenue) / float64(totalRevenue) * 100
+		}
+		stores = append(stores, StoreRevenue{
+			Domain:           domain,
+			ShopName:         agg.shopName,
+			RevenueCents:     agg.revenue,
+			TransactionCount: agg.count,
+			PctOfTotal:       pct,
+		})
+	}
+
+	// Sort descending by revenue
+	for i := 0; i < len(stores); i++ {
+		for j := i + 1; j < len(stores); j++ {
+			if stores[j].RevenueCents > stores[i].RevenueCents {
+				stores[i], stores[j] = stores[j], stores[i]
+			}
+		}
+	}
+
+	// Limit results
+	if limit > 0 && len(stores) > limit {
+		stores = stores[:limit]
+	}
+
+	return &RevenueConcentrationResponse{
+		TotalRevenueCents: totalRevenue,
+		Stores:            stores,
+	}, nil
+}
+
 // Errors
 var (
 	ErrInvalidDateRange       = &RevenueError{Message: "invalid date range: start date must be before end date"}

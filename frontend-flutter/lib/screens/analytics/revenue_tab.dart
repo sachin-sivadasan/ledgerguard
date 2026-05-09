@@ -16,6 +16,7 @@ class RevenueTab extends StatelessWidget {
     final provider = context.watch<AnalyticsProvider>();
     final mix = provider.revenueMix;
     final movements = provider.mrrMovements;
+    final concentration = provider.revenueConcentration;
 
     return SingleChildScrollView(
       child: Column(
@@ -126,6 +127,64 @@ class RevenueTab extends StatelessWidget {
               ],
             ),
           ),
+
+          // Top stores by revenue (live mode only)
+          if (concentration != null && concentration.stores.isNotEmpty) ...[
+            const SizedBox(height: LgSpacing.s600),
+            LgCard(
+              title: 'Top Stores by Revenue',
+              child: Column(
+                children: concentration.stores.map((store) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            store.shopName.isNotEmpty
+                                ? store.shopName
+                                : store.domain,
+                            style: const TextStyle(fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: LinearProgressIndicator(
+                            value: (store.pctOfTotal / 100).clamp(0.0, 1.0),
+                            backgroundColor:
+                                LgColors.primary.withValues(alpha: 0.1),
+                            color: LgColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: LgSpacing.s200),
+                        SizedBox(
+                          width: 70,
+                          child: Text(
+                            '\$${store.revenueDollars.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600),
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                        SizedBox(
+                          width: 50,
+                          child: Text(
+                            '${store.pctOfTotal.toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                                fontSize: 11,
+                                color: LgColors.textSecondary),
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
         ],
       ),
     );

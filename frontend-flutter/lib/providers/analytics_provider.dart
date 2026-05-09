@@ -26,6 +26,7 @@ class AnalyticsProvider extends ChangeNotifier {
   List<ExpenseBreakdown>? _liveExpenses;
   List<CohortData>? _liveCohorts;
   List<AppComparison>? _liveApps;
+  RevenueConcentration? _revenueConcentration;
 
   AnalyticsProvider(this._metricsService, [this._earningsService]);
 
@@ -77,6 +78,7 @@ class AnalyticsProvider extends ChangeNotifier {
       _loadCohorts(appId);
       _loadExpenses(appId);
       _loadApps();
+      _loadRevenueConcentration(appId);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) return;
       _error = e.message;
@@ -112,6 +114,13 @@ class AnalyticsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _loadRevenueConcentration(String appId) async {
+    final result = await _metricsService.fetchRevenueConcentration(appId,
+        cancelToken: _cancelToken);
+    _revenueConcentration = result;
+    notifyListeners();
+  }
+
   Future<void> _loadApps() async {
     final apps = await _metricsService.fetchAppComparison(
         cancelToken: _cancelToken);
@@ -128,6 +137,11 @@ class AnalyticsProvider extends ChangeNotifier {
   }
 
   // Revenue tab
+  RevenueConcentration? get revenueConcentration {
+    if (_demoMode) return null;
+    return _revenueConcentration;
+  }
+
   List<MrrSnapshot> get mrrSnapshots {
     if (!_demoMode) return _liveMetrics?.mrrTrend ?? [];
     return mockMrrSnapshots;

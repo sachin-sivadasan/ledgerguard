@@ -195,6 +195,24 @@ class MetricsService {
     }
   }
 
+  Future<RevenueConcentration?> fetchRevenueConcentration(String appId,
+      {int top = 10, CancelToken? cancelToken}) async {
+    try {
+      final response = await _client.get(
+        '/api/v1/apps/$appId/revenue/concentration',
+        queryParameters: {'top': top},
+        cancelToken: cancelToken,
+      );
+      return RevenueConcentration.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return null;
+      debugPrint(
+          '[MetricsService] fetchRevenueConcentration error: ${e.response?.statusCode}');
+      return null;
+    }
+  }
+
   Future<List<AppComparison>> fetchAppComparison(
       {CancelToken? cancelToken}) async {
     try {

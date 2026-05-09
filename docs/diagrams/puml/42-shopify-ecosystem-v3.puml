@@ -1,0 +1,257 @@
+@startuml
+title 42. Shopify Ecosystem — Full Actor & Integration Map (v3 — consolidated arrows)
+caption LedgerGuard connects via Partner API (GraphQL) for revenue intelligence
+
+top to bottom direction
+
+skinparam componentStyle rectangle
+skinparam packageStyle frame
+skinparam nodesep 60
+skinparam ranksep 80
+skinparam defaultFontSize 11
+skinparam noteFontSize 9
+skinparam packageFontSize 12
+skinparam packageFontStyle bold
+
+legend top right
+  |= Color |= Flow Type |
+  | <color:#5C6AC4>——></color> | API call |
+  | <color:#059669>——></color> | Money flow |
+  | <color:#D97706>--></color> | Data sync |
+  | <color:#DC2626>..></color> | OAuth / Auth |
+  | <color:#6B7280>--></color> | Webhook |
+  |<#E8E0FF> Purple |= LedgerGuard |
+endlegend
+
+' ══════════════════════════════════════════════
+'  ROW 1 — ACTORS
+' ══════════════════════════════════════════════
+
+package "Consumer Side" as pkg_buy #FFFFF0 {
+  actor "Online Buyer" as buyer
+  actor "In-Store\nCustomer" as instore_buyer
+  actor "B2B Buyer\n(wholesale)" as b2b_buyer
+}
+
+package "Merchant Side" as pkg_merch #FFFFF0 {
+  actor "Store Owner\n(Merchant)" as merchant
+  actor "Staff Account\n(granular perms)" as staff
+  actor "POS Staff\n(retail)" as pos_staff
+  actor "Plus Merchant\n(enterprise)" as plus_merchant
+  actor "Dropshipper\n(supplier fulfillment)" as dropshipper
+}
+
+package "Partner Side" as pkg_part #FFFFF0 {
+  actor "App Developer" as app_dev
+  actor "Theme Developer" as theme_dev
+  actor "Agency /\nFreelancer" as agency
+  actor "Collaborator\n(partner in store)" as collaborator
+}
+
+pkg_buy -[hidden]right- pkg_merch
+pkg_merch -[hidden]right- pkg_part
+
+' ══════════════════════════════════════════════
+'  ROW 2 — SHOPIFY PLATFORM
+' ══════════════════════════════════════════════
+
+package "Shopify Commerce" as pkg_commerce #F0F1FF {
+  component "Shopify Admin\n(Web + Mobile)" as admin
+  component "Online Store\n(Liquid themes)" as online_store
+  component "Checkout\n(+ Shop Pay)" as checkout
+  component "Shopify POS\n(physical retail)" as pos
+  component "B2B Storefront\n(Plus: company profiles,\nprice lists)" as b2b
+  component "Customer Accounts\n(classic + new SSO)" as cust_accounts
+  component "Settings\n(Tax, Shipping, Payments)" as settings
+  component "Shopify Markets\n(International)" as markets
+}
+
+package "Partner & Marketplace" as pkg_partner #F0F1FF {
+  component "Partner\nDashboard" as partner_dash
+  component "Shopify\nApp Store" as app_store
+  component "Theme Store" as theme_store
+  component "App Billing\n(recurring, usage,\none-time charges)" as app_billing
+}
+
+package "Platform Services" as pkg_services #F0F1FF {
+  component "Shopify Flow\n(automation)" as flow
+  component "Shopify Magic\n(AI content gen)" as magic
+  component "Sidekick\n(AI assistant)" as sidekick
+  component "Hydrogen\n(React headless)" as hydrogen
+  component "Oxygen\n(edge hosting)" as oxygen
+  component "Shopify Audiences\n(Plus: ad targeting)" as audiences
+  component "Shop App\n(consumer: tracking,\ndiscovery, buy-again)" as shop_app
+  component "Shop Pay\n(accelerated checkout)" as shop_pay
+  component "Analytics &\nShopifyQL Notebooks" as analytics
+}
+
+pkg_commerce -[hidden]right- pkg_partner
+pkg_partner -[hidden]right- pkg_services
+
+' ══════════════════════════════════════════════
+'  ROW 3 — APIs & EXTENSIONS
+' ══════════════════════════════════════════════
+
+package "Shopify APIs" as pkg_apis #E8F5E9 {
+
+  package "Core APIs" as pkg_core_apis {
+    component "Admin API\n(REST + GraphQL)" as admin_api
+    component "Storefront API\n(GraphQL)" as storefront_api
+    component "Partner API\n(GraphQL)" as partner_api
+    component "Customer Account API" as cust_api
+    component "Payments Apps API" as payments_api
+    component "Ajax API\n(storefront cart)" as ajax_api
+  }
+
+  package "Event & Data APIs" as pkg_event_apis {
+    component "Webhooks\n(HTTP callbacks)" as webhooks
+    component "Web Pixels\n(analytics events)" as pixels
+    component "ShopifyQL API" as shopifyql
+    component "Metafields /\nMetaobjects API" as meta_api
+  }
+
+  package "Tooling" as pkg_tooling {
+    component "Shopify CLI" as cli
+    component "App Bridge\n(embedded app SDK)" as app_bridge
+    component "Polaris\n(React components)" as polaris
+    component "OAuth 2.0 Flow" as oauth
+  }
+}
+
+package "App & Extension Surfaces" as pkg_extensions #FFF3E0 {
+  component "Embedded App\n(runs inside Admin\nvia App Bridge)" as embedded_app
+  component "Non-Embedded App\n(standalone URL,\nredirect from Admin)" as standalone_app
+  component "Sales Channel App\n(publish products\nto external channels)" as channel_app
+
+  package "UI Extensions" as pkg_ui_ext {
+    component "Admin UI Extensions\n(actions, blocks, nav links)" as admin_ext
+    component "Checkout UI Extensions\n(custom blocks at\nextension points)" as checkout_ext
+    component "Theme App Extensions\n(app blocks, embeds,\ntheme editor sections)" as theme_ext
+    component "POS UI Extensions\n(tiles, modals)" as pos_ext
+    component "Customer Account\nUI Extensions" as cust_ext
+    component "Post-Purchase Extensions\n(upsell after checkout)" as post_purchase
+  }
+
+  package "Backend Extensions" as pkg_backend_ext {
+    component "Shopify Functions\n(Discount, Shipping,\nPayment, Cart Validation)" as functions
+    component "Flow Actions &\nTriggers (automation)" as flow_ext
+  }
+}
+
+pkg_apis -[hidden]right- pkg_extensions
+
+' ══════════════════════════════════════════════
+'  ROW 4 — EXTERNAL ECOSYSTEM
+' ══════════════════════════════════════════════
+
+package "Marketplaces & Social Commerce" as pkg_mkt #FFF0F0 {
+  component "Amazon" as amazon
+  component "eBay" as ebay
+  component "Etsy" as etsy
+  component "Google Shopping\n& YouTube" as google
+  component "TikTok Shop" as tiktok
+  component "Facebook / Meta\n& Instagram" as meta
+  component "Walmart\nMarketplace" as walmart
+  component "Pinterest" as pinterest
+}
+
+package "Fulfillment & Logistics" as pkg_ful #FFF0F0 {
+  component "Shopify Fulfillment\nNetwork (SFN)" as sfn
+  component "ShipStation /\nShipBob" as shipstation
+  component "AliExpress /\nDSers / Spocket\n(dropship suppliers)" as dropship_suppliers
+  component "Print-on-Demand\n(Printful, Printify)" as pod
+}
+
+package "Payments & Finance" as pkg_pay #FFF0F0 {
+  component "Shopify Payments\n(powered by Stripe)" as shopify_payments
+  component "PayPal" as paypal
+  component "Klarna / Afterpay\n(BNPL)" as bnpl
+  component "External Payment\nGateways" as ext_gateways
+}
+
+package "Marketing & CRM" as pkg_mktg #FFF0F0 {
+  component "Klaviyo" as klaviyo
+  component "Mailchimp" as mailchimp
+  component "HubSpot" as hubspot
+  component "Omnisend" as omnisend
+}
+
+package "Accounting & ERP" as pkg_acct #FFF0F0 {
+  component "QuickBooks" as quickbooks
+  component "Xero" as xero
+  component "NetSuite /\nSAP / Dynamics" as erp
+}
+
+package "Store Design & UX" as pkg_design #FFF0F0 {
+  component "Page Builders\n(PageFly, Shogun)" as page_builders
+  component "Review / UGC Apps\n(Judge.me, Loox)" as reviews
+  component "Search & Filters\n(Algolia, Searchanise)" as search_apps
+}
+
+package "Analytics & Revenue Intelligence" as pkg_rev #E8E0FF {
+  component "**LedgerGuard**\n(Revenue Intelligence\nfor App Developers)" as ledgerguard #D4C8FF
+  component "Baremetrics /\nChartMogul" as baremetrics
+  component "Google Analytics\n/ Pixel tracking" as ga
+}
+
+pkg_mkt -[hidden]right- pkg_ful
+pkg_ful -[hidden]right- pkg_pay
+pkg_pay -[hidden]right- pkg_mktg
+pkg_acct -[hidden]right- pkg_design
+pkg_design -[hidden]right- pkg_rev
+
+' ══════════════════════════════════════════════
+'  ARROWS (all after declarations)
+' ══════════════════════════════════════════════
+
+' ── ROW 1 → ROW 2 (consolidated) ──
+pkg_buy -[#5C6AC4]-> pkg_commerce : browse, buy,\nin-store, wholesale
+pkg_merch -[#5C6AC4]-> pkg_commerce : manage store,\nPOS, B2B, orders
+pkg_part -[#5C6AC4]-> pkg_partner : manage apps,\npublish themes
+
+' ── ROW 2 internal (intra-row) ──
+app_billing -[#059669]-> partner_dash : revenue share\n(80/20 split)
+
+' ── ROW 2 → ROW 3 (consolidated) ──
+pkg_commerce -[#5C6AC4]-> pkg_apis : Admin, Storefront,\nPayments APIs
+pkg_partner -[#5C6AC4]-> pkg_apis : Partner API
+pkg_extensions -[#D97706,dashed]-> pkg_commerce : extend Admin, Checkout,\nPOS, Theme, Customer Acct
+
+' ── ROW 3 internal (apps → APIs) ──
+embedded_app -[#5C6AC4]-> app_bridge : embedded in Admin
+embedded_app -[#5C6AC4]-> admin_api
+standalone_app -[#5C6AC4]-> admin_api
+channel_app -[#5C6AC4]-> admin_api : publish products
+embedded_app -[#DC2626,dashed]..> oauth : authenticate
+standalone_app -[#DC2626,dashed]..> oauth
+
+' ── ROW 4 → ROW 3 (consolidated) ──
+pkg_mkt -[#D97706,dashed]-> admin_api : product sync
+pkg_ful -[#D97706,dashed]-> admin_api : fulfillment,\norders + inventory
+pkg_pay -[#059669]-> payments_api : payments
+pkg_mktg -[#D97706,dashed]-> admin_api : customer data,\norder events
+pkg_acct -[#D97706,dashed]-> admin_api : orders / refunds
+pkg_design -[#D97706,dashed]-> storefront_api : page builders,\nsearch, reviews
+ga -[#6B7280,dashed]-> pixels : tracking events
+
+' ── LedgerGuard (highlighted) ──
+ledgerguard -[#5C6AC4,bold]-> partner_api : **fetch transactions,\nsubscriptions, earnings**
+ledgerguard -[#6B7280,dashed]-> webhooks : subscription events,\nbilling failures
+baremetrics -[#D97706,dashed]-> partner_api
+
+' ── Money flows (key individual arrows) ──
+buyer -[#059669]-> shopify_payments : pays merchant
+shopify_payments -[#059669]-> merchant : payout (minus fees)
+checkout -[#059669]-> shopify_payments : processes $
+app_billing -[#059669]-> app_dev : app earnings\n(via Partner payout)
+dropship_suppliers -[#059669,dashed]-> dropshipper : product cost
+
+' ── Layout hints ──
+pkg_buy -[hidden]down- pkg_commerce
+pkg_merch -[hidden]down- pkg_commerce
+pkg_part -[hidden]down- pkg_partner
+pkg_commerce -[hidden]down- pkg_apis
+pkg_partner -[hidden]down- pkg_apis
+pkg_apis -[hidden]down- pkg_mkt
+
+@enduml

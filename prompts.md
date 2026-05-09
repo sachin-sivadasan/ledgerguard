@@ -1979,3 +1979,35 @@
 - 1 new file: `dashboard_settings_screen.dart`
 - 4 modified: `settings_screen.dart`, `app.dart`, `SCREENS.puml`, `future.md`
 - `flutter analyze` — no issues
+
+---
+
+### [2026-05-09] Diagram Audit
+
+**Original:**
+> run diagram audit
+
+**Improved:**
+> Execute full diagram audit per `docs/prompts/diagram-audit-prompt.md`. Audit all PlantUML, Excalidraw, and sequence diagrams in `docs/`. Update outdated diagrams, verify Postman collection against `router.go`, check frontend-flutter diagrams, and ensure consistency.
+
+**Result:**
+- **37 numbered diagrams** (01–40): all CURRENT, no updates needed
+- **Core diagrams** (ER_current, C4_current, SEQUENCE_current): all CURRENT
+- **Frontend diagrams** (SCREENS.puml, MOBILE_NAVIGATION.puml): CURRENT
+- **41-backend-api-endpoint-map.puml**: OUTDATED → fixed 5 issues (missing `GET /metrics/aggregate`, wrong paths for refresh-install-count / reviews/scrape / internal sync, missing invitation ID param), updated count ~85 → ~107
+- **Postman collection**: Fixed 9 parameter name mismatches (apiKeyId→id, memberId→userId, invitationToken→token, invitationId→id), added GET /graphql endpoint, replaced hardcoded IDs with variables
+
+---
+
+### [2026-05-10] Shopify Ecosystem Diagram
+
+**Original:**
+> I also want a Shopify ecosystem diagram (any one or more puml + excalidraw) includes Shopify App Store, embedded app, non-embedded app, website theme, shops, admin account, partner account, dropshippers, external apps for shops & admins & partners, any external apps who help Shopify & other ecosystem like Amazon. Also highlight LedgerGuard's position.
+
+**Improved:**
+> Create a comprehensive Shopify Ecosystem diagram set with all actors, platforms, APIs, extension surfaces, and external integrations. Produce 3 files: (1) full ecosystem PlantUML component diagram, (2) LedgerGuard-focused PlantUML showing data/money flows through the ecosystem to LedgerGuard, (3) Excalidraw visual map. Enriched with Shopify AI assistant's response covering all account types, API surfaces, extension types, and ecosystem categories.
+
+**Result:**
+- `docs/diagrams/puml/42-shopify-ecosystem.puml` — Full ecosystem (~80 components, 13 actor types, 8 external categories)
+- `docs/diagrams/puml/43-ledgerguard-in-shopify-ecosystem.puml` — LedgerGuard-focused: money flow, data ingestion, processing pipeline, user types
+- `docs/diagrams/shopify-ecosystem.excalidraw` — Visual map (138 elements, 5 color-coded zones)

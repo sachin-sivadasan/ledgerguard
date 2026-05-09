@@ -140,6 +140,74 @@ class _EarningsTab extends StatelessWidget {
               LgMetricCard(label: 'Available', value: provider.availableAmount, icon: Icons.check_circle_outline),
             ],
           ),
+
+          // Upcoming 30 days (from API)
+          if (provider.earningsStatus != null &&
+              provider.earningsStatus!.upcoming.isNotEmpty) ...[
+            const SizedBox(height: LgSpacing.s600),
+            LgCard(
+              title: 'Upcoming 30 Days',
+              child: Column(
+                children: provider.earningsStatus!.upcoming.map((entry) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: LgSpacing.s100),
+                    child: Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          DateFormat('MMM d').format(entry.date),
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        Text(
+                          entry.amountFormatted,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: LgColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+
+          // Fee savings card
+          if (provider.feeSummary != null &&
+              provider.feeSummary!.savingsCents > 0) ...[
+            const SizedBox(height: LgSpacing.s600),
+            LgCard(
+              title: 'Fee Savings',
+              child: Row(
+                children: [
+                  Icon(Icons.savings, color: LgColors.success, size: 32),
+                  const SizedBox(width: LgSpacing.s300),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'You saved ${provider.feeSummary!.savingsFormatted}',
+                          style: theme.textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: LgSpacing.s100),
+                        Text(
+                          'compared to the default 20% tier over ${provider.feeSummary!.transactionCount} transactions',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: LgColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           const SizedBox(height: LgSpacing.s600),
           ...periods.map((period) {
             return Padding(

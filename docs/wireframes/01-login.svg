@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Centered Card Container (card 400x380, centered at 720,450) -->
+  <!-- Logo area above card -->
+  <circle cx="720" cy="280" r="20" fill="#5C6AC4" opacity="0.15"/>
+  <circle cx="720" cy="280" r="14" fill="#5C6AC4" opacity="0.3"/>
+  <circle cx="720" cy="280" r="8" fill="#5C6AC4"/>
+  <text x="720" y="318" text-anchor="middle" font-size="20" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+  <text x="720" y="340" text-anchor="middle" font-size="13" fill="#6B7280">Revenue Intelligence Platform</text>
+
+  <!-- White Card -->
+  <rect x="520" y="370" width="400" height="380" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Card Heading -->
+  <text x="720" y="410" text-anchor="middle" font-size="18" font-weight="bold" fill="#111827">Sign in to your account</text>
+
+  <!-- Email Label -->
+  <text x="556" y="452" font-size="13" font-weight="500" fill="#111827">Email</text>
+  <!-- Email Input -->
+  <rect x="556" y="460" width="328" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="572" y="485" font-size="13" fill="#9CA3AF">you@example.com</text>
+
+  <!-- Password Label -->
+  <text x="556" y="524" font-size="13" font-weight="500" fill="#111827">Password</text>
+  <!-- Password Input -->
+  <rect x="556" y="532" width="328" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="572" y="557" font-size="13" fill="#9CA3AF">Enter your password</text>
+
+  <!-- Sign In Button -->
+  <rect x="556" y="596" width="328" height="42" rx="6" fill="#5C6AC4"/>
+  <text x="720" y="622" text-anchor="middle" font-size="14" font-weight="600" fill="#FFFFFF">Sign In</text>
+
+  <!-- Forgot Password Link -->
+  <text x="720" y="664" text-anchor="middle" font-size="13" fill="#5C6AC4">Forgot password?</text>
+
+  <!-- Sign Up Link -->
+  <text x="720" y="714" text-anchor="middle" font-size="13" fill="#6B7280">
+    Don't have an account?
+  </text>
+  <text x="720" y="732" text-anchor="middle" font-size="13" font-weight="600" fill="#5C6AC4">Sign up</text>
+</svg>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Logo area above card -->
+  <circle cx="720" cy="220" r="20" fill="#5C6AC4" opacity="0.15"/>
+  <circle cx="720" cy="220" r="14" fill="#5C6AC4" opacity="0.3"/>
+  <circle cx="720" cy="220" r="8" fill="#5C6AC4"/>
+  <text x="720" y="258" text-anchor="middle" font-size="20" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+  <text x="720" y="280" text-anchor="middle" font-size="13" fill="#6B7280">Revenue Intelligence Platform</text>
+
+  <!-- White Card -->
+  <rect x="520" y="306" width="400" height="430" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Card Heading -->
+  <text x="720" y="346" text-anchor="middle" font-size="18" font-weight="bold" fill="#111827">Create your account</text>
+
+  <!-- Full Name Label -->
+  <text x="556" y="384" font-size="13" font-weight="500" fill="#111827">Full Name</text>
+  <!-- Full Name Input -->
+  <rect x="556" y="392" width="328" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="572" y="417" font-size="13" fill="#9CA3AF">John Doe</text>
+
+  <!-- Email Label -->
+  <text x="556" y="452" font-size="13" font-weight="500" fill="#111827">Email</text>
+  <!-- Email Input -->
+  <rect x="556" y="460" width="328" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="572" y="485" font-size="13" fill="#9CA3AF">you@example.com</text>
+
+  <!-- Password Label -->
+  <text x="556" y="520" font-size="13" font-weight="500" fill="#111827">Password</text>
+  <!-- Password Input -->
+  <rect x="556" y="528" width="328" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="572" y="553" font-size="13" fill="#9CA3AF">Create a password</text>
+
+  <!-- Confirm Password Label -->
+  <text x="556" y="588" font-size="13" font-weight="500" fill="#111827">Confirm Password</text>
+  <!-- Confirm Password Input -->
+  <rect x="556" y="596" width="328" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="572" y="621" font-size="13" fill="#9CA3AF">Confirm your password</text>
+
+  <!-- Create Account Button -->
+  <rect x="556" y="660" width="328" height="42" rx="6" fill="#5C6AC4"/>
+  <text x="720" y="686" text-anchor="middle" font-size="14" font-weight="600" fill="#FFFFFF">Create Account</text>
+
+  <!-- Sign In Link -->
+  <text x="720" y="760" text-anchor="middle" font-size="13" fill="#6B7280">
+    Already have an account?
+  </text>
+  <text x="720" y="778" text-anchor="middle" font-size="13" font-weight="600" fill="#5C6AC4">Sign in</text>
+</svg>

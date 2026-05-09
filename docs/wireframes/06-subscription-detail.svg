@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Left Sidebar -->
+  <rect x="0" y="0" width="220" height="900" fill="#FFFFFF"/>
+  <line x1="220" y1="0" x2="220" y2="900" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Logo -->
+  <rect x="20" y="20" width="180" height="40" fill="none"/>
+  <text x="30" y="45" font-size="14" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+
+  <!-- Nav Items -->
+  <rect x="10" y="80" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="87" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="100" font-size="13" fill="#6B7280">Dashboard</text>
+
+  <rect x="10" y="116" width="200" height="30" rx="6" fill="#F0F1FF"/>
+  <rect x="20" y="123" width="16" height="16" rx="3" fill="#5C6AC4"/>
+  <text x="44" y="136" font-size="13" font-weight="600" fill="#5C6AC4">Subscriptions</text>
+
+  <rect x="10" y="152" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="159" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="172" font-size="13" fill="#6B7280">Stores</text>
+
+  <rect x="10" y="188" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="195" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="208" font-size="13" fill="#6B7280">Transactions</text>
+
+  <rect x="10" y="224" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="231" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="244" font-size="13" fill="#6B7280">Events</text>
+
+  <rect x="10" y="260" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="267" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="280" font-size="13" fill="#6B7280">Webhooks</text>
+
+  <rect x="10" y="296" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="303" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="316" font-size="13" fill="#6B7280">Risk</text>
+
+  <rect x="10" y="332" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="339" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="352" font-size="13" fill="#6B7280">Analytics</text>
+
+  <rect x="10" y="368" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="375" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="388" font-size="13" fill="#6B7280">Earnings</text>
+
+  <rect x="10" y="404" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="411" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="424" font-size="13" fill="#6B7280">Apps</text>
+
+  <rect x="10" y="440" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="447" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="460" font-size="13" fill="#6B7280">API Keys</text>
+
+  <rect x="10" y="476" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="483" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="496" font-size="13" fill="#6B7280">Insights</text>
+
+  <rect x="10" y="512" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="519" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="532" font-size="13" fill="#6B7280">Settings</text>
+
+  <!-- Content Area -->
+  <!-- Back Arrow + Title -->
+  <text x="260" y="40" font-size="18" fill="#5C6AC4" cursor="pointer">&#8592;</text>
+  <text x="285" y="40" font-size="24" font-weight="bold" fill="#111827">acme-shop.myshopify.com</text>
+  <text x="285" y="62" font-size="13" fill="#6B7280">Subscription detail</text>
+
+  <!-- Summary Cards Row -->
+  <!-- Billing Info Card -->
+  <rect x="260" y="90" width="360" height="120" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="115" font-size="14" font-weight="600" fill="#111827">Billing Info</text>
+  <line x1="280" y1="125" x2="600" y2="125" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="148" font-size="12" fill="#6B7280">Plan</text>
+  <text x="420" y="148" font-size="13" font-weight="500" fill="#111827">Pro</text>
+  <text x="280" y="170" font-size="12" fill="#6B7280">Price</text>
+  <text x="420" y="170" font-size="13" font-weight="500" fill="#111827">$29.99/mo</text>
+  <text x="280" y="192" font-size="12" fill="#6B7280">MRR</text>
+  <text x="420" y="192" font-size="13" font-weight="500" fill="#111827">$29.99</text>
+
+  <!-- Status Card -->
+  <rect x="640" y="90" width="360" height="120" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="660" y="115" font-size="14" font-weight="600" fill="#111827">Status</text>
+  <line x1="660" y1="125" x2="980" y2="125" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="660" y="148" font-size="12" fill="#6B7280">Status</text>
+  <rect x="800" y="136" width="56" height="20" rx="10" fill="#ECFDF5"/>
+  <text x="812" y="150" font-size="11" fill="#059669">Active</text>
+  <text x="660" y="170" font-size="12" fill="#6B7280">Risk</text>
+  <rect x="800" y="158" width="44" height="20" rx="10" fill="#ECFDF5"/>
+  <text x="812" y="172" font-size="11" fill="#059669">Safe</text>
+  <text x="660" y="192" font-size="12" fill="#6B7280">Next Charge</text>
+  <text x="800" y="192" font-size="13" font-weight="500" fill="#111827">Jun 15</text>
+
+  <!-- Store Card -->
+  <rect x="1020" y="90" width="360" height="120" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1040" y="115" font-size="14" font-weight="600" fill="#111827">Store</text>
+  <line x1="1040" y1="125" x2="1360" y2="125" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1040" y="155" font-size="13" fill="#5C6AC4" text-decoration="underline">acme-shop.myshopify.com</text>
+
+  <!-- Tab Bar -->
+  <rect x="260" y="230" width="1120" height="40" rx="0" fill="none"/>
+  <text x="280" y="256" font-size="14" font-weight="600" fill="#5C6AC4">Payment History</text>
+  <line x1="280" y1="264" x2="395" y2="264" stroke="#5C6AC4" stroke-width="2"/>
+  <text x="430" y="256" font-size="14" fill="#6B7280">Risk Timeline</text>
+  <line x1="260" y1="270" x2="1380" y2="270" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Payment Metric Cards -->
+  <rect x="260" y="290" width="240" height="80" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="318" font-size="12" fill="#6B7280">Payments</text>
+  <text x="280" y="348" font-size="24" font-weight="bold" fill="#111827">12</text>
+
+  <rect x="520" y="290" width="240" height="80" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="540" y="318" font-size="12" fill="#6B7280">Total Gross</text>
+  <text x="540" y="348" font-size="24" font-weight="bold" fill="#111827">$359.88</text>
+
+  <rect x="780" y="290" width="240" height="80" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="800" y="318" font-size="12" fill="#6B7280">Total Net</text>
+  <text x="800" y="348" font-size="24" font-weight="bold" fill="#111827">$287.90</text>
+
+  <!-- Transaction Table -->
+  <rect x="260" y="390" width="1120" height="260" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Table Header -->
+  <rect x="260" y="390" width="1120" height="40" rx="8" fill="#F9FAFB"/>
+  <rect x="260" y="420" width="1120" height="10" fill="#F9FAFB"/>
+  <line x1="260" y1="430" x2="1380" y2="430" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="416" font-size="12" font-weight="600" fill="#6B7280">Date</text>
+  <text x="480" y="416" font-size="12" font-weight="600" fill="#6B7280">Type</text>
+  <text x="700" y="416" font-size="12" font-weight="600" fill="#6B7280">Gross</text>
+  <text x="880" y="416" font-size="12" font-weight="600" fill="#6B7280">Net</text>
+  <text x="1060" y="416" font-size="12" font-weight="600" fill="#6B7280">Status</text>
+
+  <!-- Transaction Row 1 -->
+  <line x1="260" y1="470" x2="1380" y2="470" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="458" font-size="13" fill="#111827">May 15, 2026</text>
+  <rect x="480" y="444" width="76" height="20" rx="10" fill="#EFF6FF"/>
+  <text x="492" y="458" font-size="11" fill="#2563EB">Recurring</text>
+  <text x="700" y="458" font-size="13" fill="#111827">$29.99</text>
+  <text x="880" y="458" font-size="13" fill="#111827">$23.99</text>
+  <rect x="1060" y="444" width="44" height="20" rx="10" fill="#ECFDF5"/>
+  <text x="1070" y="458" font-size="11" fill="#059669">Paid</text>
+
+  <!-- Transaction Row 2 -->
+  <line x1="260" y1="510" x2="1380" y2="510" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="498" font-size="13" fill="#111827">Apr 15, 2026</text>
+  <rect x="480" y="484" width="76" height="20" rx="10" fill="#EFF6FF"/>
+  <text x="492" y="498" font-size="11" fill="#2563EB">Recurring</text>
+  <text x="700" y="498" font-size="13" fill="#111827">$29.99</text>
+  <text x="880" y="498" font-size="13" fill="#111827">$23.99</text>
+  <rect x="1060" y="484" width="44" height="20" rx="10" fill="#ECFDF5"/>
+  <text x="1070" y="498" font-size="11" fill="#059669">Paid</text>
+
+  <!-- Transaction Row 3 -->
+  <line x1="260" y1="550" x2="1380" y2="550" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="538" font-size="13" fill="#111827">Mar 15, 2026</text>
+  <rect x="480" y="524" width="76" height="20" rx="10" fill="#EFF6FF"/>
+  <text x="492" y="538" font-size="11" fill="#2563EB">Recurring</text>
+  <text x="700" y="538" font-size="13" fill="#111827">$29.99</text>
+  <text x="880" y="538" font-size="13" fill="#111827">$23.99</text>
+  <rect x="1060" y="524" width="44" height="20" rx="10" fill="#ECFDF5"/>
+  <text x="1070" y="538" font-size="11" fill="#059669">Paid</text>
+
+  <!-- Transaction Row 4 -->
+  <line x1="260" y1="590" x2="1380" y2="590" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="578" font-size="13" fill="#111827">Feb 15, 2026</text>
+  <rect x="480" y="564" width="76" height="20" rx="10" fill="#EFF6FF"/>
+  <text x="492" y="578" font-size="11" fill="#2563EB">Recurring</text>
+  <text x="700" y="578" font-size="13" fill="#111827">$29.99</text>
+  <text x="880" y="578" font-size="13" fill="#111827">$23.99</text>
+  <rect x="1060" y="564" width="44" height="20" rx="10" fill="#ECFDF5"/>
+  <text x="1070" y="578" font-size="11" fill="#059669">Paid</text>
+</svg>

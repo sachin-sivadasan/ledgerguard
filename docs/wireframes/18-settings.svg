@@ -1,0 +1,219 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Left Sidebar -->
+  <rect x="0" y="0" width="220" height="900" fill="#FFFFFF"/>
+  <line x1="220" y1="0" x2="220" y2="900" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Logo -->
+  <rect x="20" y="20" width="180" height="40" fill="none"/>
+  <text x="30" y="45" font-size="14" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+
+  <!-- Nav Items -->
+  <!-- Dashboard -->
+  <rect x="12" y="80" width="196" height="32" rx="6" fill="none"/>
+  <rect x="20" y="88" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="101" font-size="13" fill="#6B7280">Dashboard</text>
+
+  <!-- Subscriptions -->
+  <rect x="12" y="116" width="196" height="32" rx="6" fill="none"/>
+  <rect x="20" y="124" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="137" font-size="13" fill="#6B7280">Subscriptions</text>
+
+  <!-- Stores -->
+  <rect x="12" y="152" width="196" height="32" rx="6" fill="none"/>
+  <rect x="20" y="160" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="173" font-size="13" fill="#6B7280">Stores</text>
+
+  <!-- Transactions -->
+  <rect x="12" y="188" width="196" height="32" rx="6" fill="none"/>
+  <rect x="20" y="196" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="209" font-size="13" fill="#6B7280">Transactions</text>
+
+  <!-- Events -->
+  <rect x="12" y="224" width="196" height="32" rx="6" fill="none"/>
+  <rect x="20" y="232" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="245" font-size="13" fill="#6B7280">Events</text>
+
+  <!-- Webhooks -->
+  <rect x="12" y="260" width="196" height="32" rx="6" fill="none"/>
+  <rect x="20" y="268" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="281" font-size="13" fill="#6B7280">Webhooks</text>
+
+  <!-- Risk -->
+  <rect x="12" y="296" width="196" height="32" rx="6" fill="none"/>
+  <rect x="20" y="304" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="317" font-size="13" fill="#6B7280">Risk</text>
+
+  <!-- Analytics -->
+  <rect x="12" y="332" width="196" height="32" rx="6" fill="none"/>
+  <rect x="20" y="340" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="353" font-size="13" fill="#6B7280">Analytics</text>
+
+  <!-- Earnings -->
+  <rect x="12" y="368" width="196" height="32" rx="6" fill="none"/>
+  <rect x="20" y="376" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="389" font-size="13" fill="#6B7280">Earnings</text>
+
+  <!-- Apps -->
+  <rect x="12" y="404" width="196" height="32" rx="6" fill="none"/>
+  <rect x="20" y="412" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="425" font-size="13" fill="#6B7280">Apps</text>
+
+  <!-- API Keys -->
+  <rect x="12" y="440" width="196" height="32" rx="6" fill="none"/>
+  <rect x="20" y="448" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="461" font-size="13" fill="#6B7280">API Keys</text>
+
+  <!-- Insights -->
+  <rect x="12" y="476" width="196" height="32" rx="6" fill="none"/>
+  <rect x="20" y="484" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="497" font-size="13" fill="#6B7280">Insights</text>
+
+  <!-- Settings (Active) -->
+  <rect x="12" y="512" width="196" height="32" rx="6" fill="#F0F1FF"/>
+  <rect x="20" y="520" width="16" height="16" rx="3" fill="#5C6AC4"/>
+  <text x="44" y="533" font-size="13" font-weight="600" fill="#5C6AC4">Settings</text>
+
+  <!-- Content Area -->
+  <!-- Page Title -->
+  <text x="260" y="40" font-size="24" font-weight="bold" fill="#111827">Settings</text>
+  <text x="260" y="62" font-size="13" fill="#6B7280">Notifications, sync, and workspace configuration</text>
+
+  <!-- Developer Card -->
+  <rect x="260" y="90" width="560" height="56" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="114" font-size="14" font-weight="600" fill="#111827">Developer</text>
+  <text x="280" y="132" font-size="12" fill="#6B7280">Demo Mode</text>
+  <!-- Toggle OFF -->
+  <rect x="760" y="108" width="36" height="20" rx="10" fill="#D1D5DB"/>
+  <circle cx="768" cy="118" r="8" fill="#FFFFFF"/>
+
+  <!-- Dashboard Card -->
+  <rect x="260" y="158" width="560" height="56" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="280" y="174" width="24" height="24" rx="4" fill="#EEF0FB"/>
+  <rect x="286" y="180" width="12" height="12" rx="2" fill="#5C6AC4"/>
+  <text x="314" y="186" font-size="14" font-weight="600" fill="#111827">Customize Dashboard</text>
+  <text x="314" y="202" font-size="12" fill="#6B7280">Choose KPIs and widgets</text>
+  <!-- Chevron Right -->
+  <text x="800" y="192" font-size="16" fill="#9CA3AF">&#x203A;</text>
+
+  <!-- Organization Card -->
+  <rect x="260" y="226" width="560" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="250" font-size="14" font-weight="600" fill="#111827">Organization</text>
+  <!-- Team Members row -->
+  <text x="280" y="272" font-size="13" fill="#111827">Team Members</text>
+  <text x="680" y="272" font-size="12" fill="#6B7280">3 members</text>
+  <text x="800" y="272" font-size="16" fill="#9CA3AF">&#x203A;</text>
+  <!-- Divider -->
+  <line x1="280" y1="282" x2="800" y2="282" stroke="#E5E7EB" stroke-width="1"/>
+  <!-- Audit Log row -->
+  <text x="280" y="304" font-size="13" fill="#111827">Audit Log</text>
+  <text x="680" y="304" font-size="12" fill="#6B7280">View organization activity</text>
+  <text x="800" y="304" font-size="16" fill="#9CA3AF">&#x203A;</text>
+
+  <!-- Shopify Integration Card -->
+  <rect x="260" y="334" width="560" height="48" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="356" font-size="14" font-weight="600" fill="#111827">Shopify Integration</text>
+  <text x="580" y="356" font-size="12" fill="#6B7280">Connect Partner Account</text>
+  <text x="800" y="362" font-size="16" fill="#9CA3AF">&#x203A;</text>
+
+  <!-- Notification Preferences Card -->
+  <rect x="260" y="394" width="560" height="252" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="420" font-size="14" font-weight="600" fill="#111827">Notification Preferences</text>
+
+  <!-- Email Alerts (ON) -->
+  <text x="280" y="446" font-size="13" fill="#111827">Email Alerts</text>
+  <rect x="760" y="432" width="36" height="20" rx="10" fill="#5C6AC4"/>
+  <circle cx="786" cy="442" r="8" fill="#FFFFFF"/>
+
+  <!-- Slack Alerts (OFF) -->
+  <text x="280" y="472" font-size="13" fill="#111827">Slack Alerts</text>
+  <rect x="760" y="458" width="36" height="20" rx="10" fill="#D1D5DB"/>
+  <circle cx="768" cy="468" r="8" fill="#FFFFFF"/>
+
+  <!-- Divider -->
+  <line x1="280" y1="486" x2="800" y2="486" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Churn Risk Alerts (ON) -->
+  <text x="280" y="508" font-size="13" fill="#111827">Churn Risk Alerts</text>
+  <rect x="760" y="494" width="36" height="20" rx="10" fill="#5C6AC4"/>
+  <circle cx="786" cy="504" r="8" fill="#FFFFFF"/>
+
+  <!-- Revenue Alerts (ON) -->
+  <text x="280" y="534" font-size="13" fill="#111827">Revenue Alerts</text>
+  <rect x="760" y="520" width="36" height="20" rx="10" fill="#5C6AC4"/>
+  <circle cx="786" cy="530" r="8" fill="#FFFFFF"/>
+
+  <!-- Review Alerts (OFF) -->
+  <text x="280" y="560" font-size="13" fill="#111827">Review Alerts</text>
+  <rect x="760" y="546" width="36" height="20" rx="10" fill="#D1D5DB"/>
+  <circle cx="768" cy="556" r="8" fill="#FFFFFF"/>
+
+  <!-- Divider -->
+  <line x1="280" y1="574" x2="800" y2="574" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Risk Threshold -->
+  <text x="280" y="596" font-size="13" fill="#111827">Risk Threshold</text>
+  <text x="760" y="596" font-size="12" fill="#6B7280">30 days</text>
+  <!-- Slider track -->
+  <rect x="280" y="608" width="516" height="4" rx="2" fill="#E5E7EB"/>
+  <!-- Slider filled portion (30%) -->
+  <rect x="280" y="608" width="155" height="4" rx="2" fill="#5C6AC4"/>
+  <!-- Slider knob -->
+  <circle cx="435" cy="610" r="8" fill="#5C6AC4" stroke="#FFFFFF" stroke-width="2"/>
+  <!-- Min/Max labels -->
+  <text x="280" y="632" font-size="10" fill="#9CA3AF">0</text>
+  <text x="786" y="632" font-size="10" fill="#9CA3AF">90</text>
+
+  <!-- Sync Schedule Card -->
+  <rect x="260" y="658" width="560" height="92" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="684" font-size="14" font-weight="600" fill="#111827">Sync Schedule</text>
+
+  <!-- Auto Sync (ON) -->
+  <text x="280" y="710" font-size="13" fill="#111827">Auto Sync</text>
+  <rect x="760" y="696" width="36" height="20" rx="10" fill="#5C6AC4"/>
+  <circle cx="786" cy="706" r="8" fill="#FFFFFF"/>
+
+  <!-- Sync Frequency -->
+  <text x="280" y="738" font-size="13" fill="#111827">Sync Frequency</text>
+  <rect x="660" y="722" width="140" height="28" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="672" y="740" font-size="12" fill="#111827">Every 6 hours</text>
+  <text x="784" y="740" font-size="10" fill="#9CA3AF">&#x25BC;</text>
+
+  <!-- Workspace Card -->
+  <rect x="260" y="762" width="560" height="128" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="788" font-size="14" font-weight="600" fill="#111827">Workspace</text>
+
+  <!-- Workspace Name -->
+  <text x="280" y="812" font-size="13" fill="#111827">Workspace Name</text>
+  <rect x="460" y="796" width="340" height="28" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="472" y="814" font-size="12" fill="#111827">My Workspace</text>
+
+  <!-- Currency -->
+  <text x="280" y="844" font-size="13" fill="#111827">Currency</text>
+  <rect x="460" y="828" width="160" height="28" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="472" y="846" font-size="12" fill="#111827">USD</text>
+  <text x="604" y="846" font-size="10" fill="#9CA3AF">&#x25BC;</text>
+
+  <!-- Timezone -->
+  <text x="280" y="876" font-size="13" fill="#111827">Timezone</text>
+  <rect x="460" y="860" width="340" height="28" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="472" y="878" font-size="12" fill="#111827">America/New_York</text>
+  <text x="784" y="878" font-size="10" fill="#9CA3AF">&#x25BC;</text>
+
+  <!-- Scroll fade at bottom to indicate more content -->
+  <defs>
+    <linearGradient id="fadeBottom" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F8F9FA" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#F8F9FA" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+  <rect x="240" y="860" width="1200" height="40" fill="url(#fadeBottom)"/>
+</svg>

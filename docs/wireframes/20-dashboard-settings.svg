@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- ==================== LEFT SIDEBAR ==================== -->
+  <rect x="0" y="0" width="220" height="900" fill="#FFFFFF"/>
+  <line x1="220" y1="0" x2="220" y2="900" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Logo -->
+  <rect x="20" y="20" width="180" height="40" rx="4" fill="none"/>
+  <circle cx="38" cy="40" r="10" fill="#5C6AC4" opacity="0.2"/>
+  <circle cx="38" cy="40" r="6" fill="#5C6AC4"/>
+  <text x="56" y="45" font-size="14" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+
+  <!-- Nav Items -->
+  <!-- Dashboard -->
+  <rect x="24" y="88" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="48" y="101" font-size="13" fill="#6B7280">Dashboard</text>
+
+  <!-- Subscriptions -->
+  <rect x="24" y="124" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="48" y="137" font-size="13" fill="#6B7280">Subscriptions</text>
+
+  <!-- Stores -->
+  <rect x="24" y="160" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="48" y="173" font-size="13" fill="#6B7280">Stores</text>
+
+  <!-- Transactions -->
+  <rect x="24" y="196" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="48" y="209" font-size="13" fill="#6B7280">Transactions</text>
+
+  <!-- Events -->
+  <rect x="24" y="232" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="48" y="245" font-size="13" fill="#6B7280">Events</text>
+
+  <!-- Webhooks -->
+  <rect x="24" y="268" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="48" y="281" font-size="13" fill="#6B7280">Webhooks</text>
+
+  <!-- Risk -->
+  <rect x="24" y="304" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="48" y="317" font-size="13" fill="#6B7280">Risk</text>
+
+  <!-- Analytics -->
+  <rect x="24" y="340" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="48" y="353" font-size="13" fill="#6B7280">Analytics</text>
+
+  <!-- Earnings -->
+  <rect x="24" y="376" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="48" y="389" font-size="13" fill="#6B7280">Earnings</text>
+
+  <!-- Apps -->
+  <rect x="24" y="412" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="48" y="425" font-size="13" fill="#6B7280">Apps</text>
+
+  <!-- API Keys -->
+  <rect x="24" y="448" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="48" y="461" font-size="13" fill="#6B7280">API Keys</text>
+
+  <!-- Insights -->
+  <rect x="24" y="484" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="48" y="497" font-size="13" fill="#6B7280">Insights</text>
+
+  <!-- Settings (Active) -->
+  <rect x="12" y="516" width="196" height="32" rx="6" fill="#F0F1FF"/>
+  <rect x="24" y="524" width="16" height="16" rx="3" fill="#5C6AC4" opacity="0.4"/>
+  <text x="48" y="537" font-size="13" font-weight="600" fill="#5C6AC4">Settings</text>
+
+  <!-- ==================== CONTENT AREA ==================== -->
+  <!-- Back Arrow + Title -->
+  <!-- Back arrow icon -->
+  <polygon points="260,32 268,24 270,26 264,32 270,38 268,40" fill="#6B7280"/>
+  <text x="282" y="40" font-size="24" font-weight="bold" fill="#111827">Dashboard</text>
+  <text x="282" y="62" font-size="13" fill="#6B7280">Customize KPIs and widgets</text>
+
+  <!-- ==================== PRIMARY KPIs SECTION ==================== -->
+  <text x="260" y="110" font-size="16" font-weight="600" fill="#111827">Primary KPIs</text>
+  <text x="260" y="130" font-size="13" fill="#6B7280">Choose up to 4 metrics</text>
+
+  <!-- Checkbox Row 1: Monthly Recurring Revenue [CHECKED] -->
+  <rect x="260" y="150" width="560" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="276" y="163" width="16" height="16" rx="3" fill="#5C6AC4"/>
+  <polyline points="280,171 284,175 290,165" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="302" y="175" font-size="13" fill="#111827">Monthly Recurring Revenue</text>
+
+  <!-- Checkbox Row 2: Renewal Rate [CHECKED] -->
+  <rect x="260" y="198" width="560" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="276" y="211" width="16" height="16" rx="3" fill="#5C6AC4"/>
+  <polyline points="280,219 284,223 290,213" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="302" y="223" font-size="13" fill="#111827">Renewal Rate</text>
+
+  <!-- Checkbox Row 3: Revenue at Risk [CHECKED] -->
+  <rect x="260" y="246" width="560" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="276" y="259" width="16" height="16" rx="3" fill="#5C6AC4"/>
+  <polyline points="280,267 284,271 290,261" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="302" y="271" font-size="13" fill="#111827">Revenue at Risk</text>
+
+  <!-- Checkbox Row 4: Usage Revenue [UNCHECKED] -->
+  <rect x="260" y="294" width="560" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="276" y="307" width="16" height="16" rx="3" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1.5"/>
+  <text x="302" y="319" font-size="13" fill="#111827">Usage Revenue</text>
+
+  <!-- Checkbox Row 5: Churned Subscriptions [UNCHECKED] -->
+  <rect x="260" y="342" width="560" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="276" y="355" width="16" height="16" rx="3" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1.5"/>
+  <text x="302" y="367" font-size="13" fill="#111827">Churned Subscriptions</text>
+
+  <!-- Checkbox Row 6: Total Revenue [UNCHECKED] -->
+  <rect x="260" y="390" width="560" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="276" y="403" width="16" height="16" rx="3" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1.5"/>
+  <text x="302" y="415" font-size="13" fill="#111827">Total Revenue</text>
+
+  <!-- Divider -->
+  <line x1="260" y1="454" x2="820" y2="454" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- ==================== SECONDARY WIDGETS SECTION ==================== -->
+  <text x="260" y="486" font-size="16" font-weight="600" fill="#111827">Secondary Widgets</text>
+  <text x="260" y="506" font-size="13" fill="#6B7280">Toggle dashboard widgets</text>
+
+  <!-- Checkbox Row 1: MRR Trend (12 months) [CHECKED] -->
+  <rect x="260" y="524" width="560" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="276" y="537" width="16" height="16" rx="3" fill="#5C6AC4"/>
+  <polyline points="280,545 284,549 290,539" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="302" y="549" font-size="13" fill="#111827">MRR Trend (12 months)</text>
+
+  <!-- Checkbox Row 2: Risk Distribution [CHECKED] -->
+  <rect x="260" y="572" width="560" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="276" y="585" width="16" height="16" rx="3" fill="#5C6AC4"/>
+  <polyline points="280,593 284,597 290,587" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="302" y="597" font-size="13" fill="#111827">Risk Distribution</text>
+
+  <!-- Checkbox Row 3: Forecast (Next Month) [CHECKED] -->
+  <rect x="260" y="620" width="560" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="276" y="633" width="16" height="16" rx="3" fill="#5C6AC4"/>
+  <polyline points="280,641 284,645 290,635" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="302" y="645" font-size="13" fill="#111827">Forecast (Next Month)</text>
+
+  <!-- Checkbox Row 4: Revenue Mix [CHECKED] -->
+  <rect x="260" y="668" width="560" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="276" y="681" width="16" height="16" rx="3" fill="#5C6AC4"/>
+  <polyline points="280,689 284,693 290,683" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="302" y="693" font-size="13" fill="#111827">Revenue Mix</text>
+
+  <!-- Checkbox Row 5: Activity Summary [CHECKED] -->
+  <rect x="260" y="716" width="560" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="276" y="729" width="16" height="16" rx="3" fill="#5C6AC4"/>
+  <polyline points="280,737 284,741 290,731" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="302" y="741" font-size="13" fill="#111827">Activity Summary</text>
+
+  <!-- Checkbox Row 6: Earnings Overview [UNCHECKED] -->
+  <rect x="260" y="764" width="560" height="40" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="276" y="777" width="16" height="16" rx="3" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1.5"/>
+  <text x="302" y="789" font-size="13" fill="#111827">Earnings Overview</text>
+</svg>

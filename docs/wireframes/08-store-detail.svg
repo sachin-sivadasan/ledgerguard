@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Left Sidebar -->
+  <rect x="0" y="0" width="220" height="900" fill="#FFFFFF"/>
+  <line x1="220" y1="0" x2="220" y2="900" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Logo -->
+  <rect x="20" y="20" width="180" height="40" fill="none"/>
+  <text x="30" y="45" font-size="14" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+
+  <!-- Nav Items -->
+  <rect x="10" y="80" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="87" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="100" font-size="13" fill="#6B7280">Dashboard</text>
+
+  <rect x="10" y="116" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="123" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="136" font-size="13" fill="#6B7280">Subscriptions</text>
+
+  <!-- Stores (Active) -->
+  <rect x="10" y="152" width="200" height="30" rx="6" fill="#F0F1FF"/>
+  <rect x="20" y="159" width="16" height="16" rx="3" fill="#5C6AC4"/>
+  <text x="44" y="172" font-size="13" font-weight="600" fill="#5C6AC4">Stores</text>
+
+  <rect x="10" y="188" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="195" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="208" font-size="13" fill="#6B7280">Transactions</text>
+
+  <rect x="10" y="224" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="231" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="244" font-size="13" fill="#6B7280">Events</text>
+
+  <rect x="10" y="260" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="267" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="280" font-size="13" fill="#6B7280">Webhooks</text>
+
+  <rect x="10" y="296" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="303" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="316" font-size="13" fill="#6B7280">Risk</text>
+
+  <rect x="10" y="332" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="339" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="352" font-size="13" fill="#6B7280">Analytics</text>
+
+  <rect x="10" y="368" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="375" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="388" font-size="13" fill="#6B7280">Earnings</text>
+
+  <rect x="10" y="404" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="411" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="424" font-size="13" fill="#6B7280">Apps</text>
+
+  <rect x="10" y="440" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="447" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="460" font-size="13" fill="#6B7280">API Keys</text>
+
+  <rect x="10" y="476" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="483" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="496" font-size="13" fill="#6B7280">Insights</text>
+
+  <rect x="10" y="512" width="200" height="30" rx="6" fill="none"/>
+  <rect x="20" y="519" width="16" height="16" rx="3" fill="#E5E7EB"/>
+  <text x="44" y="532" font-size="13" fill="#6B7280">Settings</text>
+
+  <!-- Content Area -->
+  <!-- Back Arrow + Title -->
+  <text x="260" y="40" font-size="18" fill="#5C6AC4" cursor="pointer">&#8592;</text>
+  <text x="285" y="40" font-size="24" font-weight="bold" fill="#111827">acme-shop</text>
+  <text x="285" y="62" font-size="13" fill="#6B7280">Store CRM</text>
+
+  <!-- Summary Cards Row -->
+  <!-- Overview Card -->
+  <rect x="260" y="90" width="360" height="140" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="115" font-size="14" font-weight="600" fill="#111827">Overview</text>
+  <line x1="280" y1="125" x2="600" y2="125" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="148" font-size="12" fill="#6B7280">Health</text>
+  <text x="420" y="148" font-size="13" font-weight="500" fill="#111827">94%</text>
+  <text x="280" y="170" font-size="12" fill="#6B7280">LTV</text>
+  <text x="420" y="170" font-size="13" font-weight="500" fill="#111827">$1,240</text>
+  <text x="280" y="192" font-size="12" fill="#6B7280">First Install</text>
+  <text x="420" y="192" font-size="13" font-weight="500" fill="#111827">Jan 2025</text>
+  <text x="280" y="214" font-size="12" fill="#6B7280">Risk</text>
+  <rect x="420" y="202" width="44" height="20" rx="10" fill="#ECFDF5"/>
+  <text x="430" y="216" font-size="11" fill="#059669">Safe</text>
+
+  <!-- Installed Apps Card -->
+  <rect x="640" y="90" width="360" height="140" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="660" y="115" font-size="14" font-weight="600" fill="#111827">Installed Apps</text>
+  <line x1="660" y1="125" x2="980" y2="125" stroke="#E5E7EB" stroke-width="1"/>
+  <circle cx="676" cy="148" r="4" fill="#5C6AC4"/>
+  <text x="690" y="152" font-size="13" fill="#111827">Revenue Tracker Pro</text>
+  <circle cx="676" cy="176" r="4" fill="#5C6AC4"/>
+  <text x="690" y="180" font-size="13" fill="#111827">Subscription Manager</text>
+
+  <!-- Subscriptions Card -->
+  <rect x="1020" y="90" width="360" height="140" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1040" y="115" font-size="14" font-weight="600" fill="#111827">Subscriptions</text>
+  <line x1="1040" y1="125" x2="1360" y2="125" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Sub 1 -->
+  <text x="1040" y="150" font-size="13" fill="#111827">Pro Plan</text>
+  <text x="1200" y="150" font-size="13" fill="#6B7280">$29.99/mo</text>
+  <rect x="1310" y="138" width="50" height="18" rx="9" fill="#ECFDF5"/>
+  <text x="1320" y="150" font-size="10" fill="#059669">Active</text>
+
+  <!-- Sub 2 -->
+  <text x="1040" y="178" font-size="13" fill="#111827">Basic Plan</text>
+  <text x="1200" y="178" font-size="13" fill="#6B7280">$14.99/mo</text>
+  <rect x="1310" y="166" width="50" height="18" rx="9" fill="#ECFDF5"/>
+  <text x="1320" y="178" font-size="10" fill="#059669">Active</text>
+
+  <!-- Timeline Section -->
+  <rect x="260" y="260" width="1120" height="340" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="290" font-size="14" font-weight="600" fill="#111827">Recent Events</text>
+  <line x1="280" y1="302" x2="1360" y2="302" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Event 1 -->
+  <circle cx="300" cy="334" r="14" fill="#ECFDF5"/>
+  <rect x="292" y="328" width="16" height="12" rx="2" fill="#059669"/>
+  <text x="326" y="330" font-size="13" font-weight="500" fill="#111827">Subscription Renewed</text>
+  <rect x="480" y="318" width="76" height="20" rx="10" fill="#EFF6FF"/>
+  <text x="492" y="332" font-size="11" fill="#2563EB">Recurring</text>
+  <text x="326" y="348" font-size="12" fill="#6B7280">May 15, 2026</text>
+  <line x1="280" y1="366" x2="1360" y2="366" stroke="#F3F4F6" stroke-width="1"/>
+
+  <!-- Event 2 -->
+  <circle cx="300" cy="398" r="14" fill="#EFF6FF"/>
+  <rect x="292" y="392" width="16" height="12" rx="2" fill="#2563EB"/>
+  <text x="326" y="394" font-size="13" font-weight="500" fill="#111827">Usage Charge Billed</text>
+  <rect x="474" y="382" width="58" height="20" rx="10" fill="#F5F3FF"/>
+  <text x="486" y="396" font-size="11" fill="#7C3AED">Usage</text>
+  <text x="326" y="412" font-size="12" fill="#6B7280">May 10, 2026</text>
+  <line x1="280" y1="430" x2="1360" y2="430" stroke="#F3F4F6" stroke-width="1"/>
+
+  <!-- Event 3 -->
+  <circle cx="300" cy="462" r="14" fill="#ECFDF5"/>
+  <rect x="292" y="456" width="16" height="12" rx="2" fill="#059669"/>
+  <text x="326" y="458" font-size="13" font-weight="500" fill="#111827">App Installed</text>
+  <rect x="432" y="446" width="54" height="20" rx="10" fill="#ECFDF5"/>
+  <text x="444" y="460" font-size="11" fill="#059669">Install</text>
+  <text x="326" y="476" font-size="12" fill="#6B7280">Jan 15, 2025</text>
+  <line x1="280" y1="494" x2="1360" y2="494" stroke="#F3F4F6" stroke-width="1"/>
+
+  <!-- Event 4 -->
+  <circle cx="300" cy="526" r="14" fill="#EFF6FF"/>
+  <rect x="292" y="520" width="16" height="12" rx="2" fill="#2563EB"/>
+  <text x="326" y="522" font-size="13" font-weight="500" fill="#111827">Subscription Created</text>
+  <rect x="484" y="510" width="76" height="20" rx="10" fill="#EFF6FF"/>
+  <text x="496" y="524" font-size="11" fill="#2563EB">Recurring</text>
+  <text x="326" y="540" font-size="12" fill="#6B7280">Jan 15, 2025</text>
+</svg>

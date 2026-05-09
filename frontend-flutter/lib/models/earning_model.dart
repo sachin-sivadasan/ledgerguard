@@ -91,6 +91,144 @@ class FeeBreakdown {
   String get netFormatted => '\$${(netCents / 100).toStringAsFixed(2)}';
 }
 
+class FeeBreakdownResponse {
+  final int grossCents;
+  final List<TierFeeBreakdown> tiers;
+
+  const FeeBreakdownResponse({
+    required this.grossCents,
+    required this.tiers,
+  });
+
+  factory FeeBreakdownResponse.fromJson(Map<String, dynamic> json) {
+    return FeeBreakdownResponse(
+      grossCents: json['gross_cents'] as int? ?? 0,
+      tiers: (json['tiers'] as List<dynamic>?)
+              ?.map((t) =>
+                  TierFeeBreakdown.fromJson(t as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+}
+
+class TierFeeBreakdown {
+  final String tierName;
+  final double ratePct;
+  final int shopifyFeeCents;
+  final int processingFeeCents;
+  final int netCents;
+
+  const TierFeeBreakdown({
+    required this.tierName,
+    required this.ratePct,
+    required this.shopifyFeeCents,
+    required this.processingFeeCents,
+    required this.netCents,
+  });
+
+  factory TierFeeBreakdown.fromJson(Map<String, dynamic> json) {
+    return TierFeeBreakdown(
+      tierName: json['tier_name'] as String? ?? '',
+      ratePct: (json['rate_pct'] as num?)?.toDouble() ?? 0,
+      shopifyFeeCents: json['shopify_fee_cents'] as int? ?? 0,
+      processingFeeCents: json['processing_fee_cents'] as int? ?? 0,
+      netCents: json['net_cents'] as int? ?? 0,
+    );
+  }
+}
+
+class FeeSummary {
+  final int transactionCount;
+  final int grossCents;
+  final int shopifyFeeCents;
+  final int processingFeeCents;
+  final int netCents;
+  final int savingsCents;
+  final String currentTier;
+
+  const FeeSummary({
+    required this.transactionCount,
+    required this.grossCents,
+    required this.shopifyFeeCents,
+    required this.processingFeeCents,
+    required this.netCents,
+    required this.savingsCents,
+    required this.currentTier,
+  });
+
+  factory FeeSummary.fromJson(Map<String, dynamic> json) {
+    return FeeSummary(
+      transactionCount: json['transaction_count'] as int? ?? 0,
+      grossCents: json['gross_cents'] as int? ?? 0,
+      shopifyFeeCents: json['shopify_fee_cents'] as int? ?? 0,
+      processingFeeCents: json['processing_fee_cents'] as int? ?? 0,
+      netCents: json['net_cents'] as int? ?? 0,
+      savingsCents: json['savings_cents'] as int? ?? 0,
+      currentTier: json['current_tier'] as String? ?? '',
+    );
+  }
+
+  String get savingsFormatted =>
+      '\$${(savingsCents / 100).toStringAsFixed(2)}';
+  String get netFormatted => '\$${(netCents / 100).toStringAsFixed(2)}';
+}
+
+class EarningsStatus {
+  final int pendingCents;
+  final int availableCents;
+  final int paidOutCents;
+  final List<UpcomingAvailability> upcoming;
+
+  const EarningsStatus({
+    required this.pendingCents,
+    required this.availableCents,
+    required this.paidOutCents,
+    required this.upcoming,
+  });
+
+  factory EarningsStatus.fromJson(Map<String, dynamic> json) {
+    return EarningsStatus(
+      pendingCents: json['pending_cents'] as int? ?? 0,
+      availableCents: json['available_cents'] as int? ?? 0,
+      paidOutCents: json['paid_out_cents'] as int? ?? 0,
+      upcoming: (json['upcoming'] as List<dynamic>?)
+              ?.map((u) =>
+                  UpcomingAvailability.fromJson(u as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+
+  String get pendingFormatted =>
+      '\$${(pendingCents / 100).toStringAsFixed(2)}';
+  String get availableFormatted =>
+      '\$${(availableCents / 100).toStringAsFixed(2)}';
+  String get paidOutFormatted =>
+      '\$${(paidOutCents / 100).toStringAsFixed(2)}';
+}
+
+class UpcomingAvailability {
+  final DateTime date;
+  final int amountCents;
+
+  const UpcomingAvailability({
+    required this.date,
+    required this.amountCents,
+  });
+
+  factory UpcomingAvailability.fromJson(Map<String, dynamic> json) {
+    return UpcomingAvailability(
+      date: DateTime.parse(
+          json['date'] as String? ?? DateTime.now().toIso8601String()),
+      amountCents: json['amount_cents'] as int? ?? 0,
+    );
+  }
+
+  String get amountFormatted =>
+      '\$${(amountCents / 100).toStringAsFixed(2)}';
+}
+
 class RevenueShareTier {
   final String name;
   final String description;
@@ -105,6 +243,20 @@ class RevenueShareTier {
     required this.ratePct,
     required this.isCurrentTier,
   });
+
+  factory RevenueShareTier.fromJson(Map<String, dynamic> json,
+      {String? currentTierName}) {
+    final name = json['name'] as String? ?? '';
+    return RevenueShareTier(
+      name: name,
+      description: json['description'] as String? ?? '',
+      thresholdCents: json['threshold_cents'] as int?,
+      ratePct: (json['rate_pct'] as num?)?.toDouble() ?? 0,
+      isCurrentTier: currentTierName != null
+          ? name == currentTierName
+          : json['is_current_tier'] as bool? ?? false,
+    );
+  }
 
   String get rateLabel => '${ratePct.toStringAsFixed(0)}%';
   String? get thresholdFormatted => thresholdCents != null

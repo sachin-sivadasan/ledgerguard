@@ -72,6 +72,7 @@ class _EarningsScreenState extends State<EarningsScreen>
     return LgPage(
       title: 'Earnings',
       subtitle: 'Revenue and fee breakdown',
+      onRefresh: refreshData,
       scrollable: false,
       child: DefaultTabController(
         length: 2,
@@ -232,8 +233,12 @@ class _FeesAndTiersTabState extends State<_FeesAndTiersTab> {
     final gross = double.tryParse(_grossController.text);
     if (gross != null && gross > 0) {
       final provider = context.read<EarningsProvider>();
+      final amountCents = (gross * 100).round();
+      if (!provider.demoMode && provider.selectedAppId != null) {
+        provider.loadFeeBreakdown(provider.selectedAppId!, amountCents);
+      }
       setState(() {
-        _breakdown = provider.calculateFees((gross * 100).round());
+        _breakdown = provider.calculateFees(amountCents);
       });
     }
   }
@@ -248,6 +253,7 @@ class _FeesAndTiersTabState extends State<_FeesAndTiersTab> {
   Widget build(BuildContext context) {
     final provider = context.watch<EarningsProvider>();
     final currentTier = provider.currentTier;
+    final feeSummary = provider.feeSummary;
     final theme = Theme.of(context);
 
     return SingleChildScrollView(
@@ -277,6 +283,27 @@ class _FeesAndTiersTabState extends State<_FeesAndTiersTab> {
             ),
           ),
           const SizedBox(height: LgSpacing.s600),
+
+          // Fee savings (from API)
+          if (feeSummary != null && feeSummary.savingsCents > 0) ...[
+            LgCard(
+              title: 'Fee Savings',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                      'You saved ${feeSummary.savingsFormatted} compared to the default 20% tier',
+                      style: theme.textTheme.bodyMedium),
+                  const SizedBox(height: LgSpacing.s200),
+                  Text(
+                      '${feeSummary.transactionCount} transactions processed',
+                      style: TextStyle(
+                          fontSize: 13, color: LgColors.textSecondary)),
+                ],
+              ),
+            ),
+            const SizedBox(height: LgSpacing.s600),
+          ],
 
           // Fee calculator
           LgCard(
@@ -315,6 +342,18 @@ class _FeesAndTiersTabState extends State<_FeesAndTiersTab> {
                   const Divider(),
                   _feeRow('Net Earnings', _breakdown!.netFormatted, theme,
                       bold: true),
+                ],
+                // Show API breakdown comparison if available
+                if (provider.feeBreakdownResponse != null) ...[
+                  const SizedBox(height: LgSpacing.s400),
+                  Text('Breakdown by tier:',
+                      style: theme.textTheme.titleSmall),
+                  const SizedBox(height: LgSpacing.s200),
+                  ...provider.feeBreakdownResponse!.tiers.map((tb) =>
+                      _feeRow(
+                          '${tb.tierName} (${tb.ratePct.toStringAsFixed(0)}%)',
+                          '\$${(tb.netCents / 100).toStringAsFixed(2)} net',
+                          theme)),
                 ],
               ],
             ),

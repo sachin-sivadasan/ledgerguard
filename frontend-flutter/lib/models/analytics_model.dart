@@ -128,6 +128,16 @@ class ExpenseBreakdown {
     required this.paymentFeesCents,
   });
 
+  factory ExpenseBreakdown.fromJson(Map<String, dynamic> json) {
+    return ExpenseBreakdown(
+      month: json['month'] as String? ?? '',
+      grossRevenueCents: json['gross_cents'] as int? ?? 0,
+      shopifyCutCents: json['shopify_cut_cents'] as int? ?? 0,
+      infraCostCents: json['infrastructure_cents'] as int? ?? 0,
+      paymentFeesCents: json['processing_fee_cents'] as int? ?? 0,
+    );
+  }
+
   int get netProfitCents =>
       grossRevenueCents - shopifyCutCents - infraCostCents - paymentFeesCents;
   double get profitMarginPct =>

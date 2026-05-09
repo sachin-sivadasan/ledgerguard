@@ -14,6 +14,10 @@ class EarningsProvider extends ChangeNotifier {
   CancelToken? _cancelToken;
 
   List<EarningPeriod> _liveEarnings = [];
+  List<RevenueShareTier>? _liveTiers;
+  FeeBreakdownResponse? _liveFeeBreakdown;
+  FeeSummary? _liveFeeSummary;
+  EarningsStatus? _liveEarningsStatus;
 
   EarningsProvider(this._earningsService);
 
@@ -21,6 +25,11 @@ class EarningsProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   String? get selectedAppId => _selectedAppId;
+  FeeSummary? get feeSummary => _demoMode ? null : _liveFeeSummary;
+  EarningsStatus? get earningsStatus =>
+      _demoMode ? null : _liveEarningsStatus;
+  FeeBreakdownResponse? get feeBreakdownResponse =>
+      _demoMode ? null : _liveFeeBreakdown;
 
   void setDemoMode(bool value) {
     _demoMode = value;
@@ -32,6 +41,9 @@ class EarningsProvider extends ChangeNotifier {
     notifyListeners();
     if (!_demoMode && appId != null) {
       loadEarnings(appId);
+      loadTiers();
+      loadFeeSummary(appId);
+      loadEarningsStatus(appId);
     }
   }
 
@@ -55,6 +67,32 @@ class EarningsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadTiers() async {
+    if (_demoMode) return;
+    _liveTiers = await _earningsService.fetchTiers();
+    notifyListeners();
+  }
+
+  Future<void> loadFeeSummary(String appId) async {
+    if (_demoMode) return;
+    _liveFeeSummary = await _earningsService.fetchFeeSummary(appId);
+    notifyListeners();
+  }
+
+  Future<void> loadEarningsStatus(String appId) async {
+    if (_demoMode) return;
+    _liveEarningsStatus =
+        await _earningsService.fetchEarningsStatus(appId);
+    notifyListeners();
+  }
+
+  Future<void> loadFeeBreakdown(String appId, int amountCents) async {
+    if (_demoMode) return;
+    _liveFeeBreakdown =
+        await _earningsService.fetchFeeBreakdown(appId, amountCents);
+    notifyListeners();
+  }
+
   List<EarningPeriod> get _allPeriods =>
       _demoMode ? mockEarningPeriods : _liveEarnings;
 
@@ -70,6 +108,9 @@ class EarningsProvider extends ChangeNotifier {
   }
 
   String get pendingAmount {
+    if (!_demoMode && _liveEarningsStatus != null) {
+      return _liveEarningsStatus!.pendingFormatted;
+    }
     final cents = _allPeriods
         .where((p) => p.status == EarningStatus.pending)
         .fold<int>(0, (sum, p) => sum + p.netEarningsCents);
@@ -77,6 +118,9 @@ class EarningsProvider extends ChangeNotifier {
   }
 
   String get availableAmount {
+    if (!_demoMode && _liveEarningsStatus != null) {
+      return _liveEarningsStatus!.availableFormatted;
+    }
     final cents = _allPeriods
         .where((p) => p.status == EarningStatus.available)
         .fold<int>(0, (sum, p) => sum + p.netEarningsCents);
@@ -99,8 +143,14 @@ class EarningsProvider extends ChangeNotifier {
     );
   }
 
-  List<RevenueShareTier> get tiers => mockRevenueShareTiers;
+  List<RevenueShareTier> get tiers {
+    if (!_demoMode && _liveTiers != null && _liveTiers!.isNotEmpty) {
+      return _liveTiers!;
+    }
+    return mockRevenueShareTiers;
+  }
 
   RevenueShareTier get currentTier =>
-      mockRevenueShareTiers.firstWhere((t) => t.isCurrentTier);
+      tiers.firstWhere((t) => t.isCurrentTier,
+          orElse: () => tiers.first);
 }

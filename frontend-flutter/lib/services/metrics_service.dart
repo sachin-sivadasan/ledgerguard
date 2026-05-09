@@ -195,13 +195,15 @@ class MetricsService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> fetchAppComparison(
+  Future<List<AppComparison>> fetchAppComparison(
       {CancelToken? cancelToken}) async {
     try {
       final response = await _client.get('/api/v1/metrics/aggregate',
           cancelToken: cancelToken);
       final apps = response.data['apps'] as List<dynamic>? ?? [];
-      return apps.cast<Map<String, dynamic>>();
+      return apps
+          .map((e) => AppComparison.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) return [];
       debugPrint(

@@ -173,6 +173,37 @@ class CohortData {
   }
 }
 
+class AppComparison {
+  final String id;
+  final String name;
+  final int mrrCents;
+  final int atRiskCents;
+  final int subscriptionCount;
+  final double renewalRate;
+
+  const AppComparison({
+    required this.id,
+    required this.name,
+    required this.mrrCents,
+    this.atRiskCents = 0,
+    this.subscriptionCount = 0,
+    this.renewalRate = 0,
+  });
+
+  double get mrrDollars => mrrCents / 100;
+
+  factory AppComparison.fromJson(Map<String, dynamic> json) {
+    return AppComparison(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      mrrCents: (json['mrr_cents'] as num?)?.toInt() ?? 0,
+      atRiskCents: (json['at_risk_cents'] as num?)?.toInt() ?? 0,
+      subscriptionCount: (json['subscription_count'] as num?)?.toInt() ?? 0,
+      renewalRate: (json['renewal_rate'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
 class ExpenseBreakdown {
   final String month;
   final int grossRevenueCents;

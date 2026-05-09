@@ -4,7 +4,6 @@ import '../mock_data/mock_analytics.dart';
 import '../mock_data/mock_apps.dart';
 import '../mock_data/mock_subscriptions.dart';
 import '../models/analytics_model.dart';
-import '../models/app_model.dart';
 import '../services/earnings_service.dart';
 import '../services/metrics_service.dart';
 
@@ -26,7 +25,7 @@ class AnalyticsProvider extends ChangeNotifier {
   String _forecastModel = 'linear';
   List<ExpenseBreakdown>? _liveExpenses;
   List<CohortData>? _liveCohorts;
-  List<ShopifyApp>? _liveApps;
+  List<AppComparison>? _liveApps;
 
   AnalyticsProvider(this._metricsService, [this._earningsService]);
 
@@ -77,6 +76,7 @@ class AnalyticsProvider extends ChangeNotifier {
       _loadForecast(appId);
       _loadCohorts(appId);
       _loadExpenses(appId);
+      _loadApps();
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) return;
       _error = e.message;
@@ -109,6 +109,13 @@ class AnalyticsProvider extends ChangeNotifier {
     final expenses = await _earningsService.fetchMonthlyProfit(appId,
         cancelToken: _cancelToken);
     _liveExpenses = expenses;
+    notifyListeners();
+  }
+
+  Future<void> _loadApps() async {
+    final apps = await _metricsService.fetchAppComparison(
+        cancelToken: _cancelToken);
+    _liveApps = apps;
     notifyListeners();
   }
 
@@ -166,31 +173,20 @@ class AnalyticsProvider extends ChangeNotifier {
   }
 
   // Multi-app tab
-  List<ShopifyApp> get apps {
+  List<AppComparison> get apps {
     if (!_demoMode) return _liveApps ?? [];
-    return mockApps;
-  }
-
-  Map<String, int> appMrrCents() {
-    final appList = apps;
-    if (!_demoMode) return {};
-    final map = <String, int>{};
-    for (final app in appList) {
-      map[app.id] = mockSubscriptions
+    // Convert mock ShopifyApps to AppComparison for demo mode
+    return mockApps.map((app) {
+      final mrr = mockSubscriptions
           .where((s) => s.appId == app.id)
           .fold<int>(0, (sum, s) => sum + s.priceCents);
-    }
-    return map;
-  }
-
-  Map<String, int> appSubCount() {
-    final appList = apps;
-    if (!_demoMode) return {};
-    final map = <String, int>{};
-    for (final app in appList) {
-      map[app.id] =
-          mockSubscriptions.where((s) => s.appId == app.id).length;
-    }
-    return map;
+      final subs = mockSubscriptions.where((s) => s.appId == app.id).length;
+      return AppComparison(
+        id: app.id,
+        name: app.name,
+        mrrCents: mrr,
+        subscriptionCount: subs,
+      );
+    }).toList();
   }
 }

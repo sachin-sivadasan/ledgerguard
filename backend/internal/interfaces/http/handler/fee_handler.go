@@ -186,6 +186,68 @@ func (h *FeeHandler) GetTierBreakdown(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetMonthlyProfitBreakdown returns monthly P&L breakdown for the app.
+// GET /api/v1/apps/{appID}/fees/monthly?months=6
+func (h *FeeHandler) GetMonthlyProfitBreakdown(w http.ResponseWriter, r *http.Request) {
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeFeeError(w, lookupErr.statusCode, lookupErr.message)
+		return
+	}
+
+	months := 6
+	if m := r.URL.Query().Get("months"); m != "" {
+		if parsed, err := json.Number(m).Int64(); err == nil && parsed >= 1 && parsed <= 24 {
+			months = int(parsed)
+		}
+	}
+
+	now := time.Now()
+	type monthBreakdown struct {
+		Month              string  `json:"month"`
+		GrossCents         int64   `json:"gross_cents"`
+		ShopifyCutCents    int64   `json:"shopify_cut_cents"`
+		ProcessingFeeCents int64   `json:"processing_fee_cents"`
+		TaxCents           int64   `json:"tax_cents"`
+		NetCents           int64   `json:"net_cents"`
+		ProfitMarginPct    float64 `json:"profit_margin_pct"`
+	}
+
+	result := make([]monthBreakdown, 0, months)
+
+	for i := months - 1; i >= 0; i-- {
+		monthStart := time.Date(now.Year(), now.Month()-time.Month(i), 1, 0, 0, 0, 0, time.UTC)
+		monthEnd := time.Date(now.Year(), now.Month()-time.Month(i)+1, 0, 23, 59, 59, 0, time.UTC)
+
+		transactions, err := h.transactionRepo.FindByAppID(r.Context(), app.ID, monthStart, monthEnd)
+		if err != nil {
+			continue
+		}
+
+		summary := h.feeService.CalculateFeeSummary(transactions)
+
+		var margin float64
+		if summary.TotalGrossAmountCents > 0 {
+			margin = float64(summary.TotalNetAmountCents) / float64(summary.TotalGrossAmountCents) * 100
+		}
+
+		result = append(result, monthBreakdown{
+			Month:              monthStart.Format("Jan"),
+			GrossCents:         summary.TotalGrossAmountCents,
+			ShopifyCutCents:    summary.TotalRevenueShareCents,
+			ProcessingFeeCents: summary.TotalProcessingFeeCents,
+			TaxCents:           summary.TotalTaxOnFeesCents,
+			NetCents:           summary.TotalNetAmountCents,
+			ProfitMarginPct:    margin,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"months": result,
+	})
+}
+
 // ListAvailableTiers returns all available revenue share tiers
 // GET /api/v1/tiers
 func (h *FeeHandler) ListAvailableTiers(w http.ResponseWriter, r *http.Request) {

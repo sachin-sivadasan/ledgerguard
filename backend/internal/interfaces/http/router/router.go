@@ -217,6 +217,7 @@ func New(cfg Config) *chi.Mux {
 				if cfg.FeeHandler != nil {
 					r.Get("/{appID}/fees/summary", cfg.FeeHandler.GetFeeSummary)
 					r.Get("/{appID}/fees/breakdown", cfg.FeeHandler.GetTierBreakdown)
+					r.Get("/{appID}/fees/monthly", cfg.FeeHandler.GetMonthlyProfitBreakdown)
 				}
 
 				// Store health routes

@@ -5,7 +5,7 @@ skinparam componentStyle rectangle
 skinparam componentArrowThickness 2
 
 package "Chat System" {
-  [Chat Handler\n(WebSocket)] as CH
+  [Chat Handler\n(SSE)] as CH
   [Module Registry] as MR
   [AIClient Interface] as AIC
   [AIProviderRegistry] as APR
@@ -73,7 +73,7 @@ end note
 
 note bottom of CH
   **Protocol:**
-  WebSocket (gorilla)
+  SSE (Server-Sent Events)
   Max 5 tool iterations
 end note
 

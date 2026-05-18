@@ -2024,3 +2024,22 @@
 - `docs/diagrams/puml/42-shopify-ecosystem.puml` — Full ecosystem (~80 components, 13 actor types, 8 external categories)
 - `docs/diagrams/puml/43-ledgerguard-in-shopify-ecosystem.puml` — LedgerGuard-focused: money flow, data ingestion, processing pipeline, user types
 - `docs/diagrams/shopify-ecosystem.excalidraw` — Visual map (138 elements, 5 color-coded zones)
+
+### [2026-05-18] Diagram Audit
+
+**Original:**
+> run diagram audit
+
+**Improved:**
+> Execute the full diagram audit prompt at `docs/prompts/diagram-audit-prompt.md`. Audit all 63 diagrams (PlantUML, Excalidraw, sequence) across backend + frontend-flutter. Identify outdated diagrams, update them to match current codebase, create missing ones, verify Postman collection completeness, and run a consistency pass across all diagrams.
+
+**Result:**
+- **ER_current.puml** — Added `billing_subscriptions` entity, updated `shops` (6 new fields), added `app_store_slug` to `apps`, added relationship + notes
+- **C4_current.puml** — Added 6 missing handlers (ForecastHandler, CohortHandler, ReviewHandler, NotificationPreferencesHandler, DeviceHandler, BillingHandler), 7 missing repos + impls (Shop, AppReview, BillingSubscription, DeviceToken, NotificationPreferences, Revenue, AppEvent), 3 domain services (EarningsCalculator, ForecastingEngine, FeeVerificationService), 3 value objects (BillingPlan, BillingSubscriptionStatus, Granularity), Apps chat module, fixed ChatHandler WebSocket→SSE
+- **41-backend-api-endpoint-map.puml** — Updated title from ~107 to ~127 endpoints, removed phantom `GET /api/v1/usages` endpoint
+- **40-flutter-provider-service-graph.puml** — Added ApiKeyProvider→API and WebhookProvider→API arrows
+- **SEQUENCE_current.puml** — Updated Flow 14 from WebSocket to SSE (title, note, protocol)
+- **18-ai-chat-tool-loop-sequence.puml** — Fixed WebSocket→SSE references (participant, message arrow)
+- **18-ai-chat-modules-component.puml** — Fixed WebSocket→SSE references (component, protocol note)
+- **Postman collection** — Verified 110 entries cover all 127 router endpoints (GET+PUT pairs consolidated); minor issues noted (duplicate token endpoint, phantom usages path)
+- **No new diagrams needed** — All candidate diagrams from audit prompt already exist

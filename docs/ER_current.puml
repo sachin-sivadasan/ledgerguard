@@ -35,6 +35,7 @@ entity "apps" as apps {
   tracking_enabled : BOOLEAN <<DEFAULT: TRUE>>
   revenue_share_tier : VARCHAR(20) <<DEFAULT: SMALL_DEV_0>>
   install_count : INT <<DEFAULT: 0>>
+  app_store_slug : VARCHAR(255)
   created_at : TIMESTAMPTZ
   updated_at : TIMESTAMPTZ
   <<UNIQUE: partner_account_id, partner_app_id>>
@@ -335,11 +336,14 @@ entity "shops" as shops {
   *id : UUID <<PK>>
   --
   *myshopify_domain : VARCHAR(255) <<UNIQUE>>
+  shopify_shop_gid : VARCHAR(255)
   shop_name : VARCHAR(255)
   logo_url : TEXT
-  industry : VARCHAR(100)
-  city : VARCHAR(100)
-  country : VARCHAR(100)
+  square_logo_url : TEXT
+  cover_image_url : TEXT
+  primary_domain : VARCHAR(255)
+  country_code : VARCHAR(10)
+  currency_code : VARCHAR(3)
   created_at : TIMESTAMPTZ
   updated_at : TIMESTAMPTZ
 }
@@ -357,6 +361,24 @@ entity "app_reviews" as app_reviews {
   time_using : VARCHAR(100)
   source : VARCHAR(50) <<DEFAULT: shopify_app_store>>
   scraped_at : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "billing_subscriptions" as billing_subscriptions {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK>>
+  *razorpay_subscription_id : VARCHAR(100) <<UNIQUE>>
+  razorpay_plan_id : VARCHAR(100)
+  razorpay_customer_id : VARCHAR(100)
+  *plan : VARCHAR(20) <<CHECK: STARTER, PRO>>
+  *status : VARCHAR(20) <<CHECK: CREATED, ACTIVE, PENDING, HALTED, CANCELLED, COMPLETED>>
+  amount_cents : BIGINT
+  currency : VARCHAR(3) <<DEFAULT: INR>>
+  current_period_start : TIMESTAMPTZ
+  current_period_end : TIMESTAMPTZ
+  short_url : TEXT
   created_at : TIMESTAMPTZ
   updated_at : TIMESTAMPTZ
 }
@@ -391,6 +413,7 @@ sync_jobs ||--o{ sync_jobs : "parent_job_id"
 users ||--o{ sync_jobs : "triggers"
 apps ||--o{ app_events : "records"
 apps ||--o{ app_reviews : "has"
+users ||--o| billing_subscriptions : "subscribes"
 
 ' CQRS Read Model (denormalized, populated from subscriptions/transactions)
 apps ..> api_subscription_status : "populates"
@@ -425,10 +448,12 @@ note right of apps
   Migration: 000003_create_apps_table
   Migration: 000017_add_revenue_share_tier
   Migration: 000027_add_install_count
+  Migration: 000041_add_app_store_slug
   - Shopify apps being tracked
   - One app selected per user
   - Revenue share tier (0%, 15%, 20%)
   - Install count from Partner API events
+  - app_store_slug for review scraping
 
   Indexes:
   - idx_apps_partner_account_id
@@ -629,6 +654,29 @@ note right of org_audit_log
   Indexes:
   - idx_audit_log_org (org_id, created_at DESC)
   - idx_audit_log_actor (actor_id, created_at DESC)
+end note
+
+note right of billing_subscriptions
+  Migration: 000028_create_billing_subscriptions
+  - Razorpay B2B subscription billing
+  - Maps to LedgerGuard plan tiers (STARTER, PRO)
+  - Status lifecycle: CREATED → ACTIVE → CANCELLED/COMPLETED
+  - Webhook updates from Razorpay
+
+  Indexes:
+  - idx_billing_subs_user_id
+  - idx_billing_subs_razorpay_id
+end note
+
+note right of shops
+  Migration: 000020_create_shops_table
+  - Shopify shop metadata (enriched from Partner API)
+  - shopify_shop_gid: Shopify global ID
+  - Logos, cover image, primary domain
+  - Country/currency codes for localization
+
+  Indexes:
+  - idx_shops_myshopify_domain
 end note
 
 @enduml

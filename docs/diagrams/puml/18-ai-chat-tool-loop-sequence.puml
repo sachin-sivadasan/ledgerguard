@@ -5,14 +5,14 @@ skinparam sequenceArrowThickness 2
 
 actor "User" as User
 participant "Flutter Chat UI" as UI
-participant "Chat Handler\n(WebSocket)" as CH
+participant "Chat Handler\n(SSE)" as CH
 participant "Module Registry" as MR
 participant "AI Provider\n(OpenAI)" as AI
 participant "GraphQL\nExecutor" as GQL
 database "PostgreSQL" as DB
 
 User -> UI: "What's my MRR?"
-UI -> CH: WS: {type: "message",\ncontent: "What's my MRR?"}
+UI -> CH: POST /api/v1/chat\n{message: "What's my MRR?"}
 activate CH
 
 CH -> MR: BuildSystemPrompt()

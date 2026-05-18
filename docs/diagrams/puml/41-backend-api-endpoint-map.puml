@@ -1,5 +1,5 @@
 @startuml
-title 41. Backend API Endpoint Map (~107 endpoints)
+title 41. Backend API Endpoint Map (~127 endpoints)
 
 skinparam componentStyle rectangle
 skinparam packageStyle frame
@@ -250,7 +250,6 @@ package "Revenue API  [API Key]" as pkg_revenue #LightCoral {
   component "GET  /api/v1/subscriptions/{gid}" as ep_rv_sub
   component "GET  /api/v1/subscriptions/status" as ep_rv_sub_status
   component "POST /api/v1/subscriptions/batch" as ep_rv_sub_batch
-  component "GET  /api/v1/usages" as ep_rv_usage
   component "GET  /api/v1/usages/{gid}" as ep_rv_usage_gid
   component "POST /api/v1/usages/batch" as ep_rv_usage_batch
   component "POST /api/v1/graphql" as ep_rv_gql

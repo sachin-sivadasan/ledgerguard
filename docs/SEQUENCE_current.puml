@@ -852,9 +852,9 @@ end
 Scheduler -> Scheduler: Update lastCheckedHour
 
 ' ==========================================
-' 14. AI Chat Flow (WebSocket)
+' 14. AI Chat Flow (SSE)
 ' ==========================================
-newpage AI Chat Flow (WebSocket)
+newpage AI Chat Flow (SSE Streaming)
 
 actor User
 participant "Flutter App" as App
@@ -866,22 +866,19 @@ participant "Domain Services" as Domain
 database "PostgreSQL" as DB
 
 note over User, DB
-  AI-powered chat via WebSocket.
+  AI-powered chat via SSE (Server-Sent Events).
+  POST /api/v1/chat with streaming response.
   OpenAI function calling → GraphQL queries → Domain services.
   Max 5 tool call iterations per message.
 end note
 
-== WebSocket Connection ==
+== SSE Request ==
 
 User -> App: Open chat page
-App -> Chat: WS Upgrade\n/api/v1/chat?token=<firebase_token>
-Chat -> Chat: Verify Firebase token
-Chat --> App: WS Connected
-
-== User Message ==
-
 User -> App: "Which stores haven't paid in 60+ days?"
-App -> Chat: { type: "message",\ncontent: "Which stores...",\ncontext: [] }
+App -> Chat: POST /api/v1/chat\n{ message: "Which stores...",\ncontext: [] }\nAuthorization: Bearer <token>
+Chat -> Chat: Verify Firebase token
+Chat --> App: SSE stream opened
 
 Chat -> Registry: BuildSystemPrompt()
 Registry --> Chat: System prompt with\nall module descriptions + tools

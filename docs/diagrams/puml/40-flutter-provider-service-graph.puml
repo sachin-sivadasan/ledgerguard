@@ -117,8 +117,11 @@ OrgP --> OrgSvc
 OrgP --> API
 OrgP --> PrefsSvc
 
-' ApiKeyProvider — no service deps
-' WebhookProvider — no service deps
+' ApiKeyProvider — calls API directly (no dedicated service)
+ApiKeyP --> API
+
+' WebhookProvider — calls API directly (no dedicated service)
+WebhookP --> API
 
 ' ══════════════════════════════════════════════
 '  Service → ApiClient

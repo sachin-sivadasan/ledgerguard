@@ -23,6 +23,31 @@
 
 ### 1. Infrastructure
 
+#### 1.0 Auth Middleware – DB Error Handling
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| AUTH-001 | User lookup fails with `ErrUserNotFound` | Auto-creates user, returns 200 | ✓ |
+| AUTH-002 | User lookup fails with DB connection error | Returns 503 "service temporarily unavailable" | ✓ |
+| AUTH-003 | User create fails with DB error | Returns 503 "service temporarily unavailable" | ✓ |
+
+#### 1.0b App Lookup – DB Error Handling
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| AL-001 | `resolvePartnerAccount` with `ErrPartnerAccountNotFound` | Returns 404 | ✓ |
+| AL-002 | `resolvePartnerAccount` with DB connection error | Returns 503 | ✓ |
+| AL-003 | `resolvePartnerAccount` (org path) with `ErrPartnerAccountNotFound` | Returns 404 | ✓ |
+| AL-004 | `resolvePartnerAccount` (org path) with DB connection error | Returns 503 | ✓ |
+| AL-005 | `resolveAppFromRequest` with `ErrAppNotFound` | Returns 404 | ✓ |
+| AL-006 | `resolveAppFromRequest` with DB connection error | Returns 503 | ✓ |
+| AL-007 | `resolveAppFromRequest` with nil app (no error) | Returns 404 | ✓ |
+
+#### 1.0c Frontend Dashboard – Service Unavailable (Bloc)
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| FD-001 | API returns 503 | Emits `DashboardServiceUnavailable` state | ✓ |
+| FD-002 | Auto-retry after 503 succeeds | Emits `DashboardLoaded` after retry | ✓ |
+| FD-003 | Max retries exhausted (3×) | Stops retrying after 4 total calls | ✓ |
+
 #### 1.1 Health Endpoint
 | ID | Scenario | Expected Result | Status |
 |----|----------|-----------------|--------|

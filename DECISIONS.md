@@ -893,4 +893,32 @@ Created `AppComparison` model in `analytics_model.dart` matching the backend `Ap
 - No migration needed — same table, same schema
 - Backfill performance: O(n log n + 365*k) instead of O(365*n)
 - Frontend Revenue tab uses weekly granularity for cleaner chart (~26 points vs ~180)
+
+---
+
+### ADR-042: Three-State HTTP Error Model for DB Outages
+**Date:** 2026-05-18
+**Status:** Accepted
+
+**Context:**
+When Postgres was unreachable, the auth middleware returned HTTP 500 and `app_lookup.go` returned HTTP 404 for all errors. The frontend treated 404 as "no data" and 500 as a generic error, causing silent $0 dashboards and false onboarding wizards instead of informing the user about a service outage.
+
+**Decision:**
+Implement a three-state HTTP error model:
+- **404** — Resource genuinely not found (sentinel errors `ErrPartnerAccountNotFound`, `ErrAppNotFound`)
+- **503** — Backend service unavailable (DB connection errors, timeouts)
+- **500** — Application bugs / unexpected errors
+
+Auth middleware and `app_lookup.go` use `errors.Is()` against sentinel errors to distinguish 404 from 503. Frontend intercepts 503 at the **AppShell level** (not per-screen) to show a global "Service Temporarily Unavailable" UI with auto-retry.
+
+**Alternatives rejected:**
+- Per-screen 503 handling — required changes to every screen; shell-level is DRY
+- Retry at API client interceptor level — too aggressive, retries every request silently
+- Health-check polling — adds complexity; auto-retry on user action is simpler for MVP
+
+**Consequences:**
+- Clear user feedback when backend is down instead of misleading empty states
+- Auto-retry (3× at 15s) recovers automatically when DB comes back
+- All existing test mocks updated to use sentinel errors — prevents future regressions
+- Shell-level intercept means zero changes needed when adding new screens
 - Forecasting still uses raw daily data (unchanged)

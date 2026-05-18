@@ -243,3 +243,17 @@ Tracks verification points from each implementation plan. Run these after deploy
 - [ ] Change Currency → PUT fires → persists
 - [ ] Backend down → settings fall back to local defaults gracefully
 - [ ] Sequence diagram renders correctly
+
+---
+
+## Fix: Silent $0 Dashboard When Postgres Is Down — Three-State HTTP Error Model (2026-05-18)
+
+- [x] `go test ./...` — all pass
+- [x] `flutter analyze` — no issues
+- [ ] Stop Postgres locally → hit dashboard API → confirm 503 response (not 404)
+- [ ] Start Flutter app with Postgres down → confirm "Service Temporarily Unavailable" UI with cloud_off icon across all screens (Dashboard, Stores, Subscriptions)
+- [ ] Start Postgres back → confirm auto-retry loads dashboard within ~15s
+- [ ] New user with no data (Postgres up) → confirm 404 → onboarding wizard still works
+- [ ] Auth middleware: DB down → returns 503 (not 500) for `/api/v1/orgs` and `/api/v1/user/preferences/*`
+- [ ] App lookup: `ErrPartnerAccountNotFound` → 404, generic DB error → 503
+- [ ] AppShell intercepts 503 globally — no per-screen leaks to empty-state UI

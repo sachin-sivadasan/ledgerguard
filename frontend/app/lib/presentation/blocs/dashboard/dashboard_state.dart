@@ -66,6 +66,18 @@ class DashboardEmpty extends DashboardState {
   List<Object?> get props => [message];
 }
 
+/// Backend service temporarily unavailable (e.g., database down)
+class DashboardServiceUnavailable extends DashboardState {
+  final String message;
+
+  const DashboardServiceUnavailable({
+    this.message = 'Service temporarily unavailable. Retrying automatically...',
+  });
+
+  @override
+  List<Object?> get props => [message];
+}
+
 /// Error loading metrics
 class DashboardError extends DashboardState {
   final String message;

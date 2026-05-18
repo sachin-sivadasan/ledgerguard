@@ -44,3 +44,10 @@ class UnauthorizedMetricsException extends DashboardException {
   const UnauthorizedMetricsException()
       : super('Please sign in to view metrics.', code: 'unauthorized');
 }
+
+/// Backend service is temporarily unavailable (e.g., database down)
+class ServiceUnavailableException extends DashboardException {
+  const ServiceUnavailableException()
+      : super('Service temporarily unavailable. Retrying...',
+            code: 'service-unavailable');
+}

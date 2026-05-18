@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../core/navigation/navigation_refresh_notifier.dart';
+import '../providers/organization_provider.dart';
 import '../theme/app_breakpoints.dart';
 import '../theme/app_colors.dart';
+import '../widgets/lg_service_unavailable.dart';
 import '../widgets/org_switcher.dart';
 
 class AppShell extends StatelessWidget {
@@ -33,17 +35,26 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final orgProvider = context.watch<OrganizationProvider>();
     final deviceType = LgBreakpoints.deviceType(context);
 
+    // When service is unavailable, show the unavailable UI in place of
+    // every screen's content, while keeping the navigation chrome.
+    final Widget content = orgProvider.isServiceUnavailable
+        ? LgServiceUnavailable(
+            onRetry: () => orgProvider.loadOrganizations(),
+          )
+        : navigationShell;
+
     return switch (deviceType) {
-      LgDeviceType.mobile => _buildMobileScaffold(context),
-      LgDeviceType.tablet => _buildTabletScaffold(context),
-      LgDeviceType.desktop => _buildDesktopScaffold(context),
+      LgDeviceType.mobile => _buildMobileScaffold(context, content),
+      LgDeviceType.tablet => _buildTabletScaffold(context, content),
+      LgDeviceType.desktop => _buildDesktopScaffold(context, content),
     };
   }
 
   // ─── Mobile: BottomNavigationBar ──────────────────────────────────
-  Widget _buildMobileScaffold(BuildContext context) {
+  Widget _buildMobileScaffold(BuildContext context, Widget content) {
 
     final currentIndex = navigationShell.currentIndex;
     // Map current branch to bottom nav index
@@ -58,7 +69,7 @@ class AppShell extends StatelessWidget {
     }
 
     return Scaffold(
-      body: SafeArea(child: navigationShell),
+      body: SafeArea(child: content),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: bottomIndex,
         type: BottomNavigationBarType.fixed,
@@ -138,25 +149,25 @@ class AppShell extends StatelessWidget {
   }
 
   // ─── Tablet: AppBar + Drawer ──────────────────────────────────────
-  Widget _buildTabletScaffold(BuildContext context) {
+  Widget _buildTabletScaffold(BuildContext context, Widget content) {
     return Scaffold(
       drawer: _buildDrawer(context),
       appBar: AppBar(
         title: const Text('LedgerGuard'),
         backgroundColor: LgColors.surface,
       ),
-      body: SafeArea(child: navigationShell),
+      body: SafeArea(child: content),
     );
   }
 
   // ─── Desktop: NavigationRail ──────────────────────────────────────
-  Widget _buildDesktopScaffold(BuildContext context) {
+  Widget _buildDesktopScaffold(BuildContext context, Widget content) {
     return Scaffold(
       body: Row(
         children: [
           _buildRail(context),
           const VerticalDivider(width: 1),
-          Expanded(child: navigationShell),
+          Expanded(child: content),
         ],
       ),
     );

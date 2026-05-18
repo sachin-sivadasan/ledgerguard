@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../mock_data/mock_apps.dart';
@@ -15,6 +16,7 @@ class AppsProvider extends ChangeNotifier {
   bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
+  bool _isServiceUnavailable = false;
 
   List<ShopifyApp> _liveApps = [];
   List<AppReview> _liveReviews = [];
@@ -38,6 +40,7 @@ class AppsProvider extends ChangeNotifier {
   bool get demoMode => _demoMode;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get isServiceUnavailable => _isServiceUnavailable;
 
   void setDemoMode(bool value) {
     _demoMode = value;
@@ -52,6 +55,7 @@ class AppsProvider extends ChangeNotifier {
     if (_demoMode || _isLoading) return;
     _isLoading = true;
     _error = null;
+    _isServiceUnavailable = false;
     notifyListeners();
     try {
       _liveApps = await _appService.fetchApps();
@@ -70,6 +74,14 @@ class AppsProvider extends ChangeNotifier {
           }
         }
       }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 503) {
+        _isServiceUnavailable = true;
+        _error = 'Service temporarily unavailable. Retrying...';
+      } else {
+        _error = e.message ?? e.toString();
+      }
+      debugPrint('[AppsProvider] loadApps error – $e');
     } catch (e) {
       _error = e.toString();
       debugPrint('[AppsProvider] loadApps error – $e');

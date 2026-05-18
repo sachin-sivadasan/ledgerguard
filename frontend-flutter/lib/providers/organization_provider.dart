@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../core/network/api_client.dart';
 import '../models/organization_model.dart';
@@ -11,6 +12,7 @@ class OrganizationProvider extends ChangeNotifier {
 
   bool _isLoading = false;
   String? _error;
+  bool _isServiceUnavailable = false;
 
   // Current org context
   Organization? _currentOrg;
@@ -33,6 +35,7 @@ class OrganizationProvider extends ChangeNotifier {
   // --- Getters ---
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get isServiceUnavailable => _isServiceUnavailable;
   Organization? get currentOrg => _currentOrg;
   List<OrgMembership> get memberships => _memberships;
   List<OrgMember> get members => _members;
@@ -65,6 +68,7 @@ class OrganizationProvider extends ChangeNotifier {
   Future<void> loadOrganizations() async {
     _isLoading = true;
     _error = null;
+    _isServiceUnavailable = false;
     notifyListeners();
 
     try {
@@ -79,6 +83,13 @@ class OrganizationProvider extends ChangeNotifier {
                 : _memberships.first.orgId;
         await selectOrganization(targetOrgId);
         return; // selectOrganization calls notifyListeners
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 503) {
+        _isServiceUnavailable = true;
+        _error = 'Service temporarily unavailable';
+      } else {
+        _error = e.message ?? e.toString();
       }
     } catch (e) {
       _error = e.toString();

@@ -57,7 +57,8 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 			if errors.Is(err, ErrUserNotFound) {
 				user = entity.NewUser(claims.UID, claims.Email)
 				if err := m.userRepo.Create(r.Context(), user); err != nil {
-					writeError(w, http.StatusInternalServerError, "failed to create user")
+					log.Printf("auth: failed to create user for UID %s: %v", claims.UID, err)
+					writeError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 					return
 				}
 				if m.tracker != nil {
@@ -72,7 +73,8 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 					})
 				}
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to lookup user")
+				log.Printf("auth: DB error looking up user for UID %s: %v", claims.UID, err)
+				writeError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 				return
 			}
 		}

@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,6 +15,7 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
 )
 
 // Mock implementations for sync tests
@@ -257,7 +257,7 @@ func TestSyncHandler_SyncAllApps_NoUser(t *testing.T) {
 }
 
 func TestSyncHandler_SyncAllApps_NoPartnerAccount(t *testing.T) {
-	partnerRepo := &mockSyncPartnerRepo{err: errors.New("not found")}
+	partnerRepo := &mockSyncPartnerRepo{err: persistence.ErrPartnerAccountNotFound}
 	handler := NewSyncHandler(nil, partnerRepo, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/sync", nil)
@@ -413,7 +413,7 @@ func TestSyncHandler_SyncApp_AppNotFound(t *testing.T) {
 		EncryptedAccessToken: []byte("encrypted"),
 	}
 
-	appRepo := &mockSyncAppRepo{err: errors.New("not found")}
+	appRepo := &mockSyncAppRepo{err: persistence.ErrAppNotFound}
 	partnerRepo := &mockSyncPartnerRepo{account: partnerAccount}
 
 	handler := NewSyncHandler(nil, partnerRepo, appRepo)

@@ -1,12 +1,15 @@
 package handler
 
 import (
+	"errors"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
@@ -22,7 +25,11 @@ func resolvePartnerAccount(r *http.Request, partnerRepo repository.PartnerAccoun
 	if org != nil {
 		account, err := partnerRepo.FindByOrgID(r.Context(), org.ID)
 		if err != nil {
-			return nil, &appLookupError{http.StatusNotFound, "no partner account for organization"}
+			if isNotFoundError(err) {
+				return nil, &appLookupError{http.StatusNotFound, "no partner account for organization"}
+			}
+			log.Printf("app_lookup: DB error resolving partner account by org %s: %v", org.ID, err)
+			return nil, &appLookupError{http.StatusServiceUnavailable, "service temporarily unavailable"}
 		}
 		return account, nil
 	}
@@ -33,7 +40,11 @@ func resolvePartnerAccount(r *http.Request, partnerRepo repository.PartnerAccoun
 	}
 	account, err := partnerRepo.FindByUserID(r.Context(), user.ID)
 	if err != nil {
-		return nil, &appLookupError{http.StatusNotFound, "no partner account found"}
+		if isNotFoundError(err) {
+			return nil, &appLookupError{http.StatusNotFound, "no partner account found"}
+		}
+		log.Printf("app_lookup: DB error resolving partner account by user %s: %v", user.ID, err)
+		return nil, &appLookupError{http.StatusServiceUnavailable, "service temporarily unavailable"}
 	}
 	return account, nil
 }
@@ -52,8 +63,21 @@ func resolveAppFromRequest(r *http.Request, partnerRepo repository.PartnerAccoun
 	}
 
 	app, err := appRepo.FindByID(r.Context(), appID)
-	if err != nil || app == nil {
+	if err != nil {
+		if isNotFoundError(err) {
+			return nil, &appLookupError{http.StatusNotFound, "app not found"}
+		}
+		log.Printf("app_lookup: DB error resolving app %s: %v", appID, err)
+		return nil, &appLookupError{http.StatusServiceUnavailable, "service temporarily unavailable"}
+	}
+	if app == nil {
 		return nil, &appLookupError{http.StatusNotFound, "app not found"}
 	}
 	return app, nil
+}
+
+// isNotFoundError checks if the error is a known "not found" sentinel error.
+func isNotFoundError(err error) bool {
+	return errors.Is(err, persistence.ErrPartnerAccountNotFound) ||
+		errors.Is(err, persistence.ErrAppNotFound)
 }

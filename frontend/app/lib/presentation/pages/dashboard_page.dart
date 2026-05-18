@@ -72,7 +72,9 @@ class _DashboardPageState extends State<DashboardPage> {
         if (state is AppSelectionLoaded && state.hasSelection) {
           // App became available — load dashboard if not already loaded
           final dashState = context.read<DashboardBloc>().state;
-          if (dashState is DashboardInitial || dashState is DashboardError) {
+          if (dashState is DashboardInitial ||
+              dashState is DashboardError ||
+              dashState is DashboardServiceUnavailable) {
             _initialLoadTriggered = true;
             context.read<DashboardBloc>().add(const LoadDashboardRequested());
           }
@@ -189,6 +191,18 @@ class _DashboardPageState extends State<DashboardPage> {
 
               if (state is DashboardEmpty) {
                 return _buildEmptyState(context, state.message);
+              }
+
+              if (state is DashboardServiceUnavailable) {
+                return ErrorStateWidget(
+                  title: 'Service Temporarily Unavailable',
+                  message: state.message,
+                  icon: Icons.cloud_off,
+                  iconColor: Colors.orange,
+                  onRetry: () => context
+                      .read<DashboardBloc>()
+                      .add(const LoadDashboardRequested()),
+                );
               }
 
               if (state is DashboardError) {

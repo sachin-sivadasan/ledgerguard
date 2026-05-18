@@ -503,3 +503,4 @@ class _EarningsRow extends StatelessWidget {
     );
   }
 }
+

@@ -79,6 +79,9 @@ class ApiDashboardRepository implements DashboardRepository {
       if (e.response?.statusCode == 401) {
         throw const UnauthorizedMetricsException();
       }
+      if (e.response?.statusCode == 503) {
+        throw const ServiceUnavailableException();
+      }
       if (e.response?.statusCode == 404) {
         // No metrics found - empty state
         return null;

@@ -16,6 +16,7 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
 )
 
 // Mock subscription repository
@@ -504,7 +505,7 @@ func TestSubscriptionHandler_List_InvalidAppID(t *testing.T) {
 
 func TestSubscriptionHandler_List_AppNotFoundByID(t *testing.T) {
 	appID := uuid.New()
-	appRepo := &mockAppRepoForSub{findErr: errors.New("not found")}
+	appRepo := &mockAppRepoForSub{findErr: persistence.ErrAppNotFound}
 	handler := NewSubscriptionHandler(nil, nil, appRepo)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions", nil)
@@ -537,7 +538,7 @@ func TestSubscriptionHandler_List_AppNotFoundNilResult(t *testing.T) {
 
 func TestSubscriptionHandler_List_AppNotFound(t *testing.T) {
 	appID := uuid.New()
-	appRepo := &mockAppRepoForSub{findErr: errors.New("not found")}
+	appRepo := &mockAppRepoForSub{findErr: persistence.ErrAppNotFound}
 	handler := NewSubscriptionHandler(nil, nil, appRepo)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions", nil)

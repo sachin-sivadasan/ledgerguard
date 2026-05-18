@@ -222,7 +222,31 @@ func TestAuthMiddleware_CreateUserError(t *testing.T) {
 
 	handler.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusInternalServerError {
-		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, rec.Code)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("expected status %d, got %d", http.StatusServiceUnavailable, rec.Code)
+	}
+}
+
+func TestAuthMiddleware_DBErrorOnLookup(t *testing.T) {
+	verifier := &mockTokenVerifier{
+		claims: &service.TokenClaims{UID: "existing-uid", Email: "user@test.com"},
+	}
+	userRepo := &mockUserRepository{
+		findErr: errors.New("connection refused"),
+	}
+	mw := NewAuthMiddleware(verifier, userRepo)
+
+	handler := mw.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("handler should not be called")
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("expected status %d, got %d", http.StatusServiceUnavailable, rec.Code)
 	}
 }

@@ -31,6 +31,7 @@ class OrganizationService {
           .toList();
     } on DioException catch (e) {
       debugPrint('[OrgService] listOrgs error: ${e.response?.statusCode}');
+      if (e.response?.statusCode == 503) rethrow;
       return [];
     }
   }

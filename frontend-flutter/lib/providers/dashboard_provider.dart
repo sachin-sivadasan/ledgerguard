@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../core/dashboard_registry.dart';
@@ -22,6 +24,11 @@ class DashboardProvider extends ChangeNotifier {
   bool _demoMode = false;
   bool _isLoading = false;
   String? _error;
+  bool _isServiceUnavailable = false;
+  Timer? _retryTimer;
+  int _retryCount = 0;
+  static const int _maxRetries = 3;
+  static const Duration _retryInterval = Duration(seconds: 15);
   String? _selectedAppId;
   DashboardTimeRange _timeRange = DashboardTimeRange.thisWeek;
   CancelToken? _cancelToken;
@@ -36,6 +43,7 @@ class DashboardProvider extends ChangeNotifier {
   bool get demoMode => _demoMode;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get isServiceUnavailable => _isServiceUnavailable;
   String? get selectedAppId => _selectedAppId;
   DashboardTimeRange get timeRange => _timeRange;
   List<String> get primaryKpis => _primaryKpis;
@@ -83,14 +91,22 @@ class DashboardProvider extends ChangeNotifier {
     _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
+    _isServiceUnavailable = false;
     notifyListeners();
     try {
       _metrics = await _metricsService.fetchMetrics(appId,
           cancelToken: _cancelToken);
+      _resetRetry();
       debugPrint('[DashboardProvider] loadMetrics success');
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) return;
-      _error = e.message;
+      if (e.response?.statusCode == 503) {
+        _isServiceUnavailable = true;
+        _error = 'Service temporarily unavailable. Retrying...';
+        _scheduleRetry(appId);
+      } else {
+        _error = e.message;
+      }
       debugPrint('[DashboardProvider] loadMetrics error – $e');
     } catch (e) {
       _error = e.toString();
@@ -98,6 +114,28 @@ class DashboardProvider extends ChangeNotifier {
     }
     _isLoading = false;
     notifyListeners();
+  }
+
+  void _scheduleRetry(String appId) {
+    if (_retryCount >= _maxRetries) return;
+    _retryTimer?.cancel();
+    _retryTimer = Timer(_retryInterval, () {
+      _retryCount++;
+      loadMetrics(appId);
+    });
+  }
+
+  void _resetRetry() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _retryCount = 0;
+  }
+
+  @override
+  void dispose() {
+    _retryTimer?.cancel();
+    _cancelToken?.cancel('disposed');
+    super.dispose();
   }
 
   DateTime get _activityCutoff {

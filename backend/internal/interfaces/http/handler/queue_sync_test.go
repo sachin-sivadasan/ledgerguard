@@ -15,6 +15,7 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 
@@ -140,7 +141,7 @@ func (m *mockAppRepoForQueueSync) FindByID(_ context.Context, id uuid.UUID) (*en
 	if a, ok := m.apps[id]; ok {
 		return a, nil
 	}
-	return nil, fmt.Errorf("not found")
+	return nil, persistence.ErrAppNotFound
 }
 func (m *mockAppRepoForQueueSync) FindByPartnerAccountID(_ context.Context, _ uuid.UUID) ([]*entity.App, error) {
 	return nil, nil
@@ -167,19 +168,19 @@ func (m *mockPartnerRepoForQueueSync) FindByID(_ context.Context, id uuid.UUID) 
 			return a, nil
 		}
 	}
-	return nil, fmt.Errorf("not found")
+	return nil, persistence.ErrPartnerAccountNotFound
 }
 func (m *mockPartnerRepoForQueueSync) FindByUserID(_ context.Context, userID uuid.UUID) (*entity.PartnerAccount, error) {
 	if a, ok := m.accounts[userID]; ok {
 		return a, nil
 	}
-	return nil, fmt.Errorf("not found")
+	return nil, persistence.ErrPartnerAccountNotFound
 }
 func (m *mockPartnerRepoForQueueSync) FindByOrgID(_ context.Context, _ uuid.UUID) (*entity.PartnerAccount, error) {
-	return nil, fmt.Errorf("not found")
+	return nil, persistence.ErrPartnerAccountNotFound
 }
 func (m *mockPartnerRepoForQueueSync) FindByPartnerID(_ context.Context, _ string) (*entity.PartnerAccount, error) {
-	return nil, fmt.Errorf("not found")
+	return nil, persistence.ErrPartnerAccountNotFound
 }
 func (m *mockPartnerRepoForQueueSync) Update(_ context.Context, _ *entity.PartnerAccount) error {
 	return nil

@@ -14,6 +14,7 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
 )
 
 // Mock implementations
@@ -189,7 +190,7 @@ func TestAppHandler_GetAvailableApps_NoPartnerClient(t *testing.T) {
 }
 
 func TestAppHandler_GetAvailableApps_NoPartnerAccount(t *testing.T) {
-	partnerRepo := &mockPartnerRepoForApp{findErr: errors.New("not found")}
+	partnerRepo := &mockPartnerRepoForApp{findErr: persistence.ErrPartnerAccountNotFound}
 	partnerClient := &mockPartnerClient{} // Need to provide a mock client to pass nil check
 	handler := NewAppHandler(partnerClient, partnerRepo, nil, nil)
 
@@ -457,7 +458,7 @@ func TestAppHandler_ListApps_Success(t *testing.T) {
 }
 
 func TestAppHandler_ListApps_NoPartnerAccount(t *testing.T) {
-	partnerRepo := &mockPartnerRepoForApp{findErr: errors.New("not found")}
+	partnerRepo := &mockPartnerRepoForApp{findErr: persistence.ErrPartnerAccountNotFound}
 	handler := NewAppHandler(nil, partnerRepo, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps", nil)

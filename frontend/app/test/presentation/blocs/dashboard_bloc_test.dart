@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -155,6 +156,80 @@ void main() {
           isA<DashboardEmpty>(),
         ],
       );
+    });
+
+    group('ServiceUnavailable', () {
+      blocTest<DashboardBloc, DashboardState>(
+        'emits [Loading, ServiceUnavailable] when 503 received',
+        build: () {
+          when(() => mockRepository.fetchMetrics(timeRange: any(named: 'timeRange')))
+              .thenThrow(const ServiceUnavailableException());
+          return DashboardBloc(repository: mockRepository);
+        },
+        act: (bloc) => bloc.add(const LoadDashboardRequested()),
+        expect: () => [
+          isA<DashboardLoading>(),
+          isA<DashboardServiceUnavailable>(),
+        ],
+      );
+
+      test('auto-retry fires after interval and emits Loaded on success', () {
+        fakeAsync((async) {
+          int callCount = 0;
+          final repo = MockDashboardRepository();
+          when(() => repo.fetchMetrics(timeRange: any(named: 'timeRange')))
+              .thenAnswer((_) async {
+            callCount++;
+            if (callCount == 1) {
+              throw const ServiceUnavailableException();
+            }
+            return testMetrics;
+          });
+
+          final bloc = DashboardBloc(repository: repo);
+          bloc.add(const LoadDashboardRequested());
+
+          // Process first load (will fail with 503)
+          async.elapse(Duration.zero);
+          expect(bloc.state, isA<DashboardServiceUnavailable>());
+
+          // Advance past retry interval
+          async.elapse(const Duration(seconds: 16));
+          expect(bloc.state, isA<DashboardLoaded>());
+
+          bloc.close();
+        });
+      });
+
+      test('stops retrying after max retries', () {
+        fakeAsync((async) {
+          final repo = MockDashboardRepository();
+          when(() => repo.fetchMetrics(timeRange: any(named: 'timeRange')))
+              .thenThrow(const ServiceUnavailableException());
+
+          final bloc = DashboardBloc(repository: repo);
+          bloc.add(const LoadDashboardRequested());
+
+          // Process initial load
+          async.elapse(Duration.zero);
+
+          // Advance past 3 retry intervals (each 15s)
+          async.elapse(const Duration(seconds: 16)); // retry 1
+          async.elapse(const Duration(seconds: 16)); // retry 2
+          async.elapse(const Duration(seconds: 16)); // retry 3
+
+          // After 3 retries, no more retries scheduled
+          // Total calls: 1 initial + 3 retries = 4
+          verify(() => repo.fetchMetrics(timeRange: any(named: 'timeRange')))
+              .called(4);
+
+          // Advance more — should NOT retry again
+          async.elapse(const Duration(seconds: 30));
+          verifyNever(() => repo.fetchMetrics(timeRange: any(named: 'timeRange')));
+
+          bloc.close();
+        });
+      });
     });
   });
 }

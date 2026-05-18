@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../domain/entities/time_range.dart';
@@ -11,6 +13,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
   /// Current time range (defaults to this month)
   TimeRange _currentTimeRange = TimeRange.thisMonth();
+
+  /// Auto-retry state for service unavailable
+  Timer? _retryTimer;
+  int _retryCount = 0;
+  static const int _maxRetries = 3;
+  static const Duration _retryInterval = Duration(seconds: 15);
 
   DashboardBloc({
     required DashboardRepository repository,
@@ -34,6 +42,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       final metrics = await _repository.fetchMetrics(
         timeRange: _currentTimeRange,
       );
+      _resetRetry();
       if (metrics == null) {
         emit(const DashboardEmpty());
       } else {
@@ -42,6 +51,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           timeRange: _currentTimeRange,
         ));
       }
+    } on ServiceUnavailableException {
+      emit(const DashboardServiceUnavailable());
+      _scheduleRetry();
     } on DashboardException catch (e) {
       emit(DashboardError(e.message));
     } catch (e) {
@@ -79,6 +91,27 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       // If not loaded, treat as initial load
       add(const LoadDashboardRequested());
     }
+  }
+
+  void _scheduleRetry() {
+    if (_retryCount >= _maxRetries) return;
+    _retryTimer?.cancel();
+    _retryTimer = Timer(_retryInterval, () {
+      _retryCount++;
+      add(const LoadDashboardRequested());
+    });
+  }
+
+  void _resetRetry() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _retryCount = 0;
+  }
+
+  @override
+  Future<void> close() {
+    _retryTimer?.cancel();
+    return super.close();
   }
 
   Future<void> _onTimeRangeChanged(

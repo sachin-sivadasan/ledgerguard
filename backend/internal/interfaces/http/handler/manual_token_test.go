@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
 )
 
 // Mock implementations for testing
@@ -274,7 +275,7 @@ func TestManualTokenHandler_GetToken_Success(t *testing.T) {
 }
 
 func TestManualTokenHandler_GetToken_NotFound(t *testing.T) {
-	repo := &mockPartnerRepoForManual{findErr: errors.New("not found")}
+	repo := &mockPartnerRepoForManual{findErr: persistence.ErrPartnerAccountNotFound}
 	handler := NewManualTokenHandler(&mockEncryptorForManual{}, repo)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/integrations/shopify/token", nil)

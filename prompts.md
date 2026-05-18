@@ -2043,3 +2043,17 @@
 - **18-ai-chat-modules-component.puml** — Fixed WebSocket→SSE references (component, protocol note)
 - **Postman collection** — Verified 110 entries cover all 127 router endpoints (GET+PUT pairs consolidated); minor issues noted (duplicate token endpoint, phantom usages path)
 - **No new diagrams needed** — All candidate diagrams from audit prompt already exist
+
+---
+
+### [2026-05-18] Sync Pipeline Blueprint — Reusable Agent File
+**Original:**
+> Create a reusable sync pipeline blueprint extracting production patterns from LedgerGuard's queue system.
+
+**Improved:**
+> Extract all 14 production bug fixes, distributed locking patterns, wave-based orchestration, crash recovery, and cooperative cancellation from LedgerGuard's sync pipeline into a standalone, language-agnostic blueprint file (`docs/blueprints/SYNC_PIPELINE_BLUEPRINT.md`) with 18 sections covering architecture, state machine, Lua lock scripts, worker pool, orchestrator, progress tracking, recovery, schedulers, pitfall catalog, implementation checklist, and extension point registry. Target: ~1000 lines, usable as CLAUDE.md include, AI agent prompt, or developer checklist.
+
+**Result:**
+- Created `docs/blueprints/SYNC_PIPELINE_BLUEPRINT.md` (~1400 lines, 18 sections)
+- Added "Reusable Blueprints" section to `CLAUDE.md`
+- Added blueprint cross-reference to ADR-022 in `DECISIONS.md`

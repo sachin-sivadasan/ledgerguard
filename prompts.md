@@ -18,6 +18,19 @@
 
 ## Log
 
+### [2026-05-18] Fix Silent $0 Dashboard When Postgres Is Down
+**Original:**
+> Implement the following plan: Fix: Silent $0 Dashboard When Postgres Is Down — distinguish DB errors from not-found in backend, add service-unavailable dashboard state with auto-retry in frontend.
+
+**Improved:**
+> Fix silent $0 dashboard and false "No data yet" states when Postgres is unreachable. (1) Backend auth middleware: return 503 instead of 500 for DB connection errors; (2) Backend app_lookup.go: distinguish sentinel not-found errors (→ 404) from DB errors (→ 503) via `isNotFoundError()` helper; (3) Frontend Bloc app (`frontend/app/`): add `ServiceUnavailableException`, `DashboardServiceUnavailable` state, auto-retry (3×, 15s); (4) Frontend Provider app (`frontend-flutter/`): rethrow 503 from `OrgService.listOrganizations()`, add `isServiceUnavailable` to OrganizationProvider/AppsProvider/DashboardProvider, intercept at `AppShell` level to show cloud_off UI on all screens; (5) Fix existing test mocks using generic `errors.New("not found")` to use sentinel errors.
+
+**Result:**
+- 22 files changed (2 new, 20 modified)
+- Commit `f57914b`
+
+---
+
 ### [2026-05-09] Persist Org + Default App Selection via Backend Preferences
 **Original:**
 > Wire backend user_preferences endpoints (selected-org, default-app) to frontend OrganizationProvider and AppsProvider so selection persists across sessions.

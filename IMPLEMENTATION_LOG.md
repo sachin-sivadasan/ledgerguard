@@ -4,6 +4,41 @@ A chronological record of all features implemented with detailed summaries.
 
 ---
 
+## [2026-05-18] Fix: Silent $0 Dashboard When Postgres Is Down
+
+**Summary:**
+When the backend Postgres database was unreachable, the Flutter dashboard silently showed $0 KPIs and the onboarding wizard instead of an error. Root cause: the auth middleware returned HTTP 500 for all DB errors, `app_lookup.go` converted all errors to HTTP 404, and the frontend treated 404/500 as "no data" → showed empty states. Fixed by implementing a three-state model: 404 (not found), 503 (service unavailable), 500 (application error).
+
+**Changes:**
+
+Backend:
+- **auth.go** — Return 503 (not 500) when `FindByFirebaseUID` or `Create` fails due to DB errors. Added log lines for debugging.
+- **auth_test.go** — Updated `CreateUserError` test to expect 503. Added `DBErrorOnLookup` test.
+- **app_lookup.go** — Added `isNotFoundError()` helper checking `ErrPartnerAccountNotFound` and `ErrAppNotFound` sentinels. `resolvePartnerAccount()` and `resolveAppFromRequest()` return 404 for sentinel errors, 503 for DB errors.
+- **app_lookup_test.go** (NEW) — 7 tests covering not-found→404 and DB-error→503 for both resolve functions.
+- **app_test.go, sync_test.go, manual_token_test.go, subscription_test.go, queue_sync_test.go** — Updated mock repos to use sentinel errors instead of generic `errors.New("not found")`.
+
+Frontend (`frontend/app/` — Bloc):
+- **dashboard_repository.dart** — Added `ServiceUnavailableException` class.
+- **api_dashboard_repository.dart** — Catch 503 → throw `ServiceUnavailableException`.
+- **dashboard_state.dart** — Added `DashboardServiceUnavailable` state.
+- **dashboard_bloc.dart** — Catch `ServiceUnavailableException` → emit new state, auto-retry (3× at 15s intervals), cancel timer on close.
+- **dashboard_page.dart** — Render `ErrorStateWidget` with `Icons.cloud_off` for service unavailable.
+- **dashboard_bloc_test.dart** — 3 new tests: 503 emission, auto-retry success, max retry cap.
+
+Frontend (`frontend-flutter/` — Provider):
+- **organization_service.dart** — Rethrow `DioException` on 503 instead of swallowing it.
+- **organization_provider.dart** — Detect 503, set `isServiceUnavailable` flag.
+- **apps_provider.dart** — Detect 503, set `isServiceUnavailable` flag.
+- **dashboard_provider.dart** — Detect 503, set `isServiceUnavailable` flag, auto-retry (3× at 15s).
+- **app_shell.dart** — Intercept `isServiceUnavailable` at shell level, replacing all screen content with service unavailable UI while keeping navigation chrome.
+- **lg_service_unavailable.dart** (NEW) — Shared cloud_off widget with retry button.
+
+**Files changed:** 22 (2 new, 20 modified)
+**Commit:** `f57914b`
+
+---
+
 ## [2026-05-09] Feat: Move Dashboard Customization to Settings Sub-Page
 
 **Summary:**

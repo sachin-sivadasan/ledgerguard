@@ -467,6 +467,14 @@ ledgerguard/
 
 ---
 
+## Reusable Blueprints
+
+| Blueprint | File | Description |
+|-----------|------|-------------|
+| Sync Pipeline | `docs/blueprints/SYNC_PIPELINE_BLUEPRINT.md` | Language-agnostic async job pipeline with distributed locking, wave orchestration, crash recovery, and 14 production pitfalls. Drop into any project's CLAUDE.md. |
+
+---
+
 ## REMEMBER
 
 - **Ask before assuming** – Clarify ambiguous requirements

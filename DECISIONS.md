@@ -513,6 +513,8 @@ Implement an async, queue-based sync system using Redis + PostgreSQL:
 - Cooperative cancellation via Redis flag checked between major steps
 - Recovery handles Redis flush and worker crashes gracefully
 
+**Reusable Blueprint:** The patterns from this ADR (and ADR-023 through ADR-028) were extracted into `docs/blueprints/SYNC_PIPELINE_BLUEPRINT.md` — a language-agnostic blueprint covering all 14 production bug fixes, suitable for dropping into any new project.
+
 ---
 
 ### ADR-023: Cooperative Cancellation over Hard Kill

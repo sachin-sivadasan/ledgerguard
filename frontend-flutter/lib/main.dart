@@ -27,6 +27,7 @@ import 'providers/store_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'providers/sync_status_provider.dart';
 import 'providers/transaction_provider.dart';
+import 'providers/uninstall_context_provider.dart';
 import 'providers/organization_provider.dart';
 import 'providers/webhook_provider.dart';
 import 'services/app_service.dart';
@@ -46,6 +47,7 @@ import 'services/subscription_service.dart';
 import 'services/organization_service.dart';
 import 'services/sync_status_service.dart';
 import 'services/transaction_service.dart';
+import 'services/uninstall_context_service.dart';
 import 'services/user_preferences_service.dart';
 
 void main() async {
@@ -68,6 +70,7 @@ void main() async {
   final churnService = ChurnService(apiClient);
   final cohortsService = CohortsService(apiClient);
   final retentionService = RetentionService(apiClient);
+  final uninstallContextService = UninstallContextService(apiClient);
   final reviewsService = ReviewsService(apiClient);
   final eventsService = EventsService(apiClient);
   final insightsService = InsightsService(apiClient);
@@ -88,6 +91,8 @@ void main() async {
   final churnProvider = ChurnProvider(churnService);
   final cohortsProvider = CohortsProvider(cohortsService);
   final retentionProvider = RetentionProvider(retentionService);
+  final uninstallContextProvider =
+      UninstallContextProvider(uninstallContextService);
   final reviewsProvider = ReviewsProvider(reviewsService);
   final analyticsProvider = AnalyticsProvider(metricsService, earningsService);
   final earningsProvider = EarningsProvider(earningsService);
@@ -106,6 +111,7 @@ void main() async {
     churnProvider: churnProvider,
     cohortsProvider: cohortsProvider,
     retentionProvider: retentionProvider,
+    uninstallContextProvider: uninstallContextProvider,
     reviewsProvider: reviewsProvider,
     analyticsProvider: analyticsProvider,
     earningsProvider: earningsProvider,
@@ -132,6 +138,7 @@ void main() async {
         ChangeNotifierProvider.value(value: churnProvider),
         ChangeNotifierProvider.value(value: cohortsProvider),
         ChangeNotifierProvider.value(value: retentionProvider),
+        ChangeNotifierProvider.value(value: uninstallContextProvider),
         ChangeNotifierProvider.value(value: reviewsProvider),
         ChangeNotifierProvider.value(value: analyticsProvider),
         ChangeNotifierProvider.value(value: earningsProvider),

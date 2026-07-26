@@ -41,6 +41,7 @@ type Config struct {
 	RevenueAtRiskHandler            *handler.RevenueAtRiskHandler
 	ChurnHandler                    *handler.ChurnHandler
 	RetentionHandler                *handler.RetentionHandler
+	UninstallContextHandler         *handler.UninstallContextHandler
 	RiskHandler                     *handler.RiskHandler
 	OrgHandler                      *handler.OrgHandler
 	OrgAuditHandler                 *handler.OrgAuditHandler
@@ -256,6 +257,11 @@ func New(cfg Config) *chi.Mux {
 				// Retention/Renewal report route
 				if cfg.RetentionHandler != nil {
 					r.Get("/{appID}/reports/retention", cfg.RetentionHandler.GetRetention)
+				}
+
+				// Uninstall Context report route
+				if cfg.UninstallContextHandler != nil {
+					r.Get("/{appID}/reports/uninstall-context", cfg.UninstallContextHandler.GetUninstallContext)
 				}
 
 				// Cohort retention route. Both paths hit the same handler: /cohorts is

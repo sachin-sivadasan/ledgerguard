@@ -15,7 +15,8 @@ class ReportsScreen extends StatelessWidget {
     _ReportCategory('Retention & Risk', Icons.shield_outlined, [
       _ReportEntry('Revenue at Risk', 'At-risk MRR, recoverable revenue, ranked stores',
           route: '/reports/revenue-at-risk'),
-      _ReportEntry('Churn', 'Cancellations and lost MRR over time'),
+      _ReportEntry('Churn', 'Cancellations and lost MRR over time',
+          route: '/reports/churn'),
       _ReportEntry('Retention', 'How many merchants stay active'),
       _ReportEntry('Retention Cohorts', 'Retention by signup cohort'),
       _ReportEntry('Reviews', 'App Store review sentiment'),

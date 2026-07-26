@@ -364,6 +364,13 @@ func run() error {
 		log.Println("Revenue at Risk handler initialized")
 	}
 
+	// Initialize churn report handler
+	var churnHandler *handler.ChurnHandler
+	if subscriptionRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
+		churnHandler = handler.NewChurnHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo)
+		log.Println("Churn handler initialized")
+	}
+
 	// Initialize risk handler
 	var riskHandler *handler.RiskHandler
 	if subscriptionRepo != nil && partnerRepo != nil && appRepo != nil {
@@ -759,6 +766,7 @@ func run() error {
 		CohortHandler:                   cohortHandler,
 		ForecastHandler:                 forecastHandler,
 		RevenueAtRiskHandler:            revenueAtRiskHandler,
+		ChurnHandler:                    churnHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,
 		OrgAuditHandler:                 orgAuditHandler,

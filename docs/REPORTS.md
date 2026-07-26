@@ -195,3 +195,19 @@ Every report is an **instance of an archetype**. To introduce a new report: pick
 | 🛡️ Ledger Reconciliation | Guard | F | `19t` | `51` |
 
 Index page: `docs/wireframes/19-reports.svg`.
+
+---
+
+## 6. Build status (source of truth — keep updated as reports ship)
+
+| Report | Status |
+|---|---|
+| **Revenue at Risk** | ✅ **Shipped** — `backend/.../revenue_at_risk_handler.go` + `frontend-flutter/.../revenue_at_risk_screen.dart`; live on app.ledgerspear.com |
+| **Churn** | 🚧 In progress (Archetype A · `19j`) |
+| Retention · Retention Cohorts · Reviews · Uninstall Context | ⬜ Pending (Retention & Risk) |
+| Earnings · MRR · Revenue Mix · Usage & One-Time · Usage Trends · Subscriptions · Payout Schedule · Payout History | ⬜ Pending (Revenue & Billing) |
+| Installs · Activation · Net-New Subscriptions | ⬜ Pending (Growth) |
+| Active Customers · Customer Insights | ⬜ Pending (Customers) |
+| 🛡️ Fee Audit · Payout Accuracy · Ledger Reconciliation | ⬜ Pending (Guard — differentiators) |
+
+**Reports shell** (nav + index card grid) ✅ shipped with Revenue at Risk. Each pending report = clone its archetype (see §5), add a backend `/reports/<name>` endpoint + a Provider screen, wire into `DemoModeCoordinator`.

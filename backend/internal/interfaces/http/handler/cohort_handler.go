@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -57,17 +60,73 @@ func (h *CohortHandler) GetCohorts(w http.ResponseWriter, r *http.Request) {
 	// Fetch all subscriptions for this app
 	subscriptions, err := h.subscriptionRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to fetch subscriptions")
+		writeCohortRepoError(w, "FindByAppID", err)
 		return
 	}
 
 	now := time.Now()
 	cohorts := buildCohorts(subscriptions, months, now)
 
+	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
+		writeCohortsCSV(w, cohorts)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]any{
 		"cohorts": cohorts,
-	})
+	}); err != nil {
+		log.Printf("cohorts: encode response: %v", err)
+	}
+}
+
+// writeCohortRepoError logs a repository failure and responds 503. This repo has no
+// not-found sentinel — every error is an infrastructure failure (ADR-042), matching
+// writeRetentionRepoError.
+func writeCohortRepoError(w http.ResponseWriter, op string, err error) {
+	log.Printf("cohorts: repo error in %s: %v", op, err)
+	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
+}
+
+// writeCohortsCSV writes the cohort retention heatmap as a CSV attachment. The header
+// is cohort,initialStores,M0..M(maxMonths-1) — one month column per month of the
+// longest-lived cohort. Ragged rows (a cohort with fewer months) are padded with empty
+// strings so every row has the same column count. Uses encoding/csv for correct escaping.
+func writeCohortsCSV(w http.ResponseWriter, cohorts []entity.CohortData) {
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", `attachment; filename="cohorts.csv"`)
+
+	maxMonths := 0
+	for _, c := range cohorts {
+		if len(c.RetentionPcts) > maxMonths {
+			maxMonths = len(c.RetentionPcts)
+		}
+	}
+
+	header := make([]string, 0, 2+maxMonths)
+	header = append(header, "cohort", "initialStores")
+	for m := 0; m < maxMonths; m++ {
+		header = append(header, "M"+strconv.Itoa(m))
+	}
+
+	cw := csv.NewWriter(w)
+	_ = cw.Write(header)
+	for _, c := range cohorts {
+		row := make([]string, 0, len(header))
+		row = append(row, c.CohortMonth, strconv.Itoa(c.InitialStores))
+		for m := 0; m < maxMonths; m++ {
+			if m < len(c.RetentionPcts) {
+				row = append(row, strconv.FormatFloat(c.RetentionPcts[m], 'f', 1, 64))
+			} else {
+				row = append(row, "") // pad ragged row
+			}
+		}
+		_ = cw.Write(row)
+	}
+	cw.Flush()
+	if err := cw.Error(); err != nil {
+		log.Printf("cohorts: write CSV: %v", err)
+	}
 }
 
 // buildCohorts groups subscriptions by creation month and calculates retention.
@@ -115,6 +174,14 @@ func buildCohorts(subscriptions []*entity.Subscription, months int, now time.Tim
 
 		retentionPcts := make([]float64, 0, monthsElapsed+1)
 		for m := 0; m <= monthsElapsed; m++ {
+			// M0 is the cohort baseline: every member signed up this month, so it is
+			// 100% by definition. Measuring activity at the month's 1st instant would
+			// wrongly exclude the (typical) subs created mid-month.
+			if m == 0 {
+				retentionPcts = append(retentionPcts, 100)
+				continue
+			}
+			// For M1+, measure activity at the 1st of (cohort month + m).
 			checkDate := entry.monthTime.AddDate(0, m, 0)
 			active := 0
 			for _, sub := range entry.subscriptions {
@@ -142,26 +209,32 @@ func monthsBetween(from, to time.Time) int {
 	return years*12 + months
 }
 
-// isActiveAt checks if a subscription was still active at the given date.
-// A subscription is active if it's not churned (risk state is not CHURNED)
-// or if it was churned after the check date.
+// isActiveAt checks if a subscription was still active at the given date. It returns
+// false if the sub did not yet exist at date (CreatedAt after date); a non-churned sub
+// (safe/at-risk) is treated as active; a churned sub is active until its churn date.
 func isActiveAt(sub *entity.Subscription, date time.Time) bool {
-	// If subscription was created after the check date, not active
+	// If subscription was created after the check date, it wasn't active yet.
 	if sub.CreatedAt.After(date) {
 		return false
 	}
 
-	// If subscription is currently active (safe or at-risk), it was active at this date
+	// If subscription is currently active (safe or at-risk), it was active at this date.
 	if sub.RiskState == valueobject.RiskStateSafe ||
 		sub.RiskState == valueobject.RiskStateOneCycleMissed ||
 		sub.RiskState == valueobject.RiskStateTwoCyclesMissed {
 		return true
 	}
 
-	// For churned subscriptions, check if they churned after the date
-	// Use UpdatedAt as a proxy for when the churn happened
+	// For churned subscriptions, it was active up to its churn date. Use the
+	// deterministic expected-charge/last-charge date (churnedDateOf) rather than
+	// UpdatedAt, which every sync/ledger rebuild bumps (§8 determinism). Fall back to
+	// UpdatedAt only when no charge dates are known.
 	if sub.RiskState == valueobject.RiskStateChurned {
-		return sub.UpdatedAt.After(date)
+		churnDate := churnedDateOf(sub)
+		if churnDate == nil {
+			return sub.UpdatedAt.After(date)
+		}
+		return churnDate.After(date)
 	}
 
 	return true

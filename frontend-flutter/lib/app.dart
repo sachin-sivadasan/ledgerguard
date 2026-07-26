@@ -16,6 +16,7 @@ import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/earnings/earnings_screen.dart';
 import 'screens/insights/insights_screen.dart';
 import 'screens/reports/churn_screen.dart';
+import 'screens/reports/cohorts_screen.dart';
 import 'screens/reports/reports_screen.dart';
 import 'screens/reports/retention_screen.dart';
 import 'screens/reports/revenue_at_risk_screen.dart';
@@ -204,6 +205,10 @@ class _AppState extends State<App> {
                   GoRoute(
                     path: 'retention',
                     builder: (c, s) => const RetentionScreen(),
+                  ),
+                  GoRoute(
+                    path: 'cohorts',
+                    builder: (c, s) => const CohortsReportScreen(),
                   ),
                 ],
               ),

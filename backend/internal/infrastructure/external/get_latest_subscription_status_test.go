@@ -72,6 +72,59 @@ func TestGetLatestSubscriptionStatus(t *testing.T) {
 			want: "CANCELLED",
 		},
 		{
+			name: "frozen is the latest event — reads FROZEN, not the older ACTIVE",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base.Add(1*time.Hour)),
+				ev("SUBSCRIPTION_CHARGE_FROZEN", base.Add(4*time.Hour)),
+			},
+			want: "FROZEN",
+		},
+		{
+			name: "unfrozen restores ACTIVE",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_FROZEN", base.Add(2*time.Hour)),
+				ev("SUBSCRIPTION_CHARGE_UNFROZEN", base.Add(5*time.Hour)),
+			},
+			want: "ACTIVE",
+		},
+		{
+			name: "accept then a LATER uninstall stays terminal (accept is not sticky)",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_CANCELED", base.Add(1*time.Hour)),
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base.Add(2*time.Hour)),
+				ev("RELATIONSHIP_UNINSTALLED", base.Add(6*time.Hour)),
+			},
+			want: "UNINSTALLED",
+		},
+		{
+			name: "genuine churn — cancel later than an EARLIER accept (tie-break must not over-fire)",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base.Add(1*time.Hour)),
+				ev("SUBSCRIPTION_CHARGE_CANCELED", base.Add(5*time.Hour)),
+			},
+			want: "CANCELLED",
+		},
+		{
+			name: "multiple upgrades in sequence — latest accept wins",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base),
+				ev("SUBSCRIPTION_CHARGE_CANCELED", base.Add(1*time.Hour)),
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base.Add(1*time.Hour)), // same-ts upgrade
+				ev("SUBSCRIPTION_CHARGE_CANCELED", base.Add(2*time.Hour)),
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base.Add(3*time.Hour)), // newest
+			},
+			want: "ACTIVE",
+		},
+		{
+			name: "all zero timestamps — degrades to priority order (accept wins over cancel)",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_CANCELED", time.Time{}),
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", time.Time{}),
+				ev("RELATIONSHIP_INSTALLED", time.Time{}),
+			},
+			want: "ACTIVE",
+		},
+		{
 			name:   "installed only — pending",
 			events: []AppEvent{ev("RELATIONSHIP_INSTALLED", base)},
 			want:   "PENDING",

@@ -774,7 +774,7 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 	query := `
 		query($appId: ID!, $shopId: ID) {
 			app(id: $appId) {
-				events(shopId: $shopId, first: 50) {
+				events(shopId: $shopId, first: 100) {
 					edges {
 						node {
 							type
@@ -877,8 +877,9 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 	return events, nil
 }
 
-// GetLatestSubscriptionStatus determines subscription status from events
-// Returns: "ACTIVE", "CANCELLED", "UNINSTALLED", or empty if unknown
+// GetLatestSubscriptionStatus determines subscription status from the latest
+// (by OccurredAt) status-relevant app event.
+// Returns: "ACTIVE", "FROZEN", "CANCELLED", "UNINSTALLED", "PENDING", or "" if unknown.
 func GetLatestSubscriptionStatus(events []AppEvent) string {
 	if len(events) == 0 {
 		return ""
@@ -904,7 +905,10 @@ func GetLatestSubscriptionStatus(events []AppEvent) string {
 			return "UNINSTALLED"
 		case "SUBSCRIPTION_CHARGE_CANCELED":
 			return "CANCELLED"
-		case "SUBSCRIPTION_CHARGE_ACCEPTED":
+		case "SUBSCRIPTION_CHARGE_FROZEN":
+			return "FROZEN"
+		case "SUBSCRIPTION_CHARGE_UNFROZEN", "SUBSCRIPTION_CHARGE_ACCEPTED":
+			// Unfrozen restores billing; accepted (re)starts it — both ACTIVE.
 			return "ACTIVE"
 		case "RELATIONSHIP_INSTALLED":
 			// Installed but no subscription event yet - could be trial or pending
@@ -916,13 +920,18 @@ func GetLatestSubscriptionStatus(events []AppEvent) string {
 }
 
 // statusEventPriority ranks status-relevant events for same-timestamp tie-breaks.
-// An accepted charge wins over a cancel so a same-instant upgrade/downgrade is
-// treated as ACTIVE, not churn. Higher wins.
+// Higher wins. Active signals (accepted / unfrozen) outrank a cancel so a
+// same-instant upgrade/downgrade (Shopify cancels the old sub and accepts a new
+// one) reads as ACTIVE, not churn.
 func statusEventPriority(eventType string) int {
 	switch eventType {
 	case "SUBSCRIPTION_CHARGE_ACCEPTED":
-		return 3
+		return 5
+	case "SUBSCRIPTION_CHARGE_UNFROZEN":
+		return 4
 	case "RELATIONSHIP_INSTALLED":
+		return 3
+	case "SUBSCRIPTION_CHARGE_FROZEN":
 		return 2
 	case "SUBSCRIPTION_CHARGE_CANCELED":
 		return 1

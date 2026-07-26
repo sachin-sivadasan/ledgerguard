@@ -23,6 +23,9 @@ class ReportsScreen extends StatelessWidget {
           route: '/reports/cohorts'),
       _ReportEntry('Reviews', 'App Store review sentiment',
           route: '/reports/reviews'),
+      _ReportEntry('Uninstall Context',
+          'Inferred pre-uninstall state, tenure, and plan',
+          route: '/reports/uninstall-context'),
     ]),
     _ReportCategory('Revenue & Billing', Icons.attach_money_outlined, [
       _ReportEntry('Earnings', 'Net payouts after Shopify fees'),

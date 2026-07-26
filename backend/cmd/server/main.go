@@ -378,6 +378,13 @@ func run() error {
 		log.Println("Retention handler initialized")
 	}
 
+	// Initialize uninstall context report handler
+	var uninstallContextHandler *handler.UninstallContextHandler
+	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
+		uninstallContextHandler = handler.NewUninstallContextHandler(subscriptionRepo, appEventRepo, appRepo, partnerRepo)
+		log.Println("Uninstall context handler initialized")
+	}
+
 	// Initialize risk handler
 	var riskHandler *handler.RiskHandler
 	if subscriptionRepo != nil && partnerRepo != nil && appRepo != nil {
@@ -775,6 +782,7 @@ func run() error {
 		RevenueAtRiskHandler:            revenueAtRiskHandler,
 		ChurnHandler:                    churnHandler,
 		RetentionHandler:                retentionHandler,
+		UninstallContextHandler:         uninstallContextHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,
 		OrgAuditHandler:                 orgAuditHandler,

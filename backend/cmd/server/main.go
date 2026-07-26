@@ -371,6 +371,13 @@ func run() error {
 		log.Println("Churn handler initialized")
 	}
 
+	// Initialize retention/renewal report handler
+	var retentionHandler *handler.RetentionHandler
+	if subscriptionRepo != nil && snapshotRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
+		retentionHandler = handler.NewRetentionHandler(subscriptionRepo, snapshotRepo, appEventRepo, appRepo, partnerRepo)
+		log.Println("Retention handler initialized")
+	}
+
 	// Initialize risk handler
 	var riskHandler *handler.RiskHandler
 	if subscriptionRepo != nil && partnerRepo != nil && appRepo != nil {
@@ -767,6 +774,7 @@ func run() error {
 		ForecastHandler:                 forecastHandler,
 		RevenueAtRiskHandler:            revenueAtRiskHandler,
 		ChurnHandler:                    churnHandler,
+		RetentionHandler:                retentionHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,
 		OrgAuditHandler:                 orgAuditHandler,

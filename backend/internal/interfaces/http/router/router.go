@@ -40,6 +40,7 @@ type Config struct {
 	ForecastHandler                 *handler.ForecastHandler
 	RevenueAtRiskHandler            *handler.RevenueAtRiskHandler
 	ChurnHandler                    *handler.ChurnHandler
+	RetentionHandler                *handler.RetentionHandler
 	RiskHandler                     *handler.RiskHandler
 	OrgHandler                      *handler.OrgHandler
 	OrgAuditHandler                 *handler.OrgAuditHandler
@@ -250,6 +251,11 @@ func New(cfg Config) *chi.Mux {
 				// Churn report route
 				if cfg.ChurnHandler != nil {
 					r.Get("/{appID}/reports/churn", cfg.ChurnHandler.GetChurn)
+				}
+
+				// Retention/Renewal report route
+				if cfg.RetentionHandler != nil {
+					r.Get("/{appID}/reports/retention", cfg.RetentionHandler.GetRetention)
 				}
 
 				// Cohort retention route

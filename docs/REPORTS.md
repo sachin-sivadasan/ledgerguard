@@ -206,7 +206,8 @@ Index page: `docs/wireframes/19-reports.svg`.
 | **Churn** | ✅ **Shipped** — `backend/.../churn_handler.go` (12 tests) + `frontend-flutter/.../churn_screen.dart`; churn %, MRR lost, ranked churned stores, trend, CSV. Merged to main (PR #4). |
 | **Retention / Renewal** | ✅ **Shipped** — `backend/.../retention_handler.go` (15 tests) + `frontend-flutter/.../retention_screen.dart`; renewal rate + trend, retained MRR, reactivations, Retention-by-Plan table, CSV. Merged to main (PR #5). |
 | **Retention Cohorts** | ✅ **Shipped** — hardened `backend/.../cohort_handler.go` (13 tests, was 0; M0 baseline fix, deterministic churn date, 500→503, CSV, /reports/cohorts alias) + `frontend-flutter/.../cohorts_screen.dart` + reusable `CohortHeatmap` widget. Merged to main (PR #6). |
-| Reviews · Uninstall Context | ⬜ Pending (Retention & Risk) |
+| **Reviews** | ✅ **Shipped** — `backend/.../review_report.go` (16 tests, was 0; new `FindAllByAppID` repo method, avg/distribution/sentiment/recent, out-of-range guard, 503, CSV) + `frontend-flutter/.../reviews_screen.dart`, reusing the `AppReview` model. Merged to main (PR #7). |
+| Uninstall Context | ⬜ Pending (Retention & Risk) |
 | Earnings · MRR · Revenue Mix · Usage & One-Time · Usage Trends · Subscriptions · Payout Schedule · Payout History | ⬜ Pending (Revenue & Billing) |
 | Installs · Activation · Net-New Subscriptions | ⬜ Pending (Growth) |
 | Active Customers · Customer Insights | ⬜ Pending (Customers) |

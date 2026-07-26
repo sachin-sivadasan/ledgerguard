@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/navigation/navigation_refresh_notifier.dart';
 import '../providers/organization_provider.dart';
 import '../theme/app_breakpoints.dart';
@@ -8,30 +9,66 @@ import '../theme/app_colors.dart';
 import '../widgets/lg_service_unavailable.dart';
 import '../widgets/org_switcher.dart';
 
-class AppShell extends StatelessWidget {
+// Nav items, indexed by branch index (order must match the router branches).
+const _destinations = <_NavItem>[
+  _NavItem(icon: Icons.dashboard_outlined, selectedIcon: Icons.dashboard, label: 'Dashboard'),
+  _NavItem(icon: Icons.subscriptions_outlined, selectedIcon: Icons.subscriptions, label: 'Subscriptions'),
+  _NavItem(icon: Icons.store_outlined, selectedIcon: Icons.store, label: 'Stores'),
+  _NavItem(icon: Icons.receipt_long_outlined, selectedIcon: Icons.receipt_long, label: 'Transactions'),
+  _NavItem(icon: Icons.event_outlined, selectedIcon: Icons.event, label: 'Events'),
+  _NavItem(icon: Icons.webhook_outlined, selectedIcon: Icons.webhook, label: 'Webhooks'),
+  _NavItem(icon: Icons.warning_amber_outlined, selectedIcon: Icons.warning_amber, label: 'Risk'),
+  _NavItem(icon: Icons.analytics_outlined, selectedIcon: Icons.analytics, label: 'Analytics'),
+  _NavItem(icon: Icons.account_balance_wallet_outlined, selectedIcon: Icons.account_balance_wallet, label: 'Earnings'),
+  _NavItem(icon: Icons.apps_outlined, selectedIcon: Icons.apps, label: 'Apps'),
+  _NavItem(icon: Icons.vpn_key_outlined, selectedIcon: Icons.vpn_key, label: 'API Keys'),
+  _NavItem(icon: Icons.auto_awesome_outlined, selectedIcon: Icons.auto_awesome, label: 'AI Insights'),
+  _NavItem(icon: Icons.settings_outlined, selectedIcon: Icons.settings, label: 'Settings'),
+];
+
+// Desktop sidebar grouping (values are branch indices into _destinations).
+const _navGroups = <_NavGroup>[
+  _NavGroup('CORE', [0, 1, 2, 3, 4, 5, 6]),
+  _NavGroup('ANALYTICS', [7, 8, 11]),
+  _NavGroup('ADMIN', [9, 10, 12]),
+];
+
+// Bottom nav shows these 4 + "More" (index 0-3 map to branch 0,1,2,7)
+const _bottomNavBranches = [0, 1, 2, 7]; // Dashboard, Subs, Stores, Analytics
+const _moreItems = [3, 4, 5, 6, 8, 9, 10, 11, 12]; // remaining branches
+
+class AppShell extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
 
   const AppShell({super.key, required this.navigationShell});
 
-  static const _destinations = <_NavItem>[
-    _NavItem(icon: Icons.dashboard_outlined, selectedIcon: Icons.dashboard, label: 'Dashboard'),
-    _NavItem(icon: Icons.subscriptions_outlined, selectedIcon: Icons.subscriptions, label: 'Subscriptions'),
-    _NavItem(icon: Icons.store_outlined, selectedIcon: Icons.store, label: 'Stores'),
-    _NavItem(icon: Icons.receipt_long_outlined, selectedIcon: Icons.receipt_long, label: 'Transactions'),
-    _NavItem(icon: Icons.event_outlined, selectedIcon: Icons.event, label: 'Events'),
-    _NavItem(icon: Icons.webhook_outlined, selectedIcon: Icons.webhook, label: 'Webhooks'),
-    _NavItem(icon: Icons.warning_amber_outlined, selectedIcon: Icons.warning_amber, label: 'Risk'),
-    _NavItem(icon: Icons.analytics_outlined, selectedIcon: Icons.analytics, label: 'Analytics'),
-    _NavItem(icon: Icons.account_balance_wallet_outlined, selectedIcon: Icons.account_balance_wallet, label: 'Earnings'),
-    _NavItem(icon: Icons.apps_outlined, selectedIcon: Icons.apps, label: 'Apps'),
-    _NavItem(icon: Icons.vpn_key_outlined, selectedIcon: Icons.vpn_key, label: 'API Keys'),
-    _NavItem(icon: Icons.auto_awesome_outlined, selectedIcon: Icons.auto_awesome, label: 'AI Insights'),
-    _NavItem(icon: Icons.settings_outlined, selectedIcon: Icons.settings, label: 'Settings'),
-  ];
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
 
-  // Bottom nav shows these 4 + "More" (index 0-3 map to branch 0,1,2,7)
-  static const _bottomNavBranches = [0, 1, 2, 7]; // Dashboard, Subs, Stores, Analytics
-  static const _moreItems = [3, 4, 5, 6, 8, 9, 10, 11, 12]; // remaining branches
+class _AppShellState extends State<AppShell> {
+  static const _railCollapsedKey = 'rail_collapsed';
+
+  bool _railCollapsed = false;
+
+  StatefulNavigationShell get navigationShell => widget.navigationShell;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((p) {
+      final saved = p.getBool(_railCollapsedKey);
+      if (saved != null && mounted) {
+        setState(() => _railCollapsed = saved);
+      }
+    });
+  }
+
+  void _toggleRail() {
+    setState(() => _railCollapsed = !_railCollapsed);
+    SharedPreferences.getInstance()
+        .then((p) => p.setBool(_railCollapsedKey, _railCollapsed));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +92,6 @@ class AppShell extends StatelessWidget {
 
   // ─── Mobile: BottomNavigationBar ──────────────────────────────────
   Widget _buildMobileScaffold(BuildContext context, Widget content) {
-
     final currentIndex = navigationShell.currentIndex;
     // Map current branch to bottom nav index
     int bottomIndex;
@@ -174,76 +210,121 @@ class AppShell extends StatelessWidget {
   }
 
   Widget _buildRail(BuildContext context) {
-    final theme = Theme.of(context);
-    return SizedBox(
-      width: 100,
+    final collapsed = _railCollapsed;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      width: collapsed ? 72 : 220,
+      color: LgColors.surface,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Header: logo + collapse toggle
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Image.asset('assets/images/logo.jpeg', height: 40),
+            padding: const EdgeInsets.fromLTRB(12, 12, 8, 8),
+            child: Row(
+              mainAxisAlignment: collapsed
+                  ? MainAxisAlignment.center
+                  : MainAxisAlignment.spaceBetween,
+              children: [
+                if (!collapsed) Image.asset('assets/images/logo.jpeg', height: 36),
+                IconButton(
+                  tooltip: collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(collapsed ? Icons.menu : Icons.menu_open, size: 20),
+                  onPressed: _toggleRail,
+                ),
+              ],
+            ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: OrgSwitcher(),
-          ),
+          if (!collapsed)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: OrgSwitcher(),
+            ),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
-                children: _destinations.asMap().entries.map((e) {
-                  final selected = navigationShell.currentIndex == e.key;
-                  final d = e.value;
-                  return InkWell(
-                    onTap: () {
-                      navigationShell.goBranch(e.key);
-                      context.read<NavigationRefreshNotifier>().triggerRefreshCheck();
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: selected
-                          ? BoxDecoration(
-                              color: LgColors.primary.withValues(alpha: 0.08),
-                              border: Border(
-                                left: BorderSide(
-                                    color: LgColors.primary, width: 3),
-                              ),
-                            )
-                          : null,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            selected ? d.selectedIcon : d.icon,
-                            size: 22,
-                            color: selected
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final group in _navGroups) ...[
+                    if (collapsed)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Divider(height: 1),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 16, 6),
+                        child: Text(
+                          group.title,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.6,
+                            color: group.branchIndices
+                                    .contains(navigationShell.currentIndex)
                                 ? LgColors.primary
-                                : theme.colorScheme.onSurface,
+                                : LgColors.textSecondary,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            d.label,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: selected
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                              color: selected
-                                  ? LgColors.primary
-                                  : theme.colorScheme.onSurface,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    ...group.branchIndices.map((i) => _buildRailItem(context, i)),
+                  ],
+                  const SizedBox(height: 12),
+                ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRailItem(BuildContext context, int branchIndex) {
+    final theme = Theme.of(context);
+    final collapsed = _railCollapsed;
+    final d = _destinations[branchIndex];
+    final selected = navigationShell.currentIndex == branchIndex;
+    final color = selected ? LgColors.primary : theme.colorScheme.onSurface;
+
+    final Widget row = Container(
+      height: 44,
+      padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 16),
+      decoration: BoxDecoration(
+        color: selected ? LgColors.primary.withValues(alpha: 0.08) : null,
+        border: selected
+            ? const Border(left: BorderSide(color: LgColors.primary, width: 3))
+            : null,
+      ),
+      child: Row(
+        mainAxisAlignment:
+            collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
+        children: [
+          Icon(selected ? d.selectedIcon : d.icon, size: 22, color: color),
+          if (!collapsed) ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                d.label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  color: color,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    return InkWell(
+      onTap: () {
+        navigationShell.goBranch(branchIndex);
+        context.read<NavigationRefreshNotifier>().triggerRefreshCheck();
+      },
+      child: collapsed ? Tooltip(message: d.label, child: row) : row,
     );
   }
 
@@ -296,4 +377,11 @@ class _NavItem {
   final String label;
 
   const _NavItem({required this.icon, required this.selectedIcon, required this.label});
+}
+
+class _NavGroup {
+  final String title;
+  final List<int> branchIndices;
+
+  const _NavGroup(this.title, this.branchIndices);
 }

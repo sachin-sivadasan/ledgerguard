@@ -15,6 +15,8 @@ import 'screens/auth/sign_up_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/earnings/earnings_screen.dart';
 import 'screens/insights/insights_screen.dart';
+import 'screens/reports/reports_screen.dart';
+import 'screens/reports/revenue_at_risk_screen.dart';
 import 'screens/risk/risk_screen.dart';
 import 'screens/settings/connect_shopify_screen.dart';
 import 'screens/settings/dashboard_settings_screen.dart';
@@ -182,6 +184,19 @@ class _AppState extends State<App> {
                       builder: (c, s) => const AuditLogScreen(),
                     ),
                   ]),
+            ]),
+            // Reports — appended LAST so existing branch indices don't shift.
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/reports',
+                builder: (c, s) => const ReportsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'revenue-at-risk',
+                    builder: (c, s) => const RevenueAtRiskScreen(),
+                  ),
+                ],
+              ),
             ]),
           ],
         ),

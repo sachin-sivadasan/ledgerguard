@@ -24,18 +24,19 @@ const _destinations = <_NavItem>[
   _NavItem(icon: Icons.vpn_key_outlined, selectedIcon: Icons.vpn_key, label: 'API Keys'),
   _NavItem(icon: Icons.auto_awesome_outlined, selectedIcon: Icons.auto_awesome, label: 'AI Insights'),
   _NavItem(icon: Icons.settings_outlined, selectedIcon: Icons.settings, label: 'Settings'),
+  _NavItem(icon: Icons.assessment_outlined, selectedIcon: Icons.assessment, label: 'Reports'),
 ];
 
 // Desktop sidebar grouping (values are branch indices into _destinations).
 const _navGroups = <_NavGroup>[
   _NavGroup('CORE', [0, 1, 2, 3, 4, 5, 6]),
-  _NavGroup('ANALYTICS', [7, 8, 11]),
+  _NavGroup('ANALYTICS', [7, 8, 11, 13]),
   _NavGroup('ADMIN', [9, 10, 12]),
 ];
 
 // Bottom nav shows these 4 + "More" (index 0-3 map to branch 0,1,2,7)
 const _bottomNavBranches = [0, 1, 2, 7]; // Dashboard, Subs, Stores, Analytics
-const _moreItems = [3, 4, 5, 6, 8, 9, 10, 11, 12]; // remaining branches
+const _moreItems = [3, 4, 5, 6, 8, 9, 10, 11, 12, 13]; // remaining branches
 
 class AppShell extends StatefulWidget {
   final StatefulNavigationShell navigationShell;

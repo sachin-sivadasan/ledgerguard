@@ -16,8 +16,9 @@ import (
 )
 
 // cohortSub builds a subscription with explicit created/updated timestamps and risk
-// state, for deterministic cohort tests. buildCohorts groups by CreatedAt month and
-// uses UpdatedAt (for churned subs) as the churn instant via isActiveAt.
+// state, for deterministic cohort tests. buildCohorts groups by CreatedAt month; for
+// churned subs isActiveAt prefers churnedDateOf (ExpectedNextChargeDate/
+// LastRecurringChargeDate) and falls back to UpdatedAt only when those are unset.
 func cohortSub(appID uuid.UUID, created, updated time.Time, state valueobject.RiskState) *entity.Subscription {
 	return &entity.Subscription{
 		ID:              uuid.New(),
@@ -67,18 +68,21 @@ func TestBuildCohorts_GroupsAndM0IsFull(t *testing.T) {
 	}
 }
 
-// TestBuildCohorts_ChurnedDropsOutAtRightMonth verifies a churned sub (via UpdatedAt)
-// counts as retained up to its churn month, then drops the retention pct.
+// TestBuildCohorts_ChurnedDropsOutAtRightMonth verifies a churned sub counts as
+// retained up to its (deterministic) churn date, then drops the retention pct. The
+// churn date is taken from ExpectedNextChargeDate, not UpdatedAt.
 func TestBuildCohorts_ChurnedDropsOutAtRightMonth(t *testing.T) {
 	appID := uuid.New()
 	now := time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC)
 	cohortMonth := month(2026, 5)
+	// Churned; expected charge (churn date) mid-June → active at M1 (June 1), gone by
+	// M2 (July 1). UpdatedAt is set to `now` to prove it is NOT used as the churn date.
+	churned := cohortSub(appID, cohortMonth, now, valueobject.RiskStateChurned)
+	churnDate := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
+	churned.ExpectedNextChargeDate = &churnDate
 	subs := []*entity.Subscription{
-		// Stays safe the whole time.
-		cohortSub(appID, cohortMonth, now, valueobject.RiskStateSafe),
-		// Churned; updated (churn instant) mid-June → active at M0 (May) and M1 (June),
-		// gone by M2 (July). isActiveAt is UpdatedAt.After(checkDate).
-		cohortSub(appID, cohortMonth, time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC), valueobject.RiskStateChurned),
+		cohortSub(appID, cohortMonth, now, valueobject.RiskStateSafe), // stays safe
+		churned,
 	}
 
 	cohorts := buildCohorts(subs, 6, now)
@@ -86,8 +90,8 @@ func TestBuildCohorts_ChurnedDropsOutAtRightMonth(t *testing.T) {
 		t.Fatalf("expected 1 cohort, got %d", len(cohorts))
 	}
 	pcts := cohorts[0].RetentionPcts
-	// M0 = May 1: both active → 100. M1 = June 1: churn at June 15 is after → 100.
-	// M2 = July 1: churn at June 15 is before → only the safe sub → 50.
+	// M0: cohort baseline → 100. M1 = June 1: churn June 15 is after → 100.
+	// M2 = July 1: churn June 15 is before → only the safe sub → 50.
 	if len(pcts) < 3 {
 		t.Fatalf("expected >=3 retention points, got %+v", pcts)
 	}
@@ -99,6 +103,44 @@ func TestBuildCohorts_ChurnedDropsOutAtRightMonth(t *testing.T) {
 	}
 	if pcts[2] != 50 {
 		t.Errorf("M2: expected 50 (churned sub dropped), got %v", pcts[2])
+	}
+}
+
+// TestBuildCohorts_M0FullForMidMonthCreated is the regression guard for the M0 fix: a
+// sub created mid-month (the realistic case) must still yield M0 = 100% (cohort
+// baseline), not ~0% from measuring activity at the month's 1st instant.
+func TestBuildCohorts_M0FullForMidMonthCreated(t *testing.T) {
+	appID := uuid.New()
+	now := time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC)
+	subs := []*entity.Subscription{
+		cohortSub(appID, time.Date(2026, 5, 15, 12, 0, 0, 0, time.UTC), now, valueobject.RiskStateSafe),
+		cohortSub(appID, time.Date(2026, 5, 28, 9, 30, 0, 0, time.UTC), now, valueobject.RiskStateSafe),
+	}
+	cohorts := buildCohorts(subs, 6, now)
+	if len(cohorts) != 1 {
+		t.Fatalf("expected 1 cohort, got %d", len(cohorts))
+	}
+	if cohorts[0].RetentionPcts[0] != 100 {
+		t.Errorf("M0 for mid-month-created subs: expected 100, got %v", cohorts[0].RetentionPcts[0])
+	}
+}
+
+// TestBuildCohorts_ChurnFallsBackToUpdatedAt verifies that when a churned sub has no
+// charge dates, isActiveAt falls back to UpdatedAt as the churn instant.
+func TestBuildCohorts_ChurnFallsBackToUpdatedAt(t *testing.T) {
+	appID := uuid.New()
+	now := time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC)
+	cohortMonth := month(2026, 5)
+	// No ExpectedNextChargeDate/LastRecurringChargeDate → falls back to UpdatedAt (June 15).
+	churned := cohortSub(appID, cohortMonth, time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC), valueobject.RiskStateChurned)
+	subs := []*entity.Subscription{
+		cohortSub(appID, cohortMonth, now, valueobject.RiskStateSafe),
+		churned,
+	}
+	cohorts := buildCohorts(subs, 6, now)
+	pcts := cohorts[0].RetentionPcts
+	if len(pcts) < 3 || pcts[1] != 100 || pcts[2] != 50 {
+		t.Errorf("fallback-to-UpdatedAt churn: expected M1=100, M2=50, got %+v", pcts)
 	}
 }
 
@@ -227,6 +269,30 @@ func TestGetCohorts_MonthsClampDefault(t *testing.T) {
 	}
 	if len(resp.Cohorts) != 2 {
 		t.Errorf("months=24: expected 2 cohorts, got %d: %+v", len(resp.Cohorts), resp.Cohorts)
+	}
+}
+
+// TestGetCohorts_MonthsLowerBoundAndInvalid verifies a below-min (months=1) and a
+// non-numeric (months=abc) param both fall back to the default window of 6.
+func TestGetCohorts_MonthsLowerBoundAndInvalid(t *testing.T) {
+	appID, pa, h := cohortFixture(nil)
+	now := time.Now().UTC()
+	subs := []*entity.Subscription{
+		cohortSub(appID, now.AddDate(0, -3, 0), now, valueobject.RiskStateSafe),  // within default-6
+		cohortSub(appID, now.AddDate(0, -12, 0), now, valueobject.RiskStateSafe), // outside default-6
+	}
+	h = replaceCohortSubs(h, subs)
+
+	for _, q := range []string{"months=1", "months=abc"} {
+		rec := doCohorts(t, h, appID, pa, q)
+		var resp cohortsResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("%s decode: %v", q, err)
+		}
+		// Default 6 → only the -3mo sub is in-window; proves the bad param was ignored.
+		if len(resp.Cohorts) != 1 {
+			t.Errorf("%s (should fall back to default 6): expected 1 cohort, got %d: %+v", q, len(resp.Cohorts), resp.Cohorts)
+		}
 	}
 }
 

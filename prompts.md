@@ -2057,3 +2057,18 @@
 - Created `docs/blueprints/SYNC_PIPELINE_BLUEPRINT.md` (~1400 lines, 18 sections)
 - Added "Reusable Blueprints" section to `CLAUDE.md`
 - Added blueprint cross-reference to ADR-022 in `DECISIONS.md`
+
+---
+
+### [2026-07-25] Fix: Events storeDomain Filter Resolves to Shop GIDs
+**Original:**
+> pending work is complete? yes, close those gaps and commit
+
+**Improved:**
+> The uncommitted app-events fix (resolve `?storeDomain=` to shop GIDs) is functionally complete but violates the mandatory workflow: no test covers the new resolution logic, and IMPLEMENTATION_LOG / TEST_PLAN / prompts / verification are not updated. Close those gaps: (1) add a table-driven handler test for domain→GID resolution plus the no-match ILIKE fallback, (2) log the fix to IMPLEMENTATION_LOG.md and TEST_PLAN.md (EVT-001..005), (3) add `backend/server` and `frontend/app/.firebase/` to .gitignore and untrack the committed binary, (4) append a verification checklist, then commit as a clean `fix:` commit separate from the pending `docs:` wireframe/diagram batch.
+
+**Result:**
+- Added `TestEventHandler_List_StoreDomainResolvesToShopGIDs` (table-driven: match → resolved GID, no-match → fallback) — full backend suite green
+- Logged to `IMPLEMENTATION_LOG.md` (2026-07-25 entry) and `TEST_PLAN.md` (section 16, EVT-001..005)
+- Added `backend/server` + `frontend/app/.firebase/` to `.gitignore`; `git rm --cached backend/server` (untracked 62MB binary)
+- Appended verification checklist to `verification.md`

@@ -1,0 +1,325 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1100" width="1440" height="1100">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1440" height="1100" fill="#F8F9FA"/>
+
+  <!-- Page Title -->
+  <text x="40" y="36" font-size="22" font-weight="bold" fill="#111827">Navigation — AppShell (3 Responsive Layouts)</text>
+  <text x="40" y="58" font-size="13" fill="#6B7280">LgBreakpoints: mobile (&lt;600), tablet (600-1024), desktop (&gt;1024). All 13 nav items with outlined/filled icon pairs.</text>
+
+  <!-- ==================== DESKTOP: NavigationRail ==================== -->
+  <text x="40" y="96" font-size="16" font-weight="bold" fill="#111827">Desktop — NavigationRail (width: 100px)</text>
+
+  <rect x="40" y="110" width="120" height="620" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Logo -->
+  <rect x="52" y="120" width="96" height="36" rx="4" fill="#F3F4F6"/>
+  <text x="100" y="143" text-anchor="middle" font-size="10" fill="#6B7280">logo.jpeg</text>
+
+  <!-- Org Switcher -->
+  <rect x="52" y="164" width="96" height="26" rx="6" fill="none" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="66" y="181" font-size="8" fill="#6B7280">&#127970;</text>
+  <text x="78" y="181" font-size="9" font-weight="600" fill="#111827">Acme Inc</text>
+  <text x="136" y="181" font-size="8" fill="#6B7280">&#9660;</text>
+
+  <!-- Nav items (scrollable Column) -->
+  <!-- 1. Dashboard (selected) -->
+  <rect x="40" y="200" width="120" height="40" fill="rgba(92,106,196,0.08)"/>
+  <line x1="40" y1="200" x2="40" y2="240" stroke="#5C6AC4" stroke-width="3"/>
+  <text x="100" y="220" text-anchor="middle" font-size="14" fill="#5C6AC4">&#9632;</text>
+  <text x="100" y="234" text-anchor="middle" font-size="9" font-weight="600" fill="#5C6AC4">Dashboard</text>
+
+  <!-- 2. Subscriptions -->
+  <rect x="40" y="240" width="120" height="40" fill="none"/>
+  <text x="100" y="260" text-anchor="middle" font-size="14" fill="#374151">&#9633;</text>
+  <text x="100" y="274" text-anchor="middle" font-size="9" fill="#374151">Subscriptions</text>
+
+  <!-- 3. Stores -->
+  <rect x="40" y="280" width="120" height="40" fill="none"/>
+  <text x="100" y="300" text-anchor="middle" font-size="14" fill="#374151">&#9633;</text>
+  <text x="100" y="314" text-anchor="middle" font-size="9" fill="#374151">Stores</text>
+
+  <!-- 4. Transactions -->
+  <rect x="40" y="320" width="120" height="40" fill="none"/>
+  <text x="100" y="340" text-anchor="middle" font-size="14" fill="#374151">&#9633;</text>
+  <text x="100" y="354" text-anchor="middle" font-size="9" fill="#374151">Transactions</text>
+
+  <!-- 5. Events -->
+  <rect x="40" y="360" width="120" height="40" fill="none"/>
+  <text x="100" y="380" text-anchor="middle" font-size="14" fill="#374151">&#9633;</text>
+  <text x="100" y="394" text-anchor="middle" font-size="9" fill="#374151">Events</text>
+
+  <!-- 6. Webhooks -->
+  <rect x="40" y="400" width="120" height="40" fill="none"/>
+  <text x="100" y="420" text-anchor="middle" font-size="14" fill="#374151">&#9633;</text>
+  <text x="100" y="434" text-anchor="middle" font-size="9" fill="#374151">Webhooks</text>
+
+  <!-- 7. Risk -->
+  <rect x="40" y="440" width="120" height="40" fill="none"/>
+  <text x="100" y="460" text-anchor="middle" font-size="14" fill="#374151">&#9633;</text>
+  <text x="100" y="474" text-anchor="middle" font-size="9" fill="#374151">Risk</text>
+
+  <!-- 8. Analytics -->
+  <rect x="40" y="480" width="120" height="40" fill="none"/>
+  <text x="100" y="500" text-anchor="middle" font-size="14" fill="#374151">&#9633;</text>
+  <text x="100" y="514" text-anchor="middle" font-size="9" fill="#374151">Analytics</text>
+
+  <!-- 9. Earnings -->
+  <rect x="40" y="520" width="120" height="40" fill="none"/>
+  <text x="100" y="540" text-anchor="middle" font-size="14" fill="#374151">&#9633;</text>
+  <text x="100" y="554" text-anchor="middle" font-size="9" fill="#374151">Earnings</text>
+
+  <!-- 10. Apps -->
+  <rect x="40" y="560" width="120" height="40" fill="none"/>
+  <text x="100" y="580" text-anchor="middle" font-size="14" fill="#374151">&#9633;</text>
+  <text x="100" y="594" text-anchor="middle" font-size="9" fill="#374151">Apps</text>
+
+  <!-- 11. API Keys -->
+  <rect x="40" y="600" width="120" height="40" fill="none"/>
+  <text x="100" y="620" text-anchor="middle" font-size="14" fill="#374151">&#9633;</text>
+  <text x="100" y="634" text-anchor="middle" font-size="9" fill="#374151">API Keys</text>
+
+  <!-- 12. AI Insights -->
+  <rect x="40" y="640" width="120" height="40" fill="none"/>
+  <text x="100" y="660" text-anchor="middle" font-size="14" fill="#374151">&#9633;</text>
+  <text x="100" y="674" text-anchor="middle" font-size="9" fill="#374151">AI Insights</text>
+
+  <!-- 13. Settings -->
+  <rect x="40" y="680" width="120" height="40" fill="none"/>
+  <text x="100" y="700" text-anchor="middle" font-size="14" fill="#374151">&#9633;</text>
+  <text x="100" y="714" text-anchor="middle" font-size="9" fill="#374151">Settings</text>
+
+  <!-- Divider + Content placeholder -->
+  <line x1="160" y1="110" x2="160" y2="730" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="170" y="110" width="280" height="620" rx="8" fill="#F3F4F6" stroke="#E5E7EB" stroke-width="1" stroke-dasharray="4,4"/>
+  <text x="310" y="420" text-anchor="middle" font-size="13" fill="#D1D5DB">Page Content</text>
+
+  <!-- Desktop annotations -->
+  <text x="170" y="756" font-size="10" fill="#9CA3AF" font-style="italic">Selected: primary bg (0.08 alpha) + 3px left border + filled icon + bold label</text>
+  <text x="170" y="772" font-size="10" fill="#9CA3AF" font-style="italic">Unselected: outlined icon + normal weight label</text>
+  <text x="170" y="788" font-size="10" fill="#9CA3AF" font-style="italic">OrgSwitcher: shown only when hasMultipleOrgs. PopupMenuButton with org list + role.</text>
+  <text x="170" y="804" font-size="10" fill="#9CA3AF" font-style="italic">ScrollView wraps all 13 items. Logo at top, org switcher below logo.</text>
+
+  <!-- ==================== TABLET: Drawer ==================== -->
+  <text x="500" y="96" font-size="16" font-weight="bold" fill="#111827">Tablet — Drawer (hamburger menu)</text>
+
+  <!-- AppBar -->
+  <rect x="500" y="110" width="400" height="44" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="520" y="136" font-size="16" fill="#374151">&#9776;</text>
+  <text x="546" y="137" font-size="14" font-weight="600" fill="#111827">LedgerGuard</text>
+
+  <!-- Drawer overlay -->
+  <rect x="500" y="160" width="260" height="560" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- DrawerHeader -->
+  <rect x="500" y="160" width="260" height="80" rx="8" fill="#5C6AC4"/>
+  <rect x="516" y="192" width="36" height="36" rx="4" fill="rgba(255,255,255,0.2)"/>
+  <text x="534" y="215" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.7)">logo</text>
+  <text x="516" y="234" font-size="14" font-weight="600" fill="#FFFFFF">LedgerGuard</text>
+
+  <!-- Org Switcher in drawer -->
+  <rect x="516" y="250" width="228" height="28" rx="6" fill="none" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="530" y="268" font-size="9" fill="#6B7280">&#127970; Acme Inc &#9660;</text>
+
+  <!-- ListTile nav items -->
+  <!-- 1. Dashboard (selected) -->
+  <rect x="508" y="286" width="244" height="32" rx="4" fill="rgba(92,106,196,0.08)"/>
+  <text x="524" y="306" font-size="12" fill="#5C6AC4">&#9632;</text>
+  <text x="544" y="306" font-size="12" font-weight="500" fill="#5C6AC4">Dashboard</text>
+
+  <text x="524" y="332" font-size="12" fill="#374151">&#9633;</text>
+  <text x="544" y="332" font-size="12" fill="#374151">Subscriptions</text>
+
+  <text x="524" y="356" font-size="12" fill="#374151">&#9633;</text>
+  <text x="544" y="356" font-size="12" fill="#374151">Stores</text>
+
+  <text x="524" y="380" font-size="12" fill="#374151">&#9633;</text>
+  <text x="544" y="380" font-size="12" fill="#374151">Transactions</text>
+
+  <text x="524" y="404" font-size="12" fill="#374151">&#9633;</text>
+  <text x="544" y="404" font-size="12" fill="#374151">Events</text>
+
+  <text x="524" y="428" font-size="12" fill="#374151">&#9633;</text>
+  <text x="544" y="428" font-size="12" fill="#374151">Webhooks</text>
+
+  <text x="524" y="452" font-size="12" fill="#374151">&#9633;</text>
+  <text x="544" y="452" font-size="12" fill="#374151">Risk</text>
+
+  <text x="524" y="476" font-size="12" fill="#374151">&#9633;</text>
+  <text x="544" y="476" font-size="12" fill="#374151">Analytics</text>
+
+  <text x="524" y="500" font-size="12" fill="#374151">&#9633;</text>
+  <text x="544" y="500" font-size="12" fill="#374151">Earnings</text>
+
+  <text x="524" y="524" font-size="12" fill="#374151">&#9633;</text>
+  <text x="544" y="524" font-size="12" fill="#374151">Apps</text>
+
+  <text x="524" y="548" font-size="12" fill="#374151">&#9633;</text>
+  <text x="544" y="548" font-size="12" fill="#374151">API Keys</text>
+
+  <text x="524" y="572" font-size="12" fill="#374151">&#9633;</text>
+  <text x="544" y="572" font-size="12" fill="#374151">AI Insights</text>
+
+  <text x="524" y="596" font-size="12" fill="#374151">&#9633;</text>
+  <text x="544" y="596" font-size="12" fill="#374151">Settings</text>
+
+  <!-- Content behind drawer (dimmed) -->
+  <rect x="760" y="160" width="140" height="560" rx="0" fill="#000000" opacity="0.2"/>
+  <text x="830" y="440" text-anchor="middle" font-size="11" fill="rgba(255,255,255,0.5)">Content</text>
+
+  <!-- Tablet annotations -->
+  <text x="500" y="756" font-size="10" fill="#9CA3AF" font-style="italic">Drawer: DrawerHeader (primary bg, logo + title) + OrgSwitcher + ListTile for each destination.</text>
+  <text x="500" y="772" font-size="10" fill="#9CA3AF" font-style="italic">Opened via hamburger icon in AppBar. Closes on item tap (Navigator.pop).</text>
+  <text x="500" y="788" font-size="10" fill="#9CA3AF" font-style="italic">All 13 items shown as ListTile with leading icon. Selected item highlighted with primary color.</text>
+
+  <!-- ==================== MOBILE: BottomNavigationBar + More Sheet ==================== -->
+  <text x="960" y="96" font-size="16" font-weight="bold" fill="#111827">Mobile — BottomNavigationBar + More</text>
+
+  <!-- Phone frame -->
+  <rect x="960" y="110" width="320" height="610" rx="20" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="2"/>
+
+  <!-- Content area -->
+  <rect x="972" y="122" width="296" height="520" rx="4" fill="#F8F9FA"/>
+  <text x="1120" y="380" text-anchor="middle" font-size="13" fill="#D1D5DB">Page Content</text>
+
+  <!-- Bottom nav bar -->
+  <rect x="972" y="648" width="296" height="60" fill="#FFFFFF"/>
+  <line x1="972" y1="648" x2="1268" y2="648" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- 5 tabs -->
+  <!-- Dashboard (selected) -->
+  <text x="1002" y="668" text-anchor="middle" font-size="16" fill="#5C6AC4">&#9632;</text>
+  <text x="1002" y="682" text-anchor="middle" font-size="8" fill="#5C6AC4">Dashboard</text>
+
+  <!-- Subs -->
+  <text x="1062" y="668" text-anchor="middle" font-size="16" fill="#6B7280">&#9633;</text>
+  <text x="1062" y="682" text-anchor="middle" font-size="8" fill="#6B7280">Subs</text>
+
+  <!-- Stores -->
+  <text x="1122" y="668" text-anchor="middle" font-size="16" fill="#6B7280">&#9633;</text>
+  <text x="1122" y="682" text-anchor="middle" font-size="8" fill="#6B7280">Stores</text>
+
+  <!-- Analytics -->
+  <text x="1182" y="668" text-anchor="middle" font-size="16" fill="#6B7280">&#9633;</text>
+  <text x="1182" y="682" text-anchor="middle" font-size="8" fill="#6B7280">Analytics</text>
+
+  <!-- More -->
+  <text x="1242" y="668" text-anchor="middle" font-size="16" fill="#6B7280">&#8943;</text>
+  <text x="1242" y="682" text-anchor="middle" font-size="8" fill="#6B7280">More</text>
+
+  <!-- More bottom sheet (overlay) -->
+  <rect x="1300" y="110" width="120" height="340" rx="12" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="1340" y="118" width="40" height="4" rx="2" fill="#D1D5DB"/>
+  <text x="1360" y="140" text-anchor="middle" font-size="10" font-weight="600" fill="#111827">More Sheet</text>
+
+  <text x="1316" y="162" font-size="9" fill="#374151">&#9633; Transactions</text>
+  <text x="1316" y="182" font-size="9" fill="#374151">&#9633; Events</text>
+  <text x="1316" y="202" font-size="9" fill="#374151">&#9633; Webhooks</text>
+  <text x="1316" y="222" font-size="9" fill="#374151">&#9633; Risk</text>
+  <text x="1316" y="242" font-size="9" fill="#374151">&#9633; Earnings</text>
+  <text x="1316" y="262" font-size="9" fill="#374151">&#9633; Apps</text>
+  <text x="1316" y="282" font-size="9" fill="#374151">&#9633; API Keys</text>
+  <text x="1316" y="302" font-size="9" fill="#374151">&#9633; AI Insights</text>
+  <text x="1316" y="322" font-size="9" fill="#374151">&#9633; Settings</text>
+
+  <!-- Arrow from More to sheet -->
+  <line x1="1268" y1="670" x2="1300" y2="340" stroke="#9CA3AF" stroke-width="1" stroke-dasharray="4,4"/>
+
+  <!-- Mobile annotations -->
+  <text x="960" y="756" font-size="10" fill="#9CA3AF" font-style="italic">Bottom nav: 4 primary tabs + "More". Branches: Dashboard(0), Subs(1), Stores(2), Analytics(7).</text>
+  <text x="960" y="772" font-size="10" fill="#9CA3AF" font-style="italic">"More" opens showModalBottomSheet with 9 remaining items as ListTile.</text>
+  <text x="960" y="788" font-size="10" fill="#9CA3AF" font-style="italic">If current branch is in _moreItems, "More" tab highlights with primary color.</text>
+  <text x="960" y="804" font-size="10" fill="#9CA3AF" font-style="italic">No OrgSwitcher on mobile bottom nav (only visible in drawer/rail).</text>
+
+  <!-- ==================== NAV ITEMS TABLE ==================== -->
+  <text x="40" y="846" font-size="16" font-weight="bold" fill="#111827">Navigation Items (13 destinations)</text>
+
+  <rect x="40" y="860" width="1360" height="28" fill="#F3F4F6"/>
+  <text x="60" y="879" font-size="10" font-weight="600" fill="#6B7280">#</text>
+  <text x="100" y="879" font-size="10" font-weight="600" fill="#6B7280">Label</text>
+  <text x="280" y="879" font-size="10" font-weight="600" fill="#6B7280">Icon (outlined)</text>
+  <text x="520" y="879" font-size="10" font-weight="600" fill="#6B7280">Icon (selected/filled)</text>
+  <text x="760" y="879" font-size="10" font-weight="600" fill="#6B7280">Route</text>
+  <text x="940" y="879" font-size="10" font-weight="600" fill="#6B7280">Mobile Bottom Nav</text>
+  <text x="1140" y="879" font-size="10" font-weight="600" fill="#6B7280">Mobile "More" Sheet</text>
+
+  <text x="60" y="903" font-size="10" fill="#111827">0</text>
+  <text x="100" y="903" font-size="10" fill="#111827">Dashboard</text>
+  <text x="280" y="903" font-size="10" fill="#6B7280">dashboard_outlined</text>
+  <text x="520" y="903" font-size="10" fill="#6B7280">dashboard</text>
+  <text x="760" y="903" font-size="10" fill="#6B7280">/dashboard</text>
+  <text x="940" y="903" font-size="10" fill="#059669">Tab 1</text>
+  <text x="1140" y="903" font-size="10" fill="#9CA3AF">—</text>
+
+  <text x="60" y="919" font-size="10" fill="#111827">1</text>
+  <text x="100" y="919" font-size="10" fill="#111827">Subscriptions</text>
+  <text x="280" y="919" font-size="10" fill="#6B7280">subscriptions_outlined</text>
+  <text x="520" y="919" font-size="10" fill="#6B7280">subscriptions</text>
+  <text x="760" y="919" font-size="10" fill="#6B7280">/subscriptions</text>
+  <text x="940" y="919" font-size="10" fill="#059669">Tab 2 ("Subs")</text>
+  <text x="1140" y="919" font-size="10" fill="#9CA3AF">—</text>
+
+  <text x="60" y="935" font-size="10" fill="#111827">2</text>
+  <text x="100" y="935" font-size="10" fill="#111827">Stores</text>
+  <text x="280" y="935" font-size="10" fill="#6B7280">store_outlined</text>
+  <text x="520" y="935" font-size="10" fill="#6B7280">store</text>
+  <text x="760" y="935" font-size="10" fill="#6B7280">/stores</text>
+  <text x="940" y="935" font-size="10" fill="#059669">Tab 3</text>
+  <text x="1140" y="935" font-size="10" fill="#9CA3AF">—</text>
+
+  <text x="60" y="951" font-size="10" fill="#111827">3</text>
+  <text x="100" y="951" font-size="10" fill="#111827">Transactions</text>
+  <text x="280" y="951" font-size="10" fill="#6B7280">receipt_long_outlined</text>
+  <text x="520" y="951" font-size="10" fill="#6B7280">receipt_long</text>
+  <text x="760" y="951" font-size="10" fill="#6B7280">/transactions</text>
+  <text x="940" y="951" font-size="10" fill="#9CA3AF">—</text>
+  <text x="1140" y="951" font-size="10" fill="#F59E0B">More</text>
+
+  <text x="60" y="967" font-size="10" fill="#111827">4</text>
+  <text x="100" y="967" font-size="10" fill="#111827">Events</text>
+  <text x="280" y="967" font-size="10" fill="#6B7280">event_outlined</text>
+  <text x="520" y="967" font-size="10" fill="#6B7280">event</text>
+  <text x="760" y="967" font-size="10" fill="#6B7280">/events</text>
+  <text x="940" y="967" font-size="10" fill="#9CA3AF">—</text>
+  <text x="1140" y="967" font-size="10" fill="#F59E0B">More</text>
+
+  <text x="60" y="983" font-size="10" fill="#111827">5</text>
+  <text x="100" y="983" font-size="10" fill="#111827">Webhooks</text>
+  <text x="280" y="983" font-size="10" fill="#6B7280">webhook_outlined</text>
+  <text x="520" y="983" font-size="10" fill="#6B7280">webhook</text>
+  <text x="760" y="983" font-size="10" fill="#6B7280">/webhooks</text>
+  <text x="940" y="983" font-size="10" fill="#9CA3AF">—</text>
+  <text x="1140" y="983" font-size="10" fill="#F59E0B">More</text>
+
+  <text x="60" y="999" font-size="10" fill="#111827">6</text>
+  <text x="100" y="999" font-size="10" fill="#111827">Risk</text>
+  <text x="280" y="999" font-size="10" fill="#6B7280">warning_amber_outlined</text>
+  <text x="520" y="999" font-size="10" fill="#6B7280">warning_amber</text>
+  <text x="760" y="999" font-size="10" fill="#6B7280">/risk</text>
+  <text x="940" y="999" font-size="10" fill="#9CA3AF">—</text>
+  <text x="1140" y="999" font-size="10" fill="#F59E0B">More</text>
+
+  <text x="60" y="1015" font-size="10" fill="#111827">7</text>
+  <text x="100" y="1015" font-size="10" fill="#111827">Analytics</text>
+  <text x="280" y="1015" font-size="10" fill="#6B7280">analytics_outlined</text>
+  <text x="520" y="1015" font-size="10" fill="#6B7280">analytics</text>
+  <text x="760" y="1015" font-size="10" fill="#6B7280">/analytics</text>
+  <text x="940" y="1015" font-size="10" fill="#059669">Tab 4</text>
+  <text x="1140" y="1015" font-size="10" fill="#9CA3AF">—</text>
+
+  <text x="60" y="1031" font-size="10" fill="#111827">8–12</text>
+  <text x="100" y="1031" font-size="10" fill="#111827">Earnings, Apps, API Keys, AI Insights, Settings</text>
+  <text x="760" y="1031" font-size="10" fill="#6B7280">/earnings, /apps, /api-keys, /insights, /settings</text>
+  <text x="940" y="1031" font-size="10" fill="#9CA3AF">—</text>
+  <text x="1140" y="1031" font-size="10" fill="#F59E0B">More</text>
+
+  <!-- ==================== ANNOTATIONS ==================== -->
+  <rect x="40" y="1048" width="1360" height="44" rx="6" fill="#FEF3C7" stroke="#FDE68A" stroke-width="1"/>
+  <text x="60" y="1066" font-size="11" fill="#92400E">AppShell uses StatefulNavigationShell (GoRouter). NavigationRefreshNotifier.triggerRefreshCheck() called on every branch switch.</text>
+  <text x="60" y="1082" font-size="11" fill="#92400E">OrgSwitcher hidden when single org (hasMultipleOrgs == false). Service unavailable state replaces content with LgServiceUnavailable widget.</text>
+</svg>

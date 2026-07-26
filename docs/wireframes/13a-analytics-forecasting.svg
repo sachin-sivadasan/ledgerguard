@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="700" fill="#F8F9FA"/>
+
+  <!-- Header -->
+  <text x="40" y="36" font-size="18" font-weight="bold" fill="#111827">Analytics — Forecasting Tab</text>
+  <text x="40" y="56" font-size="12" fill="#6B7280">Tab 2 of 5 in Analytics screen</text>
+
+  <!-- Tab Bar -->
+  <line x1="40" y1="80" x2="1160" y2="80" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="40" y="74" font-size="13" fill="#6B7280">Revenue</text>
+  <text x="120" y="74" font-size="13" font-weight="600" fill="#5C6AC4">Forecasting</text>
+  <line x1="120" y1="80" x2="206" y2="80" stroke="#5C6AC4" stroke-width="2"/>
+  <text x="230" y="74" font-size="13" fill="#6B7280">Profit &amp; Expense</text>
+  <text x="370" y="74" font-size="13" fill="#6B7280">Cohorts</text>
+  <text x="440" y="74" font-size="13" fill="#6B7280">Multi-App</text>
+
+  <!-- Model Selector -->
+  <text x="40" y="112" font-size="13" font-weight="500" fill="#111827">Model:</text>
+  <rect x="90" y="96" width="200" height="30" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="92" y="98" width="98" height="26" rx="5" fill="#5C6AC4"/>
+  <text x="120" y="116" font-size="12" font-weight="500" fill="#FFFFFF">Linear</text>
+  <text x="220" y="116" font-size="12" fill="#6B7280">Exponential</text>
+  <text x="320" y="116" font-size="11" fill="#9CA3AF">12 data points</text>
+
+  <!-- Summary Cards (side-by-side) -->
+  <rect x="40" y="140" width="360" height="80" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="60" y="164" font-size="12" fill="#6B7280">Next Month Expected MRR</text>
+  <text x="60" y="196" font-size="24" font-weight="bold" fill="#111827">$13,200</text>
+  <text x="60" y="210" font-size="11" fill="#6B7280">Range: $12,400 – $14,000</text>
+
+  <rect x="420" y="140" width="360" height="80" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="440" y="164" font-size="12" fill="#6B7280">12-Month Projected MRR</text>
+  <text x="440" y="196" font-size="24" font-weight="bold" fill="#111827">$18,500</text>
+  <text x="440" y="210" font-size="11" fill="#6B7280">Range: $15,200 – $22,800</text>
+
+  <!-- Forecast Chart -->
+  <rect x="40" y="240" width="1120" height="340" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="60" y="268" font-size="14" font-weight="600" fill="#111827">12-Month Revenue Forecast</text>
+
+  <!-- Confidence band (shaded area) -->
+  <polygon points="100,520 200,510 300,490 400,470 500,450 600,430 700,410 800,390 900,360 1000,340 1100,310 1100,380 1000,400 900,420 800,440 700,460 600,470 500,480 400,500 300,510 200,520 100,530"
+           fill="#5C6AC4" opacity="0.08"/>
+
+  <!-- Optimistic line (dashed green) -->
+  <polyline points="100,510 200,490 300,470 400,450 500,430 600,410 700,390 800,370 900,340 1000,320 1100,290"
+            fill="none" stroke="#059669" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.6"/>
+
+  <!-- Expected line (solid primary) -->
+  <polyline points="100,520 200,505 300,485 400,465 500,445 600,430 700,415 800,400 900,380 1000,360 1100,340"
+            fill="none" stroke="#5C6AC4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Pessimistic line (dashed red) -->
+  <polyline points="100,530 200,520 300,510 400,500 500,485 600,470 700,455 800,440 900,420 1000,400 1100,380"
+            fill="none" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.6"/>
+
+  <!-- X-axis labels -->
+  <text x="100" y="558" font-size="10" fill="#9CA3AF" text-anchor="middle">Jun</text>
+  <text x="200" y="558" font-size="10" fill="#9CA3AF" text-anchor="middle">Jul</text>
+  <text x="300" y="558" font-size="10" fill="#9CA3AF" text-anchor="middle">Aug</text>
+  <text x="400" y="558" font-size="10" fill="#9CA3AF" text-anchor="middle">Sep</text>
+  <text x="500" y="558" font-size="10" fill="#9CA3AF" text-anchor="middle">Oct</text>
+  <text x="600" y="558" font-size="10" fill="#9CA3AF" text-anchor="middle">Nov</text>
+  <text x="700" y="558" font-size="10" fill="#9CA3AF" text-anchor="middle">Dec</text>
+  <text x="800" y="558" font-size="10" fill="#9CA3AF" text-anchor="middle">Jan</text>
+  <text x="900" y="558" font-size="10" fill="#9CA3AF" text-anchor="middle">Feb</text>
+  <text x="1000" y="558" font-size="10" fill="#9CA3AF" text-anchor="middle">Mar</text>
+  <text x="1100" y="558" font-size="10" fill="#9CA3AF" text-anchor="middle">Apr</text>
+
+  <!-- Legend -->
+  <circle cx="60" cy="596" r="4" fill="#059669"/>
+  <text x="70" y="600" font-size="11" fill="#6B7280">Optimistic</text>
+  <circle cx="160" cy="596" r="4" fill="#5C6AC4"/>
+  <text x="170" y="600" font-size="11" fill="#6B7280">Expected</text>
+  <circle cx="250" cy="596" r="4" fill="#DC2626"/>
+  <text x="260" y="600" font-size="11" fill="#6B7280">Pessimistic</text>
+
+  <!-- Annotations -->
+  <rect x="40" y="628" width="1120" height="72" rx="6" fill="#FEF3C7" stroke="#FDE68A" stroke-width="1"/>
+  <text x="60" y="648" font-size="11" fill="#92400E">Features: Linear/Exponential model toggle (SegmentedButton), confidence band between optimistic/pessimistic lines,</text>
+  <text x="60" y="664" font-size="11" fill="#92400E">responsive summary cards (stacked on mobile). Empty state shown when forecast data insufficient. Uses fl_chart LineChart.</text>
+  <text x="60" y="680" font-size="11" fill="#92400E">Exponential model: same layout, steeper curve, wider confidence band, higher projected values. API returns different points via model param.</text>
+  <text x="60" y="696" font-size="11" fill="#92400E">Toggle calls provider.setForecastModel() → re-fetches from API. "N data points" label shown from forecastResult.dataPointsUsed.</text>
+</svg>

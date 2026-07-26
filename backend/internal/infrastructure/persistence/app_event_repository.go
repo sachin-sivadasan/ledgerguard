@@ -93,7 +93,16 @@ func (r *PostgresAppEventRepository) FindByAppIDPaginated(ctx context.Context, a
 		argNum++
 	}
 
-	if filters.StoreDomain != "" {
+	if len(filters.ShopGIDs) > 0 {
+		placeholders := make([]string, len(filters.ShopGIDs))
+		for i, gid := range filters.ShopGIDs {
+			placeholders[i] = fmt.Sprintf("$%d", argNum)
+			args = append(args, gid)
+			argNum++
+		}
+		conditions = append(conditions, fmt.Sprintf("shopify_shop_gid IN (%s)", strings.Join(placeholders, ", ")))
+	} else if filters.StoreDomain != "" {
+		// Fallback: ILIKE match if no GIDs resolved (e.g., no subscriptions yet)
 		conditions = append(conditions, fmt.Sprintf("shopify_shop_gid ILIKE $%d", argNum))
 		args = append(args, "%"+filters.StoreDomain+"%")
 		argNum++

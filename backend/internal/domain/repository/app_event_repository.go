@@ -11,7 +11,8 @@ import (
 // EventFilters holds pagination and filter params for events.
 type EventFilters struct {
 	EventType   string    // optional filter
-	StoreDomain string    // optional ILIKE filter on shopify_shop_gid
+	StoreDomain string    // optional: used by handler to resolve GIDs before query
+	ShopGIDs    []string  // optional: filter by shopify_shop_gid IN (...)
 	Since       time.Time // optional: only events after this time
 	Page        int
 	PageSize    int

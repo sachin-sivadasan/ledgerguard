@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="700" fill="#F8F9FA"/>
+
+  <!-- Header -->
+  <text x="40" y="36" font-size="18" font-weight="bold" fill="#111827">Analytics — Profit &amp; Expense Tab</text>
+  <text x="40" y="56" font-size="12" fill="#6B7280">Tab 3 of 5 in Analytics screen</text>
+
+  <!-- Tab Bar -->
+  <line x1="40" y1="80" x2="1160" y2="80" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="40" y="74" font-size="13" fill="#6B7280">Revenue</text>
+  <text x="120" y="74" font-size="13" fill="#6B7280">Forecasting</text>
+  <text x="230" y="74" font-size="13" font-weight="600" fill="#5C6AC4">Profit &amp; Expense</text>
+  <line x1="230" y1="80" x2="350" y2="80" stroke="#5C6AC4" stroke-width="2"/>
+  <text x="370" y="74" font-size="13" fill="#6B7280">Cohorts</text>
+  <text x="440" y="74" font-size="13" fill="#6B7280">Multi-App</text>
+
+  <!-- Summary Cards -->
+  <rect x="40" y="100" width="360" height="70" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="60" y="124" font-size="12" fill="#6B7280">Average Profit Margin</text>
+  <text x="60" y="152" font-size="24" font-weight="bold" fill="#111827">72.3%</text>
+
+  <rect x="420" y="100" width="360" height="70" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="440" y="124" font-size="12" fill="#6B7280">This Month Net Profit</text>
+  <text x="440" y="152" font-size="24" font-weight="bold" fill="#111827">$8,640</text>
+
+  <!-- Monthly P&L Stacked Bar Chart -->
+  <rect x="40" y="190" width="1120" height="280" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="60" y="218" font-size="14" font-weight="600" fill="#111827">Monthly P&amp;L</text>
+
+  <!-- Stacked bars (simplified representation) -->
+  <!-- Bar 1: Jan -->
+  <rect x="120" y="310" width="30" height="90" rx="2" fill="#059669"/>
+  <rect x="120" y="290" width="30" height="20" rx="0" fill="#F59E0B"/>
+  <rect x="120" y="278" width="30" height="12" rx="2" fill="rgba(220,38,38,0.6)"/>
+  <text x="135" y="420" text-anchor="middle" font-size="10" fill="#9CA3AF">Jan</text>
+
+  <!-- Bar 2: Feb -->
+  <rect x="220" y="300" width="30" height="100" rx="2" fill="#059669"/>
+  <rect x="220" y="280" width="30" height="20" rx="0" fill="#F59E0B"/>
+  <rect x="220" y="268" width="30" height="12" rx="2" fill="rgba(220,38,38,0.6)"/>
+  <text x="235" y="420" text-anchor="middle" font-size="10" fill="#9CA3AF">Feb</text>
+
+  <!-- Bar 3: Mar -->
+  <rect x="320" y="290" width="30" height="110" rx="2" fill="#059669"/>
+  <rect x="320" y="270" width="30" height="20" rx="0" fill="#F59E0B"/>
+  <rect x="320" y="256" width="30" height="14" rx="2" fill="rgba(220,38,38,0.6)"/>
+  <text x="335" y="420" text-anchor="middle" font-size="10" fill="#9CA3AF">Mar</text>
+
+  <!-- Bar 4: Apr -->
+  <rect x="420" y="280" width="30" height="120" rx="2" fill="#059669"/>
+  <rect x="420" y="260" width="30" height="20" rx="0" fill="#F59E0B"/>
+  <rect x="420" y="246" width="30" height="14" rx="2" fill="rgba(220,38,38,0.6)"/>
+  <text x="435" y="420" text-anchor="middle" font-size="10" fill="#9CA3AF">Apr</text>
+
+  <!-- Bar 5: May -->
+  <rect x="520" y="270" width="30" height="130" rx="2" fill="#059669"/>
+  <rect x="520" y="250" width="30" height="20" rx="0" fill="#F59E0B"/>
+  <rect x="520" y="236" width="30" height="14" rx="2" fill="rgba(220,38,38,0.6)"/>
+  <text x="535" y="420" text-anchor="middle" font-size="10" fill="#9CA3AF">May</text>
+
+  <!-- Legend -->
+  <circle cx="60" cy="448" r="4" fill="#059669"/>
+  <text x="70" y="452" font-size="11" fill="#6B7280">Net Profit</text>
+  <circle cx="160" cy="448" r="4" fill="#F59E0B"/>
+  <text x="170" y="452" font-size="11" fill="#6B7280">Shopify 20%</text>
+  <circle cx="270" cy="448" r="4" fill="rgba(220,38,38,0.6)"/>
+  <text x="280" y="452" font-size="11" fill="#6B7280">Infra + Fees</text>
+
+  <!-- Expense Table -->
+  <rect x="40" y="476" width="1120" height="160" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="60" y="500" font-size="14" font-weight="600" fill="#111827">Expense Details</text>
+
+  <!-- Table Header -->
+  <rect x="60" y="510" width="1080" height="28" fill="#F3F4F6"/>
+  <text x="80" y="529" font-size="11" font-weight="600" fill="#6B7280">Month</text>
+  <text x="260" y="529" font-size="11" font-weight="600" fill="#6B7280">Gross</text>
+  <text x="440" y="529" font-size="11" font-weight="600" fill="#6B7280">Shopify Cut</text>
+  <text x="620" y="529" font-size="11" font-weight="600" fill="#6B7280">Infra</text>
+  <text x="800" y="529" font-size="11" font-weight="600" fill="#6B7280">Fees</text>
+  <text x="980" y="529" font-size="11" font-weight="600" fill="#6B7280">Net Profit</text>
+
+  <!-- Row 1 -->
+  <text x="80" y="558" font-size="12" fill="#111827">May</text>
+  <text x="260" y="558" font-size="12" fill="#111827">$14,200</text>
+  <text x="440" y="558" font-size="12" fill="#111827">$2,840</text>
+  <text x="620" y="558" font-size="12" fill="#111827">$450</text>
+  <text x="800" y="558" font-size="12" fill="#111827">$412</text>
+  <text x="980" y="558" font-size="12" fill="#111827">$10,498</text>
+
+  <!-- Row 2 -->
+  <text x="80" y="582" font-size="12" fill="#111827">Apr</text>
+  <text x="260" y="582" font-size="12" fill="#111827">$12,800</text>
+  <text x="440" y="582" font-size="12" fill="#111827">$2,560</text>
+  <text x="620" y="582" font-size="12" fill="#111827">$450</text>
+  <text x="800" y="582" font-size="12" fill="#111827">$371</text>
+  <text x="980" y="582" font-size="12" fill="#111827">$9,419</text>
+
+  <!-- Row 3 -->
+  <text x="80" y="606" font-size="12" fill="#111827">Mar</text>
+  <text x="260" y="606" font-size="12" fill="#111827">$11,500</text>
+  <text x="440" y="606" font-size="12" fill="#111827">$2,300</text>
+  <text x="620" y="606" font-size="12" fill="#111827">$450</text>
+  <text x="800" y="606" font-size="12" fill="#111827">$334</text>
+  <text x="980" y="606" font-size="12" fill="#111827">$8,416</text>
+
+  <!-- Annotations -->
+  <rect x="40" y="648" width="1120" height="36" rx="6" fill="#FEF3C7" stroke="#FDE68A" stroke-width="1"/>
+  <text x="60" y="670" font-size="11" fill="#92400E">Stacked bar chart (fl_chart BarChart with rodStackItems). Table scrollable horizontally on mobile. Responsive summary cards.</text>
+</svg>

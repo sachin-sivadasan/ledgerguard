@@ -1,0 +1,438 @@
+@startuml
+title 44. AI Industry Ecosystem — Full Map of Companies, Tools, APIs & Categories
+caption The modern AI landscape: from silicon to end-user applications (2024-2025)
+
+top to bottom direction
+
+skinparam componentStyle rectangle
+skinparam packageStyle frame
+skinparam nodesep 50
+skinparam ranksep 70
+skinparam defaultFontSize 10
+skinparam noteFontSize 8
+skinparam packageFontSize 11
+skinparam packageFontStyle bold
+
+legend top right
+  |= Color |= Flow Type |
+  | <color:#5C6AC4>——></color> | API / SDK call |
+  | <color:#059669>——></color> | Money flow |
+  | <color:#D97706>--></color> | Data / model sync |
+  | <color:#DC2626>..></color> | Auth / API key |
+  | <color:#6B7280>--></color> | Inference request |
+  |<#DBEAFE> Blue |= Cloud / Infra |
+  |<#FEF3C7> Yellow |= Model Providers |
+  |<#DCFCE7> Green |= Dev Tools |
+  |<#FFF0F0> Pink |= Applications |
+  |<#F3E8FF> Purple |= Hardware |
+endlegend
+
+' ══════════════════════════════════════════════
+'  ROW 1 — ACTORS
+' ══════════════════════════════════════════════
+
+package "Research & Academia" as pkg_research #FFFFF0 {
+  actor "AI Researcher\n(PhD, lab scientist)" as researcher
+  actor "Data Scientist\n(analytics + ML)" as data_scientist
+  actor "PhD Student /\nPostdoc" as phd_student
+}
+
+package "Builders" as pkg_builders #FFFFF0 {
+  actor "ML Engineer\n(training, fine-tuning)" as ml_engineer
+  actor "AI Engineer\n(apps, RAG, agents)" as ai_engineer
+  actor "Full-Stack Dev\n(AI-integrated apps)" as fullstack_dev
+  actor "MLOps / Platform\nEngineer" as mlops_engineer
+}
+
+package "Business & Strategy" as pkg_business #FFFFF0 {
+  actor "Product Manager\n(AI features)" as product_mgr
+  actor "CTO / CIO\n(AI strategy)" as cto
+  actor "Startup Founder\n(AI-native company)" as founder
+  actor "VC / Investor\n(AI portfolio)" as investor
+}
+
+package "End Users" as pkg_users #FFFFF0 {
+  actor "Knowledge Worker\n(office, enterprise)" as knowledge_worker
+  actor "Consumer\n(ChatGPT, Claude, etc.)" as consumer
+  actor "Creative Professional\n(design, music, video)" as creative_pro
+  actor "Student /\nEducator" as student
+}
+
+pkg_research -[hidden]right- pkg_builders
+pkg_builders -[hidden]right- pkg_business
+pkg_business -[hidden]right- pkg_users
+
+' ══════════════════════════════════════════════
+'  ROW 2 — FOUNDATION MODEL PROVIDERS
+' ══════════════════════════════════════════════
+
+package "Large Language Models (LLMs)" as pkg_llm #FEF3C7 {
+  component "OpenAI\n(GPT-4o, o3, o4-mini)" as openai
+  component "Anthropic\n(Claude 4, Sonnet,\nHaiku, Opus)" as anthropic
+  component "Google DeepMind\n(Gemini 2.5 Pro/Flash)" as google_ai
+  component "Meta AI\n(Llama 4, open-weight)" as meta_ai
+  component "Mistral AI\n(Mistral Large,\nCodestral, open-weight)" as mistral
+  component "Cohere\n(Command R+,\nEnterprise NLP)" as cohere
+  component "xAI\n(Grok 3)" as xai
+  component "Amazon\n(Nova, Titan)" as amazon_ai
+}
+
+package "Image, Video & 3D Generation" as pkg_visual #FEF3C7 {
+  component "Midjourney\n(image gen)" as midjourney
+  component "Stability AI\n(Stable Diffusion,\nopen-source)" as stability
+  component "Runway\n(Gen-3, video gen)" as runway
+  component "OpenAI\n(DALL-E 3, Sora\nvideo gen)" as dalle
+  component "Pika\n(video gen)" as pika
+  component "Flux / Black\nForest Labs" as flux
+}
+
+package "Audio, Speech & Music" as pkg_audio #FEF3C7 {
+  component "ElevenLabs\n(voice clone, TTS)" as elevenlabs
+  component "OpenAI Whisper\n(speech-to-text)" as whisper
+  component "Suno\n(AI music gen)" as suno
+  component "AssemblyAI\n(speech analytics)" as assemblyai
+  component "Udio\n(music gen)" as udio
+}
+
+package "Embedding & Specialized Models" as pkg_specialized #FEF3C7 {
+  component "Voyage AI\n(embeddings)" as voyage
+  component "Jina AI\n(embeddings, search)" as jina
+  component "Inflection\n(Pi, personal AI)" as inflection
+  component "AI21 Labs\n(Jamba, enterprise)" as ai21
+  component "Reka AI\n(multimodal)" as reka
+}
+
+pkg_llm -[hidden]right- pkg_visual
+pkg_visual -[hidden]right- pkg_audio
+pkg_audio -[hidden]right- pkg_specialized
+
+' ══════════════════════════════════════════════
+'  ROW 3 — DEVELOPER TOOLS & PLATFORMS
+' ══════════════════════════════════════════════
+
+package "Model APIs & Gateways" as pkg_model_apis #DCFCE7 {
+  component "OpenAI API\n(Chat, Assistants,\nFunctions)" as openai_api
+  component "Anthropic API\n(Messages, Tools,\nBatch)" as anthropic_api
+  component "Google AI Studio\n/ Vertex AI API" as google_api
+  component "AWS Bedrock\n(multi-model gateway)" as bedrock_api
+  component "Azure OpenAI\n(managed GPT)" as azure_openai
+  component "Groq API\n(ultra-fast inference)" as groq_api
+  component "Together AI\n(open-model hosting)" as together_api
+  component "Replicate\n(model marketplace)" as replicate
+  component "OpenRouter\n(multi-provider\nrouter)" as openrouter
+}
+
+package "AI Frameworks & Orchestration" as pkg_frameworks #DCFCE7 {
+  component "LangChain\n(chains, agents,\ntools)" as langchain
+  component "LlamaIndex\n(RAG, data ingestion)" as llamaindex
+  component "CrewAI\n(multi-agent\nframework)" as crewai
+  component "AutoGen\n(Microsoft,\nmulti-agent)" as autogen
+  component "Semantic Kernel\n(Microsoft, C#/.NET)" as semantic_kernel
+  component "Haystack\n(deepset, RAG\npipelines)" as haystack
+  component "DSPy\n(Stanford, prompt\noptimization)" as dspy
+  component "Vercel AI SDK\n(streaming, React)" as vercel_ai
+}
+
+package "Vector Databases" as pkg_vectordb #DCFCE7 {
+  component "Pinecone\n(managed, serverless)" as pinecone
+  component "Weaviate\n(hybrid search)" as weaviate
+  component "Chroma\n(open-source,\nembedded)" as chroma
+  component "Qdrant\n(Rust, high-perf)" as qdrant
+  component "Milvus / Zilliz\n(distributed)" as milvus
+  component "pgvector\n(Postgres extension)" as pgvector
+}
+
+package "MLOps & Experiment Tracking" as pkg_mlops #DCFCE7 {
+  component "Weights & Biases\n(experiment tracking,\neval)" as wandb
+  component "MLflow\n(open-source,\nDatabricks)" as mlflow
+  component "Neptune.ai\n(experiment mgmt)" as neptune
+  component "Comet ML\n(model monitoring)" as comet
+  component "DVC\n(data version\ncontrol)" as dvc
+}
+
+package "Data, Labeling & Fine-tuning" as pkg_data #DCFCE7 {
+  component "Scale AI\n(data labeling,\nRLHF)" as scale_ai
+  component "Labelbox\n(annotation platform)" as labelbox
+  component "Snorkel AI\n(programmatic\nlabeling)" as snorkel
+  component "Hugging Face\n(model hub, datasets,\ntransformers)" as huggingface
+  component "Unsloth\n(fast fine-tuning)" as unsloth
+  component "Axolotl\n(fine-tuning\ntoolkit)" as axolotl
+}
+
+pkg_model_apis -[hidden]right- pkg_frameworks
+pkg_frameworks -[hidden]right- pkg_vectordb
+pkg_vectordb -[hidden]right- pkg_mlops
+pkg_mlops -[hidden]right- pkg_data
+
+' ══════════════════════════════════════════════
+'  ROW 4 — APPLICATION CATEGORIES
+' ══════════════════════════════════════════════
+
+package "Coding & Dev Tools" as pkg_coding #FFF0F0 {
+  component "GitHub Copilot\n(inline completion,\nchat, workspace)" as copilot
+  component "Cursor\n(AI-native IDE)" as cursor
+  component "Claude Code\n(Anthropic CLI\nagent)" as claude_code
+  component "Windsurf\n(Codeium IDE)" as windsurf
+  component "Replit\n(cloud IDE + AI)" as replit
+  component "Devin\n(Cognition,\nautonomous SWE)" as devin
+  component "Amazon Q\nDeveloper" as amazon_q
+  component "Tabnine\n(code completion)" as tabnine
+}
+
+package "AI Search & Research" as pkg_search #FFF0F0 {
+  component "Perplexity\n(AI-powered search)" as perplexity
+  component "You.com\n(AI search engine)" as you_com
+  component "Elicit\n(research assistant)" as elicit
+  component "Consensus\n(scientific search)" as consensus
+  component "Google AI\nOverviews" as google_search
+  component "Bing Copilot\n(AI search)" as bing_ai
+}
+
+package "Enterprise AI & Copilots" as pkg_enterprise #FFF0F0 {
+  component "Microsoft 365\nCopilot" as m365_copilot
+  component "Salesforce\nEinstein / Agentforce" as salesforce_ai
+  component "ServiceNow\nNow Assist" as servicenow_ai
+  component "Notion AI" as notion_ai
+  component "Slack AI" as slack_ai
+  component "Databricks\n(Mosaic, lakehouse AI)" as databricks
+  component "Snowflake\nCortex AI" as snowflake_ai
+  component "Palantir AIP\n(govt, defense)" as palantir
+}
+
+package "Creative & Design AI" as pkg_creative #FFF0F0 {
+  component "Canva AI\n(Magic Design)" as canva_ai
+  component "Adobe Firefly\n(image gen, Photoshop)" as adobe_firefly
+  component "Figma AI\n(UI design assist)" as figma_ai
+  component "Descript\n(video/audio editing)" as descript
+  component "Synthesia\n(AI video avatars)" as synthesia
+}
+
+package "Writing & Content" as pkg_writing #FFF0F0 {
+  component "Jasper\n(marketing copy)" as jasper
+  component "Copy.ai\n(GTM AI)" as copy_ai
+  component "Grammarly\n(writing assistant)" as grammarly
+  component "Writer\n(enterprise content)" as writer_ai
+}
+
+package "Chatbots & Consumer AI" as pkg_chatbots #FFF0F0 {
+  component "ChatGPT\n(OpenAI, 200M+ users)" as chatgpt
+  component "Claude.ai\n(Anthropic)" as claude_ai
+  component "Gemini App\n(Google)" as gemini_app
+  component "Character.ai\n(roleplay, companions)" as character_ai
+  component "Pi\n(Inflection,\npersonal AI)" as pi_app
+  component "Poe\n(Quora, multi-model\naggregator)" as poe
+  component "OpenClaw\n(personal AI assistant)" as openclaw
+}
+
+pkg_coding -[hidden]right- pkg_search
+pkg_search -[hidden]right- pkg_enterprise
+pkg_enterprise -[hidden]right- pkg_creative
+pkg_creative -[hidden]right- pkg_writing
+pkg_writing -[hidden]right- pkg_chatbots
+
+' ══════════════════════════════════════════════
+'  ROW 5 — INFRASTRUCTURE
+' ══════════════════════════════════════════════
+
+package "Cloud AI Platforms" as pkg_cloud #DBEAFE {
+  component "AWS\n(SageMaker, Bedrock,\nTrainium, Inferentia)" as aws
+  component "Google Cloud\n(Vertex AI, TPU pods,\nAI Platform)" as gcp
+  component "Microsoft Azure\n(Azure AI, OpenAI\nService, AI Studio)" as azure
+  component "Oracle Cloud\n(OCI AI)" as oracle_cloud
+  component "CoreWeave\n(GPU cloud,\nNVIDIA partner)" as coreweave
+  component "Lambda Labs\n(GPU cloud for ML)" as lambda_labs
+}
+
+package "AI Hardware & Chips" as pkg_hardware #F3E8FF {
+  component "NVIDIA\n(H100, B200, GB200,\nCUDA ecosystem)" as nvidia
+  component "AMD\n(MI300X, ROCm)" as amd
+  component "Google TPUs\n(v5e, v6, Trillium)" as tpus
+  component "Intel\n(Gaudi 3, Habana)" as intel
+  component "Cerebras\n(wafer-scale chip)" as cerebras
+  component "Groq\n(LPU, ultra-low\nlatency inference)" as groq_hw
+  component "Apple Silicon\n(M4, Neural Engine,\non-device AI)" as apple_silicon
+  component "Qualcomm\n(Snapdragon, edge AI)" as qualcomm
+}
+
+package "Data & Model Hubs" as pkg_hubs #DBEAFE {
+  component "Hugging Face Hub\n(500K+ models,\n100K+ datasets)" as hf_hub
+  component "Kaggle\n(datasets,\ncompetitions)" as kaggle
+  component "GitHub Models\n(model playground)" as github_models
+  component "NVIDIA NGC\n(containers,\npretrained models)" as ngc
+  component "Papers with Code\n(benchmarks,\nSOTA tracking)" as papers_code
+}
+
+package "Evaluation & Safety" as pkg_safety #DBEAFE {
+  component "LMSYS Chatbot Arena\n(crowd-sourced eval)" as lmsys
+  component "HELM / Stanford\n(holistic eval)" as helm
+  component "Anthropic RSP\n(responsible scaling)" as rsp
+  component "NIST AI RMF\n(risk framework)" as nist
+  component "EU AI Act\n(regulation)" as eu_ai_act
+}
+
+pkg_cloud -[hidden]right- pkg_hardware
+pkg_hardware -[hidden]right- pkg_hubs
+pkg_hubs -[hidden]right- pkg_safety
+
+' ══════════════════════════════════════════════
+'  ROW 6 — INDUSTRY VERTICALS
+' ══════════════════════════════════════════════
+
+package "Healthcare & Biotech" as pkg_health #F0FFF0 {
+  component "Med-PaLM / AMIE\n(Google, clinical)" as med_palm
+  component "AlphaFold\n(DeepMind, protein)" as alphafold
+  component "Recursion Pharma\n(drug discovery)" as recursion
+  component "PathAI\n(pathology)" as pathai
+}
+
+package "Finance & Fintech" as pkg_finance #F0FFF0 {
+  component "Bloomberg GPT\n(financial NLP)" as bloomberg_gpt
+  component "Kensho / S&P\n(analytics)" as kensho
+  component "Stripe Radar\n(fraud detection)" as stripe_radar
+  component "Alphasense\n(market intel)" as alphasense
+}
+
+package "Legal" as pkg_legal #F0FFF0 {
+  component "Harvey AI\n(legal research)" as harvey
+  component "CoCounsel\n(Thomson Reuters)" as cocounsel
+  component "Casetext\n(brief analysis)" as casetext
+}
+
+package "Robotics & Autonomous" as pkg_robotics #F0FFF0 {
+  component "Tesla FSD\n(self-driving)" as tesla_fsd
+  component "Waymo\n(autonomous taxi)" as waymo
+  component "Figure AI\n(humanoid robots)" as figure
+  component "Boston Dynamics\n(Atlas, Spot)" as boston_dynamics
+}
+
+package "Cybersecurity" as pkg_security #F0FFF0 {
+  component "CrowdStrike\nCharlotte AI" as crowdstrike
+  component "Darktrace\n(anomaly detection)" as darktrace
+  component "SentinelOne\nPurple AI" as sentinelone
+}
+
+pkg_health -[hidden]right- pkg_finance
+pkg_finance -[hidden]right- pkg_legal
+pkg_legal -[hidden]right- pkg_robotics
+pkg_robotics -[hidden]right- pkg_security
+
+' ══════════════════════════════════════════════
+'  ARROWS (all after declarations)
+' ══════════════════════════════════════════════
+
+' ── Row 1 → Row 2: Actors → Model Providers ──
+pkg_research -[#5C6AC4]-> pkg_llm : research,\ntrain models
+pkg_research -[#5C6AC4]-> pkg_specialized : embeddings,\nnew architectures
+pkg_builders -[#5C6AC4]-> pkg_llm : build on top\nof foundation models
+pkg_builders -[#5C6AC4]-> pkg_visual : integrate image/video
+pkg_business -[#059669]-> pkg_llm : license / subscribe
+
+' ── Row 2 → Row 3: Models → Dev Tools ──
+pkg_llm -[#5C6AC4]-> pkg_model_apis : serve via APIs
+pkg_visual -[#5C6AC4]-> pkg_model_apis : image/video APIs
+pkg_audio -[#5C6AC4]-> pkg_model_apis : speech/music APIs
+pkg_model_apis -[#D97706,dashed]-> pkg_frameworks : consumed by\norchestration
+pkg_frameworks -[#D97706,dashed]-> pkg_vectordb : RAG retrieval
+pkg_data -[#D97706,dashed]-> pkg_llm : fine-tuned models,\nRLHF data
+pkg_mlops -[#D97706,dashed]-> pkg_model_apis : deploy & monitor
+
+' ── Row 3 → Row 4: Dev Tools → Applications ──
+pkg_model_apis -[#6B7280,dashed]-> pkg_coding : powers code\ncompletion & agents
+pkg_model_apis -[#6B7280,dashed]-> pkg_search : powers AI search
+pkg_model_apis -[#6B7280,dashed]-> pkg_enterprise : powers enterprise\ncopilots
+pkg_model_apis -[#6B7280,dashed]-> pkg_creative : powers design\n& content gen
+pkg_model_apis -[#6B7280,dashed]-> pkg_chatbots : powers consumer\nchat interfaces
+pkg_frameworks -[#D97706,dashed]-> pkg_enterprise : RAG, agents\nfor enterprise
+
+' ── Row 4 → Row 1: Apps → End Users ──
+pkg_coding -[#5C6AC4]-> pkg_builders : dev productivity
+pkg_search -[#5C6AC4]-> pkg_users : search answers
+pkg_enterprise -[#5C6AC4]-> pkg_business : business workflows
+pkg_chatbots -[#5C6AC4]-> pkg_users : consumer AI access
+pkg_creative -[#5C6AC4]-> pkg_users : creative tools
+
+' ── Row 5 → Row 2: Infra → Models ──
+pkg_cloud -[#5C6AC4]-> pkg_llm : training compute,\nserving infrastructure
+pkg_hardware -[#D97706,dashed]-> pkg_cloud : GPUs, TPUs,\naccelerators
+pkg_hubs -[#D97706,dashed]-> pkg_data : open models,\ndatasets
+pkg_hubs -[#D97706,dashed]-> pkg_frameworks : pretrained models
+
+' ── Row 5 → Row 3: Infra → Dev Tools ──
+pkg_cloud -[#5C6AC4]-> pkg_model_apis : managed model\nhosting
+
+' ── Row 6: Verticals ← Applications ──
+pkg_enterprise -[#6B7280,dashed]-> pkg_finance : financial AI
+pkg_enterprise -[#6B7280,dashed]-> pkg_health : clinical AI
+pkg_coding -[#6B7280,dashed]-> pkg_security : security automation
+
+' ── Money flows ──
+consumer -[#059669]-> chatgpt : $20/mo Plus,\n$200/mo Pro
+consumer -[#059669]-> claude_ai : $20/mo Pro,\n$100/mo Max
+knowledge_worker -[#059669]-> m365_copilot : $30/user/mo
+ai_engineer -[#059669]-> openai_api : pay-per-token
+ai_engineer -[#059669]-> anthropic_api : pay-per-token
+investor -[#059669]-> founder : VC funding\n(~$100B+ in 2024)
+nvidia -[#059669]-> coreweave : GPU supply
+
+' ── Key auth flows ──
+ai_engineer -[#DC2626,dashed]..> openai_api : API key
+ai_engineer -[#DC2626,dashed]..> anthropic_api : API key
+fullstack_dev -[#DC2626,dashed]..> bedrock_api : IAM / AWS auth
+
+' ── Layout hints ──
+pkg_research -[hidden]down- pkg_llm
+pkg_builders -[hidden]down- pkg_llm
+pkg_business -[hidden]down- pkg_visual
+pkg_users -[hidden]down- pkg_audio
+pkg_llm -[hidden]down- pkg_model_apis
+pkg_visual -[hidden]down- pkg_frameworks
+pkg_model_apis -[hidden]down- pkg_coding
+pkg_frameworks -[hidden]down- pkg_search
+pkg_coding -[hidden]down- pkg_cloud
+pkg_enterprise -[hidden]down- pkg_hardware
+pkg_cloud -[hidden]down- pkg_health
+pkg_hardware -[hidden]down- pkg_finance
+
+' ══════════════════════════════════════════════
+'  ANNOTATIONS
+' ══════════════════════════════════════════════
+
+note bottom of openai
+  **Market Leader (2024-25):**
+  ChatGPT: 200M+ weekly users
+  $11B+ revenue run rate
+  Valued at $300B+
+  Key: GPT-4o, o3 reasoning,
+  Sora video, DALL-E 3
+end note
+
+note bottom of anthropic
+  **Safety-focused rival:**
+  Claude 4 family (Opus,
+  Sonnet, Haiku)
+  Constitutional AI approach
+  $18B+ valuation
+  Key: long context (200K),
+  Claude Code (CLI agent)
+end note
+
+note bottom of nvidia
+  **AI Kingmaker:**
+  90%+ GPU market share
+  for AI training. H100/B200
+  chips power nearly every
+  major model. CUDA ecosystem
+  is the de facto standard.
+  Market cap: $3T+
+end note
+
+note bottom of huggingface
+  **Open-source hub:**
+  500K+ models, 100K+ datasets.
+  The "GitHub of ML" — hosts
+  Llama, Mistral, Stable Diffusion.
+  Transforms framework used by
+  most AI researchers.
+end note
+
+@enduml

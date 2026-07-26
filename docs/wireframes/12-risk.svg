@@ -75,83 +75,127 @@
   <!-- Page Title -->
   <text x="260" y="40" font-size="24" font-weight="bold" fill="#111827">Risk Breakdown</text>
   <text x="260" y="62" font-size="13" fill="#6B7280">Subscription risk funnel and recovery playbooks</text>
+  <!-- Refresh Button (LgPage.onRefresh → Icons.refresh) -->
+  <circle cx="1120" cy="37" r="16" fill="none" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1120" y="43" text-anchor="middle" font-size="16" fill="#6B7280">&#8635;</text>
+
+  <!-- App Filter Chip -->
+  <rect x="260" y="72" width="140" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="278" y="90" font-size="12" fill="#111827">Revenue Tracker Pro</text>
+  <!-- Annotation -->
+  <text x="414" y="90" font-size="10" fill="#9CA3AF" font-style="italic">App filter (multi-app only)</text>
 
   <!-- Risk Funnel Card -->
-  <rect x="260" y="84" width="880" height="120" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="280" y="110" font-size="14" font-weight="600" fill="#111827">Risk Funnel</text>
+  <rect x="260" y="108" width="880" height="130" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="134" font-size="14" font-weight="600" fill="#111827">Risk Funnel</text>
 
-  <!-- Horizontal stacked bar -->
-  <rect x="280" y="122" width="572" height="28" rx="4" fill="#059669"/>
-  <rect x="852" y="122" width="176" height="28" rx="0" fill="#F59E0B"/>
-  <rect x="1028" y="122" width="88" height="28" rx="0" fill="#EA580C"/>
-  <rect x="1116" y="122" width="44" height="28" rx="4" fill="#DC2626"/>
-  <!-- Rounded right end only on last -->
+  <!-- Funnel segments (count-based, not percentage) -->
+  <rect x="280" y="146" width="440" height="44" rx="0" fill="rgba(5,150,105,0.15)"/>
+  <text x="500" y="174" text-anchor="middle" font-size="20" font-weight="700" fill="#059669">26</text>
+  <text x="500" y="186" font-size="11" font-weight="500" fill="#059669">Safe</text>
 
-  <!-- Funnel labels on bars -->
-  <text x="566" y="141" text-anchor="middle" font-size="12" font-weight="600" fill="#FFFFFF">Safe (65%)</text>
-  <text x="940" y="141" text-anchor="middle" font-size="12" font-weight="600" fill="#FFFFFF">1-Cycle (20%)</text>
-  <text x="1072" y="141" text-anchor="middle" font-size="11" font-weight="600" fill="#FFFFFF">2-Cycle (10%)</text>
-  <text x="1138" y="141" text-anchor="middle" font-size="10" font-weight="600" fill="#FFFFFF">5%</text>
+  <rect x="720" y="146" width="170" height="44" rx="0" fill="rgba(245,158,11,0.15)"/>
+  <text x="805" y="174" text-anchor="middle" font-size="20" font-weight="700" fill="#F59E0B">8</text>
+  <text x="805" y="186" font-size="11" font-weight="500" fill="#F59E0B">1 Cycle</text>
+
+  <rect x="890" y="146" width="100" height="44" rx="0" fill="rgba(234,88,12,0.15)"/>
+  <text x="940" y="174" text-anchor="middle" font-size="20" font-weight="700" fill="#EA580C">4</text>
+  <text x="940" y="186" font-size="11" font-weight="500" fill="#EA580C">2 Cycles</text>
+
+  <rect x="990" y="146" width="60" height="44" rx="0" fill="rgba(220,38,38,0.15)"/>
+  <text x="1020" y="174" text-anchor="middle" font-size="20" font-weight="700" fill="#DC2626">2</text>
+  <text x="1020" y="186" font-size="11" font-weight="500" fill="#DC2626">Churned</text>
 
   <!-- Legend -->
-  <rect x="280" y="164" width="10" height="10" rx="2" fill="#059669"/>
-  <text x="296" y="174" font-size="11" fill="#6B7280">Safe</text>
-  <rect x="340" y="164" width="10" height="10" rx="2" fill="#F59E0B"/>
-  <text x="356" y="174" font-size="11" fill="#6B7280">1-Cycle Missed</text>
-  <rect x="456" y="164" width="10" height="10" rx="2" fill="#EA580C"/>
-  <text x="472" y="174" font-size="11" fill="#6B7280">2-Cycles Missed</text>
-  <rect x="586" y="164" width="10" height="10" rx="2" fill="#DC2626"/>
-  <text x="602" y="174" font-size="11" fill="#6B7280">Churned</text>
+  <rect x="280" y="200" width="10" height="10" rx="2" fill="#059669"/>
+  <text x="296" y="210" font-size="11" fill="#059669" font-weight="500">Safe: 26</text>
+  <rect x="370" y="200" width="10" height="10" rx="2" fill="#F59E0B"/>
+  <text x="386" y="210" font-size="11" fill="#F59E0B" font-weight="500">1 Cycle: 8</text>
+  <rect x="470" y="200" width="10" height="10" rx="2" fill="#EA580C"/>
+  <text x="486" y="210" font-size="11" fill="#EA580C" font-weight="500">2 Cycles: 4</text>
+  <rect x="580" y="200" width="10" height="10" rx="2" fill="#DC2626"/>
+  <text x="596" y="210" font-size="11" fill="#DC2626" font-weight="500">Churned: 2</text>
+  <!-- Annotation -->
+  <text x="720" y="210" font-size="10" fill="#9CA3AF" font-style="italic">Segments sized by count (flex)</text>
 
   <!-- At-Risk Stores Heading -->
-  <text x="260" y="232" font-size="16" font-weight="600" fill="#111827">At-Risk Stores (15)</text>
+  <text x="260" y="252" font-size="16" font-weight="600" fill="#111827">At-Risk Stores (3)</text>
+  <!-- Annotation -->
+  <text x="440" y="252" font-size="10" fill="#9CA3AF" font-style="italic">Empty state shows checkmark + "No stores at risk" when list empty</text>
 
-  <!-- Store Card 1 -->
-  <rect x="260" y="248" width="280" height="100" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="280" y="274" font-size="14" font-weight="600" fill="#111827">Acme Widgets Co.</text>
-  <text x="280" y="294" font-size="12" fill="#6B7280">Health: 42%</text>
-  <text x="280" y="314" font-size="12" fill="#6B7280">LTV: $2,340</text>
-  <rect x="420" y="260" width="100" height="24" rx="12" fill="#FEF3C7"/>
-  <text x="470" y="277" text-anchor="middle" font-size="11" font-weight="500" fill="#D97706">1-Cycle Missed</text>
+  <!-- Store Card 1 (clickable) -->
+  <rect x="260" y="268" width="880" height="56" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="292" font-size="14" font-weight="600" fill="#111827">acme-widgets</text>
+  <text x="280" y="310" font-size="12" fill="#6B7280">Health: 42% | LTV: $2,340</text>
+  <rect x="980" y="280" width="100" height="24" rx="12" fill="#FEF3C7"/>
+  <text x="1030" y="297" text-anchor="middle" font-size="11" font-weight="500" fill="#D97706">1-Cycle Missed</text>
+  <text x="1110" y="300" font-size="16" fill="#9CA3AF">&#x203A;</text>
 
-  <!-- Store Card 2 -->
-  <rect x="560" y="248" width="280" height="100" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="580" y="274" font-size="14" font-weight="600" fill="#111827">Blue Ocean Store</text>
-  <text x="580" y="294" font-size="12" fill="#6B7280">Health: 28%</text>
-  <text x="580" y="314" font-size="12" fill="#6B7280">LTV: $5,120</text>
-  <rect x="720" y="260" width="100" height="24" rx="12" fill="#FFEDD5"/>
-  <text x="770" y="277" text-anchor="middle" font-size="11" font-weight="500" fill="#EA580C">2-Cycles Missed</text>
+  <!-- Store Card 2 (clickable) -->
+  <rect x="260" y="336" width="880" height="56" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="360" font-size="14" font-weight="600" fill="#111827">blue-ocean-store</text>
+  <text x="280" y="378" font-size="12" fill="#6B7280">Health: 28% | LTV: $5,120</text>
+  <rect x="980" y="348" width="100" height="24" rx="12" fill="#FFEDD5"/>
+  <text x="1030" y="365" text-anchor="middle" font-size="11" font-weight="500" fill="#EA580C">2-Cycles Missed</text>
+  <text x="1110" y="368" font-size="16" fill="#9CA3AF">&#x203A;</text>
 
-  <!-- Store Card 3 -->
-  <rect x="860" y="248" width="280" height="100" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="880" y="274" font-size="14" font-weight="600" fill="#111827">Quick Commerce</text>
-  <text x="880" y="294" font-size="12" fill="#6B7280">Health: 12%</text>
-  <text x="880" y="314" font-size="12" fill="#6B7280">LTV: $890</text>
-  <rect x="1020" y="260" width="100" height="24" rx="12" fill="#FEF2F2"/>
-  <text x="1070" y="277" text-anchor="middle" font-size="11" font-weight="500" fill="#DC2626">Churned</text>
+  <!-- Store Card 3 (clickable) -->
+  <rect x="260" y="404" width="880" height="56" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="428" font-size="14" font-weight="600" fill="#111827">quick-commerce</text>
+  <text x="280" y="446" font-size="12" fill="#6B7280">Health: 12% | LTV: $890</text>
+  <rect x="980" y="416" width="100" height="24" rx="12" fill="#FEF2F2"/>
+  <text x="1030" y="433" text-anchor="middle" font-size="11" font-weight="500" fill="#DC2626">Churned</text>
+  <text x="1110" y="436" font-size="16" fill="#9CA3AF">&#x203A;</text>
+  <!-- Annotation -->
+  <text x="1130" y="436" font-size="10" fill="#9CA3AF" font-style="italic">Clickable cards</text>
+  <text x="1130" y="450" font-size="10" fill="#9CA3AF" font-style="italic">navigate to /stores/:id</text>
 
   <!-- Recovery Playbooks Heading -->
-  <text x="260" y="388" font-size="16" font-weight="600" fill="#111827">Recovery Playbooks</text>
+  <text x="260" y="496" font-size="16" font-weight="600" fill="#111827">Recovery Playbooks</text>
 
   <!-- Playbook Card 1 -->
-  <rect x="260" y="404" width="430" height="180" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="280" y="432" font-size="15" font-weight="600" fill="#111827">Payment Recovery</text>
-  <text x="280" y="452" font-size="12" fill="#6B7280">Re-engage stores with declined charges</text>
-  <rect x="280" y="464" width="100" height="24" rx="12" fill="#ECFDF5"/>
-  <text x="330" y="481" text-anchor="middle" font-size="11" font-weight="500" fill="#059669">68% success</text>
-  <text x="280" y="508" font-size="12" fill="#111827">Steps:</text>
-  <text x="280" y="528" font-size="12" fill="#6B7280">1. Send payment reminder email</text>
-  <text x="280" y="546" font-size="12" fill="#6B7280">2. Offer 7-day grace period</text>
-  <text x="280" y="564" font-size="12" fill="#6B7280">3. Escalate to account manager</text>
+  <rect x="260" y="512" width="430" height="200" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="540" font-size="15" font-weight="600" fill="#111827">Payment Recovery</text>
+  <text x="280" y="558" font-size="12" fill="#6B7280">Re-engage stores with declined charges</text>
+  <!-- Success rate -->
+  <rect x="280" y="568" width="16" height="16" rx="8" fill="#ECFDF5"/>
+  <text x="288" y="580" text-anchor="middle" font-size="10" fill="#059669">&#10003;</text>
+  <text x="302" y="581" font-size="12" fill="#111827">68% success rate</text>
+
+  <!-- Numbered steps -->
+  <circle cx="292" cy="608" r="10" fill="#F3F4F6"/>
+  <text x="292" y="612" text-anchor="middle" font-size="10" fill="#6B7280">1</text>
+  <text x="312" y="612" font-size="12" fill="#6B7280">Send payment reminder email</text>
+
+  <circle cx="292" cy="636" r="10" fill="#F3F4F6"/>
+  <text x="292" y="640" text-anchor="middle" font-size="10" fill="#6B7280">2</text>
+  <text x="312" y="640" font-size="12" fill="#6B7280">Offer 7-day grace period</text>
+
+  <circle cx="292" cy="664" r="10" fill="#F3F4F6"/>
+  <text x="292" y="668" text-anchor="middle" font-size="10" fill="#6B7280">3</text>
+  <text x="312" y="668" font-size="12" fill="#6B7280">Escalate to account manager</text>
 
   <!-- Playbook Card 2 -->
-  <rect x="710" y="404" width="430" height="180" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="730" y="432" font-size="15" font-weight="600" fill="#111827">Churn Prevention</text>
-  <text x="730" y="452" font-size="12" fill="#6B7280">Retain stores showing disengagement signals</text>
-  <rect x="730" y="464" width="100" height="24" rx="12" fill="#ECFDF5"/>
-  <text x="780" y="481" text-anchor="middle" font-size="11" font-weight="500" fill="#059669">45% success</text>
-  <text x="730" y="508" font-size="12" fill="#111827">Steps:</text>
-  <text x="730" y="528" font-size="12" fill="#6B7280">1. Trigger usage review notification</text>
-  <text x="730" y="546" font-size="12" fill="#6B7280">2. Offer plan downgrade option</text>
-  <text x="730" y="564" font-size="12" fill="#6B7280">3. Schedule 1:1 support call</text>
+  <rect x="710" y="512" width="430" height="200" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="730" y="540" font-size="15" font-weight="600" fill="#111827">Churn Prevention</text>
+  <text x="730" y="558" font-size="12" fill="#6B7280">Retain stores showing disengagement signals</text>
+  <!-- Success rate -->
+  <rect x="730" y="568" width="16" height="16" rx="8" fill="#ECFDF5"/>
+  <text x="738" y="580" text-anchor="middle" font-size="10" fill="#059669">&#10003;</text>
+  <text x="752" y="581" font-size="12" fill="#111827">45% success rate</text>
+
+  <!-- Numbered steps -->
+  <circle cx="742" cy="608" r="10" fill="#F3F4F6"/>
+  <text x="742" y="612" text-anchor="middle" font-size="10" fill="#6B7280">1</text>
+  <text x="762" y="612" font-size="12" fill="#6B7280">Trigger usage review notification</text>
+
+  <circle cx="742" cy="636" r="10" fill="#F3F4F6"/>
+  <text x="742" y="640" text-anchor="middle" font-size="10" fill="#6B7280">2</text>
+  <text x="762" y="640" font-size="12" fill="#6B7280">Offer plan downgrade option</text>
+
+  <circle cx="742" cy="664" r="10" fill="#F3F4F6"/>
+  <text x="742" y="668" text-anchor="middle" font-size="10" fill="#6B7280">3</text>
+  <text x="762" y="668" font-size="12" fill="#6B7280">Schedule 1:1 support call</text>
+  <!-- Annotation -->
+  <text x="742" y="700" font-size="10" fill="#9CA3AF" font-style="italic">Numbered CircleAvatar steps (not plain text)</text>
 </svg>

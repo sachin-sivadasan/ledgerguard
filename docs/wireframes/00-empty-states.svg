@@ -1,0 +1,234 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1220" width="1440" height="1220">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1440" height="1200" fill="#F8F9FA"/>
+
+  <!-- Page Title -->
+  <text x="40" y="36" font-size="22" font-weight="bold" fill="#111827">Empty States — All Screens (No Apps Connected)</text>
+  <text x="40" y="58" font-size="13" fill="#6B7280">Every data screen shows LgEmptyState when appsProvider.apps.isEmpty. All have "Go to Apps" button navigating to /apps.</text>
+
+  <!-- ==================== LAYOUT REFERENCE ==================== -->
+  <!-- Shows one full-page example, then a catalog of all variants -->
+
+  <!-- Full Example: Stores -->
+  <rect x="40" y="84" width="660" height="440" rx="10" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Sidebar mini -->
+  <rect x="40" y="84" width="140" height="440" fill="#FAFAFA" rx="10"/>
+  <line x1="180" y1="84" x2="180" y2="524" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="110" y="108" text-anchor="middle" font-size="11" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+  <rect x="52" y="120" width="116" height="22" rx="4" fill="none"/>
+  <text x="64" y="135" font-size="10" fill="#6B7280">Dashboard</text>
+  <rect x="52" y="146" width="116" height="22" rx="4" fill="none"/>
+  <text x="64" y="161" font-size="10" fill="#6B7280">Subscriptions</text>
+  <rect x="52" y="172" width="116" height="22" rx="4" fill="#F0F1FF"/>
+  <text x="64" y="187" font-size="10" font-weight="600" fill="#5C6AC4">Stores</text>
+  <rect x="52" y="198" width="116" height="22" rx="4" fill="none"/>
+  <text x="64" y="213" font-size="10" fill="#6B7280">Transactions</text>
+  <rect x="52" y="224" width="116" height="22" rx="4" fill="none"/>
+  <text x="64" y="239" font-size="10" fill="#6B7280">Events</text>
+
+  <!-- Page title -->
+  <text x="200" y="110" font-size="18" font-weight="bold" fill="#111827">Stores</text>
+
+  <!-- LgEmptyState centered -->
+  <!-- Icon circle -->
+  <circle cx="430" cy="230" r="28" fill="#F3F4F6"/>
+  <text x="430" y="240" text-anchor="middle" font-size="24" fill="#9CA3AF">&#127978;</text>
+
+  <!-- Heading -->
+  <text x="430" y="286" text-anchor="middle" font-size="18" font-weight="bold" fill="#111827">No stores yet</text>
+
+  <!-- Description -->
+  <text x="430" y="310" text-anchor="middle" font-size="13" fill="#6B7280">Connect your Shopify app to see store data.</text>
+
+  <!-- Action Button -->
+  <rect x="372" y="328" width="116" height="36" rx="8" fill="#5C6AC4"/>
+  <text x="430" y="351" text-anchor="middle" font-size="13" font-weight="500" fill="#FFFFFF">Go to Apps</text>
+
+  <!-- Label -->
+  <text x="430" y="420" text-anchor="middle" font-size="11" font-weight="600" fill="#5C6AC4">Full-Page Example: Stores Screen</text>
+  <text x="430" y="438" text-anchor="middle" font-size="10" fill="#9CA3AF">All screens follow this identical layout</text>
+
+  <!-- ==================== WIDGET SPEC ==================== -->
+  <rect x="720" y="84" width="680" height="440" rx="10" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="740" y="114" font-size="15" font-weight="bold" fill="#111827">LgEmptyState Widget Spec</text>
+
+  <!-- Widget diagram -->
+  <rect x="740" y="130" width="640" height="200" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1" stroke-dasharray="4,4"/>
+
+  <!-- Center column -->
+  <text x="1060" y="156" text-anchor="middle" font-size="11" font-weight="600" fill="#6B7280">Center</text>
+
+  <!-- Icon slot -->
+  <rect x="1028" y="164" width="64" height="28" rx="4" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1"/>
+  <text x="1060" y="183" text-anchor="middle" font-size="10" fill="#6B7280">icon</text>
+
+  <!-- SizedBox -->
+  <rect x="1040" y="196" width="40" height="10" rx="2" fill="#E5E7EB"/>
+  <text x="1094" y="205" font-size="9" fill="#9CA3AF">SizedBox(h: s400)</text>
+
+  <!-- Heading slot -->
+  <rect x="1000" y="212" width="120" height="20" rx="4" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1"/>
+  <text x="1060" y="226" text-anchor="middle" font-size="10" fill="#6B7280">heading</text>
+
+  <!-- SizedBox -->
+  <rect x="1040" y="236" width="40" height="8" rx="2" fill="#E5E7EB"/>
+  <text x="1094" y="244" font-size="9" fill="#9CA3AF">SizedBox(h: s200)</text>
+
+  <!-- Description slot -->
+  <rect x="980" y="250" width="160" height="18" rx="4" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1"/>
+  <text x="1060" y="263" text-anchor="middle" font-size="10" fill="#6B7280">description</text>
+
+  <!-- SizedBox -->
+  <rect x="1040" y="274" width="40" height="10" rx="2" fill="#E5E7EB"/>
+  <text x="1094" y="283" font-size="9" fill="#9CA3AF">SizedBox(h: s400)</text>
+
+  <!-- Button slot -->
+  <rect x="1010" y="290" width="100" height="24" rx="6" fill="#5C6AC4"/>
+  <text x="1060" y="306" text-anchor="middle" font-size="10" fill="#FFFFFF">actionLabel</text>
+
+  <!-- Props list -->
+  <text x="760" y="156" font-size="11" font-weight="600" fill="#111827">Props:</text>
+  <text x="760" y="174" font-size="11" fill="#6B7280">icon: IconData</text>
+  <text x="760" y="192" font-size="11" fill="#6B7280">heading: String</text>
+  <text x="760" y="210" font-size="11" fill="#6B7280">description: String</text>
+  <text x="760" y="228" font-size="11" fill="#6B7280">actionLabel: String?</text>
+  <text x="760" y="246" font-size="11" fill="#6B7280">onAction: VoidCallback?</text>
+  <text x="760" y="272" font-size="11" font-weight="600" fill="#111827">Behavior:</text>
+  <text x="760" y="290" font-size="11" fill="#6B7280">- Vertically centered in parent</text>
+  <text x="760" y="308" font-size="11" fill="#6B7280">- Icon: 48px, textDisabled color</text>
+  <text x="760" y="326" font-size="11" fill="#6B7280">- Button hidden if actionLabel null</text>
+
+  <!-- Trigger condition -->
+  <rect x="740" y="350" width="640" height="60" rx="6" fill="#F0FDF4" stroke="#BBF7D0" stroke-width="1"/>
+  <text x="760" y="370" font-size="11" font-weight="600" fill="#065F46">Trigger Condition</text>
+  <text x="760" y="388" font-size="11" fill="#065F46">final hasApps = context.watch&lt;AppsProvider&gt;().apps.isNotEmpty;</text>
+  <text x="760" y="404" font-size="11" fill="#065F46">if (!hasApps) return LgPage(title: '...', child: LgEmptyState(...));</text>
+
+  <!-- Navigation -->
+  <rect x="740" y="420" width="640" height="36" rx="6" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="760" y="440" font-size="11" font-weight="600" fill="#1E40AF">All screens: onAction: () =&gt; context.go('/apps')</text>
+  <text x="760" y="452" font-size="10" fill="#1E40AF">No KPIs, filters, or data tables rendered — entire content replaced by empty state.</text>
+
+  <!-- ==================== CATALOG: All 9 Screens ==================== -->
+  <text x="40" y="564" font-size="16" font-weight="bold" fill="#111827">Empty State Catalog — Per-Screen Variants</text>
+
+  <!-- Row 1 -->
+  <!-- 1. Subscriptions -->
+  <rect x="40" y="584" width="330" height="140" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <circle cx="205" cy="612" r="16" fill="#F3F4F6"/>
+  <text x="205" y="618" text-anchor="middle" font-size="14" fill="#9CA3AF">&#128203;</text>
+  <text x="205" y="642" text-anchor="middle" font-size="13" font-weight="bold" fill="#111827">No subscriptions yet</text>
+  <text x="205" y="660" text-anchor="middle" font-size="10" fill="#6B7280">Connect your Shopify app to start tracking subscriptions.</text>
+  <rect x="170" y="670" width="70" height="22" rx="6" fill="#5C6AC4"/>
+  <text x="205" y="685" text-anchor="middle" font-size="9" fill="#FFFFFF">Go to Apps</text>
+  <text x="205" y="714" text-anchor="middle" font-size="10" font-weight="600" fill="#5C6AC4">Subscriptions</text>
+  <text x="205" y="720" text-anchor="middle" font-size="8" fill="#9CA3AF">Icons.receipt_long</text>
+
+  <!-- 2. Stores -->
+  <rect x="390" y="584" width="330" height="140" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <circle cx="555" cy="612" r="16" fill="#F3F4F6"/>
+  <text x="555" y="618" text-anchor="middle" font-size="14" fill="#9CA3AF">&#127978;</text>
+  <text x="555" y="642" text-anchor="middle" font-size="13" font-weight="bold" fill="#111827">No stores yet</text>
+  <text x="555" y="660" text-anchor="middle" font-size="10" fill="#6B7280">Connect your Shopify app to see store data.</text>
+  <rect x="520" y="670" width="70" height="22" rx="6" fill="#5C6AC4"/>
+  <text x="555" y="685" text-anchor="middle" font-size="9" fill="#FFFFFF">Go to Apps</text>
+  <text x="555" y="714" text-anchor="middle" font-size="10" font-weight="600" fill="#5C6AC4">Stores</text>
+  <text x="555" y="720" text-anchor="middle" font-size="8" fill="#9CA3AF">Icons.storefront</text>
+
+  <!-- 3. Transactions -->
+  <rect x="740" y="584" width="330" height="140" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <circle cx="905" cy="612" r="16" fill="#F3F4F6"/>
+  <text x="905" y="618" text-anchor="middle" font-size="14" fill="#9CA3AF">&#8644;</text>
+  <text x="905" y="642" text-anchor="middle" font-size="13" font-weight="bold" fill="#111827">No transactions yet</text>
+  <text x="905" y="660" text-anchor="middle" font-size="10" fill="#6B7280">Connect your Shopify app to see transaction history.</text>
+  <rect x="870" y="670" width="70" height="22" rx="6" fill="#5C6AC4"/>
+  <text x="905" y="685" text-anchor="middle" font-size="9" fill="#FFFFFF">Go to Apps</text>
+  <text x="905" y="714" text-anchor="middle" font-size="10" font-weight="600" fill="#5C6AC4">Transactions</text>
+  <text x="905" y="720" text-anchor="middle" font-size="8" fill="#9CA3AF">Icons.swap_horiz</text>
+
+  <!-- Row 2 -->
+  <!-- 4. Events -->
+  <rect x="40" y="744" width="330" height="140" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <circle cx="205" cy="772" r="16" fill="#F3F4F6"/>
+  <text x="205" y="778" text-anchor="middle" font-size="14" fill="#9CA3AF">&#128276;</text>
+  <text x="205" y="802" text-anchor="middle" font-size="13" font-weight="bold" fill="#111827">No events yet</text>
+  <text x="205" y="820" text-anchor="middle" font-size="10" fill="#6B7280">Connect your Shopify app to see events.</text>
+  <rect x="170" y="830" width="70" height="22" rx="6" fill="#5C6AC4"/>
+  <text x="205" y="845" text-anchor="middle" font-size="9" fill="#FFFFFF">Go to Apps</text>
+  <text x="205" y="874" text-anchor="middle" font-size="10" font-weight="600" fill="#5C6AC4">Events</text>
+  <text x="205" y="880" text-anchor="middle" font-size="8" fill="#9CA3AF">Icons.notifications_none</text>
+
+  <!-- 5. Webhooks -->
+  <rect x="390" y="744" width="330" height="140" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <circle cx="555" cy="772" r="16" fill="#F3F4F6"/>
+  <text x="555" y="778" text-anchor="middle" font-size="14" fill="#9CA3AF">&#128279;</text>
+  <text x="555" y="802" text-anchor="middle" font-size="13" font-weight="bold" fill="#111827">No webhooks yet</text>
+  <text x="555" y="820" text-anchor="middle" font-size="10" fill="#6B7280">Connect your Shopify app to see webhook events.</text>
+  <rect x="520" y="830" width="70" height="22" rx="6" fill="#5C6AC4"/>
+  <text x="555" y="845" text-anchor="middle" font-size="9" fill="#FFFFFF">Go to Apps</text>
+  <text x="555" y="874" text-anchor="middle" font-size="10" font-weight="600" fill="#5C6AC4">Webhooks</text>
+  <text x="555" y="880" text-anchor="middle" font-size="8" fill="#9CA3AF">Icons.webhook</text>
+
+  <!-- 6. Risk -->
+  <rect x="740" y="744" width="330" height="140" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <circle cx="905" cy="772" r="16" fill="#F3F4F6"/>
+  <text x="905" y="778" text-anchor="middle" font-size="14" fill="#9CA3AF">&#128737;</text>
+  <text x="905" y="802" text-anchor="middle" font-size="13" font-weight="bold" fill="#111827">No risk data yet</text>
+  <text x="905" y="820" text-anchor="middle" font-size="10" fill="#6B7280">Connect your Shopify app to see risk analysis.</text>
+  <rect x="870" y="830" width="70" height="22" rx="6" fill="#5C6AC4"/>
+  <text x="905" y="845" text-anchor="middle" font-size="9" fill="#FFFFFF">Go to Apps</text>
+  <text x="905" y="874" text-anchor="middle" font-size="10" font-weight="600" fill="#5C6AC4">Risk</text>
+  <text x="905" y="880" text-anchor="middle" font-size="8" fill="#9CA3AF">Icons.shield_outlined</text>
+
+  <!-- Row 3 -->
+  <!-- 7. Analytics -->
+  <rect x="40" y="904" width="330" height="140" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <circle cx="205" cy="932" r="16" fill="#F3F4F6"/>
+  <text x="205" y="938" text-anchor="middle" font-size="14" fill="#9CA3AF">&#128200;</text>
+  <text x="205" y="962" text-anchor="middle" font-size="13" font-weight="bold" fill="#111827">No analytics yet</text>
+  <text x="205" y="980" text-anchor="middle" font-size="10" fill="#6B7280">Connect your Shopify app to see revenue analytics.</text>
+  <rect x="170" y="990" width="70" height="22" rx="6" fill="#5C6AC4"/>
+  <text x="205" y="1005" text-anchor="middle" font-size="9" fill="#FFFFFF">Go to Apps</text>
+  <text x="205" y="1034" text-anchor="middle" font-size="10" font-weight="600" fill="#5C6AC4">Analytics</text>
+  <text x="205" y="1040" text-anchor="middle" font-size="8" fill="#9CA3AF">Icons.analytics_outlined</text>
+
+  <!-- 8. Earnings -->
+  <rect x="390" y="904" width="330" height="140" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <circle cx="555" cy="932" r="16" fill="#F3F4F6"/>
+  <text x="555" y="938" text-anchor="middle" font-size="14" fill="#9CA3AF">&#128179;</text>
+  <text x="555" y="962" text-anchor="middle" font-size="13" font-weight="bold" fill="#111827">No earnings yet</text>
+  <text x="555" y="980" text-anchor="middle" font-size="10" fill="#6B7280">Connect your Shopify app to track earnings.</text>
+  <rect x="520" y="990" width="70" height="22" rx="6" fill="#5C6AC4"/>
+  <text x="555" y="1005" text-anchor="middle" font-size="9" fill="#FFFFFF">Go to Apps</text>
+  <text x="555" y="1034" text-anchor="middle" font-size="10" font-weight="600" fill="#5C6AC4">Earnings</text>
+  <text x="555" y="1040" text-anchor="middle" font-size="8" fill="#9CA3AF">Icons.account_balance_wallet_outlined</text>
+
+  <!-- 9. Insights -->
+  <rect x="740" y="904" width="330" height="140" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <circle cx="905" cy="932" r="16" fill="#F3F4F6"/>
+  <text x="905" y="938" text-anchor="middle" font-size="14" fill="#9CA3AF">&#128161;</text>
+  <text x="905" y="962" text-anchor="middle" font-size="13" font-weight="bold" fill="#111827">No insights yet</text>
+  <text x="905" y="980" text-anchor="middle" font-size="10" fill="#6B7280">Connect your Shopify app to get AI-powered insights.</text>
+  <rect x="870" y="990" width="70" height="22" rx="6" fill="#5C6AC4"/>
+  <text x="905" y="1005" text-anchor="middle" font-size="9" fill="#FFFFFF">Go to Apps</text>
+  <text x="905" y="1034" text-anchor="middle" font-size="10" font-weight="600" fill="#5C6AC4">Insights</text>
+  <text x="905" y="1040" text-anchor="middle" font-size="8" fill="#9CA3AF">Icons.lightbulb_outlined</text>
+
+  <!-- ==================== SPECIAL: Dashboard Empty State ==================== -->
+  <text x="40" y="1084" font-size="16" font-weight="bold" fill="#111827">Special Case: Dashboard</text>
+  <text x="40" y="1104" font-size="12" fill="#6B7280">Dashboard does NOT use LgEmptyState — it shows LgOnboardingChecklist + placeholder $0 metric cards. See 04a-dashboard-empty.svg</text>
+
+  <!-- ==================== ANNOTATIONS ==================== -->
+  <rect x="40" y="1124" width="1360" height="72" rx="6" fill="#FEF3C7" stroke="#FDE68A" stroke-width="1"/>
+  <text x="60" y="1144" font-size="11" fill="#92400E">All 9 data screens share the same pattern: if (!hasApps) return LgPage(title, child: LgEmptyState(...)). No KPIs/filters/tables rendered.</text>
+  <text x="60" y="1160" font-size="11" fill="#92400E">LgEmptyState widget: lg_empty_state.dart — vertically centered Column with icon (48px), heading (titleMedium bold), description (bodyMedium), FilledButton.</text>
+  <text x="60" y="1176" font-size="11" fill="#92400E">The only exception is Dashboard, which shows LgOnboardingChecklist (3-step wizard) + placeholder metric cards instead of LgEmptyState. See 04a-dashboard-empty.svg.</text>
+  <text x="60" y="1192" font-size="11" fill="#92400E">Settings screen has NO empty state — it always shows all sections regardless of app connection status.</text>
+</svg>

@@ -4,6 +4,31 @@ A chronological record of all features implemented with detailed summaries.
 
 ---
 
+## [2026-07-25] Fix: Events storeDomain Filter Resolves to Shop GIDs
+
+**Summary:**
+Filtering the events list by `?storeDomain=` returned no results because the `app_events.shopify_shop_gid` column stores Shopify **shop GIDs** (`gid://shopify/Shop/…`), not myshopify domains, yet the filter compared the raw domain against that column via ILIKE. Fixed by resolving the domain to its shop GID(s) via the app's subscriptions before querying.
+
+### Problem
+`EventHandler.List` set `filters.StoreDomain` directly and the persistence layer ran `shopify_shop_gid ILIKE '%domain%'`. Since the column holds GIDs, a domain like `store-a.myshopify.com` never matched → empty event list even when events existed for that store.
+
+### Solution
+1. **Handler** (`event_handler.go`) — when `storeDomain` is present, look up the app's subscriptions via `subRepo.FindByAppID`, collect every `ShopifyShopGID` whose `MyshopifyDomain` matches, and populate the new `filters.ShopGIDs`.
+2. **Filter struct** (`app_event_repository.go`, domain) — added `ShopGIDs []string` to `EventFilters`.
+3. **Persistence** (`app_event_repository.go`, infra) — when `ShopGIDs` is non-empty, filter with `shopify_shop_gid IN (...)`; otherwise fall back to the existing `StoreDomain` ILIKE match (covers stores with no subscription record yet).
+4. **Tests** — added `TestEventHandler_List_StoreDomainResolvesToShopGIDs` (table-driven: matching domain → resolved GID; unknown domain → no GIDs, falls back to StoreDomain).
+
+### Files Changed (4 modified)
+
+| File | Change |
+|------|--------|
+| `backend/internal/domain/repository/app_event_repository.go` | +`ShopGIDs []string` field on `EventFilters` |
+| `backend/internal/infrastructure/persistence/app_event_repository.go` | `IN (...)` GID filter with ILIKE fallback |
+| `backend/internal/interfaces/http/handler/event_handler.go` | Resolve domain → shop GIDs via subscriptions |
+| `backend/internal/interfaces/http/handler/event_handler_test.go` | New table-driven test for the resolution + fallback |
+
+---
+
 ## [2026-05-18] Fix: Silent $0 Dashboard When Postgres Is Down
 
 **Summary:**

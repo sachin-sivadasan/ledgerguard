@@ -55,6 +55,7 @@ Postponed ideas and features for later implementation.
 | Real-time sync status via push (MQTT/WebSocket/SSE) | P3 | Replace sync polling (5s interval) with real-time push. Backend already has Redis progress tracking — publish state changes to MQTT topic, WebSocket channel, or SSE stream. Eliminates individual API calls for sync status. Options: MQTT (mqtt_client package, needs broker), WebSocket (backend already has /api/v1/chat WS endpoint — extend or add /sync/ws), SSE (simplest, one-way server-to-client over HTTP, no new infra). |
 | Settings: Move all customization to sub-pages | P3 | Each settings card (Notifications, Sync, Workspace) gets its own sub-page like Dashboard. Cleaner main settings page with only navigation tiles. |
 | Settings: Collapsible sections | P3 | Replace cards with `ExpansionTile` widgets. All settings stay on one page but sections collapse/expand. Saves vertical space without adding navigation. |
+| Desktop sidebar: expand to 220px with grouped sections | P3 | Current desktop NavigationRail is 100px with 13 icon+label items stacked vertically (requires scrolling, tiny 11px labels). Upgrade to 220px expanded sidebar with horizontal icon+label, grouped sections (Core, Analytics, Admin), and collapse toggle to icon-only (56px). See `00-navigation.svg` wireframe. File: `frontend-flutter/lib/shell/app_shell.dart` `_buildRail()`. |
 
 ### Missing UI Features (from User Personas Analysis)
 

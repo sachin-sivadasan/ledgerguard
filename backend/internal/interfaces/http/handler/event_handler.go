@@ -51,6 +51,16 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	if s := r.URL.Query().Get("storeDomain"); s != "" {
 		filters.StoreDomain = s
+		// Resolve domain → shop GIDs via subscriptions so the query matches
+		// the shopify_shop_gid column (which stores GIDs, not domains).
+		if h.subRepo != nil {
+			subs, _ := h.subRepo.FindByAppID(r.Context(), app.ID)
+			for _, sub := range subs {
+				if sub.MyshopifyDomain == s && sub.ShopifyShopGID != "" {
+					filters.ShopGIDs = append(filters.ShopGIDs, sub.ShopifyShopGID)
+				}
+			}
+		}
 	}
 	if s := r.URL.Query().Get("page"); s != "" {
 		if parsed, err := strconv.Atoi(s); err == nil && parsed > 0 {

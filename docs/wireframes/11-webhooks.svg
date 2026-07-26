@@ -87,6 +87,9 @@
   <!-- Page Title -->
   <text x="260" y="40" font-size="24" font-weight="bold" fill="#111827">Webhooks</text>
   <text x="260" y="62" font-size="13" fill="#6B7280">89 events</text>
+  <!-- Refresh Button (LgPage.onRefresh → Icons.refresh) -->
+  <circle cx="1120" cy="37" r="16" fill="none" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1120" y="43" text-anchor="middle" font-size="16" fill="#6B7280">&#8635;</text>
 
   <!-- Segmented Control -->
   <rect x="260" y="78" width="300" height="34" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>

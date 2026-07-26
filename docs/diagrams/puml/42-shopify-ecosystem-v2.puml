@@ -293,6 +293,20 @@ checkout -[#059669]-> shopify_payments : processes $
 app_billing -[#059669]-> app_dev : app earnings\n(via Partner payout)
 dropship_suppliers -[#059669,dashed]-> dropshipper : product cost
 
+note bottom of partner_dash
+  **Why "Partner"?**
+  Shopify calls all app/theme
+  developers and agencies
+  "Partners". The Partner
+  Dashboard is their portal
+  to manage apps, view
+  earnings, and track payouts.
+  Built-in analytics are basic —
+  **LedgerGuard adds** MRR,
+  churn, risk, and forecasting
+  on top of the same data.
+end note
+
 ' ── Layout hints ──
 pkg_buy -[hidden]down- pkg_commerce
 pkg_merch -[hidden]down- pkg_commerce

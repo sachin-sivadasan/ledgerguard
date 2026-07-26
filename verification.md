@@ -257,3 +257,18 @@ Tracks verification points from each implementation plan. Run these after deploy
 - [ ] Auth middleware: DB down → returns 503 (not 500) for `/api/v1/orgs` and `/api/v1/user/preferences/*`
 - [ ] App lookup: `ErrPartnerAccountNotFound` → 404, generic DB error → 503
 - [ ] AppShell intercepts 503 globally — no per-screen leaks to empty-state UI
+
+---
+
+## Fix: Events storeDomain Filter Resolves to Shop GIDs (2026-07-25)
+
+- [x] `go build ./...` — clean
+- [x] `go vet ./internal/interfaces/http/handler/... ./internal/infrastructure/persistence/...` — clean
+- [x] `go test ./...` — all pass (incl. new `TestEventHandler_List_StoreDomainResolvesToShopGIDs`)
+- [x] `subRepo` confirmed wired: field → `NewEventHandler` param → injected in `cmd/server/main.go`
+- [x] `backend/server` untracked + ignored; `frontend/app/.firebase/` ignored
+- [x] Redeploy staging (`./scripts/gcp-deploy.sh ledgerspear`) — image `backend:a607c1d` live as revision `ledgerspear-api-00006-ck7`, `/health` OK + DB connected (2026-07-25)
+- [x] Events endpoint reachable + protected on staging (`?storeDomain=…` → 401, handler serving, not 500)
+- [x] Frontend redeployed to Firebase (`ledgerguard-c7557.web.app`) — fresh staging build, staging API baked in, 0 localhost leakage
+- [ ] Staging (authenticated, manual): `GET /api/v1/apps/{appID}/events?storeDomain=<known-domain>` → returns that store's events (not empty)
+- [ ] Staging (authenticated, manual): `?storeDomain=<unknown-domain>` → falls back to ILIKE, no error

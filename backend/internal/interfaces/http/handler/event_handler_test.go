@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 	"time"
 
@@ -16,8 +17,9 @@ import (
 )
 
 type mockEventRepo struct {
-	events  []*entity.AppEvent
-	findErr error
+	events      []*entity.AppEvent
+	findErr     error
+	lastFilters repository.EventFilters // captures the filters passed to FindByAppIDPaginated
 }
 
 func (m *mockEventRepo) UpsertBatch(ctx context.Context, events []*entity.AppEvent) error {
@@ -30,6 +32,7 @@ func (m *mockEventRepo) FindByAppID(ctx context.Context, appID uuid.UUID) ([]*en
 	return m.events, m.findErr
 }
 func (m *mockEventRepo) FindByAppIDPaginated(ctx context.Context, appID uuid.UUID, filters repository.EventFilters) (*repository.EventPage, error) {
+	m.lastFilters = filters
 	if m.findErr != nil {
 		return nil, m.findErr
 	}
@@ -174,5 +177,74 @@ func TestEventHandler_List_CustomPage(t *testing.T) {
 	first := eventList[0].(map[string]interface{})
 	if first["type"] != "APP_INSTALL" {
 		t.Errorf("expected mapped type APP_INSTALL, got %v", first["type"])
+	}
+}
+
+// TestEventHandler_List_StoreDomainResolvesToShopGIDs verifies that a
+// ?storeDomain= filter is resolved to the matching subscription's shop GID(s)
+// before querying, since app_events stores shopify_shop_gid (GIDs), not domains.
+// When no subscription matches, ShopGIDs stays empty and the query falls back
+// to the raw StoreDomain (ILIKE match at the persistence layer).
+func TestEventHandler_List_StoreDomainResolvesToShopGIDs(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	appID := uuid.New()
+	app := &entity.App{
+		ID:               appID,
+		PartnerAccountID: partnerAccount.ID,
+		Name:             "Test App",
+		PartnerAppID:     "gid://partners/App/12345",
+	}
+
+	subs := []*entity.Subscription{
+		{ID: uuid.New(), AppID: appID, MyshopifyDomain: "store-a.myshopify.com", ShopifyShopGID: "gid://shopify/Shop/111"},
+		{ID: uuid.New(), AppID: appID, MyshopifyDomain: "store-b.myshopify.com", ShopifyShopGID: "gid://shopify/Shop/222"},
+	}
+
+	tests := []struct {
+		name         string
+		storeDomain  string
+		wantShopGIDs []string
+	}{
+		{
+			name:         "matching domain resolves to its shop GID",
+			storeDomain:  "store-a.myshopify.com",
+			wantShopGIDs: []string{"gid://shopify/Shop/111"},
+		},
+		{
+			name:         "unknown domain resolves to no GIDs (falls back to StoreDomain)",
+			storeDomain:  "unknown.myshopify.com",
+			wantShopGIDs: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			eventRepo := &mockEventRepo{events: makeEventTestData(appID, 5)}
+			partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
+			appRepo := &mockAppRepoForSub{app: app}
+			subRepo := &mockSubscriptionRepo{subscriptions: subs}
+
+			handler := NewEventHandler(eventRepo, partnerRepo, appRepo, subRepo)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/events?storeDomain="+tt.storeDomain, nil)
+			req = withURLParam(req, "appID", appID.String())
+			user := &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}
+			req = req.WithContext(contextWithUser(req.Context(), user))
+
+			rec := httptest.NewRecorder()
+			handler.List(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected status %d, got %d", http.StatusOK, rec.Code)
+			}
+			if !reflect.DeepEqual(eventRepo.lastFilters.ShopGIDs, tt.wantShopGIDs) {
+				t.Errorf("expected ShopGIDs %v, got %v", tt.wantShopGIDs, eventRepo.lastFilters.ShopGIDs)
+			}
+			// StoreDomain is always propagated so the persistence layer can fall
+			// back to an ILIKE match when no GIDs were resolved.
+			if eventRepo.lastFilters.StoreDomain != tt.storeDomain {
+				t.Errorf("expected StoreDomain %q, got %q", tt.storeDomain, eventRepo.lastFilters.StoreDomain)
+			}
+		})
 	}
 }

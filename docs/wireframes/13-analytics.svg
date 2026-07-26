@@ -74,85 +74,118 @@
 
   <!-- Page Title -->
   <text x="260" y="40" font-size="24" font-weight="bold" fill="#111827">Analytics</text>
+  <!-- Refresh Button (LgPage.onRefresh) -->
+  <circle cx="1120" cy="40" r="16" fill="none" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1120" y="46" text-anchor="middle" font-size="16" fill="#6B7280">&#8635;</text>
   <text x="260" y="62" font-size="13" fill="#6B7280">Revenue analysis and forecasting</text>
 
-  <!-- Filter chips -->
-  <rect x="260" y="78" width="140" height="32" rx="16" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="280" y="99" font-size="12" fill="#111827">LedgerGuard Pro ✕</text>
+  <!-- App Filter Chip -->
+  <rect x="260" y="72" width="140" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="278" y="90" font-size="12" fill="#111827">LedgerGuard Pro</text>
+  <text x="388" y="90" font-size="11" fill="#9CA3AF">x</text>
+  <!-- Annotation -->
+  <text x="416" y="90" font-size="10" fill="#9CA3AF" font-style="italic">App filter + clearable chip</text>
 
-  <rect x="412" y="78" width="200" height="32" rx="16" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="432" y="99" font-size="12" fill="#6B7280">Compare to: May 2025</text>
+  <!-- Date Picker Chip -->
+  <rect x="260" y="106" width="186" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="124" font-size="11" fill="#6B7280">&#128197;</text>
+  <text x="298" y="124" font-size="12" fill="#111827">Compare to: May 10, 2025</text>
+  <text x="434" y="124" font-size="11" fill="#9CA3AF">x</text>
+  <!-- Annotation -->
+  <text x="462" y="124" font-size="10" fill="#9CA3AF" font-style="italic">Date picker for snapshot comparison</text>
 
-  <!-- Tab Bar -->
-  <line x1="260" y1="134" x2="1140" y2="134" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="260" y="128" font-size="13" font-weight="600" fill="#5C6AC4">Revenue</text>
-  <line x1="260" y1="134" x2="318" y2="134" stroke="#5C6AC4" stroke-width="2"/>
+  <!-- MRR Comparison Card -->
+  <rect x="260" y="142" width="880" height="56" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="164" font-size="12" font-weight="600" fill="#111827">MRR vs May 10</text>
 
-  <text x="340" y="128" font-size="13" fill="#6B7280">Forecasting</text>
-  <text x="446" y="128" font-size="13" fill="#6B7280">Profit &amp; Expense</text>
-  <text x="582" y="128" font-size="13" fill="#6B7280">Cohorts</text>
-  <text x="650" y="128" font-size="13" fill="#6B7280">Multi-App</text>
+  <text x="420" y="158" font-size="10" fill="#6B7280">Current</text>
+  <text x="420" y="176" font-size="14" font-weight="600" fill="#111827">$12,400</text>
+
+  <text x="560" y="158" font-size="10" fill="#6B7280">May 10</text>
+  <text x="560" y="176" font-size="14" font-weight="600" fill="#111827">$11,900</text>
+
+  <text x="700" y="158" font-size="10" fill="#6B7280">Change</text>
+  <text x="700" y="176" font-size="14" font-weight="600" fill="#059669">+4.2%</text>
+  <!-- Annotation -->
+  <text x="810" y="176" font-size="10" fill="#9CA3AF" font-style="italic">Snapshot comparison card (live mode only)</text>
+
+  <!-- Tab Bar (5 tabs) -->
+  <line x1="260" y1="220" x2="1140" y2="220" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="260" y="214" font-size="13" font-weight="600" fill="#5C6AC4">Revenue</text>
+  <line x1="260" y1="220" x2="318" y2="220" stroke="#5C6AC4" stroke-width="2"/>
+
+  <text x="340" y="214" font-size="13" fill="#6B7280">Forecasting</text>
+  <text x="446" y="214" font-size="13" fill="#6B7280">Profit &amp; Expense</text>
+  <text x="582" y="214" font-size="13" fill="#6B7280">Cohorts</text>
+  <text x="650" y="214" font-size="13" fill="#6B7280">Multi-App</text>
 
   <!-- Revenue Chart Card -->
-  <rect x="260" y="152" width="880" height="380" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="260" y="238" width="880" height="380" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
 
   <!-- Chart title -->
-  <text x="284" y="180" font-size="14" font-weight="600" fill="#111827">Revenue Over Time</text>
-  <text x="284" y="198" font-size="12" fill="#6B7280">Last 12 months</text>
+  <text x="284" y="266" font-size="14" font-weight="600" fill="#111827">Revenue Over Time</text>
+  <text x="284" y="284" font-size="12" fill="#6B7280">Last 12 months</text>
 
   <!-- Y-axis labels -->
-  <text x="288" y="240" font-size="10" fill="#9CA3AF">$50k</text>
-  <text x="288" y="290" font-size="10" fill="#9CA3AF">$40k</text>
-  <text x="288" y="340" font-size="10" fill="#9CA3AF">$30k</text>
-  <text x="288" y="390" font-size="10" fill="#9CA3AF">$20k</text>
-  <text x="288" y="440" font-size="10" fill="#9CA3AF">$10k</text>
-  <text x="288" y="490" font-size="10" fill="#9CA3AF">$0</text>
+  <text x="288" y="326" font-size="10" fill="#9CA3AF">$50k</text>
+  <text x="288" y="376" font-size="10" fill="#9CA3AF">$40k</text>
+  <text x="288" y="426" font-size="10" fill="#9CA3AF">$30k</text>
+  <text x="288" y="476" font-size="10" fill="#9CA3AF">$20k</text>
+  <text x="288" y="526" font-size="10" fill="#9CA3AF">$10k</text>
+  <text x="288" y="576" font-size="10" fill="#9CA3AF">$0</text>
 
   <!-- Grid lines -->
-  <line x1="320" y1="236" x2="1120" y2="236" stroke="#F3F4F6" stroke-width="1"/>
-  <line x1="320" y1="286" x2="1120" y2="286" stroke="#F3F4F6" stroke-width="1"/>
-  <line x1="320" y1="336" x2="1120" y2="336" stroke="#F3F4F6" stroke-width="1"/>
-  <line x1="320" y1="386" x2="1120" y2="386" stroke="#F3F4F6" stroke-width="1"/>
-  <line x1="320" y1="436" x2="1120" y2="436" stroke="#F3F4F6" stroke-width="1"/>
-  <line x1="320" y1="486" x2="1120" y2="486" stroke="#F3F4F6" stroke-width="1"/>
+  <line x1="320" y1="322" x2="1120" y2="322" stroke="#F3F4F6" stroke-width="1"/>
+  <line x1="320" y1="372" x2="1120" y2="372" stroke="#F3F4F6" stroke-width="1"/>
+  <line x1="320" y1="422" x2="1120" y2="422" stroke="#F3F4F6" stroke-width="1"/>
+  <line x1="320" y1="472" x2="1120" y2="472" stroke="#F3F4F6" stroke-width="1"/>
+  <line x1="320" y1="522" x2="1120" y2="522" stroke="#F3F4F6" stroke-width="1"/>
+  <line x1="320" y1="572" x2="1120" y2="572" stroke="#F3F4F6" stroke-width="1"/>
 
-  <!-- Chart line (zigzag polyline) -->
-  <polyline points="340,440 400,420 460,390 520,400 580,370 640,350 700,340 760,320 820,300 880,280 940,260 1000,240 1060,230 1100,220"
+  <!-- Chart line -->
+  <polyline points="340,526 400,506 460,476 520,486 580,456 640,436 700,426 760,406 820,386 880,366 940,346 1000,326 1060,316 1100,306"
             fill="none" stroke="#5C6AC4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Filled area under line -->
-  <polyline points="340,440 400,420 460,390 520,400 580,370 640,350 700,340 760,320 820,300 880,280 940,260 1000,240 1060,230 1100,220 1100,486 340,486"
+  <!-- Filled area -->
+  <polyline points="340,526 400,506 460,476 520,486 580,456 640,436 700,426 760,406 820,386 880,366 940,346 1000,326 1060,316 1100,306 1100,572 340,572"
             fill="#5C6AC4" opacity="0.06" stroke="none"/>
 
   <!-- X-axis labels -->
-  <text x="340" y="508" font-size="10" fill="#9CA3AF" text-anchor="middle">Jun</text>
-  <text x="410" y="508" font-size="10" fill="#9CA3AF" text-anchor="middle">Jul</text>
-  <text x="480" y="508" font-size="10" fill="#9CA3AF" text-anchor="middle">Aug</text>
-  <text x="550" y="508" font-size="10" fill="#9CA3AF" text-anchor="middle">Sep</text>
-  <text x="620" y="508" font-size="10" fill="#9CA3AF" text-anchor="middle">Oct</text>
-  <text x="690" y="508" font-size="10" fill="#9CA3AF" text-anchor="middle">Nov</text>
-  <text x="760" y="508" font-size="10" fill="#9CA3AF" text-anchor="middle">Dec</text>
-  <text x="830" y="508" font-size="10" fill="#9CA3AF" text-anchor="middle">Jan</text>
-  <text x="900" y="508" font-size="10" fill="#9CA3AF" text-anchor="middle">Feb</text>
-  <text x="970" y="508" font-size="10" fill="#9CA3AF" text-anchor="middle">Mar</text>
-  <text x="1040" y="508" font-size="10" fill="#9CA3AF" text-anchor="middle">Apr</text>
-  <text x="1100" y="508" font-size="10" fill="#9CA3AF" text-anchor="middle">May</text>
+  <text x="340" y="594" font-size="10" fill="#9CA3AF" text-anchor="middle">Jun</text>
+  <text x="410" y="594" font-size="10" fill="#9CA3AF" text-anchor="middle">Jul</text>
+  <text x="480" y="594" font-size="10" fill="#9CA3AF" text-anchor="middle">Aug</text>
+  <text x="550" y="594" font-size="10" fill="#9CA3AF" text-anchor="middle">Sep</text>
+  <text x="620" y="594" font-size="10" fill="#9CA3AF" text-anchor="middle">Oct</text>
+  <text x="690" y="594" font-size="10" fill="#9CA3AF" text-anchor="middle">Nov</text>
+  <text x="760" y="594" font-size="10" fill="#9CA3AF" text-anchor="middle">Dec</text>
+  <text x="830" y="594" font-size="10" fill="#9CA3AF" text-anchor="middle">Jan</text>
+  <text x="900" y="594" font-size="10" fill="#9CA3AF" text-anchor="middle">Feb</text>
+  <text x="970" y="594" font-size="10" fill="#9CA3AF" text-anchor="middle">Mar</text>
+  <text x="1040" y="594" font-size="10" fill="#9CA3AF" text-anchor="middle">Apr</text>
+  <text x="1100" y="594" font-size="10" fill="#9CA3AF" text-anchor="middle">May</text>
 
   <!-- Metric Cards Row -->
   <!-- Card 1: Total Revenue -->
-  <rect x="260" y="550" width="280" height="90" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="280" y="578" font-size="12" fill="#6B7280">Total Revenue</text>
-  <text x="280" y="610" font-size="26" font-weight="bold" fill="#111827">$48,290</text>
-  <text x="420" y="610" font-size="12" fill="#059669">+12.4%</text>
+  <rect x="260" y="636" width="280" height="90" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="280" y="664" font-size="12" fill="#6B7280">Total Revenue</text>
+  <text x="280" y="696" font-size="26" font-weight="bold" fill="#111827">$48,290</text>
+  <text x="420" y="696" font-size="12" fill="#059669">+12.4%</text>
 
   <!-- Card 2: MRR Growth -->
-  <rect x="560" y="550" width="280" height="90" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="580" y="578" font-size="12" fill="#6B7280">MRR Growth</text>
-  <text x="580" y="610" font-size="26" font-weight="bold" fill="#111827">+4.2%</text>
-  <text x="700" y="610" font-size="12" fill="#059669">+0.8pp</text>
+  <rect x="560" y="636" width="280" height="90" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="580" y="664" font-size="12" fill="#6B7280">MRR Growth</text>
+  <text x="580" y="696" font-size="26" font-weight="bold" fill="#111827">+4.2%</text>
+  <text x="700" y="696" font-size="12" fill="#059669">+0.8pp</text>
 
   <!-- Card 3: Avg Transaction -->
-  <rect x="860" y="550" width="280" height="90" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="880" y="578" font-size="12" fill="#6B7280">Avg Transaction</text>
-  <text x="880" y="610" font-size="26" font-weight="bold" fill="#111827">$24.50</text>
-  <text x="1020" y="610" font-size="12" fill="#DC2626">-1.2%</text>
+  <rect x="860" y="636" width="280" height="90" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="880" y="664" font-size="12" fill="#6B7280">Avg Transaction</text>
+  <text x="880" y="696" font-size="26" font-weight="bold" fill="#111827">$24.50</text>
+  <text x="1020" y="696" font-size="12" fill="#DC2626">-1.2%</text>
+
+  <!-- Annotations -->
+  <!-- Revenue tab also includes: Revenue Breakdown (Recurring/Usage/One-Time mix bars), MRR Movement bar chart, Top Stores by Revenue -->
+  <rect x="260" y="748" width="880" height="62" rx="6" fill="#FEF3C7" stroke="#FDE68A" stroke-width="1"/>
+  <text x="280" y="768" font-size="11" fill="#92400E">5 tabs each as TabBarView children. See sub-wireframes: 13a (Forecasting), 13b (Profit), 13c (Cohorts), 13d (Multi-App).</text>
+  <text x="280" y="784" font-size="11" fill="#92400E">Revenue tab also has: Revenue Breakdown (mix bars for Recurring/Usage/One-Time), MRR Movement (stacked bar), Top Stores.</text>
+  <text x="280" y="800" font-size="11" fill="#92400E">Date picker + MRR comparison shown only in live mode (!demoMode). App filter clearable with "All Apps" option.</text>
 </svg>

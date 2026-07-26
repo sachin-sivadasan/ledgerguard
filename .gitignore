@@ -77,3 +77,10 @@ gcp-sa-key.json
 # Temp
 tmp/
 temp/
+
+# Compiled Go server binary (built locally, not versioned)
+backend/server
+
+# Firebase local build/cache
+frontend/app/.firebase/
+**/.firebase/

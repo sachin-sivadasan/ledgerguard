@@ -1235,3 +1235,14 @@ flutter test --watch
 | RAPI-040 | RebuildForApp populates api_subscription_status | Read model reflects subscription data | Pending |
 | RAPI-041 | RebuildForApp populates api_usage_status | Read model reflects usage transactions | Pending |
 | RAPI-042 | POST /admin/rebuild-read-model | 200, read model rebuilt for app | Pending |
+
+### 16. App Events
+
+#### 16.1 storeDomain → Shop GID Resolution
+| ID | Scenario | Expected Result | Status |
+|----|----------|-----------------|--------|
+| EVT-001 | List events, no filters | 200, default page (20), correct totals | ✓ |
+| EVT-002 | List events with page/pageSize | 200, correct slice + totalPages | ✓ |
+| EVT-003 | Filter `?storeDomain=` matches a subscription | Domain resolved to its `ShopifyShopGID`; `filters.ShopGIDs` set for `IN (...)` query | ✓ |
+| EVT-004 | Filter `?storeDomain=` matches no subscription | `filters.ShopGIDs` empty; `StoreDomain` propagated for ILIKE fallback | ✓ |
+| EVT-005 | Filter `?storeDomain=` with multiple subs on same domain | All matching GIDs collected into `ShopGIDs` | Pending |

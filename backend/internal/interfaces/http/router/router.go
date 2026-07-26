@@ -258,9 +258,12 @@ func New(cfg Config) *chi.Mux {
 					r.Get("/{appID}/reports/retention", cfg.RetentionHandler.GetRetention)
 				}
 
-				// Cohort retention route
+				// Cohort retention route. Both paths hit the same handler: /cohorts is
+				// used by the analytics tab; /reports/cohorts gives the reports API a
+				// uniform path alongside the other reports.
 				if cfg.CohortHandler != nil {
 					r.Get("/{appID}/cohorts", cfg.CohortHandler.GetCohorts)
+					r.Get("/{appID}/reports/cohorts", cfg.CohortHandler.GetCohorts)
 				}
 
 				// Risk summary route

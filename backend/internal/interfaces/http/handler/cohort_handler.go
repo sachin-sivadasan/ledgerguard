@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -57,17 +60,73 @@ func (h *CohortHandler) GetCohorts(w http.ResponseWriter, r *http.Request) {
 	// Fetch all subscriptions for this app
 	subscriptions, err := h.subscriptionRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to fetch subscriptions")
+		writeCohortRepoError(w, "FindByAppID", err)
 		return
 	}
 
 	now := time.Now()
 	cohorts := buildCohorts(subscriptions, months, now)
 
+	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
+		writeCohortsCSV(w, cohorts)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]any{
 		"cohorts": cohorts,
-	})
+	}); err != nil {
+		log.Printf("cohorts: encode response: %v", err)
+	}
+}
+
+// writeCohortRepoError logs a repository failure and responds 503. This repo has no
+// not-found sentinel — every error is an infrastructure failure (ADR-042), matching
+// writeRetentionRepoError.
+func writeCohortRepoError(w http.ResponseWriter, op string, err error) {
+	log.Printf("cohorts: repo error in %s: %v", op, err)
+	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
+}
+
+// writeCohortsCSV writes the cohort retention heatmap as a CSV attachment. The header
+// is cohort,initialStores,M0,M1,...,Mmax where max is the longest RetentionPcts across
+// all cohorts. Ragged rows (a cohort with fewer months) are padded with empty strings
+// so every row has the same column count. Uses encoding/csv for correct escaping.
+func writeCohortsCSV(w http.ResponseWriter, cohorts []entity.CohortData) {
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", `attachment; filename="cohorts.csv"`)
+
+	maxMonths := 0
+	for _, c := range cohorts {
+		if len(c.RetentionPcts) > maxMonths {
+			maxMonths = len(c.RetentionPcts)
+		}
+	}
+
+	header := make([]string, 0, 2+maxMonths)
+	header = append(header, "cohort", "initialStores")
+	for m := 0; m < maxMonths; m++ {
+		header = append(header, "M"+strconv.Itoa(m))
+	}
+
+	cw := csv.NewWriter(w)
+	_ = cw.Write(header)
+	for _, c := range cohorts {
+		row := make([]string, 0, len(header))
+		row = append(row, c.CohortMonth, strconv.Itoa(c.InitialStores))
+		for m := 0; m < maxMonths; m++ {
+			if m < len(c.RetentionPcts) {
+				row = append(row, strconv.FormatFloat(c.RetentionPcts[m], 'f', 1, 64))
+			} else {
+				row = append(row, "") // pad ragged row
+			}
+		}
+		_ = cw.Write(row)
+	}
+	cw.Flush()
+	if err := cw.Error(); err != nil {
+		log.Printf("cohorts: write CSV: %v", err)
+	}
 }
 
 // buildCohorts groups subscriptions by creation month and calculates retention.

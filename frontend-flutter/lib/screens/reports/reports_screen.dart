@@ -19,7 +19,8 @@ class ReportsScreen extends StatelessWidget {
           route: '/reports/churn'),
       _ReportEntry('Retention', 'How many merchants stay active',
           route: '/reports/retention'),
-      _ReportEntry('Retention Cohorts', 'Retention by signup cohort'),
+      _ReportEntry('Retention Cohorts', 'Retention by signup cohort',
+          route: '/reports/cohorts'),
       _ReportEntry('Reviews', 'App Store review sentiment'),
     ]),
     _ReportCategory('Revenue & Billing', Icons.attach_money_outlined, [

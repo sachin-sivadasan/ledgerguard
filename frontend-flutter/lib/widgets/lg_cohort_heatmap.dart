@@ -4,8 +4,9 @@ import '../models/analytics_model.dart';
 import '../theme/app_colors.dart';
 
 /// Reusable cohort retention heatmap. Renders a horizontally-scrollable
-/// [Table] where each row is a signup-month cohort and each column M0..Mmax is
-/// the percentage of that cohort still retained N months later. Green intensity
+/// [Table] where each row is a signup-month cohort and each month column
+/// (M0 through M of the longest-lived cohort) is the percentage of that cohort
+/// still retained N months later; M0 is the 100% signup baseline. Green intensity
 /// scales with the percentage; ragged rows (shorter than the widest cohort)
 /// render '—' for the missing months.
 ///

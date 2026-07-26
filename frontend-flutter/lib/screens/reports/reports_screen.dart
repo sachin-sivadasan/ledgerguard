@@ -21,7 +21,8 @@ class ReportsScreen extends StatelessWidget {
           route: '/reports/retention'),
       _ReportEntry('Retention Cohorts', 'Retention by signup cohort',
           route: '/reports/cohorts'),
-      _ReportEntry('Reviews', 'App Store review sentiment'),
+      _ReportEntry('Reviews', 'App Store review sentiment',
+          route: '/reports/reviews'),
     ]),
     _ReportCategory('Revenue & Billing', Icons.attach_money_outlined, [
       _ReportEntry('Earnings', 'Net payouts after Shopify fees'),

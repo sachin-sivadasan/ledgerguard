@@ -111,6 +111,48 @@ func (r *PostgresAppReviewRepository) FindByAppID(ctx context.Context, appID uui
 	return reviews, rows.Err()
 }
 
+func (r *PostgresAppReviewRepository) FindAllByAppID(ctx context.Context, appID uuid.UUID) ([]*entity.AppReview, error) {
+	query := `
+		SELECT id, app_id, source_review_id, author, rating, body, review_date,
+		       location, time_using, source, scraped_at, created_at, updated_at
+		FROM app_reviews
+		WHERE app_id = $1
+		ORDER BY review_date DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query, appID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reviews []*entity.AppReview
+	for rows.Next() {
+		var review entity.AppReview
+		err := rows.Scan(
+			&review.ID,
+			&review.AppID,
+			&review.SourceReviewID,
+			&review.Author,
+			&review.Rating,
+			&review.Body,
+			&review.ReviewDate,
+			&review.Location,
+			&review.TimeUsing,
+			&review.Source,
+			&review.ScrapedAt,
+			&review.CreatedAt,
+			&review.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		reviews = append(reviews, &review)
+	}
+
+	return reviews, rows.Err()
+}
+
 func (r *PostgresAppReviewRepository) CountByAppID(ctx context.Context, appID uuid.UUID) (int, error) {
 	query := `SELECT COUNT(*) FROM app_reviews WHERE app_id = $1`
 

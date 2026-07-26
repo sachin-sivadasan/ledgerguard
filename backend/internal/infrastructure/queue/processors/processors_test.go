@@ -389,6 +389,9 @@ func (m *mockReviewRepo) UpsertBatch(_ context.Context, reviews []*entity.AppRev
 func (m *mockReviewRepo) FindByAppID(_ context.Context, _ uuid.UUID, _, _ int) ([]*entity.AppReview, error) {
 	return nil, nil
 }
+func (m *mockReviewRepo) FindAllByAppID(_ context.Context, _ uuid.UUID) ([]*entity.AppReview, error) {
+	return nil, nil
+}
 func (m *mockReviewRepo) CountByAppID(_ context.Context, _ uuid.UUID) (int, error) {
 	return 0, nil
 }

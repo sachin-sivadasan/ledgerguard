@@ -19,6 +19,7 @@ import 'providers/earnings_provider.dart';
 import 'providers/events_provider.dart';
 import 'providers/insights_provider.dart';
 import 'providers/retention_provider.dart';
+import 'providers/reviews_provider.dart';
 import 'providers/revenue_at_risk_provider.dart';
 import 'providers/risk_provider.dart';
 import 'providers/settings_provider.dart';
@@ -36,6 +37,7 @@ import 'services/events_service.dart';
 import 'services/insights_service.dart';
 import 'services/metrics_service.dart';
 import 'services/retention_service.dart';
+import 'services/reviews_service.dart';
 import 'services/mixpanel_service.dart';
 import 'services/revenue_at_risk_service.dart';
 import 'services/risk_service.dart';
@@ -66,6 +68,7 @@ void main() async {
   final churnService = ChurnService(apiClient);
   final cohortsService = CohortsService(apiClient);
   final retentionService = RetentionService(apiClient);
+  final reviewsService = ReviewsService(apiClient);
   final eventsService = EventsService(apiClient);
   final insightsService = InsightsService(apiClient);
   final storeService = StoreService(apiClient);
@@ -85,6 +88,7 @@ void main() async {
   final churnProvider = ChurnProvider(churnService);
   final cohortsProvider = CohortsProvider(cohortsService);
   final retentionProvider = RetentionProvider(retentionService);
+  final reviewsProvider = ReviewsProvider(reviewsService);
   final analyticsProvider = AnalyticsProvider(metricsService, earningsService);
   final earningsProvider = EarningsProvider(earningsService);
   final insightsProvider = InsightsProvider(insightsService);
@@ -102,6 +106,7 @@ void main() async {
     churnProvider: churnProvider,
     cohortsProvider: cohortsProvider,
     retentionProvider: retentionProvider,
+    reviewsProvider: reviewsProvider,
     analyticsProvider: analyticsProvider,
     earningsProvider: earningsProvider,
     insightsProvider: insightsProvider,
@@ -127,6 +132,7 @@ void main() async {
         ChangeNotifierProvider.value(value: churnProvider),
         ChangeNotifierProvider.value(value: cohortsProvider),
         ChangeNotifierProvider.value(value: retentionProvider),
+        ChangeNotifierProvider.value(value: reviewsProvider),
         ChangeNotifierProvider.value(value: analyticsProvider),
         ChangeNotifierProvider.value(value: earningsProvider),
         ChangeNotifierProvider.value(value: appsProvider),

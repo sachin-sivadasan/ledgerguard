@@ -230,8 +230,11 @@ func buildRetentionPlans(subs []*entity.Subscription) []retentionPlan {
 // event within the [from,to] date range, inclusive of the entire `to` day. Event
 // types are matched case-insensitively on the "REACTIVAT" stem (e.g. REACTIVATED,
 // reactivation). This is period-scoped — reactivations are inherently a within-window
-// count. `to` from parseDateRange is midnight of that day, so the upper bound is the
-// day AFTER `to` (exclusive); otherwise every event on the `to` day would be dropped.
+// count. The upper bound is the day AFTER `to` (exclusive): when `to` is an explicit
+// date param, parseDateRange returns it as midnight UTC, so +1 day keeps the whole
+// `to` day inclusive (a plain `.After(to)` would drop every event on that day); when
+// `to` defaults to `now`, the window is inclusive of the current instant (up to ~24h
+// past it), which is acceptable for this coarse in-range count.
 func countReactivations(events []*entity.AppEvent, from, to time.Time) int {
 	toExclusive := to.AddDate(0, 0, 1)
 	seen := map[string]struct{}{}

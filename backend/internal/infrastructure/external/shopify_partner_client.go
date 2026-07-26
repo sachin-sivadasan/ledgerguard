@@ -10,6 +10,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -883,9 +884,21 @@ func GetLatestSubscriptionStatus(events []AppEvent) string {
 		return ""
 	}
 
-	// Events are typically returned newest-first
-	// Look at the most recent relevant event
-	for _, event := range events {
+	// Decide status from the LATEST event by OccurredAt — never trust the
+	// slice/API order (it isn't guaranteed sorted). Tie-break: an accepted
+	// charge outranks a cancel at the same timestamp so an upgrade/downgrade
+	// (Shopify cancels the old subscription and accepts a new one, often at the
+	// same instant) is not misread as churn — the "cancel trap".
+	sorted := make([]AppEvent, len(events))
+	copy(sorted, events)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if !sorted[i].OccurredAt.Equal(sorted[j].OccurredAt) {
+			return sorted[i].OccurredAt.After(sorted[j].OccurredAt)
+		}
+		return statusEventPriority(sorted[i].Type) > statusEventPriority(sorted[j].Type)
+	})
+
+	for _, event := range sorted {
 		switch event.Type {
 		case "RELATIONSHIP_UNINSTALLED":
 			return "UNINSTALLED"
@@ -900,6 +913,24 @@ func GetLatestSubscriptionStatus(events []AppEvent) string {
 	}
 
 	return ""
+}
+
+// statusEventPriority ranks status-relevant events for same-timestamp tie-breaks.
+// An accepted charge wins over a cancel so a same-instant upgrade/downgrade is
+// treated as ACTIVE, not churn. Higher wins.
+func statusEventPriority(eventType string) int {
+	switch eventType {
+	case "SUBSCRIPTION_CHARGE_ACCEPTED":
+		return 3
+	case "RELATIONSHIP_INSTALLED":
+		return 2
+	case "SUBSCRIPTION_CHARGE_CANCELED":
+		return 1
+	case "RELATIONSHIP_UNINSTALLED":
+		return 0
+	default:
+		return -1
+	}
 }
 
 // FetchInstallCount retrieves the number of shops that have installed the app

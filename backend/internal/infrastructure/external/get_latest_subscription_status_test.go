@@ -1,0 +1,93 @@
+package external
+
+import (
+	"testing"
+	"time"
+)
+
+// These tests pin down the "cancel trap": on Shopify, an upgrade/downgrade emits
+// a SUBSCRIPTION_CHARGE_CANCELED (old plan) plus a SUBSCRIPTION_CHARGE_ACCEPTED
+// (new plan). Reading the cancel as churn over-counts churn. Status must be
+// decided by the latest event by OccurredAt (not slice order), with an
+// accepted-charge winning a same-timestamp tie against a cancel.
+func TestGetLatestSubscriptionStatus(t *testing.T) {
+	base := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	ev := func(typ string, t time.Time) AppEvent { return AppEvent{Type: typ, OccurredAt: t} }
+
+	tests := []struct {
+		name   string
+		events []AppEvent
+		want   string
+	}{
+		{
+			name: "upgrade is not churn — later ACCEPTED wins over earlier CANCELED (slice order misleading)",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_CANCELED", base.Add(2*time.Hour)), // old plan (listed first)
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base.Add(3*time.Hour)), // new plan (newer)
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base),
+				ev("RELATIONSHIP_INSTALLED", base.Add(-1*time.Hour)),
+			},
+			want: "ACTIVE",
+		},
+		{
+			name: "upgrade at same timestamp — ACCEPTED beats CANCELED on tie",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_CANCELED", base.Add(2*time.Hour)),
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base.Add(2*time.Hour)),
+			},
+			want: "ACTIVE",
+		},
+		{
+			name: "genuine churn — latest event is a CANCELED with no later ACCEPTED",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base),
+				ev("SUBSCRIPTION_CHARGE_CANCELED", base.Add(3*time.Hour)),
+			},
+			want: "CANCELLED",
+		},
+		{
+			name: "uninstall is terminal when it is the latest event",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base),
+				ev("RELATIONSHIP_UNINSTALLED", base.Add(5*time.Hour)),
+			},
+			want: "UNINSTALLED",
+		},
+		{
+			name: "win-back — reinstall + accept after an uninstall reads as ACTIVE",
+			events: []AppEvent{
+				ev("RELATIONSHIP_UNINSTALLED", base.Add(1*time.Hour)),
+				ev("RELATIONSHIP_INSTALLED", base.Add(2*time.Hour)),
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base.Add(3*time.Hour)),
+			},
+			want: "ACTIVE",
+		},
+		{
+			name: "unsorted input still resolves to the newest status",
+			events: []AppEvent{
+				ev("RELATIONSHIP_INSTALLED", base),
+				ev("SUBSCRIPTION_CHARGE_CANCELED", base.Add(4*time.Hour)), // newest
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base.Add(1*time.Hour)),
+			},
+			want: "CANCELLED",
+		},
+		{
+			name:   "installed only — pending",
+			events: []AppEvent{ev("RELATIONSHIP_INSTALLED", base)},
+			want:   "PENDING",
+		},
+		{
+			name:   "empty",
+			events: nil,
+			want:   "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetLatestSubscriptionStatus(tt.events); got != tt.want {
+				t.Errorf("GetLatestSubscriptionStatus() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

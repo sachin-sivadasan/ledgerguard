@@ -127,7 +127,7 @@ class ReviewsProvider extends ChangeNotifier {
         neutral: neutral,
         negative: negative,
       ),
-      recent: recent.take(10).toList(),
+      recent: recent.take(12).toList(), // match backend maxRecentReviews
     );
   }
 }

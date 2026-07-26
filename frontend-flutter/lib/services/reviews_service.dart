@@ -48,6 +48,9 @@ class ReviewsReport {
   final double avgRating;
   final int totalReviews;
   final List<RatingBucket> distribution;
+
+  /// Parsed from the backend but not yet surfaced in the UI (the screen shows the
+  /// star distribution instead); reserved for a future sentiment visualization.
   final ReviewSentimentBreakdown sentiment;
   final List<AppReview> recent;
 

@@ -92,15 +92,26 @@ func writeReviewRepoError(w http.ResponseWriter, op string, err error) {
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
+// validRating reports whether a star rating is in the valid 1–5 range.
+func validRating(rating int) bool { return rating >= 1 && rating <= 5 }
+
 // buildReviewsReport aggregates the average rating, star distribution, sentiment
 // breakdown and the most-recent reviews. Reviews are assumed pre-sorted by
-// review date descending (as returned by FindAllByAppID).
+// review date descending (as returned by FindAllByAppID). Reviews with an
+// out-of-range rating (malformed scrape) are excluded from every aggregate and
+// logged, so a corrupt value can't silently skew the numbers or make the bucket
+// counts disagree with totalReviews.
 func buildReviewsReport(reviews []*entity.AppReview) reviewsReport {
 	distByRating := map[int]int{}
 	sentiment := reviewSentimentBreakdown{}
-	var ratingSum int
+	var ratingSum, validCount int
 
 	for _, rev := range reviews {
+		if !validRating(rev.Rating) {
+			log.Printf("reviews: skipping out-of-range rating %d (review %s)", rev.Rating, rev.ID)
+			continue
+		}
+		validCount++
 		ratingSum += rev.Rating
 		distByRating[rev.Rating]++
 		switch deriveSentiment(rev.Rating) {
@@ -114,8 +125,8 @@ func buildReviewsReport(reviews []*entity.AppReview) reviewsReport {
 	}
 
 	avgRating := 0.0
-	if len(reviews) > 0 {
-		avgRating = float64(ratingSum) / float64(len(reviews))
+	if validCount > 0 {
+		avgRating = float64(ratingSum) / float64(validCount)
 	}
 
 	// Always emit all five star buckets, ordered 5 → 1, count 0 when absent.
@@ -128,8 +139,11 @@ func buildReviewsReport(reviews []*entity.AppReview) reviewsReport {
 	}
 
 	recent := make([]reviewSummary, 0, maxRecentReviews)
-	for i, rev := range reviews {
-		if i >= maxRecentReviews {
+	for _, rev := range reviews {
+		if !validRating(rev.Rating) {
+			continue
+		}
+		if len(recent) >= maxRecentReviews {
 			break
 		}
 		recent = append(recent, reviewSummary{
@@ -147,7 +161,7 @@ func buildReviewsReport(reviews []*entity.AppReview) reviewsReport {
 
 	return reviewsReport{
 		AvgRating:    avgRating,
-		TotalReviews: len(reviews),
+		TotalReviews: validCount,
 		Distribution: distribution,
 		Sentiment:    sentiment,
 		Recent:       recent,

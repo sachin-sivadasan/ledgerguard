@@ -119,6 +119,104 @@ func TestReviewsReport_AvgRating(t *testing.T) {
 	}
 }
 
+// TestReviewsReport_AvgRatingPrecision verifies avgRating is a raw (unrounded) mean,
+// pinning the API contract against a future "helpful" rounding/truncation.
+func TestReviewsReport_AvgRatingPrecision(t *testing.T) {
+	appID := uuid.New()
+	d := time.Date(2026, 7, 21, 0, 0, 0, 0, time.UTC)
+	// (5+4+4)/3 = 4.3333… — non-terminating; must not be rounded/truncated.
+	reviews := []*entity.AppReview{
+		review(appID, 5, "a", d), review(appID, 4, "b", d), review(appID, 4, "c", d),
+	}
+	aid, pa, h := reviewsFixture(reviews, nil)
+	resp := decodeReviewsReport(t, doReviewsReport(t, h, aid, pa, ""))
+	want := 13.0 / 3.0
+	if diff := resp.AvgRating - want; diff > 1e-9 || diff < -1e-9 {
+		t.Errorf("avgRating: expected ~%.10f (raw mean), got %v", want, resp.AvgRating)
+	}
+}
+
+// TestDeriveSentiment_Boundaries pins the sentiment label at each rating boundary.
+func TestDeriveSentiment_Boundaries(t *testing.T) {
+	cases := map[int]string{1: "negative", 2: "negative", 3: "neutral", 4: "positive", 5: "positive"}
+	for rating, want := range cases {
+		if got := deriveSentiment(rating); got != want {
+			t.Errorf("deriveSentiment(%d): expected %q, got %q", rating, want, got)
+		}
+	}
+}
+
+// TestReviewsReport_OutOfRangeRatingExcluded verifies a malformed rating (outside
+// 1–5) is excluded from avgRating, totalReviews, distribution and sentiment, so the
+// bucket counts stay consistent with totalReviews.
+func TestReviewsReport_OutOfRangeRatingExcluded(t *testing.T) {
+	appID := uuid.New()
+	d := time.Date(2026, 7, 21, 0, 0, 0, 0, time.UTC)
+	reviews := []*entity.AppReview{
+		review(appID, 5, "ok", d),
+		review(appID, 0, "corrupt-low", d),  // out of range → excluded
+		review(appID, 6, "corrupt-high", d), // out of range → excluded
+		review(appID, 3, "ok", d),
+	}
+	aid, pa, h := reviewsFixture(reviews, nil)
+	resp := decodeReviewsReport(t, doReviewsReport(t, h, aid, pa, ""))
+
+	if resp.TotalReviews != 2 {
+		t.Errorf("totalReviews: expected 2 (2 malformed excluded), got %d", resp.TotalReviews)
+	}
+	if resp.AvgRating != 4.0 { // (5+3)/2
+		t.Errorf("avgRating: expected 4.0, got %v", resp.AvgRating)
+	}
+	// Bucket counts must sum to totalReviews.
+	sum := 0
+	for _, b := range resp.Distribution {
+		sum += b.Count
+	}
+	if sum != resp.TotalReviews {
+		t.Errorf("distribution sum %d != totalReviews %d (out-of-range leaked)", sum, resp.TotalReviews)
+	}
+	if resp.Sentiment.Positive+resp.Sentiment.Neutral+resp.Sentiment.Negative != 2 {
+		t.Errorf("sentiment total: expected 2, got %+v", resp.Sentiment)
+	}
+}
+
+// TestReviewsReport_CSVFieldOrder verifies each CSV column maps to the right field
+// (guards against a silent column-order swap).
+func TestReviewsReport_CSVFieldOrder(t *testing.T) {
+	appID := uuid.New()
+	d := time.Date(2026, 7, 21, 0, 0, 0, 0, time.UTC)
+	rev := &entity.AppReview{
+		ID: uuid.New(), AppID: appID, Author: "Distinct Author", Rating: 4,
+		Body: "distinct body", ReviewDate: d, Location: "Canada",
+		TimeUsing: "2 months using the app", Source: "shopify_app_store",
+	}
+	aid, pa, h := reviewsFixture([]*entity.AppReview{rev}, nil)
+	rec := doReviewsReport(t, h, aid, pa, "format=csv")
+	records, err := csv.NewReader(strings.NewReader(rec.Body.String())).ReadAll()
+	if err != nil {
+		t.Fatalf("parse CSV: %v", err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("expected header + 1 row, got %d", len(records))
+	}
+	want := []string{"Distinct Author", "4", "2026-07-21", "Canada", "2 months using the app", "positive", "shopify_app_store", "distinct body"}
+	for i, w := range want {
+		if records[1][i] != w {
+			t.Errorf("CSV col %d: expected %q, got %q", i, w, records[1][i])
+		}
+	}
+}
+
+// TestReviewsReport_CSVRepoError503 verifies the CSV path also surfaces repo errors
+// as 503 (not just the JSON path).
+func TestReviewsReport_CSVRepoError503(t *testing.T) {
+	aid, pa, h := reviewsFixture(nil, errors.New("db down"))
+	rec := doReviewsReport(t, h, aid, pa, "format=csv")
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 on CSV path, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
 // TestReviewsReport_Distribution verifies all five star buckets are present (ordered
 // 5→1), including a rating with count 0.
 func TestReviewsReport_Distribution(t *testing.T) {

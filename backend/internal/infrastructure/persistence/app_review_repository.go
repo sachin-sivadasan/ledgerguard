@@ -111,6 +111,8 @@ func (r *PostgresAppReviewRepository) FindByAppID(ctx context.Context, appID uui
 	return reviews, rows.Err()
 }
 
+// FindAllByAppID returns every review for the app ordered by review_date descending.
+// The Reviews report depends on this ordering for its `recent` slice and aggregation.
 func (r *PostgresAppReviewRepository) FindAllByAppID(ctx context.Context, appID uuid.UUID) ([]*entity.AppReview, error) {
 	query := `
 		SELECT id, app_id, source_review_id, author, rating, body, review_date,

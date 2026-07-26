@@ -1,0 +1,16 @@
+@startuml 50-archetype-e-funnel
+title Report Archetype E — Funnel (data flow)
+' Reused by: Activation (install -> paid)
+participant Flutter as FE
+participant "ReportHandler" as H
+participant "GrowthService" as S
+participant "AppEventRepository" as EV
+participant "SubscriptionRepository" as SUB
+FE -> H : GET /reports/activation?from&to
+H -> S : Compute(appID, range)
+S -> EV : installs (RELATIONSHIP_INSTALLED)
+S -> SUB : started + paid subscriptions
+S -> S : stage counts + conversion % between stages
+S --> H : JSON stages[{label, count, conversionPct}]
+H --> FE : 200 → funnel bars
+@enduml

@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="220" height="900" fill="#FFFFFF"/>
+  <line x1="220" y1="0" x2="220" y2="900" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="110" y="45" text-anchor="middle" font-size="14" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+  <rect x="24" y="88" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="101" font-size="13" fill="#6B7280">Dashboard</text>
+  <rect x="24" y="124" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="137" font-size="13" fill="#6B7280">Subscriptions</text>
+  <rect x="24" y="160" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="173" font-size="13" fill="#6B7280">Stores</text>
+  <rect x="24" y="196" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="209" font-size="13" fill="#6B7280">Transactions</text>
+  <rect x="24" y="232" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="245" font-size="13" fill="#6B7280">Events</text>
+  <rect x="24" y="268" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="281" font-size="13" fill="#6B7280">Webhooks</text>
+  <rect x="24" y="304" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="317" font-size="13" fill="#6B7280">Risk</text>
+  <rect x="24" y="340" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="353" font-size="13" fill="#6B7280">Analytics</text>
+  <rect x="12" y="368" width="196" height="32" rx="6" fill="#F0F1FF"/>
+  <rect x="24" y="376" width="16" height="16" rx="3" fill="#5C6AC4"/><text x="52" y="389" font-size="13" font-weight="600" fill="#5C6AC4">Reports</text>
+  <rect x="24" y="412" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="425" font-size="13" fill="#6B7280">Earnings</text>
+  <rect x="24" y="448" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="461" font-size="13" fill="#6B7280">Apps</text>
+  <rect x="24" y="484" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="497" font-size="13" fill="#6B7280">API Keys</text>
+  <rect x="24" y="520" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="533" font-size="13" fill="#6B7280">Insights</text>
+  <rect x="24" y="556" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="569" font-size="13" fill="#6B7280">Settings</text>
+
+  <!-- ==================== CONTENT ==================== -->
+  <!-- Breadcrumb + title -->
+  <text x="260" y="30" font-size="11" fill="#9CA3AF">Reports  ›  Revenue &amp; Billing</text>
+  <text x="260" y="54" font-size="24" font-weight="bold" fill="#111827">Usage Charge Trends</text>
+  <text x="260" y="76" font-size="13" fill="#6B7280">Week-over-week USAGE momentum — top usage customers ranked by revenue</text>
+
+  <!-- Date range + Export + refresh (top-right) -->
+  <rect x="1040" y="30" width="150" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1058" y="48" font-size="12" fill="#111827">Last 30 days ▾</text>
+  <rect x="1204" y="30" width="120" height="28" rx="6" fill="#5C6AC4"/>
+  <text x="1264" y="48" text-anchor="middle" font-size="12" font-weight="500" fill="#FFFFFF">Export CSV</text>
+  <circle cx="1352" cy="44" r="16" fill="none" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1352" y="50" text-anchor="middle" font-size="16" fill="#6B7280">&#8635;</text>
+
+  <!-- App filter chip -->
+  <rect x="260" y="92" width="160" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="278" y="110" font-size="12" fill="#111827">Revenue Tracker Pro ▾</text>
+
+  <!-- Hero KPI cards -->
+  <rect x="260" y="132" width="360" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="284" y="160" font-size="12" fill="#6B7280">Usage MRR-equiv</text>
+  <text x="284" y="196" font-size="30" font-weight="700" fill="#D97706">$1,040</text>
+  <text x="284" y="216" font-size="11" fill="#9CA3AF">trailing-30d usage annualized ÷12</text>
+
+  <rect x="640" y="132" width="360" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="664" y="160" font-size="12" fill="#6B7280">WoW Change</text>
+  <text x="664" y="196" font-size="30" font-weight="700" fill="#059669">+8.4%</text>
+  <text x="664" y="216" font-size="11" fill="#9CA3AF">week-over-week usage growth</text>
+
+  <rect x="1020" y="132" width="380" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1044" y="160" font-size="12" fill="#6B7280">Active Usage Stores</text>
+  <text x="1044" y="196" font-size="30" font-weight="700" fill="#111827">37</text>
+  <text x="1044" y="216" font-size="11" fill="#9CA3AF">stores with usage this window</text>
+
+  <!-- Trend card -->
+  <rect x="260" y="244" width="1140" height="170" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="284" y="272" font-size="14" font-weight="600" fill="#111827">Usage — weekly trend</text>
+  <text x="284" y="290" font-size="11" fill="#9CA3AF" font-style="italic">from daily snapshot (UsageRevenueCents), bucketed weekly — trend + ranked table archetype</text>
+  <polyline points="300,388 420,380 540,372 660,378 780,360 900,352 1020,358 1140,342 1260,336 1360,326"
+            fill="none" stroke="#D97706" stroke-width="2"/>
+  <rect x="300" y="392" width="1060" height="1" fill="#F3F4F6"/>
+  <rect x="1240" y="262" width="10" height="10" fill="#D97706"/><text x="1256" y="271" font-size="10" fill="#6B7280">Usage $</text>
+
+  <!-- Ranked table -->
+  <text x="260" y="446" font-size="16" font-weight="600" fill="#111827">Top Usage Customers</text>
+  <rect x="260" y="458" width="1140" height="34" rx="8" fill="#F3F4F6"/>
+  <text x="284" y="480" font-size="11" font-weight="600" fill="#6B7280">STORE</text>
+  <text x="800" y="480" font-size="11" font-weight="600" fill="#6B7280">USAGE $</text>
+  <text x="1040" y="480" font-size="11" font-weight="600" fill="#6B7280">TREND</text>
+
+  <line x1="260" y1="528" x2="1400" y2="528" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="518" font-size="13" font-weight="500" fill="#111827">acme-widgets.myshopify.com</text>
+  <text x="800" y="518" font-size="13" fill="#D97706">$980</text>
+  <text x="1040" y="518" font-size="13" fill="#059669">▲ +14%</text>
+
+  <line x1="260" y1="566" x2="1400" y2="566" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="556" font-size="13" font-weight="500" fill="#111827">blue-ocean-store.myshopify.com</text>
+  <text x="800" y="556" font-size="13" fill="#D97706">$740</text>
+  <text x="1040" y="556" font-size="13" fill="#059669">▲ +6%</text>
+
+  <line x1="260" y1="604" x2="1400" y2="604" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="594" font-size="13" font-weight="500" fill="#111827">quick-commerce.myshopify.com</text>
+  <text x="800" y="594" font-size="13" fill="#D97706">$520</text>
+  <text x="1040" y="594" font-size="13" fill="#DC2626">▼ -3%</text>
+
+  <text x="284" y="632" font-size="12" fill="#5C6AC4">View all customers →</text>
+
+  <!-- annotations -->
+  <text x="260" y="672" font-size="10" fill="#9CA3AF" font-style="italic">Archetype A (Trend + Ranked Table). USAGE strictly separated from RECURRING — never counted in MRR.</text>
+  <text x="260" y="688" font-size="10" fill="#9CA3AF" font-style="italic">Source: daily snapshot (UsageRevenueCents), WoW = this-week ÷ prior-week − 1. Ranked by usage $ desc.</text>
+  <text x="260" y="704" font-size="10" fill="#9CA3AF" font-style="italic">Standards: LgPage header (title/subtitle/refresh), app filter chip, cards rx=8 stroke #E5E7EB, color tokens.</text>
+</svg>

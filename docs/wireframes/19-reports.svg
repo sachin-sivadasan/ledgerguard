@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Left Sidebar -->
+  <rect x="0" y="0" width="220" height="900" fill="#FFFFFF"/>
+  <line x1="220" y1="0" x2="220" y2="900" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="110" y="45" text-anchor="middle" font-size="14" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+
+  <!-- Nav Items -->
+  <rect x="24" y="88" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="101" font-size="13" fill="#6B7280">Dashboard</text>
+  <rect x="24" y="124" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="137" font-size="13" fill="#6B7280">Subscriptions</text>
+  <rect x="24" y="160" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="173" font-size="13" fill="#6B7280">Stores</text>
+  <rect x="24" y="196" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="209" font-size="13" fill="#6B7280">Transactions</text>
+  <rect x="24" y="232" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="245" font-size="13" fill="#6B7280">Events</text>
+  <rect x="24" y="268" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="281" font-size="13" fill="#6B7280">Webhooks</text>
+  <rect x="24" y="304" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="317" font-size="13" fill="#6B7280">Risk</text>
+  <rect x="24" y="340" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="353" font-size="13" fill="#6B7280">Analytics</text>
+  <!-- Reports (Active) -->
+  <rect x="12" y="368" width="196" height="32" rx="6" fill="#F0F1FF"/>
+  <rect x="24" y="376" width="16" height="16" rx="3" fill="#5C6AC4"/><text x="52" y="389" font-size="13" font-weight="600" fill="#5C6AC4">Reports</text>
+  <rect x="24" y="412" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="425" font-size="13" fill="#6B7280">Earnings</text>
+  <rect x="24" y="448" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="461" font-size="13" fill="#6B7280">Apps</text>
+  <rect x="24" y="484" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="497" font-size="13" fill="#6B7280">API Keys</text>
+  <rect x="24" y="520" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="533" font-size="13" fill="#6B7280">Insights</text>
+  <rect x="24" y="556" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="569" font-size="13" fill="#6B7280">Settings</text>
+  <text x="52" y="600" font-size="10" fill="#9CA3AF" font-style="italic">New nav item: Reports</text>
+
+  <!-- ==================== CONTENT ==================== -->
+  <text x="260" y="40" font-size="24" font-weight="bold" fill="#111827">Reports</text>
+  <text x="260" y="62" font-size="13" fill="#6B7280">Decision-ready reports for your Shopify app revenue</text>
+  <circle cx="1400" cy="37" r="16" fill="none" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1400" y="43" text-anchor="middle" font-size="16" fill="#6B7280">&#8635;</text>
+
+  <!-- Category rail -->
+  <rect x="260" y="86" width="220" height="40" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="278" y="111" font-size="12" fill="#9CA3AF">Filter reports…</text>
+
+  <rect x="260" y="136" width="220" height="40" rx="8" fill="none"/>
+  <text x="278" y="161" font-size="13" fill="#374151">Revenue &amp; Billing</text><text x="462" y="161" font-size="13" fill="#9CA3AF">&#x203A;</text>
+  <!-- active category -->
+  <rect x="260" y="184" width="220" height="40" rx="8" fill="#F0F1FF"/>
+  <text x="278" y="209" font-size="13" font-weight="600" fill="#5C6AC4">Retention &amp; Risk</text><text x="462" y="209" font-size="13" fill="#5C6AC4">&#x203A;</text>
+  <rect x="260" y="232" width="220" height="40" rx="8" fill="none"/>
+  <text x="278" y="257" font-size="13" fill="#374151">Growth</text><text x="462" y="257" font-size="13" fill="#9CA3AF">&#x203A;</text>
+  <rect x="260" y="280" width="220" height="40" rx="8" fill="none"/>
+  <text x="278" y="305" font-size="13" fill="#374151">🛡 Guard (Reconciliation)</text><text x="462" y="305" font-size="13" fill="#9CA3AF">&#x203A;</text>
+
+  <!-- custom report CTA -->
+  <rect x="260" y="340" width="220" height="64" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="278" y="366" font-size="12" fill="#6B7280">Can't find what you need?</text>
+  <text x="278" y="386" font-size="12" font-weight="600" fill="#5C6AC4">Add a custom report</text>
+  <text x="260" y="424" font-size="10" fill="#9CA3AF" font-style="italic">Category rail + custom-report CTA (Mantle pattern)</text>
+
+  <!-- Card grid: Retention & Risk -->
+  <text x="510" y="104" font-size="13" font-weight="600" fill="#6B7280">RETENTION &amp; RISK</text>
+
+  <!-- Hero card: Revenue at Risk -->
+  <rect x="510" y="120" width="280" height="118" rx="8" fill="#FFFFFF" stroke="#5C6AC4" stroke-width="2"/>
+  <text x="530" y="150" font-size="15" font-weight="700" fill="#111827">Revenue at Risk ⭐</text>
+  <text x="530" y="174" font-size="12" fill="#6B7280" width="240">See the MRR about to churn,</text>
+  <text x="530" y="192" font-size="12" fill="#6B7280">ranked by store — and how much</text>
+  <text x="530" y="210" font-size="12" fill="#6B7280">you can still recover.</text>
+
+  <rect x="810" y="120" width="280" height="118" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="830" y="150" font-size="15" font-weight="600" fill="#111827">Churn</text>
+  <text x="830" y="174" font-size="12" fill="#6B7280">Track how your churn rate and</text>
+  <text x="830" y="192" font-size="12" fill="#6B7280">lost MRR change over time.</text>
+
+  <rect x="1110" y="120" width="280" height="118" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1130" y="150" font-size="15" font-weight="600" fill="#111827">Retention</text>
+  <text x="1130" y="174" font-size="12" fill="#6B7280">Renewal-success rate and how</text>
+  <text x="1130" y="192" font-size="12" fill="#6B7280">many customers you keep.</text>
+
+  <rect x="510" y="254" width="280" height="118" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="530" y="284" font-size="15" font-weight="600" fill="#111827">Retention Cohorts</text>
+  <text x="530" y="308" font-size="12" fill="#6B7280">Revenue &amp; logo retention by</text>
+  <text x="530" y="326" font-size="12" fill="#6B7280">signup cohort, over time.</text>
+
+  <rect x="810" y="254" width="280" height="118" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="830" y="284" font-size="15" font-weight="600" fill="#111827">Reviews</text>
+  <text x="830" y="308" font-size="12" fill="#6B7280">App ratings and customer</text>
+  <text x="830" y="326" font-size="12" fill="#6B7280">sentiment insights.</text>
+
+  <rect x="1110" y="254" width="280" height="118" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1130" y="284" font-size="15" font-weight="600" fill="#111827">Uninstall Context</text>
+  <text x="1130" y="308" font-size="12" fill="#6B7280">The state before churn (at-risk?</text>
+  <text x="1130" y="326" font-size="12" fill="#6B7280">frozen? plan? tenure?).</text>
+  <rect x="1130" y="338" width="86" height="20" rx="10" fill="#FEF3C7"/>
+  <text x="1173" y="352" text-anchor="middle" font-size="10" font-weight="500" fill="#D97706">inferred</text>
+
+  <text x="510" y="404" font-size="10" fill="#9CA3AF" font-style="italic">Card grid per category. Hero card (Revenue at Risk) uses accent border. "Uninstall Context" ≠ Mantle's "Uninstall reasons" — we're read-only, so we show inferred state, not a survey.</text>
+</svg>

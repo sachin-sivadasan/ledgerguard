@@ -1,0 +1,17 @@
+@startuml 46-archetype-a-trend-table
+title Report Archetype A — Trend + Ranked Table (data flow)
+' Reused by: Revenue at Risk, Churn, MRR, Usage Trends, Top Customers, Net-new Subs, Installs
+participant Flutter as FE
+participant "ReportHandler" as H
+participant "Report Service" as S
+participant "Entity Repository\n(subs / txns / events)" as E
+participant "DailyMetricsSnapshotRepo" as SNAP
+FE -> H : GET /reports/<name>?from&to&segment
+H -> S : Compute(appID, range, segment)
+S -> E : query + group current entities (ranked list)
+S -> SNAP : RangeByApp(appID, from, to)   ' time series for trend
+SNAP --> S : [{date, metricCents}]
+S -> S : hero KPIs + trend[] + ranked rows (sort desc)
+S --> H : JSON {kpis, trend[], rows[]}
+H --> FE : 200 (or CSV when ?format=csv)
+@enduml

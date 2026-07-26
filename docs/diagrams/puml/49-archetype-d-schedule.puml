@@ -1,0 +1,15 @@
+@startuml 49-archetype-d-schedule
+title Report Archetype D — Schedule / Timeline (data flow)
+' Reused by: Payout Schedule, Payout History, Earnings
+participant Flutter as FE
+participant "ReportHandler" as H
+participant "EarningsService" as S
+participant "TransactionRepository" as T
+FE -> H : GET /reports/<name>?from&to
+H -> S : Compute(appID, range)
+S -> T : txns by EarningsStatus + AvailableDate
+T --> S : [{amount, status, availableDate}]
+S -> S : group by date → upcoming/past payouts + KPIs
+S --> H : JSON {kpis, rows[{date, amount, count, status}]}
+H --> FE : 200 → timeline table (Pending/Available/Paid)
+@enduml

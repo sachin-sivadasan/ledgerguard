@@ -1,0 +1,16 @@
+@startuml 47-archetype-b-composition
+title Report Archetype B — Composition / Breakdown (data flow)
+' Reused by: Revenue Mix, Subscriptions (ARPU/LTV by plan)
+participant Flutter as FE
+participant "ReportHandler" as H
+participant "Report Service" as S
+participant "TransactionRepository" as T
+FE -> H : GET /reports/<name>?from&to
+H -> S : Compute(appID, range)
+S -> T : aggregate grouped by dimension\n(charge type / plan)
+T --> S : [{group, amountCents, count}]
+S -> S : totals + percentages (share of total)
+note right of S : RECURRING vs USAGE kept strictly separate
+S --> H : JSON {total, segments[{group, amount, pct}]}
+H --> FE : 200 (donut/stacked bar + breakdown table)
+@enduml

@@ -1,0 +1,15 @@
+@startuml 48-archetype-c-cohort
+title Report Archetype C — Cohort Heatmap (data flow)
+' Reused by: Retention Cohorts, Retention
+participant Flutter as FE
+participant "ReportHandler" as H
+participant "CohortService" as S
+participant "SubscriptionRepository" as SUB
+FE -> H : GET /reports/cohorts?from&to
+H -> S : Compute(appID, range)
+S -> SUB : subs with signup date + status history
+SUB --> S : rows
+S -> S : bucket by signup-month (cohort)\nx retained-at period N → retention %
+S --> H : JSON matrix[cohort][periodN] = pct
+H --> FE : 200 → heatmap grid (color by %)
+@enduml

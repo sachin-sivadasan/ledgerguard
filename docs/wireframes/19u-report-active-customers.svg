@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="220" height="900" fill="#FFFFFF"/>
+  <line x1="220" y1="0" x2="220" y2="900" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="110" y="45" text-anchor="middle" font-size="14" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+  <rect x="24" y="88" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="101" font-size="13" fill="#6B7280">Dashboard</text>
+  <rect x="24" y="124" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="137" font-size="13" fill="#6B7280">Subscriptions</text>
+  <rect x="24" y="160" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="173" font-size="13" fill="#6B7280">Stores</text>
+  <rect x="24" y="196" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="209" font-size="13" fill="#6B7280">Transactions</text>
+  <rect x="24" y="232" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="245" font-size="13" fill="#6B7280">Events</text>
+  <rect x="24" y="268" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="281" font-size="13" fill="#6B7280">Webhooks</text>
+  <rect x="24" y="304" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="317" font-size="13" fill="#6B7280">Risk</text>
+  <rect x="24" y="340" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="353" font-size="13" fill="#6B7280">Analytics</text>
+  <rect x="12" y="368" width="196" height="32" rx="6" fill="#F0F1FF"/>
+  <rect x="24" y="376" width="16" height="16" rx="3" fill="#5C6AC4"/><text x="52" y="389" font-size="13" font-weight="600" fill="#5C6AC4">Reports</text>
+  <rect x="24" y="412" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="425" font-size="13" fill="#6B7280">Earnings</text>
+  <rect x="24" y="448" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="461" font-size="13" fill="#6B7280">Apps</text>
+  <rect x="24" y="484" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="497" font-size="13" fill="#6B7280">API Keys</text>
+  <rect x="24" y="520" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="533" font-size="13" fill="#6B7280">Insights</text>
+  <rect x="24" y="556" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="569" font-size="13" fill="#6B7280">Settings</text>
+
+  <!-- Header -->
+  <text x="260" y="30" font-size="11" fill="#9CA3AF">Reports  ›  Customers</text>
+  <text x="260" y="54" font-size="24" font-weight="bold" fill="#111827">Active Customers</text>
+  <text x="260" y="76" font-size="13" fill="#6B7280">Active paying customers over time</text>
+  <rect x="1040" y="30" width="150" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/><text x="1058" y="48" font-size="12" fill="#111827">Last 90 days ▾</text>
+  <rect x="1204" y="30" width="120" height="28" rx="6" fill="#5C6AC4"/><text x="1264" y="48" text-anchor="middle" font-size="12" font-weight="500" fill="#FFFFFF">Export CSV</text>
+  <circle cx="1352" cy="44" r="16" fill="none" stroke="#E5E7EB" stroke-width="1"/><text x="1352" y="50" text-anchor="middle" font-size="16" fill="#6B7280">&#8635;</text>
+  <rect x="260" y="92" width="160" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/><text x="278" y="110" font-size="12" fill="#111827">Revenue Tracker Pro ▾</text>
+
+  <!-- Hero KPIs -->
+  <rect x="260" y="132" width="360" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="284" y="160" font-size="12" fill="#6B7280">Active Customers</text>
+  <text x="284" y="196" font-size="30" font-weight="700" fill="#059669">148</text>
+  <text x="284" y="216" font-size="11" fill="#9CA3AF">paying subscriptions (Safe + at-risk)</text>
+  <rect x="640" y="132" width="360" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="664" y="160" font-size="12" fill="#6B7280">New (30d)</text>
+  <text x="664" y="196" font-size="30" font-weight="700" fill="#111827">+12</text>
+  <text x="664" y="216" font-size="11" fill="#9CA3AF">newly-activated subscriptions</text>
+  <rect x="1020" y="132" width="380" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1044" y="160" font-size="12" fill="#6B7280">Net Change (30d)</text>
+  <text x="1044" y="196" font-size="30" font-weight="700" fill="#059669">+8</text>
+  <text x="1044" y="216" font-size="11" fill="#9CA3AF">new − churned</text>
+
+  <!-- Trend -->
+  <rect x="260" y="244" width="1140" height="200" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="284" y="272" font-size="14" font-weight="600" fill="#111827">Active customers — trend</text>
+  <text x="284" y="290" font-size="11" fill="#9CA3AF">from daily snapshots (TotalSubscriptions)</text>
+  <polyline points="300,410 420,404 540,398 660,400 780,388 900,382 1020,378 1140,366 1260,360 1360,352" fill="none" stroke="#059669" stroke-width="2"/>
+  <line x1="300" y1="418" x2="1360" y2="418" stroke="#F3F4F6" stroke-width="1"/>
+
+  <!-- Breakdown table -->
+  <text x="260" y="476" font-size="16" font-weight="600" fill="#111827">Active by plan</text>
+  <rect x="260" y="488" width="1140" height="34" rx="8" fill="#F3F4F6"/>
+  <text x="284" y="510" font-size="11" font-weight="600" fill="#6B7280">PLAN</text>
+  <text x="720" y="510" font-size="11" font-weight="600" fill="#6B7280">ACTIVE</text>
+  <text x="920" y="510" font-size="11" font-weight="600" fill="#6B7280">MRR</text>
+  <text x="1150" y="510" font-size="11" font-weight="600" fill="#6B7280">% OF ACTIVE</text>
+  <line x1="260" y1="558" x2="1400" y2="558" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="548" font-size="13" fill="#111827">Enterprise</text><text x="720" y="548" font-size="13" fill="#111827">22</text><text x="920" y="548" font-size="13" fill="#111827">$5,280</text><text x="1150" y="548" font-size="13" fill="#6B7280">15%</text>
+  <line x1="260" y1="596" x2="1400" y2="596" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="586" font-size="13" fill="#111827">Pro</text><text x="720" y="586" font-size="13" fill="#111827">71</text><text x="920" y="586" font-size="13" fill="#111827">$4,970</text><text x="1150" y="586" font-size="13" fill="#6B7280">48%</text>
+  <line x1="260" y1="634" x2="1400" y2="634" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="624" font-size="13" fill="#111827">Starter</text><text x="720" y="624" font-size="13" fill="#111827">55</text><text x="920" y="624" font-size="13" fill="#111827">$2,230</text><text x="1150" y="624" font-size="13" fill="#6B7280">37%</text>
+
+  <text x="260" y="670" font-size="10" fill="#9CA3AF" font-style="italic">Archetype A · Trend + Table. Data: daily_metrics_snapshot (TotalSubscriptions / SafeCount) + subscriptions grouped by plan. "Active" = non-churned paying subs.</text>
+</svg>

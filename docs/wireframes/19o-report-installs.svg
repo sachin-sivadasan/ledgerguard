@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="220" height="900" fill="#FFFFFF"/>
+  <line x1="220" y1="0" x2="220" y2="900" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="110" y="45" text-anchor="middle" font-size="14" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+  <rect x="24" y="88" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="101" font-size="13" fill="#6B7280">Dashboard</text>
+  <rect x="24" y="124" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="137" font-size="13" fill="#6B7280">Subscriptions</text>
+  <rect x="24" y="160" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="173" font-size="13" fill="#6B7280">Stores</text>
+  <rect x="24" y="196" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="209" font-size="13" fill="#6B7280">Transactions</text>
+  <rect x="24" y="232" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="245" font-size="13" fill="#6B7280">Events</text>
+  <rect x="24" y="268" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="281" font-size="13" fill="#6B7280">Webhooks</text>
+  <rect x="24" y="304" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="317" font-size="13" fill="#6B7280">Risk</text>
+  <rect x="24" y="340" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="353" font-size="13" fill="#6B7280">Analytics</text>
+  <rect x="12" y="368" width="196" height="32" rx="6" fill="#F0F1FF"/>
+  <rect x="24" y="376" width="16" height="16" rx="3" fill="#5C6AC4"/><text x="52" y="389" font-size="13" font-weight="600" fill="#5C6AC4">Reports</text>
+  <rect x="24" y="412" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="425" font-size="13" fill="#6B7280">Earnings</text>
+  <rect x="24" y="448" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="461" font-size="13" fill="#6B7280">Apps</text>
+  <rect x="24" y="484" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="497" font-size="13" fill="#6B7280">API Keys</text>
+  <rect x="24" y="520" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="533" font-size="13" fill="#6B7280">Insights</text>
+  <rect x="24" y="556" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="569" font-size="13" fill="#6B7280">Settings</text>
+
+  <!-- ==================== CONTENT ==================== -->
+  <!-- Breadcrumb + title -->
+  <text x="260" y="30" font-size="11" fill="#9CA3AF">Reports  ›  Growth</text>
+  <text x="260" y="54" font-size="24" font-weight="bold" fill="#111827">Installs</text>
+  <text x="260" y="76" font-size="13" fill="#6B7280">Install and uninstall activity — net app adoption over the period</text>
+
+  <!-- Date range + Export + refresh (top-right) -->
+  <rect x="1040" y="30" width="150" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1058" y="48" font-size="12" fill="#111827">Last 30 days ▾</text>
+  <rect x="1204" y="30" width="120" height="28" rx="6" fill="#5C6AC4"/>
+  <text x="1264" y="48" text-anchor="middle" font-size="12" font-weight="500" fill="#FFFFFF">Export CSV</text>
+  <circle cx="1352" cy="44" r="16" fill="none" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1352" y="50" text-anchor="middle" font-size="16" fill="#6B7280">&#8635;</text>
+
+  <!-- App filter chip -->
+  <rect x="260" y="92" width="160" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="278" y="110" font-size="12" fill="#111827">Revenue Tracker Pro ▾</text>
+
+  <!-- Hero KPI cards -->
+  <rect x="260" y="132" width="360" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="284" y="160" font-size="12" fill="#6B7280">Installs</text>
+  <text x="284" y="196" font-size="30" font-weight="700" fill="#059669">62</text>
+  <text x="284" y="216" font-size="11" fill="#9CA3AF">new stores installed the app</text>
+
+  <rect x="640" y="132" width="360" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="664" y="160" font-size="12" fill="#6B7280">Uninstalls</text>
+  <text x="664" y="196" font-size="30" font-weight="700" fill="#DC2626">18</text>
+  <text x="664" y="216" font-size="11" fill="#9CA3AF">stores removed the app</text>
+
+  <rect x="1020" y="132" width="380" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1044" y="160" font-size="12" fill="#6B7280">Net</text>
+  <text x="1044" y="196" font-size="30" font-weight="700" fill="#059669">+44</text>
+  <text x="1044" y="216" font-size="11" fill="#9CA3AF">installs − uninstalls</text>
+
+  <!-- Trend card -->
+  <rect x="260" y="244" width="1140" height="200" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="284" y="272" font-size="14" font-weight="600" fill="#111827">Installs vs Uninstalls — trend</text>
+  <text x="284" y="290" font-size="11" fill="#9CA3AF">from RELATIONSHIP_INSTALLED / RELATIONSHIP_UNINSTALLED events</text>
+  <!-- legend -->
+  <rect x="1160" y="262" width="10" height="10" fill="#059669"/><text x="1176" y="271" font-size="10" fill="#6B7280">Installs</text>
+  <rect x="1250" y="262" width="10" height="10" fill="#DC2626"/><text x="1266" y="271" font-size="10" fill="#6B7280">Uninstalls</text>
+  <!-- baseline -->
+  <rect x="300" y="414" width="1060" height="1" fill="#F3F4F6"/>
+  <!-- installs (green) -->
+  <polyline points="300,392 420,378 540,384 660,356 780,364 900,338 1020,350 1140,326 1260,340 1360,318"
+            fill="none" stroke="#059669" stroke-width="2"/>
+  <!-- uninstalls (red) -->
+  <polyline points="300,408 420,402 540,406 660,398 780,404 900,392 1020,398 1140,388 1260,396 1360,384"
+            fill="none" stroke="#DC2626" stroke-width="2"/>
+
+  <!-- Recent events table -->
+  <text x="260" y="478" font-size="16" font-weight="600" fill="#111827">Recent install / uninstall events</text>
+  <!-- table header -->
+  <rect x="260" y="490" width="1140" height="34" rx="8" fill="#F3F4F6"/>
+  <text x="284" y="512" font-size="11" font-weight="600" fill="#6B7280">STORE</text>
+  <text x="720" y="512" font-size="11" font-weight="600" fill="#6B7280">EVENT</text>
+  <text x="1040" y="512" font-size="11" font-weight="600" fill="#6B7280">DATE</text>
+
+  <!-- rows -->
+  <line x1="260" y1="560" x2="1400" y2="560" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="550" font-size="13" font-weight="500" fill="#111827">acme-widgets.myshopify.com</text>
+  <rect x="720" y="536" width="90" height="22" rx="11" fill="#ECFDF5"/><text x="765" y="551" text-anchor="middle" font-size="11" font-weight="500" fill="#059669">Install</text>
+  <text x="1040" y="550" font-size="13" fill="#6B7280">Jul 24</text>
+
+  <line x1="260" y1="598" x2="1400" y2="598" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="588" font-size="13" font-weight="500" fill="#111827">blue-ocean-store.myshopify.com</text>
+  <rect x="720" y="574" width="90" height="22" rx="11" fill="#FEF3C7"/><text x="765" y="589" text-anchor="middle" font-size="11" font-weight="500" fill="#D97706">Uninstall</text>
+  <text x="1040" y="588" font-size="13" fill="#6B7280">Jul 23</text>
+
+  <line x1="260" y1="636" x2="1400" y2="636" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="626" font-size="13" font-weight="500" fill="#111827">quick-commerce.myshopify.com</text>
+  <rect x="720" y="612" width="90" height="22" rx="11" fill="#ECFDF5"/><text x="765" y="627" text-anchor="middle" font-size="11" font-weight="500" fill="#059669">Install</text>
+  <text x="1040" y="626" font-size="13" fill="#6B7280">Jul 22</text>
+
+  <text x="284" y="664" font-size="12" fill="#5C6AC4">View all events →</text>
+
+  <!-- annotations -->
+  <text x="260" y="704" font-size="10" fill="#9CA3AF" font-style="italic">Data source: FetchInstallCount + RELATIONSHIP_INSTALLED / RELATIONSHIP_UNINSTALLED events. Net = installs − uninstalls.</text>
+  <text x="260" y="720" font-size="10" fill="#9CA3AF" font-style="italic">Archetype A (hero KPIs → trend → table). Empty state: "No install activity yet". Error: LgServiceUnavailable. Loading: skeleton rows.</text>
+  <text x="260" y="736" font-size="10" fill="#9CA3AF" font-style="italic">Standards: LgPage header (title/subtitle/refresh), app filter chip, cards rx=8 stroke #E5E7EB, status tokens (green install / amber uninstall).</text>
+</svg>

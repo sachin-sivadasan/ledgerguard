@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="220" height="900" fill="#FFFFFF"/>
+  <line x1="220" y1="0" x2="220" y2="900" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="110" y="45" text-anchor="middle" font-size="14" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+  <rect x="24" y="88" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="101" font-size="13" fill="#6B7280">Dashboard</text>
+  <rect x="24" y="124" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="137" font-size="13" fill="#6B7280">Subscriptions</text>
+  <rect x="24" y="160" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="173" font-size="13" fill="#6B7280">Stores</text>
+  <rect x="24" y="196" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="209" font-size="13" fill="#6B7280">Transactions</text>
+  <rect x="24" y="232" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="245" font-size="13" fill="#6B7280">Events</text>
+  <rect x="24" y="268" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="281" font-size="13" fill="#6B7280">Webhooks</text>
+  <rect x="24" y="304" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="317" font-size="13" fill="#6B7280">Risk</text>
+  <rect x="24" y="340" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="353" font-size="13" fill="#6B7280">Analytics</text>
+  <rect x="12" y="368" width="196" height="32" rx="6" fill="#F0F1FF"/>
+  <rect x="24" y="376" width="16" height="16" rx="3" fill="#5C6AC4"/><text x="52" y="389" font-size="13" font-weight="600" fill="#5C6AC4">Reports</text>
+  <rect x="24" y="412" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="425" font-size="13" fill="#6B7280">Earnings</text>
+  <rect x="24" y="448" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="461" font-size="13" fill="#6B7280">Apps</text>
+  <rect x="24" y="484" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="497" font-size="13" fill="#6B7280">API Keys</text>
+  <rect x="24" y="520" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="533" font-size="13" fill="#6B7280">Insights</text>
+  <rect x="24" y="556" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="569" font-size="13" fill="#6B7280">Settings</text>
+
+  <!-- ==================== CONTENT ==================== -->
+  <!-- Breadcrumb + title -->
+  <text x="260" y="30" font-size="11" fill="#9CA3AF">Reports  ›  Retention &amp; Feedback</text>
+  <text x="260" y="54" font-size="24" font-weight="bold" fill="#111827">Uninstall Context</text>
+  <text x="260" y="76" font-size="13" fill="#6B7280">What state stores were in just before they uninstalled — inferred from risk signals</text>
+
+  <!-- Date range + Export + refresh (top-right) -->
+  <rect x="1040" y="30" width="150" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1058" y="48" font-size="12" fill="#111827">Last 30 days ▾</text>
+  <rect x="1204" y="30" width="120" height="28" rx="6" fill="#5C6AC4"/>
+  <text x="1264" y="48" text-anchor="middle" font-size="12" font-weight="500" fill="#FFFFFF">Export CSV</text>
+  <circle cx="1352" cy="44" r="16" fill="none" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1352" y="50" text-anchor="middle" font-size="16" fill="#6B7280">&#8635;</text>
+
+  <!-- App filter chip -->
+  <rect x="260" y="92" width="160" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="278" y="110" font-size="12" fill="#111827">Revenue Tracker Pro ▾</text>
+
+  <!-- Hero KPI cards -->
+  <rect x="260" y="132" width="360" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="284" y="160" font-size="12" fill="#6B7280">Uninstalls (30d)</text>
+  <text x="284" y="196" font-size="30" font-weight="700" fill="#111827">14</text>
+  <text x="284" y="216" font-size="11" fill="#9CA3AF">app/uninstalled webhook events</text>
+
+  <rect x="640" y="132" width="360" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="664" y="160" font-size="12" fill="#6B7280">Were At-Risk First</text>
+  <text x="664" y="196" font-size="30" font-weight="700" fill="#D97706">71%</text>
+  <text x="664" y="216" font-size="11" fill="#9CA3AF">in a missed-cycle risk state pre-uninstall</text>
+
+  <rect x="1020" y="132" width="380" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1044" y="160" font-size="12" fill="#6B7280">Median Tenure</text>
+  <text x="1044" y="196" font-size="30" font-weight="700" fill="#111827">3.2 mo</text>
+  <text x="1044" y="216" font-size="11" fill="#9CA3AF">install → uninstall, median across cohort</text>
+
+  <!-- Prominent annotation banner -->
+  <rect x="260" y="244" width="1140" height="44" rx="8" fill="#FEF3C7"/>
+  <text x="284" y="271" font-size="12" fill="#D97706" font-style="italic">Inferred state, NOT a self-reported reason — LedgerGuard is read-only (no uninstall survey).</text>
+
+  <!-- Table -->
+  <text x="260" y="326" font-size="16" font-weight="600" fill="#111827">Uninstalled Stores (pre-churn state)</text>
+  <!-- table header -->
+  <rect x="260" y="338" width="1140" height="34" rx="8" fill="#F3F4F6"/>
+  <text x="284" y="360" font-size="11" font-weight="600" fill="#6B7280">STORE</text>
+  <text x="680" y="360" font-size="11" font-weight="600" fill="#6B7280">STATE BEFORE UNINSTALL</text>
+  <text x="990" y="360" font-size="11" font-weight="600" fill="#6B7280">PLAN</text>
+  <text x="1120" y="360" font-size="11" font-weight="600" fill="#6B7280">TENURE</text>
+  <text x="1270" y="360" font-size="11" font-weight="600" fill="#6B7280">UNINSTALLED</text>
+
+  <!-- rows -->
+  <line x1="260" y1="408" x2="1400" y2="408" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="398" font-size="13" font-weight="500" fill="#111827">acme-widgets.myshopify.com</text>
+  <rect x="680" y="384" width="90" height="22" rx="11" fill="#FEF3C7"/><text x="725" y="399" text-anchor="middle" font-size="11" font-weight="500" fill="#D97706">At-Risk</text>
+  <text x="990" y="398" font-size="13" fill="#6B7280">Pro</text>
+  <text x="1120" y="398" font-size="13" fill="#111827">8.4 mo</text>
+  <text x="1270" y="398" font-size="13" fill="#6B7280">Jul 02</text>
+  <text x="1372" y="399" font-size="16" fill="#9CA3AF">&#x203A;</text>
+
+  <line x1="260" y1="446" x2="1400" y2="446" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="436" font-size="13" font-weight="500" fill="#111827">blue-ocean-store.myshopify.com</text>
+  <rect x="680" y="422" width="90" height="22" rx="11" fill="#FFEDD5"/><text x="725" y="437" text-anchor="middle" font-size="11" font-weight="500" fill="#EA580C">Frozen</text>
+  <text x="990" y="436" font-size="13" fill="#6B7280">Growth</text>
+  <text x="1120" y="436" font-size="13" fill="#111827">5.1 mo</text>
+  <text x="1270" y="436" font-size="13" fill="#6B7280">Jun 28</text>
+  <text x="1372" y="437" font-size="16" fill="#9CA3AF">&#x203A;</text>
+
+  <line x1="260" y1="484" x2="1400" y2="484" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="474" font-size="13" font-weight="500" fill="#111827">quick-commerce.myshopify.com</text>
+  <rect x="680" y="460" width="90" height="22" rx="11" fill="#FEF3C7"/><text x="725" y="475" text-anchor="middle" font-size="11" font-weight="500" fill="#D97706">At-Risk</text>
+  <text x="990" y="474" font-size="13" fill="#6B7280">Starter</text>
+  <text x="1120" y="474" font-size="13" fill="#111827">2.9 mo</text>
+  <text x="1270" y="474" font-size="13" fill="#6B7280">Jun 21</text>
+  <text x="1372" y="475" font-size="16" fill="#9CA3AF">&#x203A;</text>
+
+  <line x1="260" y1="522" x2="1400" y2="522" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="512" font-size="13" font-weight="500" fill="#111827">retro-goods.myshopify.com</text>
+  <rect x="680" y="498" width="90" height="22" rx="11" fill="#ECFDF5"/><text x="725" y="513" text-anchor="middle" font-size="11" font-weight="500" fill="#059669">Healthy</text>
+  <text x="990" y="512" font-size="13" fill="#6B7280">Pro</text>
+  <text x="1120" y="512" font-size="13" fill="#111827">1.6 mo</text>
+  <text x="1270" y="512" font-size="13" fill="#6B7280">Jun 14</text>
+  <text x="1372" y="513" font-size="16" fill="#9CA3AF">&#x203A;</text>
+
+  <text x="284" y="552" font-size="12" fill="#5C6AC4">View all 14 →</text>
+
+  <!-- annotations -->
+  <text x="260" y="592" font-size="10" fill="#9CA3AF" font-style="italic">Archetype G/A (hero KPIs + list). Data: uninstall events joined to last-known risk state + snapshot before uninstall.</text>
+  <text x="260" y="608" font-size="10" fill="#9CA3AF" font-style="italic">State badge = inferred pre-uninstall risk (At-Risk amber / Frozen orange / Healthy green). Empty state: "No uninstalls this period".</text>
+</svg>

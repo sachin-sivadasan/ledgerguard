@@ -1,0 +1,15 @@
+@startuml 52-archetype-g-list-sentiment
+title Report Archetype G — List + Sentiment (data flow)
+' Reused by: Reviews, Uninstall Context
+participant Flutter as FE
+participant "ReportHandler" as H
+participant "Report Service" as S
+participant "ReviewRepo / Event+Sub join" as R
+FE -> H : GET /reports/<name>?from&to
+H -> S : Compute(appID, range)
+S -> R : items (reviews) OR uninstalled subs + prior state
+R --> S : rows
+S -> S : distribution/summary + item list
+S --> H : JSON {distribution, items[]}
+H --> FE : 200 → distribution bars + list
+@enduml

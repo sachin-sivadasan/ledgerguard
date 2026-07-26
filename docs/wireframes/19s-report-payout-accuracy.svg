@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="220" height="900" fill="#FFFFFF"/>
+  <line x1="220" y1="0" x2="220" y2="900" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="110" y="45" text-anchor="middle" font-size="14" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+  <rect x="24" y="88" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="101" font-size="13" fill="#6B7280">Dashboard</text>
+  <rect x="24" y="124" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="137" font-size="13" fill="#6B7280">Subscriptions</text>
+  <rect x="24" y="160" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="173" font-size="13" fill="#6B7280">Stores</text>
+  <rect x="24" y="196" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="209" font-size="13" fill="#6B7280">Transactions</text>
+  <rect x="24" y="232" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="245" font-size="13" fill="#6B7280">Events</text>
+  <rect x="24" y="268" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="281" font-size="13" fill="#6B7280">Webhooks</text>
+  <rect x="24" y="304" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="317" font-size="13" fill="#6B7280">Risk</text>
+  <rect x="24" y="340" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="353" font-size="13" fill="#6B7280">Analytics</text>
+  <rect x="12" y="368" width="196" height="32" rx="6" fill="#F0F1FF"/>
+  <rect x="24" y="376" width="16" height="16" rx="3" fill="#5C6AC4"/><text x="52" y="389" font-size="13" font-weight="600" fill="#5C6AC4">Reports</text>
+  <rect x="24" y="412" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="425" font-size="13" fill="#6B7280">Earnings</text>
+  <rect x="24" y="448" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="461" font-size="13" fill="#6B7280">Apps</text>
+  <rect x="24" y="484" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="497" font-size="13" fill="#6B7280">API Keys</text>
+  <rect x="24" y="520" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="533" font-size="13" fill="#6B7280">Insights</text>
+  <rect x="24" y="556" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="569" font-size="13" fill="#6B7280">Settings</text>
+
+  <!-- ==================== CONTENT ==================== -->
+  <!-- Breadcrumb + title -->
+  <text x="260" y="30" font-size="11" fill="#9CA3AF">Reports  ›  Guard</text>
+  <text x="260" y="54" font-size="24" font-weight="bold" fill="#111827">Payout Accuracy</text>
+  <text x="260" y="76" font-size="13" fill="#6B7280">Did every charge actually pay out?</text>
+
+  <!-- Date range + Export + refresh (top-right) -->
+  <rect x="1040" y="30" width="150" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1058" y="48" font-size="12" fill="#111827">Last 30 days ▾</text>
+  <rect x="1204" y="30" width="120" height="28" rx="6" fill="#5C6AC4"/>
+  <text x="1264" y="48" text-anchor="middle" font-size="12" font-weight="500" fill="#FFFFFF">Export CSV</text>
+  <circle cx="1352" cy="44" r="16" fill="none" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1352" y="50" text-anchor="middle" font-size="16" fill="#6B7280">&#8635;</text>
+
+  <!-- App filter chip -->
+  <rect x="260" y="92" width="160" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="278" y="110" font-size="12" fill="#111827">Revenue Tracker Pro ▾</text>
+
+  <!-- Hero KPI cards -->
+  <rect x="260" y="132" width="360" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="284" y="160" font-size="12" fill="#6B7280">Charges Paid Out</text>
+  <text x="284" y="196" font-size="30" font-weight="700" fill="#059669">96%</text>
+  <text x="284" y="216" font-size="11" fill="#9CA3AF">charges with a matched payout received</text>
+
+  <rect x="640" y="132" width="360" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="664" y="160" font-size="12" fill="#6B7280">Missing Payouts</text>
+  <text x="664" y="196" font-size="30" font-weight="700" fill="#D97706">3</text>
+  <text x="664" y="216" font-size="11" fill="#9CA3AF">charges past payout window, not received</text>
+
+  <rect x="1020" y="132" width="380" height="96" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1044" y="160" font-size="12" fill="#6B7280">At Risk</text>
+  <text x="1044" y="196" font-size="30" font-weight="700" fill="#D97706">$87</text>
+  <text x="1044" y="216" font-size="11" fill="#9CA3AF">value of charges awaiting or missing payout</text>
+
+  <!-- Table -->
+  <text x="260" y="278" font-size="16" font-weight="600" fill="#111827">Charge-to-payout reconciliation</text>
+  <!-- table header -->
+  <rect x="260" y="290" width="1140" height="34" rx="8" fill="#F3F4F6"/>
+  <text x="284" y="312" font-size="11" font-weight="600" fill="#6B7280">CHARGE</text>
+  <text x="640" y="312" font-size="11" font-weight="600" fill="#6B7280">AMOUNT</text>
+  <text x="800" y="312" font-size="11" font-weight="600" fill="#6B7280">EXPECTED PAYOUT</text>
+  <text x="1030" y="312" font-size="11" font-weight="600" fill="#6B7280">RECEIVED</text>
+  <text x="1240" y="312" font-size="11" font-weight="600" fill="#6B7280">STATUS</text>
+
+  <!-- row 1 (paid) -->
+  <line x1="260" y1="360" x2="1400" y2="360" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="350" font-size="13" font-weight="500" fill="#111827">acme-widgets · Jul 02</text>
+  <text x="640" y="350" font-size="13" fill="#111827">$49.00</text>
+  <text x="800" y="350" font-size="13" fill="#6B7280">$41.65</text>
+  <text x="1030" y="350" font-size="13" fill="#111827">$41.65</text>
+  <rect x="1240" y="336" width="100" height="22" rx="11" fill="#ECFDF5"/><text x="1290" y="351" text-anchor="middle" font-size="11" font-weight="500" fill="#059669">✓ Paid</text>
+
+  <!-- row 2 (missing) -->
+  <line x1="260" y1="398" x2="1400" y2="398" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="388" font-size="13" font-weight="500" fill="#111827">blue-ocean-store · Jun 28</text>
+  <text x="640" y="388" font-size="13" fill="#111827">$39.00</text>
+  <text x="800" y="388" font-size="13" fill="#6B7280">$33.15</text>
+  <text x="1030" y="388" font-size="13" fill="#9CA3AF" font-style="italic">—</text>
+  <rect x="1240" y="374" width="120" height="22" rx="11" fill="#FEF2F2"/><text x="1300" y="389" text-anchor="middle" font-size="11" font-weight="500" fill="#DC2626">⚠ Missing</text>
+
+  <!-- row 3 (paid) -->
+  <line x1="260" y1="436" x2="1400" y2="436" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="426" font-size="13" font-weight="500" fill="#111827">quick-commerce · Jul 05</text>
+  <text x="640" y="426" font-size="13" fill="#111827">$29.00</text>
+  <text x="800" y="426" font-size="13" fill="#6B7280">$24.65</text>
+  <text x="1030" y="426" font-size="13" fill="#111827">$24.65</text>
+  <rect x="1240" y="412" width="100" height="22" rx="11" fill="#ECFDF5"/><text x="1290" y="427" text-anchor="middle" font-size="11" font-weight="500" fill="#059669">✓ Paid</text>
+
+  <!-- row 4 (pending) -->
+  <line x1="260" y1="474" x2="1400" y2="474" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="284" y="464" font-size="13" font-weight="500" fill="#111827">green-leaf-goods · Jul 21</text>
+  <text x="640" y="464" font-size="13" fill="#111827">$19.00</text>
+  <text x="800" y="464" font-size="13" fill="#6B7280">$16.15</text>
+  <text x="1030" y="464" font-size="13" fill="#9CA3AF" font-style="italic">—</text>
+  <rect x="1240" y="450" width="110" height="22" rx="11" fill="#FEF3C7"/><text x="1295" y="465" text-anchor="middle" font-size="11" font-weight="500" fill="#D97706">Pending</text>
+
+  <text x="284" y="506" font-size="12" fill="#5C6AC4">View all charges →</text>
+
+  <!-- annotations -->
+  <text x="260" y="672" font-size="10" fill="#9CA3AF" font-style="italic">Data source: transactions + EarningsStatus. Each charge is matched to a received payout; unmatched charges past the window are flagged.</text>
+  <text x="260" y="688" font-size="10" fill="#9CA3AF" font-style="italic">Archetype F · Reconciliation. Status = ✓ Paid (green) when Received matches Expected, ⚠ Missing (red) past window, Pending (amber) within window.</text>
+  <text x="260" y="704" font-size="10" fill="#9CA3AF" font-style="italic">Standards: LgPage header (title/subtitle/refresh), app filter chip, cards rx=8 stroke #E5E7EB, status color tokens (green/amber/red).</text>
+</svg>

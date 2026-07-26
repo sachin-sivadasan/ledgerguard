@@ -1,0 +1,17 @@
+@startuml 51-archetype-f-reconciliation
+title Report Archetype F — Reconciliation / Audit (data flow)
+' Reused by: Fee Audit, Payout Accuracy, Ledger Reconciliation (Guard)
+participant Flutter as FE
+participant "ReportHandler" as H
+participant "Guard Service" as S
+participant "FeeVerification / LedgerService" as V
+participant "TransactionRepository" as T
+FE -> H : GET /reports/<name>?from&to
+H -> S : Compute(appID, range)
+S -> V : expected values (recompute / correct tier)
+S -> T : actual values from Shopify data
+S -> S : delta = actual - expected; flag if mismatch
+note right of S : deterministic recompute — same input -> same output
+S --> H : JSON {summary, rows[{expected, actual, delta, flag}]}
+H --> FE : 200 → audit table (OK / discrepancy)
+@enduml

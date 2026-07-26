@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="220" height="900" fill="#FFFFFF"/>
+  <line x1="220" y1="0" x2="220" y2="900" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="110" y="45" text-anchor="middle" font-size="14" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+  <rect x="24" y="88" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="101" font-size="13" fill="#6B7280">Dashboard</text>
+  <rect x="24" y="124" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="137" font-size="13" fill="#6B7280">Subscriptions</text>
+  <rect x="24" y="160" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="173" font-size="13" fill="#6B7280">Stores</text>
+  <rect x="24" y="196" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="209" font-size="13" fill="#6B7280">Transactions</text>
+  <rect x="24" y="232" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="245" font-size="13" fill="#6B7280">Events</text>
+  <rect x="24" y="268" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="281" font-size="13" fill="#6B7280">Webhooks</text>
+  <rect x="24" y="304" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="317" font-size="13" fill="#6B7280">Risk</text>
+  <rect x="24" y="340" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="353" font-size="13" fill="#6B7280">Analytics</text>
+  <rect x="12" y="368" width="196" height="32" rx="6" fill="#F0F1FF"/>
+  <rect x="24" y="376" width="16" height="16" rx="3" fill="#5C6AC4"/><text x="52" y="389" font-size="13" font-weight="600" fill="#5C6AC4">Reports</text>
+  <rect x="24" y="412" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="425" font-size="13" fill="#6B7280">Earnings</text>
+  <rect x="24" y="448" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="461" font-size="13" fill="#6B7280">Apps</text>
+  <rect x="24" y="484" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="497" font-size="13" fill="#6B7280">API Keys</text>
+  <rect x="24" y="520" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="533" font-size="13" fill="#6B7280">Insights</text>
+  <rect x="24" y="556" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="569" font-size="13" fill="#6B7280">Settings</text>
+
+  <!-- Header -->
+  <text x="260" y="30" font-size="11" fill="#9CA3AF">Reports  ›  Customers</text>
+  <text x="260" y="54" font-size="24" font-weight="bold" fill="#111827">Customer Insights</text>
+  <text x="260" y="76" font-size="13" fill="#6B7280">Segment your customers by plan, Shopify plan, risk, and revenue</text>
+  <rect x="1204" y="30" width="120" height="28" rx="6" fill="#5C6AC4"/><text x="1264" y="48" text-anchor="middle" font-size="12" font-weight="500" fill="#FFFFFF">Export CSV</text>
+  <circle cx="1352" cy="44" r="16" fill="none" stroke="#E5E7EB" stroke-width="1"/><text x="1352" y="50" text-anchor="middle" font-size="16" fill="#6B7280">&#8635;</text>
+
+  <!-- Segment selector chips -->
+  <rect x="260" y="92" width="130" height="28" rx="14" fill="#F0F1FF"/><text x="325" y="110" text-anchor="middle" font-size="12" font-weight="500" fill="#5C6AC4">By Shopify Plan</text>
+  <rect x="400" y="92" width="90" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/><text x="445" y="110" text-anchor="middle" font-size="12" fill="#6B7280">By Plan</text>
+  <rect x="500" y="92" width="80" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/><text x="540" y="110" text-anchor="middle" font-size="12" fill="#6B7280">By Risk</text>
+  <rect x="590" y="92" width="100" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/><text x="640" y="110" text-anchor="middle" font-size="12" fill="#6B7280">By Revenue</text>
+  <text x="704" y="110" font-size="10" fill="#9CA3AF" font-style="italic">segment selector</text>
+
+  <!-- Composition card (stacked bar) -->
+  <rect x="260" y="132" width="560" height="300" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="284" y="160" font-size="14" font-weight="600" fill="#111827">Customers by Shopify plan</text>
+  <!-- horizontal bars -->
+  <text x="284" y="200" font-size="12" fill="#6B7280">Plus</text>
+  <rect x="360" y="190" width="120" height="14" rx="3" fill="#5C6AC4"/><text x="492" y="201" font-size="11" fill="#6B7280">18</text>
+  <text x="284" y="232" font-size="12" fill="#6B7280">Advanced</text>
+  <rect x="360" y="222" width="200" height="14" rx="3" fill="#5C6AC4"/><text x="572" y="233" font-size="11" fill="#6B7280">31</text>
+  <text x="284" y="264" font-size="12" fill="#6B7280">Shopify</text>
+  <rect x="360" y="254" width="300" height="14" rx="3" fill="#5C6AC4"/><text x="672" y="265" font-size="11" fill="#6B7280">54</text>
+  <text x="284" y="296" font-size="12" fill="#6B7280">Basic</text>
+  <rect x="360" y="286" width="260" height="14" rx="3" fill="#5C6AC4"/><text x="632" y="297" font-size="11" fill="#6B7280">45</text>
+  <text x="284" y="352" font-size="12" fill="#111827">Highest revenue-per-customer: <tspan font-weight="600">Plus</tspan> ($142 ARPU)</text>
+  <text x="284" y="374" font-size="12" fill="#111827">Largest segment: <tspan font-weight="600">Shopify</tspan> (54 customers)</text>
+  <text x="284" y="410" font-size="10" fill="#9CA3AF" font-style="italic">Archetype B · Composition. Data: transactions.shop_plan × subscriptions.</text>
+
+  <!-- Breakdown table -->
+  <rect x="840" y="132" width="560" height="300" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="864" y="160" font-size="14" font-weight="600" fill="#111827">Segment breakdown</text>
+  <rect x="856" y="176" width="528" height="30" rx="6" fill="#F3F4F6"/>
+  <text x="872" y="196" font-size="11" font-weight="600" fill="#6B7280">SEGMENT</text>
+  <text x="1080" y="196" font-size="11" font-weight="600" fill="#6B7280">CUSTOMERS</text>
+  <text x="1220" y="196" font-size="11" font-weight="600" fill="#6B7280">MRR</text>
+  <text x="1330" y="196" font-size="11" font-weight="600" fill="#6B7280">ARPU</text>
+  <line x1="856" y1="238" x2="1384" y2="238" stroke="#F3F4F6"/>
+  <text x="872" y="228" font-size="13" fill="#111827">Plus</text><text x="1080" y="228" font-size="13" fill="#111827">18</text><text x="1220" y="228" font-size="13" fill="#111827">$2,556</text><text x="1330" y="228" font-size="13" fill="#059669">$142</text>
+  <line x1="856" y1="272" x2="1384" y2="272" stroke="#F3F4F6"/>
+  <text x="872" y="262" font-size="13" fill="#111827">Advanced</text><text x="1080" y="262" font-size="13" fill="#111827">31</text><text x="1220" y="262" font-size="13" fill="#111827">$2,945</text><text x="1330" y="262" font-size="13" fill="#111827">$95</text>
+  <line x1="856" y1="306" x2="1384" y2="306" stroke="#F3F4F6"/>
+  <text x="872" y="296" font-size="13" fill="#111827">Shopify</text><text x="1080" y="296" font-size="13" fill="#111827">54</text><text x="1220" y="296" font-size="13" fill="#111827">$3,780</text><text x="1330" y="296" font-size="13" fill="#111827">$70</text>
+  <line x1="856" y1="340" x2="1384" y2="340" stroke="#F3F4F6"/>
+  <text x="872" y="330" font-size="13" fill="#111827">Basic</text><text x="1080" y="330" font-size="13" fill="#111827">45</text><text x="1220" y="330" font-size="13" fill="#111827">$2,205</text><text x="1330" y="330" font-size="13" fill="#111827">$49</text>
+  <text x="872" y="374" font-size="12" fill="#5C6AC4">Drill into a segment →</text>
+  <text x="864" y="410" font-size="10" fill="#9CA3AF" font-style="italic">Switch dimension via chips: plan / Shopify plan / risk / revenue band.</text>
+
+  <text x="260" y="470" font-size="10" fill="#9CA3AF" font-style="italic">Honest scope: we segment on billing + shop attributes we already sync. No behavioral/feature engagement (that needs an SDK we don't have).</text>
+</svg>

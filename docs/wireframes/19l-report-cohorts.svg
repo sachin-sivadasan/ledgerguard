@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="900" fill="#F8F9FA"/>
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="220" height="900" fill="#FFFFFF"/>
+  <line x1="220" y1="0" x2="220" y2="900" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="110" y="45" text-anchor="middle" font-size="14" font-weight="bold" fill="#5C6AC4">LedgerGuard</text>
+  <rect x="24" y="88" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="101" font-size="13" fill="#6B7280">Dashboard</text>
+  <rect x="24" y="124" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="137" font-size="13" fill="#6B7280">Subscriptions</text>
+  <rect x="24" y="160" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="173" font-size="13" fill="#6B7280">Stores</text>
+  <rect x="24" y="196" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="209" font-size="13" fill="#6B7280">Transactions</text>
+  <rect x="24" y="232" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="245" font-size="13" fill="#6B7280">Events</text>
+  <rect x="24" y="268" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="281" font-size="13" fill="#6B7280">Webhooks</text>
+  <rect x="24" y="304" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="317" font-size="13" fill="#6B7280">Risk</text>
+  <rect x="24" y="340" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="353" font-size="13" fill="#6B7280">Analytics</text>
+  <rect x="12" y="368" width="196" height="32" rx="6" fill="#F0F1FF"/>
+  <rect x="24" y="376" width="16" height="16" rx="3" fill="#5C6AC4"/><text x="52" y="389" font-size="13" font-weight="600" fill="#5C6AC4">Reports</text>
+  <rect x="24" y="412" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="425" font-size="13" fill="#6B7280">Earnings</text>
+  <rect x="24" y="448" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="461" font-size="13" fill="#6B7280">Apps</text>
+  <rect x="24" y="484" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="497" font-size="13" fill="#6B7280">API Keys</text>
+  <rect x="24" y="520" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="533" font-size="13" fill="#6B7280">Insights</text>
+  <rect x="24" y="556" width="16" height="16" rx="3" fill="#E5E7EB"/><text x="52" y="569" font-size="13" fill="#6B7280">Settings</text>
+
+  <!-- ==================== CONTENT ==================== -->
+  <!-- Breadcrumb + title -->
+  <text x="260" y="30" font-size="11" fill="#9CA3AF">Reports  ›  Retention &amp; Feedback</text>
+  <text x="260" y="54" font-size="24" font-weight="bold" fill="#111827">Retention Cohorts</text>
+  <text x="260" y="76" font-size="13" fill="#6B7280">% of each signup-month cohort still retained N months later</text>
+
+  <!-- Date range + Export + refresh (top-right) -->
+  <rect x="1040" y="30" width="150" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1058" y="48" font-size="12" fill="#111827">Last 30 days ▾</text>
+  <rect x="1204" y="30" width="120" height="28" rx="6" fill="#5C6AC4"/>
+  <text x="1264" y="48" text-anchor="middle" font-size="12" font-weight="500" fill="#FFFFFF">Export CSV</text>
+  <circle cx="1352" cy="44" r="16" fill="none" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1352" y="50" text-anchor="middle" font-size="16" fill="#6B7280">&#8635;</text>
+
+  <!-- App filter chip -->
+  <rect x="260" y="92" width="160" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="278" y="110" font-size="12" fill="#111827">Revenue Tracker Pro ▾</text>
+
+  <!-- Heatmap card -->
+  <rect x="260" y="132" width="1140" height="470" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="284" y="162" font-size="14" font-weight="600" fill="#111827">Cohort Retention Heatmap</text>
+  <text x="284" y="180" font-size="11" fill="#9CA3AF">rows = signup month · columns = months since signup · cell = % retained</text>
+
+  <!-- Column headers (Month 0..5) -->
+  <text x="360" y="212" font-size="11" font-weight="600" fill="#6B7280">COHORT</text>
+  <text x="500" y="212" text-anchor="middle" font-size="11" font-weight="600" fill="#6B7280">Month 0</text>
+  <text x="640" y="212" text-anchor="middle" font-size="11" font-weight="600" fill="#6B7280">Month 1</text>
+  <text x="780" y="212" text-anchor="middle" font-size="11" font-weight="600" fill="#6B7280">Month 2</text>
+  <text x="920" y="212" text-anchor="middle" font-size="11" font-weight="600" fill="#6B7280">Month 3</text>
+  <text x="1060" y="212" text-anchor="middle" font-size="11" font-weight="600" fill="#6B7280">Month 4</text>
+  <text x="1200" y="212" text-anchor="middle" font-size="11" font-weight="600" fill="#6B7280">Month 5</text>
+
+  <!-- Row: Feb -->
+  <text x="300" y="252" font-size="12" font-weight="500" fill="#111827">Feb</text>
+  <rect x="440" y="228" width="120" height="40" rx="4" fill="#5C6AC4"/><text x="500" y="253" text-anchor="middle" font-size="12" fill="#FFFFFF">100%</text>
+  <rect x="580" y="228" width="120" height="40" rx="4" fill="#7C88D6"/><text x="640" y="253" text-anchor="middle" font-size="12" fill="#FFFFFF">88%</text>
+  <rect x="720" y="228" width="120" height="40" rx="4" fill="#98A1E0"/><text x="780" y="253" text-anchor="middle" font-size="12" fill="#FFFFFF">79%</text>
+  <rect x="860" y="228" width="120" height="40" rx="4" fill="#B4BAEA"/><text x="920" y="253" text-anchor="middle" font-size="12" fill="#111827">71%</text>
+  <rect x="1000" y="228" width="120" height="40" rx="4" fill="#CDD1F1"/><text x="1060" y="253" text-anchor="middle" font-size="12" fill="#111827">64%</text>
+  <rect x="1140" y="228" width="120" height="40" rx="4" fill="#E1E4F8"/><text x="1200" y="253" text-anchor="middle" font-size="12" fill="#111827">58%</text>
+
+  <!-- Row: Mar -->
+  <text x="300" y="304" font-size="12" font-weight="500" fill="#111827">Mar</text>
+  <rect x="440" y="280" width="120" height="40" rx="4" fill="#5C6AC4"/><text x="500" y="305" text-anchor="middle" font-size="12" fill="#FFFFFF">100%</text>
+  <rect x="580" y="280" width="120" height="40" rx="4" fill="#7C88D6"/><text x="640" y="305" text-anchor="middle" font-size="12" fill="#FFFFFF">90%</text>
+  <rect x="720" y="280" width="120" height="40" rx="4" fill="#98A1E0"/><text x="780" y="305" text-anchor="middle" font-size="12" fill="#FFFFFF">82%</text>
+  <rect x="860" y="280" width="120" height="40" rx="4" fill="#B4BAEA"/><text x="920" y="305" text-anchor="middle" font-size="12" fill="#111827">74%</text>
+  <rect x="1000" y="280" width="120" height="40" rx="4" fill="#CDD1F1"/><text x="1060" y="305" text-anchor="middle" font-size="12" fill="#111827">67%</text>
+  <rect x="1140" y="280" width="120" height="40" rx="4" fill="#F3F4F6"/><text x="1200" y="305" text-anchor="middle" font-size="11" fill="#9CA3AF">—</text>
+
+  <!-- Row: Apr -->
+  <text x="300" y="356" font-size="12" font-weight="500" fill="#111827">Apr</text>
+  <rect x="440" y="332" width="120" height="40" rx="4" fill="#5C6AC4"/><text x="500" y="357" text-anchor="middle" font-size="12" fill="#FFFFFF">100%</text>
+  <rect x="580" y="332" width="120" height="40" rx="4" fill="#7C88D6"/><text x="640" y="357" text-anchor="middle" font-size="12" fill="#FFFFFF">85%</text>
+  <rect x="720" y="332" width="120" height="40" rx="4" fill="#98A1E0"/><text x="780" y="357" text-anchor="middle" font-size="12" fill="#FFFFFF">77%</text>
+  <rect x="860" y="332" width="120" height="40" rx="4" fill="#B4BAEA"/><text x="920" y="357" text-anchor="middle" font-size="12" fill="#111827">70%</text>
+  <rect x="1000" y="332" width="120" height="40" rx="4" fill="#F3F4F6"/><text x="1060" y="357" text-anchor="middle" font-size="11" fill="#9CA3AF">—</text>
+  <rect x="1140" y="332" width="120" height="40" rx="4" fill="#F3F4F6"/><text x="1200" y="357" text-anchor="middle" font-size="11" fill="#9CA3AF">—</text>
+
+  <!-- Row: May -->
+  <text x="300" y="408" font-size="12" font-weight="500" fill="#111827">May</text>
+  <rect x="440" y="384" width="120" height="40" rx="4" fill="#5C6AC4"/><text x="500" y="409" text-anchor="middle" font-size="12" fill="#FFFFFF">100%</text>
+  <rect x="580" y="384" width="120" height="40" rx="4" fill="#7C88D6"/><text x="640" y="409" text-anchor="middle" font-size="12" fill="#FFFFFF">92%</text>
+  <rect x="720" y="384" width="120" height="40" rx="4" fill="#98A1E0"/><text x="780" y="409" text-anchor="middle" font-size="12" fill="#FFFFFF">83%</text>
+  <rect x="860" y="384" width="120" height="40" rx="4" fill="#F3F4F6"/><text x="920" y="409" text-anchor="middle" font-size="11" fill="#9CA3AF">—</text>
+  <rect x="1000" y="384" width="120" height="40" rx="4" fill="#F3F4F6"/><text x="1060" y="409" text-anchor="middle" font-size="11" fill="#9CA3AF">—</text>
+  <rect x="1140" y="384" width="120" height="40" rx="4" fill="#F3F4F6"/><text x="1200" y="409" text-anchor="middle" font-size="11" fill="#9CA3AF">—</text>
+
+  <!-- Row: Jun -->
+  <text x="300" y="460" font-size="12" font-weight="500" fill="#111827">Jun</text>
+  <rect x="440" y="436" width="120" height="40" rx="4" fill="#5C6AC4"/><text x="500" y="461" text-anchor="middle" font-size="12" fill="#FFFFFF">100%</text>
+  <rect x="580" y="436" width="120" height="40" rx="4" fill="#7C88D6"/><text x="640" y="461" text-anchor="middle" font-size="12" fill="#FFFFFF">89%</text>
+  <rect x="720" y="436" width="120" height="40" rx="4" fill="#F3F4F6"/><text x="780" y="461" text-anchor="middle" font-size="11" fill="#9CA3AF">—</text>
+  <rect x="860" y="436" width="120" height="40" rx="4" fill="#F3F4F6"/><text x="920" y="461" text-anchor="middle" font-size="11" fill="#9CA3AF">—</text>
+  <rect x="1000" y="436" width="120" height="40" rx="4" fill="#F3F4F6"/><text x="1060" y="461" text-anchor="middle" font-size="11" fill="#9CA3AF">—</text>
+  <rect x="1140" y="436" width="120" height="40" rx="4" fill="#F3F4F6"/><text x="1200" y="461" text-anchor="middle" font-size="11" fill="#9CA3AF">—</text>
+
+  <!-- Legend -->
+  <text x="284" y="522" font-size="11" font-weight="600" fill="#6B7280">RETENTION</text>
+  <text x="284" y="552" font-size="10" fill="#9CA3AF">Low</text>
+  <rect x="320" y="540" width="40" height="16" rx="3" fill="#E1E4F8"/>
+  <rect x="360" y="540" width="40" height="16" rx="3" fill="#CDD1F1"/>
+  <rect x="400" y="540" width="40" height="16" rx="3" fill="#B4BAEA"/>
+  <rect x="440" y="540" width="40" height="16" rx="3" fill="#98A1E0"/>
+  <rect x="480" y="540" width="40" height="16" rx="3" fill="#7C88D6"/>
+  <rect x="520" y="540" width="40" height="16" rx="3" fill="#5C6AC4"/>
+  <text x="568" y="552" font-size="10" fill="#9CA3AF">High</text>
+  <rect x="640" y="540" width="16" height="16" rx="3" fill="#F3F4F6"/><text x="664" y="552" font-size="10" fill="#9CA3AF">No data (cohort too recent)</text>
+
+  <!-- annotations -->
+  <text x="284" y="582" font-size="10" fill="#9CA3AF" font-style="italic">Archetype C (cohort heatmap). Data: from CohortHandler — signup month grouped, retention % per elapsed month.</text>
+
+  <!-- outer annotations -->
+  <text x="260" y="638" font-size="10" fill="#9CA3AF" font-style="italic">Cell color intensity from primary #5C6AC4 (high %) fading to light. Diagonal empties = cohorts too young for that period.</text>
+  <text x="260" y="654" font-size="10" fill="#9CA3AF" font-style="italic">Empty state: "Not enough signup history for cohorts". Error: LgServiceUnavailable. Loading: skeleton grid.</text>
+</svg>

@@ -1,0 +1,45 @@
+@startuml 45-report-revenue-at-risk-flow
+title Revenue at Risk Report — data flow (reuses existing engines)
+
+actor Partner as U
+participant "Flutter\nReports ▸ Revenue at Risk" as FE
+participant "Router\n/api/v1/apps/{id}/reports/revenue-at-risk" as R
+participant "AuthMW + OrgContextMW" as MW
+participant "ReportHandler" as H
+participant "RevenueAtRiskService" as SVC
+participant "SubscriptionRepository" as SUB
+participant "DailyMetricsSnapshotRepo" as SNAP
+participant "RiskEngine" as RISK
+
+U -> FE : open report / pick date range
+FE -> R : GET ?from&to&segment  (Bearer + X-Org-Id)
+R -> MW : verify token, resolve org, check membership
+MW -> H : (user, org, appID)
+
+H -> SVC : Compute(appID, from, to, segment)
+
+== ranked stores (current snapshot of subs) ==
+SVC -> SUB : FindByRiskState(appID, ONE_CYCLE_MISSED)
+SVC -> SUB : FindByRiskState(appID, TWO_CYCLES_MISSED)
+note right of RISK
+  Risk states already persisted on each
+  subscription by the sync's ledger rebuild
+  (RiskEngine.ClassifyRisk). Read here; no
+  recompute needed. Deterministic.
+end note
+SVC -> SVC : totalAtRisk = Σ BasePriceCents\nbyState = {1-cycle, 2-cycle}\nrecoverable = 1cMRR*r1 + 2cMRR*r2\nsort stores by MRR desc
+
+== trend (time series) ==
+SVC -> SNAP : RangeByApp(appID, from, to)
+SNAP --> SVC : [{date, RevenueAtRiskCents}]
+
+SVC --> H : {totalAtRisk, recoverable, byState, counts, trend[], stores[]}
+H --> FE : 200 JSON  (or CSV when ?format=csv)
+FE -> U : hero KPIs + trend + ranked table
+
+note over SVC
+  recovery rates r1,r2 start as constants
+  (0.60 / 0.25), later learned from
+  RELATIONSHIP_REACTIVATED / re-charge events.
+end note
+@enduml

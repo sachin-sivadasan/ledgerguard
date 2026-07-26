@@ -126,12 +126,13 @@ class _RetentionScreenState extends State<RetentionScreen>
     final currency = report.currency;
     final hasData = report.plans.isNotEmpty ||
         report.renewalRate > 0 ||
-        report.retainedMrrCents > 0;
+        report.retainedMrrCents > 0 ||
+        report.reactivations > 0;
 
     return LgPage(
       title: 'Retention',
       subtitle:
-          'How well recurring revenue is retained — renewal rate, retained MRR, reactivations',
+          'How well recurring revenue is retained. Renewal rate & trend follow the selected range; retained MRR and the plan table are current-state; reactivations are counted in-range.',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
       secondaryActions: [
@@ -195,7 +196,7 @@ class _HeroRow extends StatelessWidget {
         label: 'Retained MRR',
         value: _money(report.retainedMrrCents, currency),
         color: LgColors.textPrimary,
-        footnote: 'recurring revenue carried into next cycle',
+        footnote: 'MRR of currently-active (SAFE) subs — current-state, not date-filtered',
       ),
       _KpiCard(
         label: 'Reactivations',

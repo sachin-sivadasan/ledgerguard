@@ -247,6 +247,97 @@ func TestRetention_Reactivations(t *testing.T) {
 	}
 }
 
+// TestRetention_ReactivationsBoundary verifies the date-range edges: an event at
+// exactly `from` (midnight) is included, an event any time on the `to` day is
+// included (the whole day, not just midnight), and an event on the day after `to`
+// is excluded. Also proves a shop with both a reactivation and a non-reactivation
+// event still counts once.
+func TestRetention_ReactivationsBoundary(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	fromMidnight := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	toDayAfternoon := time.Date(2026, 7, 31, 14, 30, 0, 0, time.UTC) // same day as to=2026-07-31
+	dayAfterTo := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+	events := []*entity.AppEvent{
+		// Exactly at `from` midnight → included.
+		{ID: uuid.New(), ShopifyShopGID: "gid://shop/1", EventType: "REACTIVATED", OccurredAt: fromMidnight},
+		// Afternoon of the `to` day → must be included (the bug this guards against).
+		{ID: uuid.New(), ShopifyShopGID: "gid://shop/2", EventType: "REACTIVATED", OccurredAt: toDayAfternoon},
+		// shop/2 also has a non-reactivation event → still counts once.
+		{ID: uuid.New(), ShopifyShopGID: "gid://shop/2", EventType: "INSTALLED", OccurredAt: toDayAfternoon},
+		// Day after `to` → excluded.
+		{ID: uuid.New(), ShopifyShopGID: "gid://shop/3", EventType: "REACTIVATED", OccurredAt: dayAfterTo},
+	}
+	h := NewRetentionHandler(
+		&mockSubscriptionRepo{},
+		&mockSnapshotRepoForForecast{},
+		&mockAppEventRepo{events: events},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+
+	rec := doRetention(t, h, appID, pa, "from=2026-07-01&to=2026-07-31")
+	var resp retentionReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	// shop/1 (at `from`) + shop/2 (on `to` day) = 2; shop/3 (day after) excluded.
+	if resp.Reactivations != 2 {
+		t.Errorf("reactivations: expected 2 (from-edge + to-day included, day-after excluded), got %d", resp.Reactivations)
+	}
+}
+
+// TestRetention_CurrencyNonUSD verifies a non-USD subscription currency surfaces.
+func TestRetention_CurrencyNonUSD(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	eur := safeSub(appID, "eu.myshopify.com", "Pro", 5000)
+	eur.Currency = "EUR"
+	h := NewRetentionHandler(
+		&mockSubscriptionRepo{subscriptions: []*entity.Subscription{eur}},
+		&mockSnapshotRepoForForecast{},
+		&mockAppEventRepo{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+	rec := doRetention(t, h, appID, pa, "")
+	var resp retentionReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Currency != "EUR" {
+		t.Errorf("currency: expected EUR, got %q", resp.Currency)
+	}
+}
+
+// TestRetention_EmptyPlanNameBucket verifies subs with an empty plan name form their
+// own bucket rather than being dropped.
+func TestRetention_EmptyPlanNameBucket(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	subs := []*entity.Subscription{
+		safeSub(appID, "noplan.myshopify.com", "", 4000),
+	}
+	h := NewRetentionHandler(
+		&mockSubscriptionRepo{subscriptions: subs},
+		&mockSnapshotRepoForForecast{},
+		&mockAppEventRepo{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+	rec := doRetention(t, h, appID, pa, "")
+	var resp retentionReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Plans) != 1 || resp.Plans[0].PlanName != "" || resp.Plans[0].RetainedMrrCents != 4000 {
+		t.Errorf("expected one empty-name plan bucket with 4000 retained, got %+v", resp.Plans)
+	}
+}
+
 // TestRetention_PlanGrouping verifies per-plan activeSubs, renewalRate and retained
 // MRR, sorted by retained MRR descending.
 func TestRetention_PlanGrouping(t *testing.T) {

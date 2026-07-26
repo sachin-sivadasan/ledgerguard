@@ -127,9 +127,9 @@ func writeRetentionRepoError(w http.ResponseWriter, op string, err error) {
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
-// renewalRate returns safeCount ÷ total clamped to [0,1], guarding divide-by-zero.
-// The headline rate comes from the latest snapshot's precomputed RenewalSuccessRate,
-// which is likewise clamped so the UI never shows a rate outside [0,1].
+// renewalRate clamps an already-computed rate to [0,1] so the UI never shows a
+// value outside that band. It performs no division — callers (the snapshot
+// headline, per-plan planRenewalRate, and each trend point) supply the rate.
 func renewalRate(rate float64) float64 {
 	if rate < 0 {
 		return 0
@@ -165,6 +165,12 @@ func buildRetentionReport(subs []*entity.Subscription, plans []retentionPlan, la
 
 	rate := 0.0
 	if latest != nil {
+		// Log if the stored rate is outside [0,1] before renewalRate clamps it, so a
+		// corrupt/stale snapshot value stays diagnosable rather than silently capped
+		// (parity with the churn drift log).
+		if latest.RenewalSuccessRate < 0 || latest.RenewalSuccessRate > 1 {
+			log.Printf("retention: snapshot RenewalSuccessRate %.4f outside [0,1] — clamping (stale/corrupt snapshot?)", latest.RenewalSuccessRate)
+		}
 		rate = renewalRate(latest.RenewalSuccessRate)
 	}
 
@@ -221,16 +227,19 @@ func buildRetentionPlans(subs []*entity.Subscription) []retentionPlan {
 }
 
 // countReactivations counts distinct shops (ShopifyShopGID) that had a reactivation
-// event within [from,to] inclusive. Event types are matched case-insensitively on
-// the "REACTIVAT" stem (e.g. REACTIVATED, reactivation). This is period-scoped —
-// reactivations are inherently a within-window count.
+// event within the [from,to] date range, inclusive of the entire `to` day. Event
+// types are matched case-insensitively on the "REACTIVAT" stem (e.g. REACTIVATED,
+// reactivation). This is period-scoped — reactivations are inherently a within-window
+// count. `to` from parseDateRange is midnight of that day, so the upper bound is the
+// day AFTER `to` (exclusive); otherwise every event on the `to` day would be dropped.
 func countReactivations(events []*entity.AppEvent, from, to time.Time) int {
+	toExclusive := to.AddDate(0, 0, 1)
 	seen := map[string]struct{}{}
 	for _, e := range events {
 		if !strings.Contains(strings.ToUpper(e.EventType), "REACTIVAT") {
 			continue
 		}
-		if e.OccurredAt.Before(from) || e.OccurredAt.After(to) {
+		if e.OccurredAt.Before(from) || !e.OccurredAt.Before(toExclusive) {
 			continue
 		}
 		seen[e.ShopifyShopGID] = struct{}{}

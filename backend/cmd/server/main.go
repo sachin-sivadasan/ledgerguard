@@ -357,6 +357,13 @@ func run() error {
 		log.Println("Forecast handler initialized")
 	}
 
+	// Initialize revenue-at-risk report handler
+	var revenueAtRiskHandler *handler.RevenueAtRiskHandler
+	if subscriptionRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
+		revenueAtRiskHandler = handler.NewRevenueAtRiskHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo)
+		log.Println("Revenue at Risk handler initialized")
+	}
+
 	// Initialize risk handler
 	var riskHandler *handler.RiskHandler
 	if subscriptionRepo != nil && partnerRepo != nil && appRepo != nil {
@@ -751,6 +758,7 @@ func run() error {
 		EventHandler:                    eventHandler,
 		CohortHandler:                   cohortHandler,
 		ForecastHandler:                 forecastHandler,
+		RevenueAtRiskHandler:            revenueAtRiskHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,
 		OrgAuditHandler:                 orgAuditHandler,

@@ -4,6 +4,7 @@ import '../providers/dashboard_provider.dart';
 import '../providers/earnings_provider.dart';
 import '../providers/events_provider.dart';
 import '../providers/insights_provider.dart';
+import '../providers/revenue_at_risk_provider.dart';
 import '../providers/risk_provider.dart';
 import '../providers/store_provider.dart';
 import '../providers/subscription_provider.dart';
@@ -20,6 +21,7 @@ class DemoModeCoordinator {
   final TransactionProvider _transactionProvider;
   final EventsProvider _eventsProvider;
   final RiskProvider _riskProvider;
+  final RevenueAtRiskProvider _revenueAtRiskProvider;
   final AnalyticsProvider _analyticsProvider;
   final EarningsProvider _earningsProvider;
   final InsightsProvider _insightsProvider;
@@ -33,6 +35,7 @@ class DemoModeCoordinator {
     required TransactionProvider transactionProvider,
     required EventsProvider eventsProvider,
     required RiskProvider riskProvider,
+    required RevenueAtRiskProvider revenueAtRiskProvider,
     required AnalyticsProvider analyticsProvider,
     required EarningsProvider earningsProvider,
     required InsightsProvider insightsProvider,
@@ -44,6 +47,7 @@ class DemoModeCoordinator {
         _transactionProvider = transactionProvider,
         _eventsProvider = eventsProvider,
         _riskProvider = riskProvider,
+        _revenueAtRiskProvider = revenueAtRiskProvider,
         _analyticsProvider = analyticsProvider,
         _earningsProvider = earningsProvider,
         _insightsProvider = insightsProvider,
@@ -58,6 +62,7 @@ class DemoModeCoordinator {
     _transactionProvider.setDemoMode(value);
     _eventsProvider.setDemoMode(value);
     _riskProvider.setDemoMode(value);
+    _revenueAtRiskProvider.setDemoMode(value);
     _analyticsProvider.setDemoMode(value);
     _earningsProvider.setDemoMode(value);
     _insightsProvider.setDemoMode(value);
@@ -77,6 +82,7 @@ class DemoModeCoordinator {
       _transactionProvider.setSelectedApp(appId);
       _eventsProvider.setSelectedApp(appId);
       _riskProvider.setSelectedApp(appId);
+      _revenueAtRiskProvider.setSelectedApp(appId);
       _analyticsProvider.setSelectedApp(appId);
       _earningsProvider.setSelectedApp(appId);
       _insightsProvider.setSelectedApp(appId);

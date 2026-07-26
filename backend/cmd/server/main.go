@@ -17,7 +17,6 @@ import (
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
-	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/cache"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/config"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
@@ -181,36 +180,9 @@ func run() error {
 		log.Println("Event tracker: noop (MIXPANEL_TOKEN not set)")
 	}
 
-	// Initialize OAuth state store (10 minute TTL)
-	stateStore := cache.NewOAuthStateStore(10 * time.Minute)
-
-	// Initialize Shopify OAuth service
-	var oauthService *external.ShopifyOAuthService
-	if cfg.Shopify.ClientID != "" {
-		oauthService = external.NewShopifyOAuthService(
-			cfg.Shopify.ClientID,
-			cfg.Shopify.ClientSecret,
-			cfg.Shopify.RedirectURI,
-			cfg.Shopify.Scopes,
-		)
-		log.Println("Shopify OAuth initialized")
-	}
-
 	// Initialize handlers
 	healthHandler := handler.NewHealthHandler(db)
 	meHandler := handler.NewMeHandler()
-
-	var oauthHandler *handler.OAuthHandler
-	if oauthService != nil && encryptor != nil && partnerRepo != nil && userRepo != nil {
-		oauthHandler = handler.NewOAuthHandler(
-			oauthService,
-			encryptor,
-			partnerRepo,
-			userRepo,
-			stateStore,
-		)
-		log.Println("OAuth handler initialized")
-	}
 
 	var manualTokenHandler *handler.ManualTokenHandler
 	if encryptor != nil && partnerRepo != nil {
@@ -557,11 +529,6 @@ func run() error {
 		orgContextMiddleware := middleware.NewOrgContextMiddleware(orgRepo, memberRepo)
 		orgContextMW = orgContextMiddleware.RequireOrg
 
-		// Wire member repo into OAuth handler for org resolution in callback
-		if oauthHandler != nil {
-			oauthHandler.SetMemberRepo(memberRepo)
-		}
-
 		log.Println("Organization handler initialized")
 	}
 
@@ -763,7 +730,6 @@ func run() error {
 	routerCfg := router.Config{
 		HealthHandler:                   healthHandler,
 		MeHandler:                       meHandler,
-		OAuthHandler:                    oauthHandler,
 		ManualTokenHandler:              manualTokenHandler,
 		IntegrationStatusHandler:        integrationStatusHandler,
 		AppHandler:                      appHandler,

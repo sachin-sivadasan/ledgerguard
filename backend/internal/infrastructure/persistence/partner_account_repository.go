@@ -23,8 +23,8 @@ func NewPostgresPartnerAccountRepository(pool *pgxpool.Pool) *PostgresPartnerAcc
 
 func (r *PostgresPartnerAccountRepository) Create(ctx context.Context, account *entity.PartnerAccount) error {
 	query := `
-		INSERT INTO partner_accounts (id, user_id, org_id, integration_type, partner_id, encrypted_access_token, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO partner_accounts (id, user_id, org_id, integration_type, name, partner_id, encrypted_access_token, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -32,6 +32,7 @@ func (r *PostgresPartnerAccountRepository) Create(ctx context.Context, account *
 		account.UserID,
 		account.OrgID,
 		account.IntegrationType.String(),
+		account.Name,
 		account.PartnerID,
 		account.EncryptedAccessToken,
 		account.CreatedAt,
@@ -42,7 +43,7 @@ func (r *PostgresPartnerAccountRepository) Create(ctx context.Context, account *
 
 func (r *PostgresPartnerAccountRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.PartnerAccount, error) {
 	query := `
-		SELECT id, user_id, org_id, integration_type, partner_id, encrypted_access_token, created_at
+		SELECT id, user_id, org_id, integration_type, name, partner_id, encrypted_access_token, created_at
 		FROM partner_accounts
 		WHERE id = $1
 	`
@@ -52,7 +53,7 @@ func (r *PostgresPartnerAccountRepository) FindByID(ctx context.Context, id uuid
 
 func (r *PostgresPartnerAccountRepository) FindByUserID(ctx context.Context, userID uuid.UUID) (*entity.PartnerAccount, error) {
 	query := `
-		SELECT id, user_id, org_id, integration_type, partner_id, encrypted_access_token, created_at
+		SELECT id, user_id, org_id, integration_type, name, partner_id, encrypted_access_token, created_at
 		FROM partner_accounts
 		WHERE user_id = $1
 	`
@@ -62,7 +63,7 @@ func (r *PostgresPartnerAccountRepository) FindByUserID(ctx context.Context, use
 
 func (r *PostgresPartnerAccountRepository) FindByOrgID(ctx context.Context, orgID uuid.UUID) (*entity.PartnerAccount, error) {
 	query := `
-		SELECT id, user_id, org_id, integration_type, partner_id, encrypted_access_token, created_at
+		SELECT id, user_id, org_id, integration_type, name, partner_id, encrypted_access_token, created_at
 		FROM partner_accounts
 		WHERE org_id = $1
 	`
@@ -72,7 +73,7 @@ func (r *PostgresPartnerAccountRepository) FindByOrgID(ctx context.Context, orgI
 
 func (r *PostgresPartnerAccountRepository) FindByPartnerID(ctx context.Context, partnerID string) (*entity.PartnerAccount, error) {
 	query := `
-		SELECT id, user_id, org_id, integration_type, partner_id, encrypted_access_token, created_at
+		SELECT id, user_id, org_id, integration_type, name, partner_id, encrypted_access_token, created_at
 		FROM partner_accounts
 		WHERE partner_id = $1
 	`
@@ -89,6 +90,7 @@ func (r *PostgresPartnerAccountRepository) scanOne(ctx context.Context, query st
 		&account.UserID,
 		&account.OrgID,
 		&integrationType,
+		&account.Name,
 		&account.PartnerID,
 		&account.EncryptedAccessToken,
 		&account.CreatedAt,
@@ -108,7 +110,7 @@ func (r *PostgresPartnerAccountRepository) scanOne(ctx context.Context, query st
 func (r *PostgresPartnerAccountRepository) Update(ctx context.Context, account *entity.PartnerAccount) error {
 	query := `
 		UPDATE partner_accounts
-		SET partner_id = $2, encrypted_access_token = $3
+		SET partner_id = $2, encrypted_access_token = $3, name = $4
 		WHERE id = $1
 	`
 
@@ -116,6 +118,7 @@ func (r *PostgresPartnerAccountRepository) Update(ctx context.Context, account *
 		account.ID,
 		account.PartnerID,
 		account.EncryptedAccessToken,
+		account.Name,
 	)
 
 	return err

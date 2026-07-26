@@ -25,6 +25,7 @@ func NewManualTokenHandler(encryptor Encryptor, partnerRepo repository.PartnerAc
 type addTokenRequest struct {
 	Token     string `json:"token"`
 	PartnerID string `json:"partner_id"`
+	Name      string `json:"name"`
 }
 
 // AddToken handles adding a manual partner token.
@@ -66,6 +67,7 @@ func (h *ManualTokenHandler) AddToken(w http.ResponseWriter, r *http.Request) {
 		existingAccount.PartnerID = req.PartnerID
 		existingAccount.EncryptedAccessToken = encryptedToken
 		existingAccount.IntegrationType = valueobject.IntegrationTypeManual
+		existingAccount.Name = req.Name
 
 		if err := h.partnerRepo.Update(r.Context(), existingAccount); err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "failed to update partner account")
@@ -78,6 +80,7 @@ func (h *ManualTokenHandler) AddToken(w http.ResponseWriter, r *http.Request) {
 			"message":      "Manual token updated successfully",
 			"id":           existingAccount.ID.String(),
 			"partner_id":   req.PartnerID,
+			"name":         req.Name,
 			"masked_token": maskToken(req.Token),
 		})
 		return
@@ -92,6 +95,7 @@ func (h *ManualTokenHandler) AddToken(w http.ResponseWriter, r *http.Request) {
 
 	// Create new account
 	account := entity.NewPartnerAccount(user.ID, org.ID, req.PartnerID, valueobject.IntegrationTypeManual, encryptedToken)
+	account.Name = req.Name
 
 	if err := h.partnerRepo.Create(r.Context(), account); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to save partner account")
@@ -104,6 +108,7 @@ func (h *ManualTokenHandler) AddToken(w http.ResponseWriter, r *http.Request) {
 		"message":      "Manual token added successfully",
 		"id":           account.ID.String(),
 		"partner_id":   req.PartnerID,
+		"name":         req.Name,
 		"masked_token": maskToken(req.Token),
 	})
 }
@@ -134,6 +139,7 @@ func (h *ManualTokenHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":               account.ID.String(),
 		"partner_id":       account.PartnerID,
+		"name":             account.Name,
 		"integration_type": account.IntegrationType.String(),
 		"masked_token":     maskToken(string(decryptedToken)),
 		"created_at":       account.CreatedAt,

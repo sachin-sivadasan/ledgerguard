@@ -14,7 +14,6 @@ import (
 type Config struct {
 	HealthHandler                   *handler.HealthHandler
 	MeHandler                       *handler.MeHandler
-	OAuthHandler                    *handler.OAuthHandler
 	ManualTokenHandler              *handler.ManualTokenHandler
 	IntegrationStatusHandler        *handler.IntegrationStatusHandler
 	AppHandler                      *handler.AppHandler
@@ -150,14 +149,6 @@ func New(cfg Config) *chi.Mux {
 					mws = append(mws, cfg.OrgContextMW)
 				}
 				r.With(mws...).Get("/status", cfg.IntegrationStatusHandler.GetStatus)
-			}
-
-			// OAuth routes
-			if cfg.OAuthHandler != nil {
-				// StartOAuth requires auth (user must be logged in)
-				r.With(cfg.AuthMW).Get("/oauth", cfg.OAuthHandler.StartOAuth)
-				// Callback is public (receives redirect from Shopify)
-				r.Get("/callback", cfg.OAuthHandler.Callback)
 			}
 
 			// Manual token routes (ADMIN only, org-scoped when available)

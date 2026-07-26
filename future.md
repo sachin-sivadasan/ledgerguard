@@ -15,6 +15,7 @@ Postponed ideas and features for later implementation.
 | Claude API as Parallel Provider | P3 | Add Claude alongside OpenAI â user picks preferred AI provider in settings |
 | ~~Revenue forecasting~~ | ~~P2~~ | ~~Done â Linear regression + exponential smoothing in ForecastingEngine (2026-05-09)~~ |
 | Anomaly detection | P2 | Alert on unusual patterns |
+| Multiple Partner Accounts per org | P2 | Connect several Shopify Partner API tokens under one org, each with a `name` label (the `name` field already exists on `partner_accounts`, added 2026-07-26). Requires: remove the "update existing single account" cap in the `manual_token` handler → allow multiple rows per org; add a partner-account **selector** in the UI; thread the selected account through sync/metrics/data queries (`resolvePartnerAccount` currently returns one per org); decide dashboard aggregation (per-account vs combined). Motivation: agencies/devs managing multiple partner orgs. |
 | Stripe integration | P3 | Non-Shopify revenue |
 | Native mobile app | P3 | iOS/Android standalone |
 | Custom report builder | P3 | User-defined reports |

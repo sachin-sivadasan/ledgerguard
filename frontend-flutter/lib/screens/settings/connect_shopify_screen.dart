@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_client.dart';
 import '../../providers/analytics_provider.dart';
 import '../../providers/apps_provider.dart';
@@ -28,6 +27,7 @@ class ConnectShopifyScreen extends StatefulWidget {
 
 class _ConnectShopifyScreenState extends State<ConnectShopifyScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
   final _partnerIdCtrl = TextEditingController();
   final _tokenCtrl = TextEditingController();
   bool _loading = false;
@@ -51,6 +51,7 @@ class _ConnectShopifyScreenState extends State<ConnectShopifyScreen> {
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     _partnerIdCtrl.dispose();
     _tokenCtrl.dispose();
     super.dispose();
@@ -72,38 +73,10 @@ class _ConnectShopifyScreenState extends State<ConnectShopifyScreen> {
     }
   }
 
-  Future<void> _connectOAuth() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-      _statusMsg = 'Redirecting to Shopify...';
-    });
-
-    try {
-      final client = context.read<ApiClient>();
-      final resp = await client.get('/api/v1/integrations/shopify/oauth');
-      final url = resp.data['url']?.toString();
-      if (url != null && url.isNotEmpty) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      }
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _statusMsg = null;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-        _statusMsg = null;
-      });
-    }
-  }
-
   Future<void> _connectManual() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final name = _nameCtrl.text.trim();
     final partnerId = _partnerIdCtrl.text.trim();
     final token = _tokenCtrl.text.trim();
 
@@ -118,6 +91,7 @@ class _ConnectShopifyScreenState extends State<ConnectShopifyScreen> {
 
       // Step 1: Save token
       await client.post('/api/v1/integrations/shopify/token', data: {
+        'name': name,
         'partner_id': partnerId,
         'token': token,
       });
@@ -290,8 +264,6 @@ class _ConnectShopifyScreenState extends State<ConnectShopifyScreen> {
             ],
             if (_alreadyConnected && !_connected) _buildConnectedCard(),
             if (!_alreadyConnected && !_connected) ...[
-              _buildOAuthSection(),
-              const SizedBox(height: LgSpacing.s600),
               _buildManualTokenSection(),
             ],
             if (_connected) _buildAppSelectionSection(),
@@ -381,62 +353,6 @@ class _ConnectShopifyScreenState extends State<ConnectShopifyScreen> {
     );
   }
 
-  Widget _buildOAuthSection() {
-    return LgCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: LgColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.storefront, color: LgColors.primary, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Connect with OAuth',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold)),
-                    Text('Recommended',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: LgColors.success)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Securely connect your Shopify Partner account using OAuth. '
-            'You will be redirected to Shopify to authorize access.',
-            style: TextStyle(color: LgColors.textSecondary, fontSize: 14),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: FilledButton.icon(
-              onPressed: _loading ? null : _connectOAuth,
-              icon: const Icon(Icons.link),
-              label: const Text('Connect Shopify Partner'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildManualTokenSection() {
     return LgCard(
       child: Form(
@@ -476,11 +392,21 @@ class _ConnectShopifyScreenState extends State<ConnectShopifyScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Manually enter your Partner API credentials. '
-              'Use this for testing or when OAuth is not available.',
+              'Enter your Shopify Partner API credentials. Create a token in '
+              'Partners Dashboard → Settings → Partner API clients.',
               style: TextStyle(color: LgColors.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: 20),
+            TextFormField(
+              controller: _nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Name (optional)',
+                hintText: 'A label to identify this connection (e.g. Main org)',
+                prefixIcon: Icon(Icons.label_outline),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _partnerIdCtrl,
               decoration: const InputDecoration(

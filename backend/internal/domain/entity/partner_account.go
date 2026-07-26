@@ -12,6 +12,7 @@ type PartnerAccount struct {
 	UserID               uuid.UUID
 	OrgID                uuid.UUID
 	IntegrationType      valueobject.IntegrationType
+	Name                 string
 	PartnerID            string
 	EncryptedAccessToken []byte
 	CreatedAt            time.Time

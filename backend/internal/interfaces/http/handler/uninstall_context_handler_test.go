@@ -307,6 +307,39 @@ func TestUninstall_MedianTenureEven(t *testing.T) {
 	}
 }
 
+// TestUninstall_WereAtRiskRateClamp pins the defensive [0,1] clamp on the helper.
+func TestUninstall_WereAtRiskRateClamp(t *testing.T) {
+	if got := wereAtRiskRate(3, 2); got != 1 {
+		t.Errorf("wereAtRiskRate(3,2): expected 1 (clamped), got %v", got)
+	}
+	if got := wereAtRiskRate(-1, 2); got != 0 {
+		t.Errorf("wereAtRiskRate(-1,2): expected 0 (clamped), got %v", got)
+	}
+	if got := wereAtRiskRate(1, 0); got != 0 {
+		t.Errorf("wereAtRiskRate(1,0): expected 0 (divide-by-zero guard), got %v", got)
+	}
+}
+
+// TestUninstall_FrozenCountsAsAtRisk verifies a FROZEN sub increments the at-risk
+// numerator (wereAtRiskPct includes Frozen, not just missed-cycle states).
+func TestUninstall_FrozenCountsAsAtRisk(t *testing.T) {
+	appID := uuid.New()
+	when := time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC)
+	frozen := uninstallSub(appID, "gid://shop/1", "a.myshopify.com", "Pro", valueobject.RiskStateSafe, when.AddDate(0, 0, -60))
+	frozen.Status = "FROZEN"
+	events := []*entity.AppEvent{
+		{ID: uuid.New(), ShopifyShopGID: "gid://shop/1", EventType: "APP_UNINSTALLED", OccurredAt: when},
+	}
+	aid, pa, h := uninstallFixture([]*entity.Subscription{frozen}, events)
+	resp := decodeUninstall(t, doUninstall(t, h, aid, pa, "from=2026-07-01&to=2026-07-31"))
+	if resp.WereAtRiskPct != 1 {
+		t.Errorf("wereAtRiskPct: expected 1 (frozen counts as at-risk), got %v", resp.WereAtRiskPct)
+	}
+	if len(resp.Stores) != 1 || resp.Stores[0].StateBeforeUninstall != "Frozen" {
+		t.Errorf("expected one Frozen store, got %+v", resp.Stores)
+	}
+}
+
 // TestUninstall_EmptyGIDEventSkipped verifies uninstall events with an empty shop GID
 // are skipped rather than collapsing into a single phantom "" row that under-counts.
 func TestUninstall_EmptyGIDEventSkipped(t *testing.T) {

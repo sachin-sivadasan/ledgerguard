@@ -200,6 +200,7 @@ func buildUninstallReport(events []*entity.AppEvent, subsByShop map[string]*enti
 
 	// Dedup to the latest uninstall event per shop within range.
 	latestByShop := map[string]*entity.AppEvent{}
+	skippedEmptyGID := 0
 	for _, e := range events {
 		if !strings.Contains(strings.ToUpper(e.EventType), "UNINSTALL") {
 			continue
@@ -209,13 +210,20 @@ func buildUninstallReport(events []*entity.AppEvent, subsByShop map[string]*enti
 		}
 		if e.ShopifyShopGID == "" {
 			// Skip uncorrelatable events — otherwise every empty-GID event would
-			// collapse into a single phantom row and under-count Uninstalls.
+			// collapse into a single phantom row and under-count Uninstalls. Empty
+			// GIDs are a known real condition, so count them for the log below.
+			skippedEmptyGID++
 			continue
 		}
 		existing, ok := latestByShop[e.ShopifyShopGID]
 		if !ok || e.OccurredAt.After(existing.OccurredAt) {
 			latestByShop[e.ShopifyShopGID] = e
 		}
+	}
+	if skippedEmptyGID > 0 {
+		// One aggregate line so a GID-less ingestion regression stays diagnosable
+		// rather than silently under-counting uninstalls.
+		log.Printf("uninstall_context: skipped %d uninstall event(s) with empty ShopifyShopGID (uncorrelatable)", skippedEmptyGID)
 	}
 
 	stores := make([]uninstallStore, 0, len(latestByShop))
@@ -281,7 +289,7 @@ func medianTenure(tenures []float64) float64 {
 
 // writeUninstallStoresCSV writes the per-shop uninstall table as a CSV attachment.
 // Uses encoding/csv so free-text domains/plan names with commas/quotes stay one
-// column. An empty tenure (0, no correlated sub) is rendered as a blank cell.
+// column. A 0 tenure (uncorrelated sub, or a floored negative) is rendered as a blank cell.
 func writeUninstallStoresCSV(w http.ResponseWriter, stores []uninstallStore) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="uninstall-context.csv"`)

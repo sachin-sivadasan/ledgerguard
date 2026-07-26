@@ -208,7 +208,7 @@ class _HeroRow extends StatelessWidget {
         label: 'Uninstalls',
         value: '${report.uninstalls}',
         color: LgColors.textPrimary,
-        footnote: 'app/uninstalled events in range',
+        footnote: 'distinct stores uninstalled in range',
       ),
       _KpiCard(
         label: 'Were At-Risk First',

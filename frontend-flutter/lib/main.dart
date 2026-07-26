@@ -17,6 +17,7 @@ import 'providers/dashboard_provider.dart';
 import 'providers/earnings_provider.dart';
 import 'providers/events_provider.dart';
 import 'providers/insights_provider.dart';
+import 'providers/retention_provider.dart';
 import 'providers/revenue_at_risk_provider.dart';
 import 'providers/risk_provider.dart';
 import 'providers/settings_provider.dart';
@@ -32,6 +33,7 @@ import 'services/earnings_service.dart';
 import 'services/events_service.dart';
 import 'services/insights_service.dart';
 import 'services/metrics_service.dart';
+import 'services/retention_service.dart';
 import 'services/mixpanel_service.dart';
 import 'services/revenue_at_risk_service.dart';
 import 'services/risk_service.dart';
@@ -60,6 +62,7 @@ void main() async {
   final riskService = RiskService(apiClient);
   final revenueAtRiskService = RevenueAtRiskService(apiClient);
   final churnService = ChurnService(apiClient);
+  final retentionService = RetentionService(apiClient);
   final eventsService = EventsService(apiClient);
   final insightsService = InsightsService(apiClient);
   final storeService = StoreService(apiClient);
@@ -77,6 +80,7 @@ void main() async {
   final riskProvider = RiskProvider(riskService);
   final revenueAtRiskProvider = RevenueAtRiskProvider(revenueAtRiskService);
   final churnProvider = ChurnProvider(churnService);
+  final retentionProvider = RetentionProvider(retentionService);
   final analyticsProvider = AnalyticsProvider(metricsService, earningsService);
   final earningsProvider = EarningsProvider(earningsService);
   final insightsProvider = InsightsProvider(insightsService);
@@ -92,6 +96,7 @@ void main() async {
     riskProvider: riskProvider,
     revenueAtRiskProvider: revenueAtRiskProvider,
     churnProvider: churnProvider,
+    retentionProvider: retentionProvider,
     analyticsProvider: analyticsProvider,
     earningsProvider: earningsProvider,
     insightsProvider: insightsProvider,
@@ -115,6 +120,7 @@ void main() async {
         ChangeNotifierProvider.value(value: riskProvider),
         ChangeNotifierProvider.value(value: revenueAtRiskProvider),
         ChangeNotifierProvider.value(value: churnProvider),
+        ChangeNotifierProvider.value(value: retentionProvider),
         ChangeNotifierProvider.value(value: analyticsProvider),
         ChangeNotifierProvider.value(value: earningsProvider),
         ChangeNotifierProvider.value(value: appsProvider),

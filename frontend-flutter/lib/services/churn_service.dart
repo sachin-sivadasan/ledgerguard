@@ -43,7 +43,7 @@ class ChurnTrendPoint {
   factory ChurnTrendPoint.fromJson(Map<String, dynamic> json) {
     return ChurnTrendPoint(
       date: _parseDate(json['date'] as String?) ?? DateTime.now(),
-      churnRate: (json['churnRate'] as num?)?.toDouble() ?? 0,
+      churnRate: ((json['churnRate'] as num?)?.toDouble() ?? 0).clamp(0.0, 1.0),
     );
   }
 }
@@ -52,7 +52,8 @@ class ChurnTrendPoint {
 class ChurnReport {
   final String currency;
 
-  /// Churn rate as a 0..1 decimal (e.g. 0.042 == 4.2%).
+  /// Churn rate as a 0..1 decimal (e.g. 0.042 == 4.2%). Clamped to [0,1] in
+  /// [fromJson] so the invariant holds regardless of producer.
   final double churnRate;
   final int churnedMrrLostCents;
   final int churnedCount;
@@ -71,7 +72,7 @@ class ChurnReport {
   factory ChurnReport.fromJson(Map<String, dynamic> json) {
     return ChurnReport(
       currency: json['currency'] as String? ?? 'USD',
-      churnRate: (json['churnRate'] as num?)?.toDouble() ?? 0,
+      churnRate: ((json['churnRate'] as num?)?.toDouble() ?? 0).clamp(0.0, 1.0),
       churnedMrrLostCents:
           (json['churnedMrrLostCents'] as num?)?.toInt() ?? 0,
       churnedCount: (json['churnedCount'] as num?)?.toInt() ?? 0,

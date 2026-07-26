@@ -174,15 +174,19 @@ func buildChurnStores(subs []*entity.Subscription, now time.Time) []churnStore {
 	return stores
 }
 
-// churnRate returns churnedCount ÷ totalSubscriptions, guarding divide-by-zero.
-// The headline rate divides the live churned count by the latest snapshot's total,
-// so a stale/behind snapshot can momentarily make the numerator exceed the
-// denominator; clamp to [0,1] so the UI never shows a >100% churn rate.
+// churnRate returns churnedCount ÷ totalSubscriptions clamped to [0,1], guarding
+// divide-by-zero. The headline rate divides the live churned count by the latest
+// snapshot's total, so a stale/behind snapshot can momentarily make the numerator
+// exceed the denominator; clamping keeps the UI from ever showing a >100% rate.
+// buildChurnReport logs the underlying drift so the clamp never hides it silently.
 func churnRate(churnedCount, totalSubscriptions int) float64 {
 	if totalSubscriptions <= 0 {
 		return 0
 	}
 	rate := float64(churnedCount) / float64(totalSubscriptions)
+	if rate < 0 {
+		return 0
+	}
 	if rate > 1 {
 		return 1
 	}
@@ -203,6 +207,14 @@ func buildChurnReport(subs []*entity.Subscription, stores []churnStore, latest *
 	total := 0
 	if latest != nil {
 		total = latest.TotalSubscriptions
+	}
+
+	// The live churned count and the snapshot total come from different points in
+	// time; when the numerator exceeds the denominator the snapshot is stale/behind.
+	// churnRate clamps this to 1.0 for the UI — log it so the data drift stays
+	// diagnosable rather than silently capped.
+	if total > 0 && len(subs) > total {
+		log.Printf("churn: live churned count %d exceeds latest snapshot total %d — clamping rate to 1.0 (stale snapshot?)", len(subs), total)
 	}
 
 	return churnReport{

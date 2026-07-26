@@ -325,6 +325,61 @@ func TestChurn_RepoErrorReturns503(t *testing.T) {
 	}
 }
 
+// TestChurn_ChurnedDateFallback verifies churnedDateOf falls back to
+// LastRecurringChargeDate when ExpectedNextChargeDate is nil, and emits an empty
+// churnedDate (with tenure measured to now) when both are nil.
+func TestChurn_ChurnedDateFallback(t *testing.T) {
+	appID := uuid.New()
+	partnerAccount := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: partnerAccount.ID, Name: "Test App"}
+	now := time.Now().UTC()
+	lastCharge := now.AddDate(0, 0, -50)
+
+	fallback := churnedSub(appID, "fallback.myshopify.com", "Pro", 9000)
+	fallback.ExpectedNextChargeDate = nil
+	fallback.LastRecurringChargeDate = &lastCharge
+
+	bothNil := churnedSub(appID, "bothnil.myshopify.com", "Pro", 1000)
+	bothNil.ExpectedNextChargeDate = nil
+	bothNil.LastRecurringChargeDate = nil
+
+	h := NewChurnHandler(
+		&mockSubscriptionRepo{subscriptions: []*entity.Subscription{fallback, bothNil}},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: partnerAccount},
+	)
+
+	req := newChurnRequest(t, appID, partnerAccount, "")
+	rec := httptest.NewRecorder()
+	h.GetChurn(rec, req)
+
+	var resp churnReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	byDomain := map[string]churnStore{}
+	for _, s := range resp.Stores {
+		byDomain[s.Domain] = s
+	}
+
+	// Fallback uses LastRecurringChargeDate for the churned date.
+	fb := byDomain["fallback.myshopify.com"]
+	if fb.ChurnedDate != lastCharge.Format(dateLayout) {
+		t.Errorf("fallback churnedDate: expected %q, got %q", lastCharge.Format(dateLayout), fb.ChurnedDate)
+	}
+
+	// Both nil → empty churnedDate; tenure measured to now (created 200d ago).
+	bn := byDomain["bothnil.myshopify.com"]
+	if bn.ChurnedDate != "" {
+		t.Errorf("both-nil churnedDate: expected empty, got %q", bn.ChurnedDate)
+	}
+	if bn.TenureDays < 199 || bn.TenureDays > 201 {
+		t.Errorf("both-nil tenureDays: expected ~200 (to now), got %d", bn.TenureDays)
+	}
+}
+
 // TestChurn_SnapshotRepoErrorReturns503 verifies the snapshot-repo error branch
 // (distinct from the subscription-repo branch) also surfaces as 503.
 func TestChurn_SnapshotRepoErrorReturns503(t *testing.T) {

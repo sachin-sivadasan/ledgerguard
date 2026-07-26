@@ -130,7 +130,7 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
     return LgPage(
       title: 'Churn',
       subtitle:
-          'Subscriptions that churned this period — MRR lost, count, and ranked stores',
+          'Stores currently churned — MRR lost, count, and ranking; churn-rate trend over the selected range',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
       secondaryActions: [
@@ -158,9 +158,9 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
           if (!hasChurn)
             const LgEmptyState(
               icon: Icons.check_circle_outline,
-              heading: 'No churn this period 🎉',
+              heading: 'No churned stores 🎉',
               description:
-                  'No subscriptions churned in this range. Retention is holding steady.',
+                  'No subscriptions are currently in the CHURNED state. Retention is holding steady.',
             )
           else ...[
             _HeroRow(report: report, currency: currency),

@@ -325,6 +325,105 @@ func TestChurn_RepoErrorReturns503(t *testing.T) {
 	}
 }
 
+// TestChurn_SnapshotRepoErrorReturns503 verifies the snapshot-repo error branch
+// (distinct from the subscription-repo branch) also surfaces as 503.
+func TestChurn_SnapshotRepoErrorReturns503(t *testing.T) {
+	appID := uuid.New()
+	partnerAccount := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: partnerAccount.ID, Name: "Test App"}
+	h := NewChurnHandler(
+		&mockSubscriptionRepo{subscriptions: []*entity.Subscription{
+			churnedSub(appID, "a.myshopify.com", "Pro", 5000),
+		}},
+		&mockSnapshotRepoForForecast{rangeErr: errors.New("snapshot db down")},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: partnerAccount},
+	)
+
+	req := newChurnRequest(t, appID, partnerAccount, "")
+	rec := httptest.NewRecorder()
+	h.GetChurn(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// TestChurn_ChurnRateClampedToOne verifies a stale/behind snapshot (live churned
+// count exceeds the snapshot's total) never yields a churnRate above 1.0.
+func TestChurn_ChurnRateClampedToOne(t *testing.T) {
+	appID := uuid.New()
+	partnerAccount := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: partnerAccount.ID, Name: "Test App"}
+	// 3 live churned subs, but the latest snapshot only knows of 2 total.
+	subs := []*entity.Subscription{
+		churnedSub(appID, "a.myshopify.com", "Pro", 5000),
+		churnedSub(appID, "b.myshopify.com", "Pro", 3000),
+		churnedSub(appID, "c.myshopify.com", "Pro", 1000),
+	}
+	d := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	snapshots := []*entity.DailyMetricsSnapshot{
+		{ID: uuid.New(), AppID: appID, Date: d, ChurnedCount: 1, TotalSubscriptions: 2},
+	}
+	h := NewChurnHandler(
+		&mockSubscriptionRepo{subscriptions: subs},
+		&mockSnapshotRepoForForecast{snapshots: snapshots},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: partnerAccount},
+	)
+
+	req := newChurnRequest(t, appID, partnerAccount, "")
+	rec := httptest.NewRecorder()
+	h.GetChurn(rec, req)
+
+	var resp churnReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	// 3 churned / 2 total = 1.5 → clamped to 1.0.
+	if resp.ChurnRate != 1 {
+		t.Errorf("churnRate: expected 1 (clamped), got %v", resp.ChurnRate)
+	}
+}
+
+// TestChurn_CSVEscaping verifies free-text fields containing commas/quotes are
+// properly quoted (encoding/csv), so a shopName like "Acme, Inc." stays one column.
+func TestChurn_CSVEscaping(t *testing.T) {
+	appID := uuid.New()
+	partnerAccount := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: partnerAccount.ID, Name: "Test App"}
+	tricky := churnedSub(appID, "acme.myshopify.com", `Pro, "Annual"`, 5000)
+	tricky.ShopName = "Acme, Inc."
+	h := NewChurnHandler(
+		&mockSubscriptionRepo{subscriptions: []*entity.Subscription{tricky}},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: partnerAccount},
+	)
+
+	req := newChurnRequest(t, appID, partnerAccount, "format=csv")
+	rec := httptest.NewRecorder()
+	h.GetChurn(rec, req)
+
+	records, err := csv.NewReader(strings.NewReader(rec.Body.String())).ReadAll()
+	if err != nil {
+		t.Fatalf("parse CSV: %v", err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("expected header + 1 row, got %d records: %v", len(records), records)
+	}
+	// Row must keep column integrity despite the embedded comma/quote.
+	if len(records[1]) != 6 {
+		t.Fatalf("expected 6 columns, got %d: %v", len(records[1]), records[1])
+	}
+	if records[1][1] != "Acme, Inc." {
+		t.Errorf("shopName column: expected %q, got %q", "Acme, Inc.", records[1][1])
+	}
+	if records[1][5] != `Pro, "Annual"` {
+		t.Errorf("planName column: expected %q, got %q", `Pro, "Annual"`, records[1][5])
+	}
+}
+
 // TestChurn_CSVFormat verifies CSV output: header + one row per store, sorted by
 // MRR lost desc.
 func TestChurn_CSVFormat(t *testing.T) {

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -56,10 +57,19 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
           ),
         );
       }
-    } catch (_) {
+    } catch (e) {
+      // Don't swallow the cause — surface a 503 with the same "service
+      // unavailable" copy the report body uses, and log everything else so
+      // export failures stay diagnosable.
+      debugPrint('churn: CSV export failed: $e');
       if (!mounted) return;
+      final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
-        const SnackBar(content: Text('Could not export CSV. Please try again.')),
+        SnackBar(
+          content: Text(isUnavailable
+              ? 'Service temporarily unavailable. Please try again shortly.'
+              : 'Could not export CSV. Please try again.'),
+        ),
       );
     }
   }
@@ -178,7 +188,7 @@ class _HeroRow extends StatelessWidget {
         label: 'Churn Rate',
         value: _percent(report.churnRate),
         color: LgColors.critical,
-        footnote: 'churned subs ÷ active at period start',
+        footnote: 'churned ÷ total subscriptions (current)',
       ),
       _KpiCard(
         label: 'Churned MRR Lost',

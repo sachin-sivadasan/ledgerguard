@@ -175,11 +175,18 @@ func buildChurnStores(subs []*entity.Subscription, now time.Time) []churnStore {
 }
 
 // churnRate returns churnedCount ÷ totalSubscriptions, guarding divide-by-zero.
+// The headline rate divides the live churned count by the latest snapshot's total,
+// so a stale/behind snapshot can momentarily make the numerator exceed the
+// denominator; clamp to [0,1] so the UI never shows a >100% churn rate.
 func churnRate(churnedCount, totalSubscriptions int) float64 {
 	if totalSubscriptions <= 0 {
 		return 0
 	}
-	return float64(churnedCount) / float64(totalSubscriptions)
+	rate := float64(churnedCount) / float64(totalSubscriptions)
+	if rate > 1 {
+		return 1
+	}
+	return rate
 }
 
 // buildChurnReport aggregates churned count, MRR lost, churn rate and currency.

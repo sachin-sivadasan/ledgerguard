@@ -17,6 +17,7 @@ import (
 // mockSnapshotRepoForForecast implements DailyMetricsSnapshotRepository
 type mockSnapshotRepoForForecast struct {
 	snapshots []*entity.DailyMetricsSnapshot
+	rangeErr  error
 }
 
 func (m *mockSnapshotRepoForForecast) Upsert(ctx context.Context, s *entity.DailyMetricsSnapshot) error {
@@ -29,6 +30,9 @@ func (m *mockSnapshotRepoForForecast) FindByAppIDAndDate(ctx context.Context, ap
 	return nil, nil
 }
 func (m *mockSnapshotRepoForForecast) FindByAppIDRange(ctx context.Context, appID uuid.UUID, from, to time.Time) ([]*entity.DailyMetricsSnapshot, error) {
+	if m.rangeErr != nil {
+		return nil, m.rangeErr
+	}
 	return m.snapshots, nil
 }
 func (m *mockSnapshotRepoForForecast) FindLatestByAppID(ctx context.Context, appID uuid.UUID) (*entity.DailyMetricsSnapshot, error) {

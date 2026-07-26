@@ -203,7 +203,7 @@ Index page: `docs/wireframes/19-reports.svg`.
 | Report | Status |
 |---|---|
 | **Revenue at Risk** | ✅ **Shipped** — `backend/.../revenue_at_risk_handler.go` + `frontend-flutter/.../revenue_at_risk_screen.dart`; live on app.ledgerspear.com |
-| **Churn** | 🚧 In progress (Archetype A · `19j`) |
+| **Churn** | ✅ **Shipped** — `backend/.../churn_handler.go` (12 tests) + `frontend-flutter/.../churn_screen.dart`; churn %, MRR lost, ranked churned stores, trend, CSV. Merged to main (PR #4). |
 | Retention · Retention Cohorts · Reviews · Uninstall Context | ⬜ Pending (Retention & Risk) |
 | Earnings · MRR · Revenue Mix · Usage & One-Time · Usage Trends · Subscriptions · Payout Schedule · Payout History | ⬜ Pending (Revenue & Billing) |
 | Installs · Activation · Net-New Subscriptions | ⬜ Pending (Growth) |

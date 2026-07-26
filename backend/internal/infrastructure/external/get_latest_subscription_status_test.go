@@ -125,6 +125,19 @@ func TestGetLatestSubscriptionStatus(t *testing.T) {
 			want: "ACTIVE",
 		},
 		{
+			name: "unknown/future event type as latest falls through to the newest handled event",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base.Add(1*time.Hour)),
+				ev("SOME_FUTURE_EVENT_TYPE", base.Add(9*time.Hour)), // newest but unhandled
+			},
+			want: "ACTIVE",
+		},
+		{
+			name:   "only unhandled event types — unknown",
+			events: []AppEvent{ev("SOME_FUTURE_EVENT_TYPE", base)},
+			want:   "",
+		},
+		{
 			name:   "installed only — pending",
 			events: []AppEvent{ev("RELATIONSHIP_INSTALLED", base)},
 			want:   "PENDING",

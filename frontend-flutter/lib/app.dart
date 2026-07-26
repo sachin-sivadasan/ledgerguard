@@ -19,6 +19,7 @@ import 'screens/reports/churn_screen.dart';
 import 'screens/reports/cohorts_screen.dart';
 import 'screens/reports/reports_screen.dart';
 import 'screens/reports/retention_screen.dart';
+import 'screens/reports/reviews_screen.dart';
 import 'screens/reports/revenue_at_risk_screen.dart';
 import 'screens/risk/risk_screen.dart';
 import 'screens/settings/connect_shopify_screen.dart';
@@ -209,6 +210,10 @@ class _AppState extends State<App> {
                   GoRoute(
                     path: 'cohorts',
                     builder: (c, s) => const CohortsReportScreen(),
+                  ),
+                  GoRoute(
+                    path: 'reviews',
+                    builder: (c, s) => const ReviewsReportScreen(),
                   ),
                 ],
               ),

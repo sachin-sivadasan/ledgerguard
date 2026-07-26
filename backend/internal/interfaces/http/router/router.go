@@ -287,6 +287,7 @@ func New(cfg Config) *chi.Mux {
 				if cfg.ReviewHandler != nil {
 					r.Get("/{appID}/reviews", cfg.ReviewHandler.List)
 					r.Post("/{appID}/reviews/scrape", cfg.ReviewHandler.Scrape)
+					r.Get("/{appID}/reports/reviews", cfg.ReviewHandler.GetReviewsReport)
 				}
 			})
 		}

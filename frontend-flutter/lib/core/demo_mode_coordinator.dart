@@ -7,6 +7,7 @@ import '../providers/earnings_provider.dart';
 import '../providers/events_provider.dart';
 import '../providers/insights_provider.dart';
 import '../providers/retention_provider.dart';
+import '../providers/reviews_provider.dart';
 import '../providers/revenue_at_risk_provider.dart';
 import '../providers/risk_provider.dart';
 import '../providers/store_provider.dart';
@@ -28,6 +29,7 @@ class DemoModeCoordinator {
   final ChurnProvider _churnProvider;
   final CohortsProvider _cohortsProvider;
   final RetentionProvider _retentionProvider;
+  final ReviewsProvider _reviewsProvider;
   final AnalyticsProvider _analyticsProvider;
   final EarningsProvider _earningsProvider;
   final InsightsProvider _insightsProvider;
@@ -45,6 +47,7 @@ class DemoModeCoordinator {
     required ChurnProvider churnProvider,
     required CohortsProvider cohortsProvider,
     required RetentionProvider retentionProvider,
+    required ReviewsProvider reviewsProvider,
     required AnalyticsProvider analyticsProvider,
     required EarningsProvider earningsProvider,
     required InsightsProvider insightsProvider,
@@ -60,6 +63,7 @@ class DemoModeCoordinator {
         _churnProvider = churnProvider,
         _cohortsProvider = cohortsProvider,
         _retentionProvider = retentionProvider,
+        _reviewsProvider = reviewsProvider,
         _analyticsProvider = analyticsProvider,
         _earningsProvider = earningsProvider,
         _insightsProvider = insightsProvider,
@@ -78,6 +82,7 @@ class DemoModeCoordinator {
     _churnProvider.setDemoMode(value);
     _cohortsProvider.setDemoMode(value);
     _retentionProvider.setDemoMode(value);
+    _reviewsProvider.setDemoMode(value);
     _analyticsProvider.setDemoMode(value);
     _earningsProvider.setDemoMode(value);
     _insightsProvider.setDemoMode(value);
@@ -101,6 +106,7 @@ class DemoModeCoordinator {
       _churnProvider.setSelectedApp(appId);
       _cohortsProvider.setSelectedApp(appId);
       _retentionProvider.setSelectedApp(appId);
+      _reviewsProvider.setSelectedApp(appId);
       _analyticsProvider.setSelectedApp(appId);
       _earningsProvider.setSelectedApp(appId);
       _insightsProvider.setSelectedApp(appId);

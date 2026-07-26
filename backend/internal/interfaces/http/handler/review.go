@@ -66,19 +66,19 @@ func (h *ReviewHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	reviews, err := h.reviewRepo.FindByAppID(r.Context(), app.ID, perPage, offset)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to fetch reviews")
+		writeReviewRepoError(w, "FindByAppID", err)
 		return
 	}
 
 	total, err := h.reviewRepo.CountByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to count reviews")
+		writeReviewRepoError(w, "CountByAppID", err)
 		return
 	}
 
-	reviewResponses := make([]map[string]interface{}, len(reviews))
+	reviewResponses := make([]map[string]any, len(reviews))
 	for i, rev := range reviews {
-		reviewResponses[i] = map[string]interface{}{
+		reviewResponses[i] = map[string]any{
 			"id":          rev.ID,
 			"author":      rev.Author,
 			"rating":      rev.Rating,
@@ -93,7 +93,7 @@ func (h *ReviewHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"reviews":  reviewResponses,
 		"total":    total,
 		"page":     page,
@@ -180,7 +180,7 @@ func (h *ReviewHandler) Scrape(w http.ResponseWriter, r *http.Request) {
 	total, _ := h.reviewRepo.CountByAppID(r.Context(), app.ID)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"message":     "Scrape completed",
 		"new_reviews": len(reviews),
 		"total_reviews": total,

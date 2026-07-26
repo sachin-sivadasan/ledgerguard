@@ -127,7 +127,8 @@ func indexSubsByShop(subs []*entity.Subscription) map[string]*entity.Subscriptio
 // stateBeforeUninstall maps a correlated subscription to the human-readable state
 // it was in right before uninstalling. A nil sub (no correlation) is "Unknown";
 // a FROZEN sub is "Frozen"; otherwise the RiskState decides: SAFE → "Healthy",
-// any missed/churned state → "At-Risk".
+// any missed/churned state → "At-Risk". A non-nil sub whose RiskState is empty or
+// unrecognized also yields "Unknown".
 func stateBeforeUninstall(sub *entity.Subscription) string {
 	if sub == nil {
 		return "Unknown"
@@ -145,11 +146,13 @@ func stateBeforeUninstall(sub *entity.Subscription) string {
 	}
 }
 
-// wereAtRiskRate returns atRisk ÷ correlated clamped to [0,1], guarding
-// divide-by-zero. The denominator is intentionally correlated-uninstalls-only
-// (shops we could match to a subscription); shops with an "Unknown" state are
-// excluded from both numerator and denominator. Logs if it clamps (parity with
-// retention's renewalRate diagnostics).
+// wereAtRiskRate returns (at-risk-or-frozen) ÷ correlated clamped to [0,1], guarding
+// divide-by-zero. The numerator counts shops whose inferred state was "At-Risk" OR
+// "Frozen". The denominator is correlated-uninstalls-only (shops matched to a
+// subscription, i.e. non-nil sub); uncorrelated shops are excluded from both. Note a
+// correlated sub can still resolve to state "Unknown" (empty/unrecognized RiskState) —
+// those remain in the denominator but not the numerator. Logs if it clamps (parity
+// with retention's renewalRate diagnostics).
 func wereAtRiskRate(atRisk, correlated int) float64 {
 	if correlated <= 0 {
 		return 0
@@ -168,12 +171,17 @@ func wereAtRiskRate(atRisk, correlated int) float64 {
 }
 
 // tenureMonths returns the sub's tenure at uninstall time in months (days ÷ 30),
-// rounded to 1 decimal. A nil sub yields 0 (rendered as "" in CSV / omitted tenure).
+// rounded to 1 decimal. A nil sub yields 0 (the CSV writer blanks a 0; JSON keeps the
+// literal 0). Floored at 0 so a clock-skewed/backfilled uninstall predating CreatedAt
+// can't produce a negative tenure that skews the median.
 func tenureMonths(sub *entity.Subscription, uninstalledAt time.Time) float64 {
 	if sub == nil {
 		return 0
 	}
 	days := uninstalledAt.Sub(sub.CreatedAt).Hours() / 24
+	if days < 0 {
+		days = 0
+	}
 	return round1(days / 30.0)
 }
 
@@ -197,6 +205,11 @@ func buildUninstallReport(events []*entity.AppEvent, subsByShop map[string]*enti
 			continue
 		}
 		if e.OccurredAt.Before(from) || !e.OccurredAt.Before(toExclusive) {
+			continue
+		}
+		if e.ShopifyShopGID == "" {
+			// Skip uncorrelatable events — otherwise every empty-GID event would
+			// collapse into a single phantom row and under-count Uninstalls.
 			continue
 		}
 		existing, ok := latestByShop[e.ShopifyShopGID]

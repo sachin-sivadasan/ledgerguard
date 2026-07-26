@@ -307,6 +307,48 @@ func TestUninstall_MedianTenureEven(t *testing.T) {
 	}
 }
 
+// TestUninstall_EmptyGIDEventSkipped verifies uninstall events with an empty shop GID
+// are skipped rather than collapsing into a single phantom "" row that under-counts.
+func TestUninstall_EmptyGIDEventSkipped(t *testing.T) {
+	when := time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC)
+	events := []*entity.AppEvent{
+		{ID: uuid.New(), ShopifyShopGID: "gid://shop/1", EventType: "APP_UNINSTALLED", OccurredAt: when},
+		{ID: uuid.New(), ShopifyShopGID: "", EventType: "APP_UNINSTALLED", OccurredAt: when},
+		{ID: uuid.New(), ShopifyShopGID: "", EventType: "APP_UNINSTALLED", OccurredAt: when.AddDate(0, 0, -1)},
+	}
+	aid, pa, h := uninstallFixture(nil, events)
+	resp := decodeUninstall(t, doUninstall(t, h, aid, pa, "from=2026-07-01&to=2026-07-31"))
+	if resp.Uninstalls != 1 {
+		t.Errorf("uninstalls: expected 1 (empty-GID events skipped), got %d", resp.Uninstalls)
+	}
+	for _, s := range resp.Stores {
+		if s.Domain == "" {
+			t.Errorf("empty-GID phantom row leaked into stores: %+v", s)
+		}
+	}
+}
+
+// TestUninstall_NegativeTenureFlooredToZero verifies an uninstall predating the sub's
+// CreatedAt (clock skew/backfill) yields tenure 0, not a negative that skews the median.
+func TestUninstall_NegativeTenureFlooredToZero(t *testing.T) {
+	appID := uuid.New()
+	when := time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC)
+	subs := []*entity.Subscription{
+		uninstallSub(appID, "gid://shop/1", "a.myshopify.com", "Pro", valueobject.RiskStateSafe, when.AddDate(0, 0, 30)),
+	}
+	events := []*entity.AppEvent{
+		{ID: uuid.New(), ShopifyShopGID: "gid://shop/1", EventType: "APP_UNINSTALLED", OccurredAt: when},
+	}
+	aid, pa, h := uninstallFixture(subs, events)
+	resp := decodeUninstall(t, doUninstall(t, h, aid, pa, "from=2026-07-01&to=2026-07-31"))
+	if resp.MedianTenureMonths < 0 {
+		t.Errorf("medianTenureMonths must not be negative, got %v", resp.MedianTenureMonths)
+	}
+	if len(resp.Stores) != 1 || resp.Stores[0].TenureMonths != 0 {
+		t.Errorf("expected tenure floored to 0, got %+v", resp.Stores)
+	}
+}
+
 // TestUninstall_SortedByDateDesc verifies stores are sorted by uninstalledDate descending.
 func TestUninstall_SortedByDateDesc(t *testing.T) {
 	appID := uuid.New()

@@ -770,11 +770,15 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 	appGID string,
 	shopGID string, // Optional: filter by shop
 ) ([]AppEvent, error) {
-	// Build query with optional shop filter
+	// Build query with optional shop filter.
+	// App.events has no sortKey/reverse (verified against Partner API 2026-04);
+	// the connection defaults to oldest-first, so `last: 100` returns the most
+	// recent events — the ones that decide current subscription status. Pair
+	// this with GetLatestSubscriptionStatus's OccurredAt-desc sort.
 	query := `
 		query($appId: ID!, $shopId: ID) {
 			app(id: $appId) {
-				events(shopId: $shopId, first: 100) {
+				events(shopId: $shopId, last: 100) {
 					edges {
 						node {
 							type

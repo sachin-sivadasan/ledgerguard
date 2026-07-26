@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/mixins/data_loading_mixin.dart';
+import '../../core/utils/file_download.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/revenue_at_risk_provider.dart';
 import '../../services/revenue_at_risk_service.dart';
@@ -33,13 +33,35 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
   }
 
   Future<void> _exportCsv() async {
-    final url = context.read<RevenueAtRiskProvider>().csvExportUrl();
-    if (url == null) return;
-    final uri = Uri.parse(url);
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not start CSV export.')),
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<RevenueAtRiskProvider>();
+    final appId = provider.selectedAppId;
+    if (appId == null) return;
+
+    try {
+      final bytes = await provider.fetchCsvBytes();
+      if (bytes == null || bytes.isEmpty) {
+        if (!mounted) return;
+        messenger.showSnackBar(
+          const SnackBar(content: Text('CSV export returned no data.')),
+        );
+        return;
+      }
+      final filename =
+          'revenue-at-risk-${DateTime.now().toIso8601String().split('T').first}.csv';
+      final ok = downloadBytes(bytes, filename, 'text/csv');
+      if (!mounted) return;
+      if (!ok) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('CSV export is only available on the web app.'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not export CSV. Please try again.')),
       );
     }
   }

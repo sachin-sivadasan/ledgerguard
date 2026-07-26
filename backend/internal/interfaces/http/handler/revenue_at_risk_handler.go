@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"encoding/csv"
 	"encoding/json"
-	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -109,12 +111,12 @@ func (h *RevenueAtRiskHandler) GetRevenueAtRisk(w http.ResponseWriter, r *http.R
 	// Fetch at-risk subscriptions (1-cycle + 2-cycle missed).
 	oneCycle, err := h.subRepo.FindByRiskState(r.Context(), app.ID, valueobject.RiskStateOneCycleMissed)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to fetch at-risk subscriptions")
+		writeRepoError(w, "FindByRiskState(one-cycle)", err)
 		return
 	}
 	twoCycle, err := h.subRepo.FindByRiskState(r.Context(), app.ID, valueobject.RiskStateTwoCyclesMissed)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to fetch at-risk subscriptions")
+		writeRepoError(w, "FindByRiskState(two-cycle)", err)
 		return
 	}
 
@@ -131,7 +133,7 @@ func (h *RevenueAtRiskHandler) GetRevenueAtRisk(w http.ResponseWriter, r *http.R
 	// Trend from daily snapshots.
 	snapshots, err := h.snapshotRepo.FindByAppIDRange(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to fetch snapshot data")
+		writeRepoError(w, "FindByAppIDRange", err)
 		return
 	}
 	report.Trend = buildTrend(snapshots)
@@ -142,7 +144,16 @@ func (h *RevenueAtRiskHandler) GetRevenueAtRisk(w http.ResponseWriter, r *http.R
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(report)
+	if err := json.NewEncoder(w).Encode(report); err != nil {
+		log.Printf("revenue_at_risk: encode report: %v", err)
+	}
+}
+
+// writeRepoError logs a repository failure and responds 503. These repos have no
+// not-found sentinel — every error is an infrastructure failure (ADR-042).
+func writeRepoError(w http.ResponseWriter, op string, err error) {
+	log.Printf("revenue_at_risk: repo error in %s: %v", op, err)
+	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
 // parseDateRange parses from/to query params (YYYY-MM-DD). Defaults: to=today, from=today-30d.
@@ -163,8 +174,8 @@ func parseSegment(segment string) string {
 	if segment == "" || segment == "all" {
 		return ""
 	}
-	if strings.HasPrefix(segment, "plan:") {
-		return strings.TrimPrefix(segment, "plan:")
+	if plan, ok := strings.CutPrefix(segment, "plan:"); ok {
+		return plan
 	}
 	return ""
 }
@@ -197,7 +208,11 @@ func daysLate(expectedNextCharge *time.Time, now time.Time) int {
 	if expectedNextCharge == nil {
 		return 0
 	}
-	return int(now.Sub(*expectedNextCharge).Hours() / 24)
+	days := int(now.Sub(*expectedNextCharge).Hours() / 24)
+	if days < 0 {
+		return 0
+	}
+	return days
 }
 
 // buildStores converts at-risk subscriptions to sorted report rows (MRR desc).
@@ -208,11 +223,12 @@ func buildStores(subs []*entity.Subscription, now time.Time) []revenueAtRiskStor
 		if s.ExpectedNextChargeDate != nil {
 			expected = s.ExpectedNextChargeDate.Format(dateLayout)
 		}
-		recoverable := int64(math.Round(float64(s.BasePriceCents) * recoveryRateFor(s.RiskState)))
+		mrrCents := s.MRRCents()
+		recoverable := int64(math.Round(float64(mrrCents) * recoveryRateFor(s.RiskState)))
 		stores = append(stores, revenueAtRiskStore{
 			Domain:             s.MyshopifyDomain,
 			ShopName:           s.ShopName,
-			MRRCents:           s.BasePriceCents,
+			MRRCents:           mrrCents,
 			RiskState:          s.RiskState.String(),
 			DaysLate:           daysLate(s.ExpectedNextChargeDate, now),
 			ExpectedChargeDate: expected,
@@ -237,10 +253,10 @@ func buildReport(subs []*entity.Subscription, stores []revenueAtRiskStore) reven
 		}
 		switch s.RiskState {
 		case valueobject.RiskStateOneCycleMissed:
-			oneCycleCents += s.BasePriceCents
+			oneCycleCents += s.MRRCents()
 			oneCycleCount++
 		case valueobject.RiskStateTwoCyclesMissed:
-			twoCycleCents += s.BasePriceCents
+			twoCycleCents += s.MRRCents()
 			twoCycleCount++
 		}
 	}
@@ -276,14 +292,31 @@ func buildTrend(snapshots []*entity.DailyMetricsSnapshot) []revenueAtRiskTrendPo
 	return trend
 }
 
-// writeStoresCSV writes the ranked stores as a CSV attachment.
+// writeStoresCSV writes the ranked stores as a CSV attachment. Uses encoding/csv
+// so free-text fields (shopName, planName) with commas/quotes/newlines are quoted.
 func writeStoresCSV(w http.ResponseWriter, stores []revenueAtRiskStore) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="revenue-at-risk.csv"`)
-	fmt.Fprintln(w, "domain,shopName,mrrCents,riskState,daysLate,expectedChargeDate,planName,recoverableCents")
+
+	cw := csv.NewWriter(w)
+	_ = cw.Write([]string{
+		"domain", "shopName", "mrrCents", "riskState", "daysLate",
+		"expectedChargeDate", "planName", "recoverableCents",
+	})
 	for _, s := range stores {
-		fmt.Fprintf(w, "%s,%s,%d,%s,%d,%s,%s,%d\n",
-			s.Domain, s.ShopName, s.MRRCents, s.RiskState, s.DaysLate,
-			s.ExpectedChargeDate, s.PlanName, s.RecoverableCents)
+		_ = cw.Write([]string{
+			s.Domain,
+			s.ShopName,
+			strconv.FormatInt(s.MRRCents, 10),
+			s.RiskState,
+			strconv.Itoa(s.DaysLate),
+			s.ExpectedChargeDate,
+			s.PlanName,
+			strconv.FormatInt(s.RecoverableCents, 10),
+		})
+	}
+	cw.Flush()
+	if err := cw.Error(); err != nil {
+		log.Printf("revenue_at_risk: write CSV: %v", err)
 	}
 }

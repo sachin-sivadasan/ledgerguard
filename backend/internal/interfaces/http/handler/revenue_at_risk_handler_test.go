@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -308,16 +310,178 @@ func TestRevenueAtRisk_CSVFormat(t *testing.T) {
 		t.Errorf("expected filename in Content-Disposition, got %q", cd)
 	}
 
-	lines := strings.Split(strings.TrimSpace(rec.Body.String()), "\n")
-	if len(lines) != 3 {
-		t.Fatalf("expected header + 2 rows, got %d lines: %v", len(lines), lines)
+	records, err := csv.NewReader(strings.NewReader(rec.Body.String())).ReadAll()
+	if err != nil {
+		t.Fatalf("parse CSV: %v", err)
 	}
-	header := "domain,shopName,mrrCents,riskState,daysLate,expectedChargeDate,planName,recoverableCents"
-	if lines[0] != header {
-		t.Errorf("header mismatch:\n got: %s\nwant: %s", lines[0], header)
+	if len(records) != 3 {
+		t.Fatalf("expected header + 2 rows, got %d records: %v", len(records), records)
+	}
+	wantHeader := []string{"domain", "shopName", "mrrCents", "riskState", "daysLate", "expectedChargeDate", "planName", "recoverableCents"}
+	if len(records[0]) != len(wantHeader) {
+		t.Fatalf("header column count: expected %d, got %d", len(wantHeader), len(records[0]))
+	}
+	for i, want := range wantHeader {
+		if records[0][i] != want {
+			t.Errorf("header[%d]: expected %q, got %q", i, want, records[0][i])
+		}
 	}
 	// Sorted by MRR desc: high first.
-	if !strings.HasPrefix(lines[1], "high.myshopify.com,") {
-		t.Errorf("expected first row to be high MRR store, got %s", lines[1])
+	if records[1][0] != "high.myshopify.com" {
+		t.Errorf("expected first row to be high MRR store, got %s", records[1][0])
+	}
+}
+
+// TestRevenueAtRisk_AnnualMRRNormalization verifies annual subs are normalized to
+// monthly (÷12) in totals and per-state sums, not counted at their full base price.
+func TestRevenueAtRisk_AnnualMRRNormalization(t *testing.T) {
+	appID := uuid.New()
+	partnerAccount := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: partnerAccount.ID, Name: "Test App"}
+	annual := atRiskSub(appID, "annual.myshopify.com", "Pro", 1200, valueobject.RiskStateOneCycleMissed)
+	annual.BillingInterval = valueobject.BillingIntervalAnnual
+	h := NewRevenueAtRiskHandler(
+		&mockSubscriptionRepo{subscriptions: []*entity.Subscription{annual}},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: partnerAccount},
+	)
+
+	req := newRevenueAtRiskRequest(t, appID, partnerAccount, "")
+	rec := httptest.NewRecorder()
+	h.GetRevenueAtRisk(rec, req)
+
+	var resp revenueAtRiskReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	// 1200 annual ÷ 12 = 100 monthly.
+	if resp.TotalAtRiskCents != 100 {
+		t.Errorf("totalAtRiskCents: expected 100 (1200/12), got %d", resp.TotalAtRiskCents)
+	}
+	if resp.ByState.OneCycleCents != 100 {
+		t.Errorf("oneCycleCents: expected 100, got %d", resp.ByState.OneCycleCents)
+	}
+	if len(resp.Stores) != 1 || resp.Stores[0].MRRCents != 100 {
+		t.Fatalf("store MRR: expected 100, got %+v", resp.Stores)
+	}
+}
+
+// TestRevenueAtRisk_RepoErrorReturns503 verifies infra repo failures surface as 503.
+func TestRevenueAtRisk_RepoErrorReturns503(t *testing.T) {
+	appID := uuid.New()
+	partnerAccount := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: partnerAccount.ID, Name: "Test App"}
+	h := NewRevenueAtRiskHandler(
+		&mockSubscriptionRepo{findAllErr: errors.New("db down")},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: partnerAccount},
+	)
+
+	req := newRevenueAtRiskRequest(t, appID, partnerAccount, "")
+	rec := httptest.NewRecorder()
+	h.GetRevenueAtRisk(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// TestRevenueAtRisk_NilExpectedChargeDate verifies a store with no expected charge
+// date reports daysLate=0 and an empty expectedChargeDate.
+func TestRevenueAtRisk_NilExpectedChargeDate(t *testing.T) {
+	appID := uuid.New()
+	partnerAccount := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: partnerAccount.ID, Name: "Test App"}
+	sub := atRiskSub(appID, "nodate.myshopify.com", "Pro", 5000, valueobject.RiskStateOneCycleMissed)
+	sub.ExpectedNextChargeDate = nil
+	h := NewRevenueAtRiskHandler(
+		&mockSubscriptionRepo{subscriptions: []*entity.Subscription{sub}},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: partnerAccount},
+	)
+
+	req := newRevenueAtRiskRequest(t, appID, partnerAccount, "")
+	rec := httptest.NewRecorder()
+	h.GetRevenueAtRisk(rec, req)
+
+	var resp revenueAtRiskReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Stores) != 1 {
+		t.Fatalf("expected 1 store, got %d", len(resp.Stores))
+	}
+	if resp.Stores[0].DaysLate != 0 {
+		t.Errorf("daysLate: expected 0, got %d", resp.Stores[0].DaysLate)
+	}
+	if resp.Stores[0].ExpectedChargeDate != "" {
+		t.Errorf("expectedChargeDate: expected empty, got %q", resp.Stores[0].ExpectedChargeDate)
+	}
+}
+
+// TestRevenueAtRisk_CSVEscaping verifies a shopName containing a comma stays a single
+// quoted field, keeping the row at 8 columns.
+func TestRevenueAtRisk_CSVEscaping(t *testing.T) {
+	appID := uuid.New()
+	partnerAccount := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: partnerAccount.ID, Name: "Test App"}
+	sub := atRiskSub(appID, "comma.myshopify.com", "Pro", 5000, valueobject.RiskStateOneCycleMissed)
+	sub.ShopName = "Acme, Inc."
+	h := NewRevenueAtRiskHandler(
+		&mockSubscriptionRepo{subscriptions: []*entity.Subscription{sub}},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: partnerAccount},
+	)
+
+	req := newRevenueAtRiskRequest(t, appID, partnerAccount, "format=csv")
+	rec := httptest.NewRecorder()
+	h.GetRevenueAtRisk(rec, req)
+
+	records, err := csv.NewReader(strings.NewReader(rec.Body.String())).ReadAll()
+	if err != nil {
+		t.Fatalf("parse CSV: %v", err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("expected header + 1 row, got %d records", len(records))
+	}
+	row := records[1]
+	if len(row) != 8 {
+		t.Fatalf("expected 8 columns, got %d: %v", len(row), row)
+	}
+	if row[1] != "Acme, Inc." {
+		t.Errorf("shopName: expected %q, got %q", "Acme, Inc.", row[1])
+	}
+}
+
+// TestParseDateRange unit-tests parseDateRange directly (same package).
+func TestParseDateRange(t *testing.T) {
+	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+
+	// Default: no params → to≈now, from=to-30d.
+	from, to := parseDateRange("", "", now)
+	if !to.Equal(now) {
+		t.Errorf("default to: expected %v, got %v", now, to)
+	}
+	if want := now.AddDate(0, 0, -30); !from.Equal(want) {
+		t.Errorf("default from: expected %v, got %v", want, from)
+	}
+
+	// Valid parse of both.
+	from, to = parseDateRange("2026-06-01", "2026-06-30", now)
+	if from.Format(dateLayout) != "2026-06-01" || to.Format(dateLayout) != "2026-06-30" {
+		t.Errorf("valid parse: got from=%s to=%s", from.Format(dateLayout), to.Format(dateLayout))
+	}
+
+	// Malformed from with valid to → from falls back to to-30d.
+	from, to = parseDateRange("not-a-date", "2026-06-30", now)
+	if to.Format(dateLayout) != "2026-06-30" {
+		t.Errorf("to: expected 2026-06-30, got %s", to.Format(dateLayout))
+	}
+	if want := to.AddDate(0, 0, -30); !from.Equal(want) {
+		t.Errorf("fallback from: expected %v, got %v", want, from)
 	}
 }

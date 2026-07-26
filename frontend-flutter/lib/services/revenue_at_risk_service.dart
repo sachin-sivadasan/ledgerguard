@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import '../core/config/app_config.dart';
 import '../core/network/api_client.dart';
 import '../widgets/lg_risk_badge.dart';
 
@@ -141,16 +140,28 @@ class RevenueAtRiskService {
     return RevenueAtRiskReport.fromJson(response.data as Map<String, dynamic>);
   }
 
-  /// Absolute URL for the CSV export of the ranked stores.
-  String csvExportUrl(String appId, {String? from, String? to}) {
-    final params = <String, String>{'format': 'csv'};
-    if (from != null) params['from'] = from;
-    if (to != null) params['to'] = to;
-    final query = params.entries
-        .map((e) =>
-            '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}')
-        .join('&');
-    return '${AppConfig.apiBaseUrl}/api/v1/apps/$appId/reports/revenue-at-risk?$query';
+  /// Fetches the CSV export of the ranked stores through the authenticated
+  /// [ApiClient] (Firebase Bearer token injected by the Dio interceptor).
+  ///
+  /// Returns the raw response bytes so the caller can trigger a client-side
+  /// download without relying on an external browser navigation (which would
+  /// 401 because it carries no auth header).
+  Future<Uint8List> fetchCsvBytes(
+    String appId, {
+    String? from,
+    String? to,
+    CancelToken? cancelToken,
+  }) async {
+    final queryParameters = <String, dynamic>{'format': 'csv'};
+    if (from != null) queryParameters['from'] = from;
+    if (to != null) queryParameters['to'] = to;
+    final response = await _client.get<List<int>>(
+      '/api/v1/apps/$appId/reports/revenue-at-risk',
+      queryParameters: queryParameters,
+      cancelToken: cancelToken,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return Uint8List.fromList(response.data ?? const <int>[]);
   }
 }
 
@@ -165,8 +176,14 @@ RiskState _parseRiskState(String? value) {
       return RiskState.twoCycleMissed;
     case 'CHURNED':
       return RiskState.churned;
-    default:
+    case 'SAFE':
       return RiskState.safe;
+    default:
+      // Safety net: this report only ever contains at-risk stores, so an
+      // unrecognized token must never render green. Fall back to the most
+      // severe at-risk state rather than turning an at-risk store safe.
+      debugPrint('[RevenueAtRiskService] unknown riskState: $value');
+      return RiskState.churned;
   }
 }
 

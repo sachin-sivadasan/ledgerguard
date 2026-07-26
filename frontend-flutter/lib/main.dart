@@ -16,6 +16,7 @@ import 'providers/dashboard_provider.dart';
 import 'providers/earnings_provider.dart';
 import 'providers/events_provider.dart';
 import 'providers/insights_provider.dart';
+import 'providers/revenue_at_risk_provider.dart';
 import 'providers/risk_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/store_provider.dart';
@@ -30,6 +31,7 @@ import 'services/events_service.dart';
 import 'services/insights_service.dart';
 import 'services/metrics_service.dart';
 import 'services/mixpanel_service.dart';
+import 'services/revenue_at_risk_service.dart';
 import 'services/risk_service.dart';
 import 'services/store_service.dart';
 import 'services/subscription_service.dart';
@@ -54,6 +56,7 @@ void main() async {
   final transactionService = TransactionService(apiClient);
   final earningsService = EarningsService(apiClient);
   final riskService = RiskService(apiClient);
+  final revenueAtRiskService = RevenueAtRiskService(apiClient);
   final eventsService = EventsService(apiClient);
   final insightsService = InsightsService(apiClient);
   final storeService = StoreService(apiClient);
@@ -103,6 +106,8 @@ void main() async {
         ChangeNotifierProvider.value(value: eventsProvider),
         ChangeNotifierProvider.value(value: webhookProvider),
         ChangeNotifierProvider.value(value: riskProvider),
+        ChangeNotifierProvider(
+            create: (_) => RevenueAtRiskProvider(revenueAtRiskService)),
         ChangeNotifierProvider.value(value: analyticsProvider),
         ChangeNotifierProvider.value(value: earningsProvider),
         ChangeNotifierProvider.value(value: appsProvider),

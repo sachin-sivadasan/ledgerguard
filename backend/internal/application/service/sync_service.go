@@ -322,7 +322,11 @@ func (s *SyncService) enrichSubscriptionStatus(ctx context.Context, app *entity.
 			sub.Status = newStatus
 			sub.UpdatedAt = time.Now().UTC()
 
-			// If uninstalled or cancelled, classify as churned
+			// Uninstalled or cancelled = terminal churn. This is intentional (not
+			// cycle-graded like a merely-late ACTIVE sub): GetLatestSubscriptionStatus
+			// now suppresses the "cancel trap" (an upgrade/downgrade's cancel no
+			// longer surfaces as CANCELLED), so a CANCELLED here is a genuine
+			// merchant-initiated cancellation — real churn, no grace window.
 			if newStatus == "UNINSTALLED" || newStatus == "CANCELLED" {
 				sub.RiskState = valueobject.RiskStateChurned
 			}

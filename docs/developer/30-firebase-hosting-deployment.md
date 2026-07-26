@@ -61,7 +61,7 @@ Infrastructure layer. Flutter web builds produce static HTML/JS/CSS files deploy
 |-------------|-------------|-------|
 | `main.dart` / `main_dev.dart` | `http://localhost:8080` | Local development |
 | `main_staging.dart` | `https://ledgerspear-api-ineifpjrdq-uc.a.run.app` | Staging (Cloud Run) |
-| `main_prod.dart` | `https://api.ledgerguard.com` | Production (Hetzner) |
+| `main_prod.dart` | `https://api.ledgerspear.com` | Production (Hetzner) |
 
 ## Command Reference
 | Action | Command |

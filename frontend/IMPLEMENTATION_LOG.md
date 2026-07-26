@@ -1090,7 +1090,7 @@ Added staging environment support to the Flutter frontend, connecting Firebase H
 ### 1. Environment.staging
 - Added `Environment.staging` variant to `EnvConfig`
 - Staging API URL: `https://ledgerspear-api-ineifpjrdq-uc.a.run.app`
-- Existing environments: `dev` (localhost:8080), `prod` (api.ledgerguard.com)
+- Existing environments: `dev` (localhost:8080), `prod` (api.ledgerspear.com)
 
 ### 2. main_staging.dart Entry Point
 - Created `lib/main_staging.dart` with `EnvConfig.staging` configuration

@@ -135,7 +135,7 @@ jobs:
 │                                                                              │
 │  Routes:                                                                     │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  api.ledgerguard.com/*    → localhost:8080  (Go Backend)           │   │
+│  │  api.ledgerspear.com/*    → localhost:8080  (Go Backend)           │   │
 │  │  ledgerguard.com/*        → localhost:3000  (Next.js Marketing)    │   │
 │  │  app.ledgerguard.com/*    → Static files    (Flutter Web)          │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
@@ -146,7 +146,7 @@ jobs:
 ### Caddyfile Configuration
 
 ```
-api.ledgerguard.com {
+api.ledgerspear.com {
     reverse_proxy localhost:8080
     encode gzip
     log {

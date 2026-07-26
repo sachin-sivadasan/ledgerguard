@@ -924,3 +924,32 @@ Auth middleware and `app_lookup.go` use `errors.Is()` against sentinel errors to
 - All existing test mocks updated to use sentinel errors — prevents future regressions
 - Shell-level intercept means zero changes needed when adding new screens
 - Forecasting still uses raw daily data (unchanged)
+
+---
+
+### ADR-043: Migrate Backend off GCP to Hetzner (Co-Host on checkoutmate VPS)
+
+**Date:** 2026-07-26
+**Status:** Deployed — co-host POC live at https://api.ledgerspear.com (2026-07-26); GCP decommissioned
+
+**Context:**
+GCP staging (`ledgerspear`) cost ~₹2000/mo, dominated by an always-on Serverless VPC Access connector (min 2× e2-micro, ~₹1,100) plus an always-on Cloud SQL `db-f1-micro` (~₹800). The VPC connector existed only because Cloud SQL was private-IP-only — a cost with no analog on a single-box setup. Cloud Run itself (min-scale 0) was ~₹0.
+
+**Decision:**
+Move the Go backend to a Hetzner VPS running Docker Compose (postgres + redis + api + nginx + certbot), modeled on the proven checkoutmate deployment. **Roll out as a POC by co-hosting on the existing, near-idle checkoutmate VPS** (`46.224.203.174`), then graduate to a dedicated CX22.
+
+Backend domain is **api.ledgerspear.com** (the owned domain; `ledgerguard.com` is parked on Afternic — not owned). Frontend stays on Firebase Hosting. The Go backend already reads all config from env vars, so no code changes were needed.
+
+**Isolation for the co-host:** own containers (`ledgerguard-*`), volumes (`lg_*`), and internal network; joins checkoutmate's docker network only so its nginx can proxy; memory-limited (api 768m / pg 512m / redis 256m); host given a 2 GB swapfile (previously none). The only change to checkoutmate is two additive nginx server blocks + one cert.
+
+**Alternatives rejected:**
+- Dedicated Hetzner box now — cleaner isolation, but +€3.79/mo and slower to prove out; deferred to post-POC.
+- Hetzner Managed Postgres (~€16/mo) — self-hosted Docker Postgres is cheaper and matches checkoutmate.
+- Stay on GCP but drop the VPC connector (Direct VPC egress) — still pays for Cloud SQL + Cloud Run; Hetzner is ~80% cheaper overall.
+
+**Consequences:**
+- Hosting drops ~₹2000/mo → ~₹0 extra during POC (co-hosted), ~₹360/mo on a dedicated box later.
+- Shared blast radius with checkoutmate production during POC — mitigated by mem limits + swap.
+- Cost is env-based + Dockerized, so graduating to a dedicated box is copy-`.env` + `up -d` + DNS repoint (no lock-in).
+- Scaffolding: `docs/HETZNER_MIGRATION_PLAN.md`, `docker-compose.prod.yml` (standalone), `deploy/cohost/` (co-host variant).
+- Follow-ups: rotate the OpenAI key; repoint frontend prod to api.ledgerspear.com; update Shopify Partner app redirect URI; tear down GCP once verified.

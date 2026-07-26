@@ -272,3 +272,18 @@ Tracks verification points from each implementation plan. Run these after deploy
 - [x] Frontend redeployed to Firebase (`ledgerguard-c7557.web.app`) — fresh staging build, staging API baked in, 0 localhost leakage
 - [ ] Staging (authenticated, manual): `GET /api/v1/apps/{appID}/events?storeDomain=<known-domain>` → returns that store's events (not empty)
 - [ ] Staging (authenticated, manual): `?storeDomain=<unknown-domain>` → falls back to ILIKE, no error
+
+---
+
+## Hetzner Migration — Co-Host Deploy (2026-07-26)
+
+- [x] Backend stack (postgres+redis+api) up on Hetzner VPS via `deploy/cohost/docker-compose.cohost.yml`
+- [x] `/health` internal → `{"status":"ok","database":"connected"}`
+- [x] Root-cause fixed: service-name collision on shared network (api pointed at `ledgerguard-db`/`ledgerguard-redis`)
+- [x] TLS cert issued (Let's Encrypt, CN=api.ledgerspear.com, valid to 2026-10-23; auto-renews via checkoutmate certbot)
+- [x] `https://api.ledgerspear.com/health` → ok (public, valid cert, HTTP→HTTPS 301)
+- [x] Events endpoint routed + protected (401) on Hetzner; CORS allows `https://ledgerguard-c7557.web.app`
+- [x] Frontend rebuilt (staging → api.ledgerspear.com) + deployed to Firebase; 0 old Cloud Run URLs in bundle
+- [x] GCP `ledgerspear` decommissioned (Cloud SQL, VPC connector, Cloud Run, Artifact Registry deleted)
+- [ ] End-to-end app data flow (login + Shopify connect + sync) — pending Shopify Partner redirect URI update
+- [ ] Rotate OpenAI key

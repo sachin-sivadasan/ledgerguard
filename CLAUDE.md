@@ -153,7 +153,16 @@ marketing/
 | `/gcp-staging` | `docs/prompts/gcp-staging-visualization.md` |
 | `/billing-flow` | `docs/prompts/billing-system-flow.md` |
 
-### 11. Frontend App (Flutter + Bloc)
+### 11. Frontend App
+
+> **⚠️ LIVE FRONTEND = `frontend-flutter/` (Provider), NOT `frontend/app/` (Bloc).**
+> As of 2026-07-26, the actively-developed **`frontend-flutter/` (Provider, ChangeNotifier)** app is the one deployed to Firebase Hosting (`ledgerguard-c7557`) at **app.ledgerspear.com** / ledgerguard-c7557.web.app, pointed at the Hetzner backend (`api.ledgerspear.com`).
+> - **Do all Flutter UI work in `frontend-flutter/`.**
+> - Config: API URL via `--dart-define=API_BASE_URL=...` (see `frontend-flutter/lib/core/config/app_config.dart`); Firebase via `lib/firebase_options.dart`.
+> - Deploy: `cd frontend-flutter && flutter build web --release --dart-define=API_BASE_URL=https://api.ledgerspear.com && firebase deploy --only hosting`.
+> - `frontend/app/` (Bloc) below is **stale/not deployed** — a possible future migration target, don't touch unless asked.
+
+#### 11a. `frontend/app/` — Bloc version (stale, migration target — reference only)
 ```
 frontend/
 ├── REQUIREMENTS.md           → App requirements, screens, flows
@@ -437,17 +446,17 @@ ledgerguard/
 | Build | `cd marketing/site && npm run build` |
 | Lint | `cd marketing/site && npm run lint` |
 
-### Frontend App (Flutter)
+### Frontend App (Flutter) — LIVE app is `frontend-flutter/` (Provider)
 | Action | Command |
 |--------|---------|
-| Run tests | `cd frontend/app && flutter test` |
-| Run app | `cd frontend/app && flutter run` |
-| Build web (staging) | `cd frontend/app && flutter build web --release -t lib/main_staging.dart` |
-| Build web (prod) | `cd frontend/app && flutter build web --release -t lib/main_prod.dart` |
-| Deploy Firebase | `cd frontend/app && firebase deploy --only hosting` |
-| Build APK | `cd frontend/app && flutter build apk` |
-| Build iOS | `cd frontend/app && flutter build ios` |
-| Analyze | `cd frontend/app && flutter analyze` |
+| Run tests | `cd frontend-flutter && flutter test` |
+| Run app | `cd frontend-flutter && flutter run --dart-define=API_BASE_URL=http://localhost:8080` |
+| Build web (live → Hetzner) | `cd frontend-flutter && flutter build web --release --dart-define=API_BASE_URL=https://api.ledgerspear.com` |
+| Deploy Firebase | `cd frontend-flutter && firebase deploy --only hosting` |
+| Build APK | `cd frontend-flutter && flutter build apk --dart-define=API_BASE_URL=https://api.ledgerspear.com` |
+| Analyze | `cd frontend-flutter && flutter analyze` |
+
+_(Legacy Bloc app `frontend/app/` — not deployed; use only if explicitly asked.)_
 
 ### GCP Staging Deployment
 | Action | Command |
@@ -462,8 +471,10 @@ ledgerguard/
 | Environment | Frontend | Backend API |
 |-------------|----------|-------------|
 | Dev | `localhost` | `http://localhost:8080` |
-| Staging | `https://ledgerguard-c7557.web.app` | `https://ledgerspear-api-ineifpjrdq-uc.a.run.app` |
-| Production | TBD | `https://api.ledgerguard.com` (Hetzner) |
+| Staging | `https://app.ledgerspear.com` (custom domain) / `ledgerguard-c7557.web.app` | `https://api.ledgerspear.com` (Hetzner, co-hosted) |
+| Production | TBD | `https://api.ledgerspear.com` (Hetzner) |
+
+> **Backend moved off GCP → Hetzner (2026-07-26).** GCP (`ledgerspear`: Cloud Run + Cloud SQL + VPC connector, ~₹2000/mo) was decommissioned. Backend now runs in Docker Compose on the shared Hetzner VPS via `deploy/cohost/` (see ADR-043 / `docs/HETZNER_MIGRATION_PLAN.md`). Deploy = SSH to box, `git pull`, `docker compose --env-file .env -f deploy/cohost/docker-compose.cohost.yml up -d --build`. `scripts/gcp-deploy.sh` is retired.
 
 ---
 

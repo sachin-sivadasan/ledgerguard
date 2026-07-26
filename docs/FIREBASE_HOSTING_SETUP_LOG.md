@@ -62,7 +62,7 @@ flutter build web
 # Staging build (uses EnvConfig.staging → Cloud Run API)
 flutter build web --release -t lib/main_staging.dart
 
-# Production build (uses EnvConfig.prod → https://api.ledgerguard.com)
+# Production build (uses EnvConfig.prod → https://api.ledgerspear.com)
 flutter build web --release -t lib/main_prod.dart
 
 # Output: build/web/
@@ -166,7 +166,7 @@ Users access: https://ledgerguard-c7557.web.app
     ↓
 Flutter app calls:
   Staging → https://ledgerspear-api-ineifpjrdq-uc.a.run.app (GCP Cloud Run)
-  Production → https://api.ledgerguard.com (Hetzner backend — future)
+  Production → https://api.ledgerspear.com (Hetzner backend — future)
 
 ## Manual Deploy (Staging)
 

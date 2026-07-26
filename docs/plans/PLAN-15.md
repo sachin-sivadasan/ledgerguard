@@ -21,7 +21,7 @@
 |-------------|----------|---------|
 | Dev | localhost | http://localhost:8080 |
 | Staging | ledgerguard-c7557.web.app | ledgerspear-api-ineifpjrdq-uc.a.run.app |
-| Production | TBD | api.ledgerguard.com (Hetzner) |
+| Production | TBD | api.ledgerspear.com (Hetzner) |
 
 ## Docker
 - `--platform linux/amd64` required for Apple Silicon → Cloud Run

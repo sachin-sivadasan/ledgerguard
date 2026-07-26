@@ -1,22 +1,33 @@
-# Implementation Log – LedgerGuard
+# Implementation Log â LedgerGuard
 
 A chronological record of all features implemented with detailed summaries.
 
 ---
 
+## [2026-07-26] Infra: Migrate Backend to Hetzner (co-host on checkoutmate VPS)
+
+**Summary:**
+Moved the Go backend off GCP (Cloud Run + Cloud SQL + VPC connector, ~₹2000/mo) onto Docker Compose on the shared Hetzner VPS, served at https://api.ledgerspear.com. Frontend (Firebase) repointed to it. GCP decommissioned. See ADR-043 and docs/HETZNER_MIGRATION_PLAN.md.
+
+### Notable
+- Backend needs no code changes (all config already env-var driven).
+- Fixed a shared-network service-name collision (api was resolving `postgres`/`redis` to checkoutmate's datastores) by using unique container names `ledgerguard-db`/`ledgerguard-redis`.
+- TLS via checkoutmate's nginx+certbot (webroot); memory-limited containers + 2GB swap protect checkoutmate.
+- Deploy files: `docker-compose.prod.yml` (standalone), `deploy/cohost/` (co-host variant), `deploy/setup.sh`, `deploy/nginx.conf`.
+
 ## [2026-07-25] Fix: Events storeDomain Filter Resolves to Shop GIDs
 
 **Summary:**
-Filtering the events list by `?storeDomain=` returned no results because the `app_events.shopify_shop_gid` column stores Shopify **shop GIDs** (`gid://shopify/Shop/…`), not myshopify domains, yet the filter compared the raw domain against that column via ILIKE. Fixed by resolving the domain to its shop GID(s) via the app's subscriptions before querying.
+Filtering the events list by `?storeDomain=` returned no results because the `app_events.shopify_shop_gid` column stores Shopify **shop GIDs** (`gid://shopify/Shop/â¦`), not myshopify domains, yet the filter compared the raw domain against that column via ILIKE. Fixed by resolving the domain to its shop GID(s) via the app's subscriptions before querying.
 
 ### Problem
-`EventHandler.List` set `filters.StoreDomain` directly and the persistence layer ran `shopify_shop_gid ILIKE '%domain%'`. Since the column holds GIDs, a domain like `store-a.myshopify.com` never matched → empty event list even when events existed for that store.
+`EventHandler.List` set `filters.StoreDomain` directly and the persistence layer ran `shopify_shop_gid ILIKE '%domain%'`. Since the column holds GIDs, a domain like `store-a.myshopify.com` never matched â empty event list even when events existed for that store.
 
 ### Solution
-1. **Handler** (`event_handler.go`) — when `storeDomain` is present, look up the app's subscriptions via `subRepo.FindByAppID`, collect every `ShopifyShopGID` whose `MyshopifyDomain` matches, and populate the new `filters.ShopGIDs`.
-2. **Filter struct** (`app_event_repository.go`, domain) — added `ShopGIDs []string` to `EventFilters`.
-3. **Persistence** (`app_event_repository.go`, infra) — when `ShopGIDs` is non-empty, filter with `shopify_shop_gid IN (...)`; otherwise fall back to the existing `StoreDomain` ILIKE match (covers stores with no subscription record yet).
-4. **Tests** — added `TestEventHandler_List_StoreDomainResolvesToShopGIDs` (table-driven: matching domain → resolved GID; unknown domain → no GIDs, falls back to StoreDomain).
+1. **Handler** (`event_handler.go`) â when `storeDomain` is present, look up the app's subscriptions via `subRepo.FindByAppID`, collect every `ShopifyShopGID` whose `MyshopifyDomain` matches, and populate the new `filters.ShopGIDs`.
+2. **Filter struct** (`app_event_repository.go`, domain) â added `ShopGIDs []string` to `EventFilters`.
+3. **Persistence** (`app_event_repository.go`, infra) â when `ShopGIDs` is non-empty, filter with `shopify_shop_gid IN (...)`; otherwise fall back to the existing `StoreDomain` ILIKE match (covers stores with no subscription record yet).
+4. **Tests** â added `TestEventHandler_List_StoreDomainResolvesToShopGIDs` (table-driven: matching domain â resolved GID; unknown domain â no GIDs, falls back to StoreDomain).
 
 ### Files Changed (4 modified)
 
@@ -24,7 +35,7 @@ Filtering the events list by `?storeDomain=` returned no results because the `ap
 |------|--------|
 | `backend/internal/domain/repository/app_event_repository.go` | +`ShopGIDs []string` field on `EventFilters` |
 | `backend/internal/infrastructure/persistence/app_event_repository.go` | `IN (...)` GID filter with ILIKE fallback |
-| `backend/internal/interfaces/http/handler/event_handler.go` | Resolve domain → shop GIDs via subscriptions |
+| `backend/internal/interfaces/http/handler/event_handler.go` | Resolve domain â shop GIDs via subscriptions |
 | `backend/internal/interfaces/http/handler/event_handler_test.go` | New table-driven test for the resolution + fallback |
 
 ---
@@ -32,32 +43,32 @@ Filtering the events list by `?storeDomain=` returned no results because the `ap
 ## [2026-05-18] Fix: Silent $0 Dashboard When Postgres Is Down
 
 **Summary:**
-When the backend Postgres database was unreachable, the Flutter dashboard silently showed $0 KPIs and the onboarding wizard instead of an error. Root cause: the auth middleware returned HTTP 500 for all DB errors, `app_lookup.go` converted all errors to HTTP 404, and the frontend treated 404/500 as "no data" → showed empty states. Fixed by implementing a three-state model: 404 (not found), 503 (service unavailable), 500 (application error).
+When the backend Postgres database was unreachable, the Flutter dashboard silently showed $0 KPIs and the onboarding wizard instead of an error. Root cause: the auth middleware returned HTTP 500 for all DB errors, `app_lookup.go` converted all errors to HTTP 404, and the frontend treated 404/500 as "no data" â showed empty states. Fixed by implementing a three-state model: 404 (not found), 503 (service unavailable), 500 (application error).
 
 **Changes:**
 
 Backend:
-- **auth.go** — Return 503 (not 500) when `FindByFirebaseUID` or `Create` fails due to DB errors. Added log lines for debugging.
-- **auth_test.go** — Updated `CreateUserError` test to expect 503. Added `DBErrorOnLookup` test.
-- **app_lookup.go** — Added `isNotFoundError()` helper checking `ErrPartnerAccountNotFound` and `ErrAppNotFound` sentinels. `resolvePartnerAccount()` and `resolveAppFromRequest()` return 404 for sentinel errors, 503 for DB errors.
-- **app_lookup_test.go** (NEW) — 7 tests covering not-found→404 and DB-error→503 for both resolve functions.
-- **app_test.go, sync_test.go, manual_token_test.go, subscription_test.go, queue_sync_test.go** — Updated mock repos to use sentinel errors instead of generic `errors.New("not found")`.
+- **auth.go** â Return 503 (not 500) when `FindByFirebaseUID` or `Create` fails due to DB errors. Added log lines for debugging.
+- **auth_test.go** â Updated `CreateUserError` test to expect 503. Added `DBErrorOnLookup` test.
+- **app_lookup.go** â Added `isNotFoundError()` helper checking `ErrPartnerAccountNotFound` and `ErrAppNotFound` sentinels. `resolvePartnerAccount()` and `resolveAppFromRequest()` return 404 for sentinel errors, 503 for DB errors.
+- **app_lookup_test.go** (NEW) â 7 tests covering not-foundâ404 and DB-errorâ503 for both resolve functions.
+- **app_test.go, sync_test.go, manual_token_test.go, subscription_test.go, queue_sync_test.go** â Updated mock repos to use sentinel errors instead of generic `errors.New("not found")`.
 
-Frontend (`frontend/app/` — Bloc):
-- **dashboard_repository.dart** — Added `ServiceUnavailableException` class.
-- **api_dashboard_repository.dart** — Catch 503 → throw `ServiceUnavailableException`.
-- **dashboard_state.dart** — Added `DashboardServiceUnavailable` state.
-- **dashboard_bloc.dart** — Catch `ServiceUnavailableException` → emit new state, auto-retry (3× at 15s intervals), cancel timer on close.
-- **dashboard_page.dart** — Render `ErrorStateWidget` with `Icons.cloud_off` for service unavailable.
-- **dashboard_bloc_test.dart** — 3 new tests: 503 emission, auto-retry success, max retry cap.
+Frontend (`frontend/app/` â Bloc):
+- **dashboard_repository.dart** â Added `ServiceUnavailableException` class.
+- **api_dashboard_repository.dart** â Catch 503 â throw `ServiceUnavailableException`.
+- **dashboard_state.dart** â Added `DashboardServiceUnavailable` state.
+- **dashboard_bloc.dart** â Catch `ServiceUnavailableException` â emit new state, auto-retry (3Ã at 15s intervals), cancel timer on close.
+- **dashboard_page.dart** â Render `ErrorStateWidget` with `Icons.cloud_off` for service unavailable.
+- **dashboard_bloc_test.dart** â 3 new tests: 503 emission, auto-retry success, max retry cap.
 
-Frontend (`frontend-flutter/` — Provider):
-- **organization_service.dart** — Rethrow `DioException` on 503 instead of swallowing it.
-- **organization_provider.dart** — Detect 503, set `isServiceUnavailable` flag.
-- **apps_provider.dart** — Detect 503, set `isServiceUnavailable` flag.
-- **dashboard_provider.dart** — Detect 503, set `isServiceUnavailable` flag, auto-retry (3× at 15s).
-- **app_shell.dart** — Intercept `isServiceUnavailable` at shell level, replacing all screen content with service unavailable UI while keeping navigation chrome.
-- **lg_service_unavailable.dart** (NEW) — Shared cloud_off widget with retry button.
+Frontend (`frontend-flutter/` â Provider):
+- **organization_service.dart** â Rethrow `DioException` on 503 instead of swallowing it.
+- **organization_provider.dart** â Detect 503, set `isServiceUnavailable` flag.
+- **apps_provider.dart** â Detect 503, set `isServiceUnavailable` flag.
+- **dashboard_provider.dart** â Detect 503, set `isServiceUnavailable` flag, auto-retry (3Ã at 15s).
+- **app_shell.dart** â Intercept `isServiceUnavailable` at shell level, replacing all screen content with service unavailable UI while keeping navigation chrome.
+- **lg_service_unavailable.dart** (NEW) â Shared cloud_off widget with retry button.
 
 **Files changed:** 22 (2 new, 20 modified)
 **Commit:** `f57914b`
@@ -70,11 +81,11 @@ Frontend (`frontend-flutter/` — Provider):
 Extracted the Dashboard customization card (~50 lines of KPI + widget checkboxes) from the main Settings page into a dedicated `/settings/dashboard` sub-page. The Settings page now shows a compact navigation ListTile instead of inline checkboxes, matching the existing pattern used by Team, Audit Log, and Connect Shopify sub-pages.
 
 **Changes:**
-- **DashboardSettingsScreen** (NEW) — `StatelessWidget` using `LgPage` with back navigation to `/settings`. Contains all KPI and widget checkbox logic previously inline in `settings_screen.dart`.
-- **SettingsScreen** — Replaced 50-line Dashboard `LgCard` with a single `ListTile` navigating to `/settings/dashboard`. Removed `DashboardProvider` watch and `dashboard_registry.dart` import.
-- **app.dart** — Added `GoRoute(path: 'dashboard')` under `/settings` routes.
-- **SCREENS.puml** — Added `DashboardSettingsScreen` node with transitions.
-- **future.md** — Logged 2 rejected alternatives (all sub-pages, collapsible sections).
+- **DashboardSettingsScreen** (NEW) â `StatelessWidget` using `LgPage` with back navigation to `/settings`. Contains all KPI and widget checkbox logic previously inline in `settings_screen.dart`.
+- **SettingsScreen** â Replaced 50-line Dashboard `LgCard` with a single `ListTile` navigating to `/settings/dashboard`. Removed `DashboardProvider` watch and `dashboard_registry.dart` import.
+- **app.dart** â Added `GoRoute(path: 'dashboard')` under `/settings` routes.
+- **SCREENS.puml** â Added `DashboardSettingsScreen` node with transitions.
+- **future.md** â Logged 2 rejected alternatives (all sub-pages, collapsible sections).
 
 **Files changed:** 5 (1 new, 4 modified)
 
@@ -83,15 +94,15 @@ Extracted the Dashboard customization card (~50 lines of KPI + widget checkboxes
 ## [2026-05-09] Feat: Persist Org + Default App Selection via Backend Preferences
 
 **Summary:**
-Wired frontend providers to the backend `user_preferences` table so org and app selection persists across sessions/devices. Previously `OrganizationProvider` always picked `memberships.first` and `DataLoadingMixin` always picked `apps.first` — now both resolve from GET `/api/v1/user/preferences/selected-org` and `/default-app` on startup, and persist via PUT on user switch.
+Wired frontend providers to the backend `user_preferences` table so org and app selection persists across sessions/devices. Previously `OrganizationProvider` always picked `memberships.first` and `DataLoadingMixin` always picked `apps.first` â now both resolve from GET `/api/v1/user/preferences/selected-org` and `/default-app` on startup, and persist via PUT on user switch.
 
 **Changes:**
-- **UserPreferencesService** (NEW) — Calls GET/PUT for `selected-org` and `default-app`. All errors silently caught (preferences are best-effort).
-- **OrganizationProvider** — Accepts optional `UserPreferencesService`. `loadOrganizations()` fetches saved org before auto-selecting. `selectOrganization()` fires-and-forgets a PUT to persist.
-- **AppsProvider** — Accepts optional `UserPreferencesService`. `loadApps()` fetches saved app ID after loading apps. New `selectedAppId` getter and `setSelectedApp()` method. Single-app users auto-persist on first load.
-- **DataLoadingMixin** — `_evaluateAndLoad()` uses `appsProvider.selectedAppId` instead of `apps.first.id`.
-- **main.dart** — Creates `UserPreferencesService` and passes to both providers.
-- **PlantUML diagram** — `docs/diagrams/puml/38-org-app-selection-sequence.puml`
+- **UserPreferencesService** (NEW) â Calls GET/PUT for `selected-org` and `default-app`. All errors silently caught (preferences are best-effort).
+- **OrganizationProvider** â Accepts optional `UserPreferencesService`. `loadOrganizations()` fetches saved org before auto-selecting. `selectOrganization()` fires-and-forgets a PUT to persist.
+- **AppsProvider** â Accepts optional `UserPreferencesService`. `loadApps()` fetches saved app ID after loading apps. New `selectedAppId` getter and `setSelectedApp()` method. Single-app users auto-persist on first load.
+- **DataLoadingMixin** â `_evaluateAndLoad()` uses `appsProvider.selectedAppId` instead of `apps.first.id`.
+- **main.dart** â Creates `UserPreferencesService` and passes to both providers.
+- **PlantUML diagram** â `docs/diagrams/puml/38-org-app-selection-sequence.puml`
 
 **Files changed:** 7 (1 new service, 1 new diagram, 5 modified)
 
@@ -100,30 +111,30 @@ Wired frontend providers to the backend `user_preferences` table so org and app 
 ## [2026-05-08] Refactor: Migrate from Numeric Shopify App IDs to Internal UUIDs
 
 **Summary:**
-Eliminated the "translation tax" where every API request paid an extra DB lookup: numeric Shopify ID → GID string construction → `FindByPartnerAppID()` → UUID. Now the frontend sends UUIDs directly, and the backend resolves apps via primary key lookup.
+Eliminated the "translation tax" where every API request paid an extra DB lookup: numeric Shopify ID â GID string construction â `FindByPartnerAppID()` â UUID. Now the frontend sends UUIDs directly, and the backend resolves apps via primary key lookup.
 
 **Changes (3 commits):**
-1. **Backend shared helper** — Created `resolveAppFromRequest()` in `app_lookup.go` accepting UUID (fast PK lookup) or numeric (GID fallback). Replaced 5 duplicate app-lookup helpers and 4 duplicate GID prefix constants across 13 handler files. Net deletion: ~200 lines.
-2. **Frontend UUID migration** — `ShopifyApp.id` now reads from `json['uuid']` (internal UUID). Added `shopifyId` for display. Simplified `SyncStatusProvider` by removing `_idToUuid` mapping hack.
-3. **Backend UUID-only enforcement** — Removed numeric fallback from `resolveAppFromRequest()`. Non-UUID app IDs now return 400. Updated all handler tests to use UUIDs in URL params.
+1. **Backend shared helper** â Created `resolveAppFromRequest()` in `app_lookup.go` accepting UUID (fast PK lookup) or numeric (GID fallback). Replaced 5 duplicate app-lookup helpers and 4 duplicate GID prefix constants across 13 handler files. Net deletion: ~200 lines.
+2. **Frontend UUID migration** â `ShopifyApp.id` now reads from `json['uuid']` (internal UUID). Added `shopifyId` for display. Simplified `SyncStatusProvider` by removing `_idToUuid` mapping hack.
+3. **Backend UUID-only enforcement** â Removed numeric fallback from `resolveAppFromRequest()`. Non-UUID app IDs now return 400. Updated all handler tests to use UUIDs in URL params.
 
 **Files changed:** ~18 (13 backend handlers, 4 frontend files, 1 app_lookup.go)
 
 ---
 
-## [2026-05-08] Feat: Fix Stale Data — Navigation Reload + Sync Awareness + Manual Refresh
+## [2026-05-08] Feat: Fix Stale Data â Navigation Reload + Sync Awareness + Manual Refresh
 
 **Summary:**
 Fixed three compounding data-freshness problems in the Flutter frontend: (1) screens kept alive by `StatefulShellRoute.indexedStack` never reloaded when revisited, (2) no visibility into background sync progress after connecting a Shopify app, (3) no way to manually refresh screen data.
 
 **Changes:**
-- **NavigationRefreshNotifier** — new `ChangeNotifier` that fires when the user taps any navigation item (desktop rail, mobile bottom nav, tablet drawer, "More" sheet). Wired into all 4 tap locations in `AppShell`.
-- **DataLoadingMixin staleness** — added `_lastLoadedAt` timestamp and 2-minute stale threshold. On navigation trigger, if data is >2 min old, auto-reloads. Also added `refreshData()` method for manual refresh.
-- **Refresh button** — `LgPage` now accepts `onRefresh` callback. When provided, shows a refresh `IconButton` in the header. Added to all 9 data screens (Dashboard, Subscriptions, Stores, Transactions, Events, Risk, Analytics, Earnings, Insights).
-- **SyncStatusService + SyncStatusProvider** — polls `GET /api/v1/sync/jobs` for active sync jobs. Exposes per-app `AppSyncState` (isSyncing, progress, message, jobId). Supports `triggerSync()` and `cancelSync()`. Adaptive polling: 5s when syncing, 30s when idle.
-- **Apps screen sync UI** — each app card shows: idle state ("Synced X ago" + [Sync Now]), syncing state (progress bar + percentage + [Cancel]), error state ([Retry]).
-- **Sync-aware auto-refresh** — `DataLoadingMixin` listens to `SyncStatusProvider`. When sync transitions syncing→done for the current app, auto-reloads data.
-- **Syncing indicator in header** — `LgPage` reads `SyncStatusProvider` and shows a small "Syncing..." chip with spinner next to the page title when the active app is syncing.
+- **NavigationRefreshNotifier** â new `ChangeNotifier` that fires when the user taps any navigation item (desktop rail, mobile bottom nav, tablet drawer, "More" sheet). Wired into all 4 tap locations in `AppShell`.
+- **DataLoadingMixin staleness** â added `_lastLoadedAt` timestamp and 2-minute stale threshold. On navigation trigger, if data is >2 min old, auto-reloads. Also added `refreshData()` method for manual refresh.
+- **Refresh button** â `LgPage` now accepts `onRefresh` callback. When provided, shows a refresh `IconButton` in the header. Added to all 9 data screens (Dashboard, Subscriptions, Stores, Transactions, Events, Risk, Analytics, Earnings, Insights).
+- **SyncStatusService + SyncStatusProvider** â polls `GET /api/v1/sync/jobs` for active sync jobs. Exposes per-app `AppSyncState` (isSyncing, progress, message, jobId). Supports `triggerSync()` and `cancelSync()`. Adaptive polling: 5s when syncing, 30s when idle.
+- **Apps screen sync UI** â each app card shows: idle state ("Synced X ago" + [Sync Now]), syncing state (progress bar + percentage + [Cancel]), error state ([Retry]).
+- **Sync-aware auto-refresh** â `DataLoadingMixin` listens to `SyncStatusProvider`. When sync transitions syncingâdone for the current app, auto-reloads data.
+- **Syncing indicator in header** â `LgPage` reads `SyncStatusProvider` and shows a small "Syncing..." chip with spinner next to the page title when the active app is syncing.
 
 **Files changed:** 16 (3 new + 13 modified)
 
@@ -136,10 +147,10 @@ Added server-side pagination (page/pageSize) to the Transactions, Events, and St
 
 **Problem:**
 Two compounding issues caused the UI to freeze on large datasets:
-1. **Backend returned everything at once** — Transactions, events, and stores endpoints had zero pagination. A single API call could return 50K+ records as one JSON response.
-2. **Flutter rendered all items eagerly** — Screens used `Column + .map().toList()` and `.take(50)` hacks, building all widget trees upfront.
+1. **Backend returned everything at once** â Transactions, events, and stores endpoints had zero pagination. A single API call could return 50K+ records as one JSON response.
+2. **Flutter rendered all items eagerly** â Screens used `Column + .map().toList()` and `.take(50)` hacks, building all widget trees upfront.
 
-**Baseline Profiling (Before — Whale persona, Stores screen):**
+**Baseline Profiling (Before â Whale persona, Stores screen):**
 
 | Metric | Value |
 |--------|-------|
@@ -150,39 +161,39 @@ Two compounding issues caused the UI to freeze on large datasets:
 | Long task on main thread | **~1-2s** continuous block |
 | Heap snapshot | **1.6 MB** (3,731 functions, 2,969 object shapes) |
 
-**After-Fix Profiling (After — Whale persona, Stores screen with pagination):**
+**After-Fix Profiling (After â Whale persona, Stores screen with pagination):**
 
 | Metric | Before | After | Improvement |
 |--------|--------|-------|-------------|
 | Chrome Performance: Total load | 5,756 ms | 5,507 ms | ~4% faster |
 | Chrome Performance: Scripting | 4,228 ms | 1,689 ms | **60% reduction** |
 | Chrome Performance: Rendering | 20 ms | 34 ms | ~same |
-| Chrome Performance: Painting | — | 21 ms | — |
-| Chrome Performance: System | — | 192 ms | — |
+| Chrome Performance: Painting | â | 21 ms | â |
+| Chrome Performance: System | â | 192 ms | â |
 | Network transfer (localhost) | 15,837 kB | 12,579 kB | **21% reduction** |
 | Chrome Performance: Frame time | 583.8 ms | 174.4 ms (steady-state) | **70% faster** |
-| INP (Interaction to Next Paint) | not measured | 38 ms (good) | — |
+| INP (Interaction to Next Paint) | not measured | 38 ms (good) | â |
 
 **Key Takeaways:**
-- **Scripting dropped 60%** (4,228ms → 1,689ms) — the biggest win. Fewer DOM nodes and JS objects to parse/construct from the smaller paginated JSON payloads.
-- **Network transfer dropped 21%** (15.8 MB → 12.6 MB) — paginated responses send only 20 items instead of 50K+.
-- **Frame times improved 70%** — initial frame 591.7ms, settling to 174.4ms vs the previous 583.8ms sustained frame time.
+- **Scripting dropped 60%** (4,228ms â 1,689ms) â the biggest win. Fewer DOM nodes and JS objects to parse/construct from the smaller paginated JSON payloads.
+- **Network transfer dropped 21%** (15.8 MB â 12.6 MB) â paginated responses send only 20 items instead of 50K+.
+- **Frame times improved 70%** â initial frame 591.7ms, settling to 174.4ms vs the previous 583.8ms sustained frame time.
 - **Total load time only marginally faster** because CDN/cached assets dominate the total; the scripting improvement is the real signal.
 - **INP at 38ms** is well within the "good" threshold (<200ms), confirming the UI is responsive to interactions.
 
 **Changes:**
 
 ### Backend (Go)
-1. **Response logger middleware** (`response_logger.go`) — logs method, path, status, duration, and response bytes for every request. Wired into router.
-2. **Transactions pagination** — Added `TransactionFilters`/`TransactionPage` to repository interface, implemented `FindByAppIDPaginated` with SQL `LIMIT/OFFSET + COUNT(*)`, updated handler to parse `page`/`pageSize` query params (default 20, max 100). 3 handler tests.
-3. **Events pagination** — Same pattern: `EventFilters`/`EventPage`, `FindByAppIDPaginated`, paginated handler. 2 handler tests.
-4. **Stores pagination** — Paginated the output after aggregation (stores are computed from subscriptions + transactions). Added `page`/`pageSize`/`search` query params, sorts by domain, slices after risk classification + LTV calc.
+1. **Response logger middleware** (`response_logger.go`) â logs method, path, status, duration, and response bytes for every request. Wired into router.
+2. **Transactions pagination** â Added `TransactionFilters`/`TransactionPage` to repository interface, implemented `FindByAppIDPaginated` with SQL `LIMIT/OFFSET + COUNT(*)`, updated handler to parse `page`/`pageSize` query params (default 20, max 100). 3 handler tests.
+3. **Events pagination** â Same pattern: `EventFilters`/`EventPage`, `FindByAppIDPaginated`, paginated handler. 2 handler tests.
+4. **Stores pagination** â Paginated the output after aggregation (stores are computed from subscriptions + transactions). Added `page`/`pageSize`/`search` query params, sorts by domain, slices after risk classification + LTV calc.
 
 ### Flutter (Dart)
-5. **`PaginatedResult<T>`** — Generic model class for paginated API responses (`items`, `total`, `page`, `pageSize`, `totalPages`, `hasMore`).
-6. **4 services updated** — `TransactionService`, `EventsService`, `StoreService`, `SubscriptionService` now accept `page`/`pageSize` params and return `PaginatedResult`.
-7. **4 providers updated** — `TransactionProvider`, `EventsProvider`, `StoreProvider`, `SubscriptionProvider` now track `_currentPage`, `_totalPages`, `_totalCount`, `hasMore`, `isLoadingMore`, and expose `loadMore()`. Filters/app-switch reset to page 1.
-8. **4 screens updated** — `TransactionsScreen`, `EventsScreen`, `StoreListScreen`, `SubscriptionListScreen`: removed `.take(50)` hacks, show server-side total count in subtitle, added "Load More" `OutlinedButton` when `hasMore`.
+5. **`PaginatedResult<T>`** â Generic model class for paginated API responses (`items`, `total`, `page`, `pageSize`, `totalPages`, `hasMore`).
+6. **4 services updated** â `TransactionService`, `EventsService`, `StoreService`, `SubscriptionService` now accept `page`/`pageSize` params and return `PaginatedResult`.
+7. **4 providers updated** â `TransactionProvider`, `EventsProvider`, `StoreProvider`, `SubscriptionProvider` now track `_currentPage`, `_totalPages`, `_totalCount`, `hasMore`, `isLoadingMore`, and expose `loadMore()`. Filters/app-switch reset to page 1.
+8. **4 screens updated** â `TransactionsScreen`, `EventsScreen`, `StoreListScreen`, `SubscriptionListScreen`: removed `.take(50)` hacks, show server-side total count in subtitle, added "Load More" `OutlinedButton` when `hasMore`.
 
 **API Response Format (all 4 endpoints):**
 ```json
@@ -216,7 +227,7 @@ Two compounding issues caused the UI to freeze on large datasets:
 | Flutter providers | `transaction_provider.dart`, `events_provider.dart`, `store_provider.dart`, `subscription_provider.dart` |
 | Flutter screens | `transactions_screen.dart`, `events_screen.dart`, `store_list_screen.dart`, `subscription_list_screen.dart` |
 
-**Design Decision — "Load More" button over infinite scroll:**
+**Design Decision â "Load More" button over infinite scroll:**
 - Simpler to implement with existing `Column` inside `SingleChildScrollView` layout
 - No scroll controller + threshold detection needed
 - User stays in control of when to load data
@@ -230,34 +241,34 @@ Two compounding issues caused the UI to freeze on large datasets:
 Fixed recurring data-loading bugs across the Flutter Provider frontend (`frontend-flutter/`). Eight screens suffered from side effects in `build()`, fragile one-shot booleans (`_wasDemoMode`, `hasAttemptedLoad`), no error recovery, and no request cancellation. Replaced all patterns with a standardized `DataLoadingMixin`, added `CancelToken` support, and centralized demo mode toggling.
 
 **Root Causes Fixed:**
-1. **Side effects in `build()`** — 8 screens triggered API calls via `addPostFrameCallback` inside `build()`, violating Flutter's "build must be pure" rule. Could fire multiple times per frame.
-2. **One-shot booleans** — `_wasDemoMode` (7 screens) and `hasAttemptedLoad` (2 providers) tracked state manually and got permanently stuck after errors.
-3. **No error recovery** — once a load failed, guards prevented retry forever.
-4. **No request cancellation** — switching apps mid-load caused stale data to overwrite new data.
-5. **Bootstrap chain fragility** — `app.dart` used `_orgLoaded`/`_appsLoaded` booleans that never reset on error.
-6. **Demo mode scatter** — 9 individual `setDemoMode()` calls in settings screen.
+1. **Side effects in `build()`** â 8 screens triggered API calls via `addPostFrameCallback` inside `build()`, violating Flutter's "build must be pure" rule. Could fire multiple times per frame.
+2. **One-shot booleans** â `_wasDemoMode` (7 screens) and `hasAttemptedLoad` (2 providers) tracked state manually and got permanently stuck after errors.
+3. **No error recovery** â once a load failed, guards prevented retry forever.
+4. **No request cancellation** â switching apps mid-load caused stale data to overwrite new data.
+5. **Bootstrap chain fragility** â `app.dart` used `_orgLoaded`/`_appsLoaded` booleans that never reset on error.
+6. **Demo mode scatter** â 9 individual `setDemoMode()` calls in settings screen.
 
 **Changes:**
 
-1. **`core/mixins/data_loading_mixin.dart`** (NEW) — Listener-based mixin replacing all `_wasDemoMode` and `hasAttemptedLoad` patterns. Detects demo→live transitions, app switches, and initial loads via `AppsProvider.addListener()`. Includes `retryLoad()` for error recovery.
+1. **`core/mixins/data_loading_mixin.dart`** (NEW) â Listener-based mixin replacing all `_wasDemoMode` and `hasAttemptedLoad` patterns. Detects demoâlive transitions, app switches, and initial loads via `AppsProvider.addListener()`. Includes `retryLoad()` for error recovery.
 
-2. **`widgets/lg_error_state.dart`** (NEW) — Reusable error + retry widget matching `LgEmptyState` visual pattern.
+2. **`widgets/lg_error_state.dart`** (NEW) â Reusable error + retry widget matching `LgEmptyState` visual pattern.
 
-3. **`core/demo_mode_coordinator.dart`** (NEW) — Centralizes demo mode toggle across 9 providers + live mode data loading into `setDemoMode()` and `switchToLiveMode()`.
+3. **`core/demo_mode_coordinator.dart`** (NEW) â Centralizes demo mode toggle across 9 providers + live mode data loading into `setDemoMode()` and `switchToLiveMode()`.
 
-4. **`core/network/api_client.dart`** — Added optional `CancelToken` param to `get()`/`post()`/`put()`/`delete()`.
+4. **`core/network/api_client.dart`** â Added optional `CancelToken` param to `get()`/`post()`/`put()`/`delete()`.
 
-5. **8 service files** — Added optional `CancelToken` param to all `fetch*()` methods: `metrics_service`, `subscription_service`, `transaction_service`, `store_service`, `earnings_service`, `risk_service`, `events_service`, `insights_service`.
+5. **8 service files** â Added optional `CancelToken` param to all `fetch*()` methods: `metrics_service`, `subscription_service`, `transaction_service`, `store_service`, `earnings_service`, `risk_service`, `events_service`, `insights_service`.
 
-6. **9 provider files** — Added `CancelToken` cancellation pattern: cancel in-flight request before starting new one, silently ignore cancelled requests, removed `_isLoading` guard that prevented retry after errors. Removed `hasAttemptedLoad` from `SubscriptionProvider` and `TransactionProvider`.
+6. **9 provider files** â Added `CancelToken` cancellation pattern: cancel in-flight request before starting new one, silently ignore cancelled requests, removed `_isLoading` guard that prevented retry after errors. Removed `hasAttemptedLoad` from `SubscriptionProvider` and `TransactionProvider`.
 
-7. **`app.dart`** — Removed `_orgLoaded`/`_appsLoaded` one-shot booleans. Replaced with idempotent calls that rely on providers' own loading guards.
+7. **`app.dart`** â Removed `_orgLoaded`/`_appsLoaded` one-shot booleans. Replaced with idempotent calls that rely on providers' own loading guards.
 
-8. **8 screen files** — Migrated to `DataLoadingMixin` with `loadData()` override. Added `LgErrorState` with retry. Removed all `_wasDemoMode`, `_maybeLoadData`, `hasAttemptedLoad` code. Zero side effects in `build()`.
+8. **8 screen files** â Migrated to `DataLoadingMixin` with `loadData()` override. Added `LgErrorState` with retry. Removed all `_wasDemoMode`, `_maybeLoadData`, `hasAttemptedLoad` code. Zero side effects in `build()`.
 
-9. **`settings_screen.dart`** — Replaced 9 individual `setDemoMode()` calls + 9 `load*()` calls with single `DemoModeCoordinator`.
+9. **`settings_screen.dart`** â Replaced 9 individual `setDemoMode()` calls + 9 `load*()` calls with single `DemoModeCoordinator`.
 
-10. **`main.dart`** — Creates providers as local vars and wires them into `DemoModeCoordinator`. Uses `ChangeNotifierProvider.value()` for all data providers.
+10. **`main.dart`** â Creates providers as local vars and wires them into `DemoModeCoordinator`. Uses `ChangeNotifierProvider.value()` for all data providers.
 
 **Files:** 3 new + 30 modified (33 total, +532/-307 lines)
 
@@ -270,21 +281,21 @@ Added a "Whale Partner" persona (org 1005) with 5 apps, 50K shops, and ~1M trans
 
 **Changes:**
 
-1. **`mock-shopify-api/data/whale.yml`** (NEW) — Whale persona definition with 5 apps, `generated` block specifying 50K shops with distribution ratios, plan pricing, status mix (75% active, 15% frozen, 10% cancelled), and usage charge templates with `shop_ratio`.
+1. **`mock-shopify-api/data/whale.yml`** (NEW) â Whale persona definition with 5 apps, `generated` block specifying 50K shops with distribution ratios, plan pricing, status mix (75% active, 15% frozen, 10% cancelled), and usage charge templates with `shop_ratio`.
 
-2. **`mock-shopify-api/data/personas.yml`** — Added org 1005 entry.
+2. **`mock-shopify-api/data/personas.yml`** â Added org 1005 entry.
 
-3. **`mock-shopify-api/data/growing.yml`** + **`power.yml`** — Replaced explicit per-shop usage charge entries with `shop_ratio` templates so usage charges expand across shops proportionally.
+3. **`mock-shopify-api/data/growing.yml`** + **`power.yml`** â Replaced explicit per-shop usage charge entries with `shop_ratio` templates so usage charges expand across shops proportionally.
 
-4. **`mock-shopify-api/lib/data_store.rb`** — Added `expand_generated()` for whale (generates shops + subscriptions). Added `expand_usage_charges()` that runs for ALL personas: expands `shop_ratio` templates into per-shop entries using app→shop mapping from subscriptions. Each entry gets a random `started_months_ago` (1-10). Updated `stats()` to include `usage_charges` count.
+4. **`mock-shopify-api/lib/data_store.rb`** â Added `expand_generated()` for whale (generates shops + subscriptions). Added `expand_usage_charges()` that runs for ALL personas: expands `shop_ratio` templates into per-shop entries using appâshop mapping from subscriptions. Each entry gets a random `started_months_ago` (1-10). Updated `stats()` to include `usage_charges` count.
 
-5. **`mock-shopify-api/lib/transaction_resolver.rb`** — Usage charges are now always monthly (aligned to subscription billing cycle, no `frequency` field). `started_months_ago` controls how far back charges go. Added per-org transaction cache. Switched to seeded `Random.new` for deterministic output.
+5. **`mock-shopify-api/lib/transaction_resolver.rb`** â Usage charges are now always monthly (aligned to subscription billing cycle, no `frequency` field). `started_months_ago` controls how far back charges go. Added per-org transaction cache. Switched to seeded `Random.new` for deterministic output.
 
-6. **`mock-shopify-api/lib/graphql_handler.rb`** — Added `invalidate_transaction_cache(org_id)` pass-through to TransactionResolver.
+6. **`mock-shopify-api/lib/graphql_handler.rb`** â Added `invalidate_transaction_cache(org_id)` pass-through to TransactionResolver.
 
-7. **`mock-shopify-api/views/persona.erb`** — Added Usage Charges summary card (teal). Capped subscriptions table at 200 rows. Added usage charges table (app/shop/amount range/started columns, capped at 100 rows). Added "Add Usage Charge" form with `started_months_ago`.
+7. **`mock-shopify-api/views/persona.erb`** â Added Usage Charges summary card (teal). Capped subscriptions table at 200 rows. Added usage charges table (app/shop/amount range/started columns, capped at 100 rows). Added "Add Usage Charge" form with `started_months_ago`.
 
-8. **`mock-shopify-api/app.rb`** — Added `@usage_charges` to persona GET route. Added `POST /admin/personas/:org_id/usage_charges` route. Added cache invalidation to all data-modifying routes.
+8. **`mock-shopify-api/app.rb`** â Added `@usage_charges` to persona GET route. Added `POST /admin/personas/:org_id/usage_charges` route. Added cache invalidation to all data-modifying routes.
 
 **Stats:** Whale generates 50K shops, 50K subs, 5.2K usage charges. Growing: 6 usage charges (30% of app 1 shops). Power: 6 usage charges (25% app 1 + 20% app 2). First whale transaction generation ~14s, cached calls instant.
 
@@ -297,66 +308,66 @@ Fixed two Flutter frontend issues preventing real API calls from working: the X-
 
 **Changes:**
 
-1. **`app.dart`** — Added auth listener that calls `OrganizationProvider.loadOrganizations()` when user authenticates. Uses `_orgLoaded` flag to avoid redundant calls. Resets on logout so orgs reload on next login. Also loads orgs immediately if already authenticated (persisted session).
+1. **`app.dart`** â Added auth listener that calls `OrganizationProvider.loadOrganizations()` when user authenticates. Uses `_orgLoaded` flag to avoid redundant calls. Resets on logout so orgs reload on next login. Also loads orgs immediately if already authenticated (persisted session).
 
-2. **10 providers** — Changed `bool _demoMode = true` → `bool _demoMode = false` in: AppsProvider, DashboardProvider, SubscriptionProvider, StoreProvider, TransactionProvider, EventsProvider, RiskProvider, AnalyticsProvider, EarningsProvider, InsightsProvider. AppsProvider persists preference via SharedPreferences, so existing users keep their last setting.
+2. **10 providers** â Changed `bool _demoMode = true` â `bool _demoMode = false` in: AppsProvider, DashboardProvider, SubscriptionProvider, StoreProvider, TransactionProvider, EventsProvider, RiskProvider, AnalyticsProvider, EarningsProvider, InsightsProvider. AppsProvider persists preference via SharedPreferences, so existing users keep their last setting.
 
-3. **`settings_screen.dart`** — Updated Demo Mode toggle subtitle to: "Enable sample data to preview features without a Shopify connection".
+3. **`settings_screen.dart`** â Updated Demo Mode toggle subtitle to: "Enable sample data to preview features without a Shopify connection".
 
-## [2026-05-08] Fix: 500 on POST /integrations/shopify/token — Missing OrgID
+## [2026-05-08] Fix: 500 on POST /integrations/shopify/token â Missing OrgID
 
 **Summary:**
 The `AddToken` handler (manual token) and `OAuth Callback` created `PartnerAccount` records without setting `OrgID`, violating the NOT NULL + FK constraint added in migration 000037. Both code paths now resolve the user's org and pass it to the entity constructor.
 
 **Changes:**
 
-1. **`entity/partner_account.go`** — Added `orgID uuid.UUID` parameter to `NewPartnerAccount()`.
+1. **`entity/partner_account.go`** â Added `orgID uuid.UUID` parameter to `NewPartnerAccount()`.
 
-2. **`handler/manual_token.go`** — `AddToken` now reads org from `OrgContextMW` (injected via middleware) and passes `org.ID` to `NewPartnerAccount`. Returns 400 if no org context.
+2. **`handler/manual_token.go`** â `AddToken` now reads org from `OrgContextMW` (injected via middleware) and passes `org.ID` to `NewPartnerAccount`. Returns 400 if no org context.
 
-3. **`handler/oauth.go`** — Added `memberRepo` field + `SetMemberRepo()` setter. `Callback` resolves user's org via `memberRepo.FindByUserID()` and passes `orgID` to `NewPartnerAccount`. Returns 400 if user has no org.
+3. **`handler/oauth.go`** â Added `memberRepo` field + `SetMemberRepo()` setter. `Callback` resolves user's org via `memberRepo.FindByUserID()` and passes `orgID` to `NewPartnerAccount`. Returns 400 if user has no org.
 
-4. **`router/router.go`** — Added `OrgContextMW` to manual token routes (same pattern as `/status` and `/apps`).
+4. **`router/router.go`** â Added `OrgContextMW` to manual token routes (same pattern as `/status` and `/apps`).
 
-5. **`middleware/org_context.go`** — Added `SetOrgContext()` exported helper for testing.
+5. **`middleware/org_context.go`** â Added `SetOrgContext()` exported helper for testing.
 
-6. **`cmd/server/main.go`** — Wires `memberRepo` into `OAuthHandler` via `SetMemberRepo()` after org block initialization.
+6. **`cmd/server/main.go`** â Wires `memberRepo` into `OAuthHandler` via `SetMemberRepo()` after org block initialization.
 
-7. **Tests** — Updated `TestManualTokenHandler_AddToken_Success` (added org context) and `TestOAuthHandler_Callback_Success` (added mock member repo with org membership).
+7. **Tests** â Updated `TestManualTokenHandler_AddToken_Success` (added org context) and `TestOAuthHandler_Callback_Success` (added mock member repo with org membership).
 
 ---
 
-## [2026-05-07] Multi-User Team Access Model — Organizations, Members, Invitations, Audit
+## [2026-05-07] Multi-User Team Access Model â Organizations, Members, Invitations, Audit
 
 **Summary:**
 Implemented the full multi-user team access model. Organizations become the top-level data-owning entity. Users join organizations with role-based access (OWNER/ADMIN/VIEWER). Includes invitation flow, member lifecycle (suspend/unsuspend), org-scoped audit log, plan-based team limits, and org-level webhooks.
 
 **Implemented:**
 
-1. **Migration 000036** — 4 new tables: `organizations`, `org_members`, `org_invitations`, `org_audit_log`. Added `org_id` column to `partner_accounts`, `billing_subscriptions`, `api_keys`.
+1. **Migration 000036** â 4 new tables: `organizations`, `org_members`, `org_invitations`, `org_audit_log`. Added `org_id` column to `partner_accounts`, `billing_subscriptions`, `api_keys`.
 
 2. **Domain Layer:**
-   - Entity: `organization.go` — Organization, OrgMember, OrgInvitation, OrgAuditEntry with constructors + behavioral methods
+   - Entity: `organization.go` â Organization, OrgMember, OrgInvitation, OrgAuditEntry with constructors + behavioral methods
    - Value Objects: `org_role.go` (OWNER/ADMIN/VIEWER with permission methods), `member_status.go` (ACTIVE/SUSPENDED), `invitation_status.go` (PENDING/ACCEPTED/EXPIRED/REVOKED)
-   - Repository interfaces: `organization_repository.go` — OrganizationRepository, MemberRepository, InvitationRepository, OrgAuditRepository
+   - Repository interfaces: `organization_repository.go` â OrganizationRepository, MemberRepository, InvitationRepository, OrgAuditRepository
 
 3. **Infrastructure Layer:**
-   - `org_repository.go` — PostgreSQL CRUD for organizations
-   - `member_repository.go` — PostgreSQL CRUD for org_members with CountByOrgID
-   - `invitation_repository.go` — PostgreSQL CRUD for org_invitations with token lookup
-   - `audit_repository.go` — PostgreSQL append + paginated query for org_audit_log
+   - `org_repository.go` â PostgreSQL CRUD for organizations
+   - `member_repository.go` â PostgreSQL CRUD for org_members with CountByOrgID
+   - `invitation_repository.go` â PostgreSQL CRUD for org_invitations with token lookup
+   - `audit_repository.go` â PostgreSQL append + paginated query for org_audit_log
 
 4. **Application Layer:**
-   - `org_service.go` — CreateOrganization, InviteMember, AcceptInvitation, RevokeInvitation, RemoveMember, SuspendMember, UnsuspendMember, ChangeRole, UpdateNotificationPrefs, ConfigureWebhook
-   - `org_audit_service.go` — LogAction, GetAuditLog (paginated)
+   - `org_service.go` â CreateOrganization, InviteMember, AcceptInvitation, RevokeInvitation, RemoveMember, SuspendMember, UnsuspendMember, ChangeRole, UpdateNotificationPrefs, ConfigureWebhook
+   - `org_audit_service.go` â LogAction, GetAuditLog (paginated)
    - Plan guards: FREE=1, STARTER=3, PRO=10 members (pending invitations count toward limit)
 
 5. **Middleware:**
-   - `org_context.go` — OrgContextMiddleware resolves org from URL param or X-Org-Id header, checks membership + active status + role
+   - `org_context.go` â OrgContextMiddleware resolves org from URL param or X-Org-Id header, checks membership + active status + role
 
 6. **HTTP Handlers:**
-   - `org_handler.go` — 15 endpoints for org CRUD, member management, invitations, webhooks
-   - `audit_handler.go` — Paginated audit log endpoint
+   - `org_handler.go` â 15 endpoints for org CRUD, member management, invitations, webhooks
+   - `audit_handler.go` â Paginated audit log endpoint
 
 7. **Router:**
    - Added `/api/v1/orgs` routes with org-scoped sub-routes
@@ -372,25 +383,25 @@ Implemented the full multi-user team access model. Organizations become the top-
 ## [2026-05-07] Fix App Filter API Calls, Transaction Upsert app_id, Disconnect Cleanup
 
 **Summary:**
-Fixed demo↔live mode switching across all Flutter providers, fixed transaction upsert to include `app_id` in ON CONFLICT, added debug logging to ledger rebuild, and ensured disconnect flow resets all 10 providers to demo mode.
+Fixed demoâlive mode switching across all Flutter providers, fixed transaction upsert to include `app_id` in ON CONFLICT, added debug logging to ledger rebuild, and ensured disconnect flow resets all 10 providers to demo mode.
 
 **Implemented:**
 
-1. **8 Providers — app selection triggers API loads in live mode:**
+1. **8 Providers â app selection triggers API loads in live mode:**
    - `DashboardProvider`, `StoreProvider`, `SubscriptionProvider`, `TransactionProvider`, `EarningsProvider`, `EventsProvider`, `RiskProvider`, `AnalyticsProvider`
    - `setSelectedApp()`/`setAppFilter()` now calls the provider's `load*()` method when `!_demoMode && appId != null`
 
-2. **transaction_repository.go — ON CONFLICT includes app_id:**
+2. **transaction_repository.go â ON CONFLICT includes app_id:**
    - Both `Upsert()` and `UpsertBatch()` now include `app_id = EXCLUDED.app_id` in the conflict resolution
    - Ensures transactions are re-assigned to the correct app during re-syncs or app re-creation
 
-3. **ledger_service.go — Debug logging:**
+3. **ledger_service.go â Debug logging:**
    - Transaction count with date range
    - Charge type breakdown map (`RECURRING: 5, USAGE: 2, ...`)
    - Unique domain count after grouping
    - Subscription count after rebuild
 
-4. **connect_shopify_screen.dart — Disconnect resets all providers:**
+4. **connect_shopify_screen.dart â Disconnect resets all providers:**
    - `_disconnect()` calls `setDemoMode(true)` on all 10 providers (Apps, Dashboard, Subscription, Store, Transaction, Events, Risk, Analytics, Earnings, Insights)
    - Symmetric with connect flow which sets live mode on all 10
 
@@ -400,9 +411,9 @@ Fixed demo↔live mode switching across all Flutter providers, fixed transaction
 
 ---
 
-## [2026-05-07] Finalize Revenue API Format — Numeric IDs, Usages-by-Subscription, chargeId Fix
+## [2026-05-07] Finalize Revenue API Format â Numeric IDs, Usages-by-Subscription, chargeId Fix
 
-**Commit:** `8acfa59` — feat: finalize Revenue API format — numeric IDs, usages-by-subscription, chargeId fix
+**Commit:** `8acfa59` â feat: finalize Revenue API format â numeric IDs, usages-by-subscription, chargeId fix
 
 **Summary:**
 Revenue API DX overhaul: all endpoints now accept plain numeric IDs (e.g., `28262727727`) in addition to full GIDs. Added `GET /usages?subscription_id={id}` endpoint. Fixed ReadModelBuilder to use `chargeId` (`gid://shopify/AppUsageRecord/...`) as usage status `shopify_gid` instead of the Partner API transaction GID. Added admin rebuild-read-model endpoint.
@@ -410,10 +421,10 @@ Revenue API DX overhaul: all endpoints now accept plain numeric IDs (e.g., `2826
 **Implemented:**
 - Batch suffix matching in subscription + usage repos (`= ANY($1) OR LIKE ANY($2)`)
 - `GetBySubscriptionShopifyGID` suffix matching for numeric IDs
-- `UsageStatusService.GetBySubscriptionGID()` — lookup subscription, verify access, fetch usages
-- `UsageStatusHandler.GetBySubscription()` — `GET /usages?subscription_id={id}`
+- `UsageStatusService.GetBySubscriptionGID()` â lookup subscription, verify access, fetch usages
+- `UsageStatusHandler.GetBySubscription()` â `GET /usages?subscription_id={id}`
 - `ReadModelBuilder.transactionToUsageStatus` uses `chargeId` (stored in `tx.SubscriptionGID`) as usage GID
-- `AdminHandler.RebuildReadModel` — `POST /api/v1/admin/apps/{appID}/rebuild-read-model`
+- `AdminHandler.RebuildReadModel` â `POST /api/v1/admin/apps/{appID}/rebuild-read-model`
 - Postman collection updated to use numeric IDs
 - Developer docs: external Revenue API surface documented in `13-revenue-api.md`
 
@@ -425,15 +436,15 @@ Revenue API DX overhaul: all endpoints now accept plain numeric IDs (e.g., `2826
 
 ## [2026-05-06] Wire ReadModelBuilder into Sync Pipeline
 
-**Commit:** `364c3b2` — fix: wire ReadModelBuilder into sync pipeline to populate Revenue API tables
+**Commit:** `364c3b2` â fix: wire ReadModelBuilder into sync pipeline to populate Revenue API tables
 
 **Summary:**
-`ReadModelBuilder.RebuildForApp()` was dead code — the service existed but was never called after ledger rebuilds. Wired it into both the queue-based and direct sync paths as a non-fatal post-sync step. Revenue API endpoints (`/subscriptions/*`, `/usages/*`) now return real data after every sync.
+`ReadModelBuilder.RebuildForApp()` was dead code â the service existed but was never called after ledger rebuilds. Wired it into both the queue-based and direct sync paths as a non-fatal post-sync step. Revenue API endpoints (`/subscriptions/*`, `/usages/*`) now return real data after every sync.
 
 **Implemented:**
-- `TransactionProcessor.WithReadModelBuilder()` — queue path calls `RebuildForApp` after ledger rebuild
-- `SyncService.WithReadModelBuilder()` — direct sync path calls `RebuildForApp` after ledger rebuild
-- Both paths log and swallow errors (non-fatal — sync still succeeds)
+- `TransactionProcessor.WithReadModelBuilder()` â queue path calls `RebuildForApp` after ledger rebuild
+- `SyncService.WithReadModelBuilder()` â direct sync path calls `RebuildForApp` after ledger rebuild
+- Both paths log and swallow errors (non-fatal â sync still succeeds)
 - Wiring in `main.go` for both sync service and transaction processor
 
 **Files Modified:** 3 source files
@@ -444,7 +455,7 @@ Revenue API DX overhaul: all endpoints now accept plain numeric IDs (e.g., `2826
 
 ## [2026-05-06] StableDomainKey + Real Shopify Subscription GID
 
-**Commit:** `e63e57d` — feat: add StableDomainKey + map real Shopify subscription GID from chargeId
+**Commit:** `e63e57d` â feat: add StableDomainKey + map real Shopify subscription GID from chargeId
 
 **Summary:**
 Mapped Partner API `chargeId` field to `tx.SubscriptionGID` so subscriptions get real Shopify GIDs instead of synthetic keys. Added `stable_domain_key` column (`lg_sub_` + SHA1(domain)) to enable churn-return analysis across reinstalls.
@@ -462,7 +473,7 @@ Mapped Partner API `chargeId` field to `tx.SubscriptionGID` so subscriptions get
 
 ---
 
-## [2026-05-05] Queue System Hardening — Fix 14 Bugs
+## [2026-05-05] Queue System Hardening â Fix 14 Bugs
 
 **Commit:** fix: harden queue system with ownership-aware locks and centralized state transitions
 
@@ -470,14 +481,14 @@ Mapped Partner API `chargeId` field to `tx.SubscriptionGID` so subscriptions get
 Fixed 14 bugs found during code review of the queue worker/recovery/lock system. Issues ranged from critical (locks released without ownership check) to low (cancelled jobs misclassified as failed). Added multi-node deployment safety with Lua-scripted atomic lock operations.
 
 **Implemented:**
-- `ReleaseLockIfOwner` — Lua script: only DEL if value matches ownerID
-- `ExtendLockIfOwner` — Lua script: only PEXPIRE if value matches ownerID
-- `StealLock` — atomic Lua script: check holder → DEL → SET NX
-- `ForceReleaseLock` — for recovery use (renamed from ReleaseLock)
-- `GetLockHolder` — read current lock value
-- `MarkPendingIfProcessing` — conditional status reset for recovery
+- `ReleaseLockIfOwner` â Lua script: only DEL if value matches ownerID
+- `ExtendLockIfOwner` â Lua script: only PEXPIRE if value matches ownerID
+- `StealLock` â atomic Lua script: check holder â DEL â SET NX
+- `ForceReleaseLock` â for recovery use (renamed from ReleaseLock)
+- `GetLockHolder` â read current lock value
+- `MarkPendingIfProcessing` â conditional status reset for recovery
 - Centralized `MarkCompleted`/`MarkFailed` in worker (removed from 7 processors)
-- Lock acquired BEFORE `MarkStarted` (fixes processing→pending bounce)
+- Lock acquired BEFORE `MarkStarted` (fixes processingâpending bounce)
 - Cancellation check before `MarkFailed` (fixes misclassification)
 - Recovery grace period (2 min) to avoid racing with new workers
 - DB status guards on all Mark* methods (prevents concurrent modification)
@@ -498,7 +509,7 @@ Fixed 14 bugs found during code review of the queue worker/recovery/lock system.
 Fixed critical issues discovered during testing: shutdown recovery (jobs now survive Ctrl+C), lock steal race condition, duplicate job prevention during recovery, and corrected wave ordering for event_sync.
 
 **Implemented:**
-- Shutdown recovery: interrupted jobs stay `processing` (not `failed`) → recovery re-enqueues on restart
+- Shutdown recovery: interrupted jobs stay `processing` (not `failed`) â recovery re-enqueues on restart
 - Heartbeat written immediately after lock acquisition (prevents steal race before goroutine starts)
 - Recovery skips child jobs when parent is also recovered (parent recreates them, prevents duplicates)
 - `MarkPendingIfProcessing` uses `worker_id = ''` (column is NOT NULL)
@@ -560,7 +571,7 @@ Initialized Go 1.22+ backend project with Clean Architecture folder structure, P
 3. **Configuration:**
    - Environment variable loading
    - YAML config file support
-   - Config precedence: defaults → file → env vars
+   - Config precedence: defaults â file â env vars
 
 4. **Health Endpoint:**
    - `GET /health` - Returns server and database status
@@ -617,7 +628,7 @@ Added YAML configuration file support with environment variable overrides.
 1. **Config Loading:**
    - YAML file support (`config.yaml`)
    - `-config` CLI flag or `CONFIG_PATH` env var
-   - Load order: defaults → config file → env vars (env wins)
+   - Load order: defaults â config file â env vars (env wins)
 
 2. **Config Sections:**
    - Server (port)
@@ -805,7 +816,7 @@ Implemented deterministic ledger rebuild that reconstructs subscription state fr
      - `last_recurring_charge_date` - Most recent RECURRING transaction
      - `expected_next_charge_date` - Computed from last charge + interval
      - `risk_state` - Classified based on days past due
-     - `MRRCents()` - Monthly recurring revenue (annual ÷ 12)
+     - `MRRCents()` - Monthly recurring revenue (annual Ã· 12)
    - `SubscriptionRepository` interface
    - `LedgerService` with:
      - `RebuildFromTransactions(appID, now)` - Full rebuild
@@ -827,14 +838,14 @@ Implemented deterministic ledger rebuild that reconstructs subscription state fr
    - ONE_TIME and REFUND tracked separately
 
 6. **Deterministic Guarantee:**
-   - Same transactions → Same subscription state
+   - Same transactions â Same subscription state
    - Sorted output for consistent ordering
    - Full rebuild (delete + insert) for idempotency
 
 7. **Billing Interval Detection:**
    - Analyzes transaction spacing
    - >180 days average = ANNUAL
-   - ≤180 days average = MONTHLY
+   - â¤180 days average = MONTHLY
 
 8. **Indexes:**
    - `idx_subscriptions_app_status` - For status queries
@@ -866,7 +877,7 @@ Created dedicated RiskEngine domain service and integrated it with the sync flow
    - `IsChurned(subscription)` - Helper for churn detection
 
 2. **Risk State Classification (per CLAUDE.md):**
-   - **SAFE:** Active subscription or ≤30 days past due (grace period)
+   - **SAFE:** Active subscription or â¤30 days past due (grace period)
    - **ONE_CYCLE_MISSED:** 31-60 days past due
    - **TWO_CYCLES_MISSED:** 61-90 days past due
    - **CHURNED:** >90 days past due
@@ -1112,7 +1123,7 @@ Created a public-facing marketing landing page for LedgerGuard using Next.js 14+
 **Commits:** 21 incremental commits
 
 **Summary:**
-Enabled Android, iOS, and macOS platform support for the `frontend-flutter/` Provider-based prototype, and made all 13 screens responsive across mobile (<600px), tablet (600–900px), and desktop (>900px) breakpoints.
+Enabled Android, iOS, and macOS platform support for the `frontend-flutter/` Provider-based prototype, and made all 13 screens responsive across mobile (<600px), tablet (600â900px), and desktop (>900px) breakpoints.
 
 **Implemented:**
 
@@ -1129,9 +1140,9 @@ Enabled Android, iOS, and macOS platform support for the `frontend-flutter/` Pro
 6. **Polish:** SafeArea wrappers, adaptive search field, ScrollBehavior for desktop drag
 
 **Key Files:**
-- `lib/theme/app_breakpoints.dart` — LgBreakpoints, LgResponsive
-- `lib/widgets/lg_metric_grid.dart` — Responsive metric card grid
-- `lib/shell/app_shell.dart` — Three-tier navigation
+- `lib/theme/app_breakpoints.dart` â LgBreakpoints, LgResponsive
+- `lib/widgets/lg_metric_grid.dart` â Responsive metric card grid
+- `lib/shell/app_shell.dart` â Three-tier navigation
 - `docs/developer/33-multi-platform-responsive-adaptation.md`
 
 ---
@@ -1147,42 +1158,42 @@ Enabled Android, iOS, and macOS platform support for the `frontend-flutter/` Pro
 
 | Migration | Description | Status |
 |-----------|-------------|--------|
-| 000001_create_users_table | Users with Firebase UID, role, plan tier | ✓ |
-| 000002_create_partner_accounts_table | Partner accounts with encrypted tokens | ✓ |
-| 000003_create_apps_table | Tracked Shopify apps | ✓ |
-| 000004_create_transactions_table | Immutable transaction ledger | ✓ |
-| 000005_create_subscriptions_table | Subscription state with risk tracking | ✓ |
-| 000006_create_daily_metrics_snapshot_table | Daily KPI snapshots | ✓ |
-| 000007_create_daily_insight_table | AI-generated daily insights (Pro only) | ✓ |
-| 000008_create_device_tokens_table | Push notification device tokens | ✓ |
-| 000009_create_notification_preferences_table | User notification preferences | ✓ |
-| 000010_add_shop_name_to_subscriptions | Add shop_name to subscriptions | ✓ |
-| 000011_add_shop_name_and_gross_amount_to_transactions | Add shop_name, gross_amount_cents to transactions | ✓ |
+| 000001_create_users_table | Users with Firebase UID, role, plan tier | â |
+| 000002_create_partner_accounts_table | Partner accounts with encrypted tokens | â |
+| 000003_create_apps_table | Tracked Shopify apps | â |
+| 000004_create_transactions_table | Immutable transaction ledger | â |
+| 000005_create_subscriptions_table | Subscription state with risk tracking | â |
+| 000006_create_daily_metrics_snapshot_table | Daily KPI snapshots | â |
+| 000007_create_daily_insight_table | AI-generated daily insights (Pro only) | â |
+| 000008_create_device_tokens_table | Push notification device tokens | â |
+| 000009_create_notification_preferences_table | User notification preferences | â |
+| 000010_add_shop_name_to_subscriptions | Add shop_name to subscriptions | â |
+| 000011_add_shop_name_and_gross_amount_to_transactions | Add shop_name, gross_amount_cents to transactions | â |
 
 ---
 
 ## Architecture
 
 ```
-cmd/server/main.go              → Entry point only
+cmd/server/main.go              â Entry point only
 internal/domain/
-  ├── entity/                   → User, PartnerAccount, App, Transaction, Subscription, DailyMetricsSnapshot, DailyInsight, DeviceToken, NotificationPreferences
-  ├── valueobject/              → Role, PlanTier, IntegrationType, ChargeType, RiskState, BillingInterval, Platform
-  ├── repository/               → Interfaces (UserRepo, PartnerAccountRepo, AppRepo, TransactionRepo, SubscriptionRepo, DailyMetricsSnapshotRepo, DailyInsightRepo, DeviceTokenRepo, NotificationPreferencesRepo)
-  └── service/                  → LedgerService, RiskEngine, MetricsEngine
+  âââ entity/                   â User, PartnerAccount, App, Transaction, Subscription, DailyMetricsSnapshot, DailyInsight, DeviceToken, NotificationPreferences
+  âââ valueobject/              â Role, PlanTier, IntegrationType, ChargeType, RiskState, BillingInterval, Platform
+  âââ repository/               â Interfaces (UserRepo, PartnerAccountRepo, AppRepo, TransactionRepo, SubscriptionRepo, DailyMetricsSnapshotRepo, DailyInsightRepo, DeviceTokenRepo, NotificationPreferencesRepo)
+  âââ service/                  â LedgerService, RiskEngine, MetricsEngine
 internal/application/
-  ├── service/                  → SyncService, AIInsightService, NotificationService
-  └── scheduler/                → SyncScheduler
+  âââ service/                  â SyncService, AIInsightService, NotificationService
+  âââ scheduler/                â SyncScheduler
 internal/infrastructure/
-  ├── config/                   → YAML + env config loading
-  ├── persistence/              → PostgreSQL implementations
-  └── external/                 → Firebase, Shopify OAuth, Shopify Partner Client, SlackNotificationProvider
+  âââ config/                   â YAML + env config loading
+  âââ persistence/              â PostgreSQL implementations
+  âââ external/                 â Firebase, Shopify OAuth, Shopify Partner Client, SlackNotificationProvider
 internal/interfaces/http/
-  ├── handler/                  → Health, OAuth, ManualToken, App, Sync
-  ├── middleware/               → Auth, Role
-  └── router/                   → Chi router setup
-pkg/crypto/                     → AES-256-GCM encryption
-migrations/                     → SQL migrations
+  âââ handler/                  â Health, OAuth, ManualToken, App, Sync
+  âââ middleware/               â Auth, Role
+  âââ router/                   â Chi router setup
+pkg/crypto/                     â AES-256-GCM encryption
+migrations/                     â SQL migrations
 ```
 
 ---
@@ -1251,9 +1262,9 @@ Implemented live transaction fetching from Shopify Partner API with GraphQL pagi
    - `FetchTransactions(ctx, accessToken, appID, from, to)` method
    - GraphQL query with pagination (100 per page)
    - Supported transaction types (Shopify Partner API only supports these):
-     - AppSubscriptionSale → RECURRING
-     - AppUsageSale → RECURRING
-     - AppOneTimeSale → ONE_TIME
+     - AppSubscriptionSale â RECURRING
+     - AppUsageSale â RECURRING
+     - AppOneTimeSale â ONE_TIME
    - NOTE: AppCredit, ServiceSale, ReferralTransaction are NOT supported in transactions query
    - Context-based organization ID passing via `WithOrganizationID`
    - Amount parsing from decimal strings to cents
@@ -1309,10 +1320,10 @@ Added shop name and gross amount fields to transactions, fixed charge type infer
 3. **ShopifyPartnerClient Updates:**
    - Added `__typename` to GraphQL query for proper type identification
    - Fixed `inferChargeType` to use typename:
-     - `AppSubscriptionSale` → RECURRING
-     - `AppUsageSale` → USAGE
-     - `AppOneTimeSale` → ONE_TIME
-     - `AppCredit` → REFUND
+     - `AppSubscriptionSale` â RECURRING
+     - `AppUsageSale` â USAGE
+     - `AppOneTimeSale` â ONE_TIME
+     - `AppCredit` â REFUND
    - Added `shop { name }` to GraphQL query
    - Added `grossAmount { amount currencyCode }` to query
    - New `parseAmounts` function returns both gross and net amounts
@@ -1584,7 +1595,7 @@ Implemented accurate Shopify revenue share tier tracking based on Shopify Partne
 
 **Key Features:**
 - 4 revenue share tiers: DEFAULT_20 (20%), SMALL_DEV_0 (0%), SMALL_DEV_15 (15%), LARGE_DEV_15 (15%)
-- Fee breakdown calculation: gross → revenue share → processing fee (2.9%) → tax on fees → net
+- Fee breakdown calculation: gross â revenue share â processing fee (2.9%) â tax on fees â net
 - Fee verification service to compare expected vs actual fees from Shopify
 - Tier savings comparison (how much saved vs default 20%)
 
@@ -1637,7 +1648,7 @@ Created interactive KPI metrics guide component for the marketing site, showing 
 1. **KPI Cards (6 metrics):**
    - Active MRR - MRR from SAFE subscriptions only
    - Revenue at Risk - MRR from ONE_CYCLE_MISSED + TWO_CYCLES_MISSED subscriptions
-   - Renewal Success Rate - (Safe Count / Total) × 100
+   - Renewal Success Rate - (Safe Count / Total) Ã 100
    - Usage Revenue - SUM where ChargeType = USAGE
    - Total Revenue - RECURRING + USAGE + ONE_TIME - REFUNDS
    - Churned Revenue - MRR from CHURNED subscriptions
@@ -1650,13 +1661,13 @@ Created interactive KPI metrics guide component for the marketing site, showing 
 3. **Visualizations:**
    - Risk Classification Timeline (30/60/90 day thresholds with animated cursor)
    - Risk Distribution Bar Chart (Safe, At Risk, Critical, Churned)
-   - Data Flow Animation (Partner API → Ledger Rebuild → Metrics Engine → Dashboard)
+   - Data Flow Animation (Partner API â Ledger Rebuild â Metrics Engine â Dashboard)
    - Subscription List with risk state filtering and MRR display
    - Period Comparison with delta calculation and good/bad semantics
 
 4. **Delta Semantics:**
-   - Higher is good: Active MRR, Renewal Rate, Usage Revenue, Total Revenue (green ↑)
-   - Lower is good: Revenue at Risk, Churned Revenue (green ↓)
+   - Higher is good: Active MRR, Renewal Rate, Usage Revenue, Total Revenue (green â)
+   - Lower is good: Revenue at Risk, Churned Revenue (green â)
 
 5. **Animation Features:**
    - Continuous animation loop with progress tracking
@@ -1679,7 +1690,7 @@ Created interactive KPI metrics guide component for the marketing site, showing 
 **Commit:** feat: add earnings timeline with pending/available status tracking
 
 **Summary:**
-Implemented Shopify earnings availability tracking. Shopify holds payments for a "cool-down" period before making them available for payout. This feature tracks when earnings become PENDING → AVAILABLE → PAID_OUT.
+Implemented Shopify earnings availability tracking. Shopify holds payments for a "cool-down" period before making them available for payout. This feature tracks when earnings become PENDING â AVAILABLE â PAID_OUT.
 
 **Key Features:**
 - Earnings availability calculation based on Shopify rules:
@@ -1758,10 +1769,10 @@ Implemented Phase 1 fixes from comprehensive app review, focusing on data integr
 ### 1. Risk Classification Logic (P0-1)
 - Added SubscriptionStatus value object with ACTIVE, CANCELLED, FROZEN, EXPIRED, PENDING states
 - Updated RiskEngine to check subscription status before days-based classification:
-  - CANCELLED/EXPIRED → CHURNED (terminal states)
-  - FROZEN → ONE_CYCLE_MISSED (payment failure)
-  - PENDING → SAFE (not yet active)
-  - ACTIVE → Check days past due
+  - CANCELLED/EXPIRED â CHURNED (terminal states)
+  - FROZEN â ONE_CYCLE_MISSED (payment failure)
+  - PENDING â SAFE (not yet active)
+  - ACTIVE â Check days past due
 - Added 10+ new boundary tests (exactly 30/31/60/61/90/91 days)
 - Added status-specific tests (CANCELLED ignores timing, FROZEN overrides days)
 
@@ -1820,7 +1831,7 @@ Implemented Phase 3 Task #1 - Webhook Integration (P1-8). Added support for Shop
   - `app_subscriptions/update` - Status changes (ACTIVE, CANCELLED, FROZEN, EXPIRED)
   - `app/uninstalled` - App uninstallation (soft delete subscription)
   - `subscription_billing_attempts/failure` - Payment failures (escalate risk state)
-- Risk state escalation: SAFE → ONE_CYCLE_MISSED → TWO_CYCLES_MISSED → CHURNED
+- Risk state escalation: SAFE â ONE_CYCLE_MISSED â TWO_CYCLES_MISSED â CHURNED
 - Lifecycle event recording for audit trail
 
 ### 3. Webhook Handler
@@ -2006,7 +2017,7 @@ Completed the notification engine implementation by wiring all existing services
   - `ProcessSubscriptionUpdate()` - When subscription status changes risk state
   - `ProcessAppUninstalled()` - When app is uninstalled (churned)
   - `ProcessBillingFailure()` - When payment fails (escalates risk)
-- Resolves UserID: Subscription → App → PartnerAccount → UserID
+- Resolves UserID: Subscription â App â PartnerAccount â UserID
 
 ### 4. Daily Summary Notification Scheduler
 - New `NotificationScheduler` with 15-minute check interval
@@ -2036,31 +2047,31 @@ Completed the notification engine implementation by wiring all existing services
 
 ```
 Webhook Event
-     ↓
+     â
 WebhookService.ProcessEvent()
-     ↓
-[Risk State Changed?] → Yes → sendRiskChangeNotification()
-                                    ↓
+     â
+[Risk State Changed?] â Yes â sendRiskChangeNotification()
+                                    â
                         NotificationService.SendCriticalAlert()
-                                    ↓
-                        ┌───────────┴───────────┐
-                        ↓                       ↓
+                                    â
+                        âââââââââââââ´ââââââââââââ
+                        â                       â
               Firebase (FCM/APNs)        Slack Webhook
-                        ↓                       ↓
+                        â                       â
               Push Notification          Slack Message
 ```
 
 ```
 NotificationScheduler (15-min tick)
-     ↓
+     â
 [Current Hour = User's Summary Hour?]
-     ↓ Yes
+     â Yes
 FindUsersWithDailySummaryAtHour(hour)
-     ↓
-For each User → PartnerAccount → Apps
-     ↓
+     â
+For each User â PartnerAccount â Apps
+     â
 NotificationService.SendDailySummary()
-     ↓
+     â
 Push + Slack Notifications
 ```
 
@@ -2114,21 +2125,21 @@ Set up Flutter web deployment to Firebase Hosting. Firebase was chosen over Verc
 **Implemented:**
 
 ### 1. Production Entry Point
-- Updated `frontend/app/lib/main_prod.dart` — added Firebase initialization (was commented out)
-- Uses `EnvConfig.prod` pointing to `https://api.ledgerguard.com`
+- Updated `frontend/app/lib/main_prod.dart` â added Firebase initialization (was commented out)
+- Uses `EnvConfig.prod` pointing to `https://api.ledgerspear.com`
 
 ### 2. Web Branding
-- `web/index.html` — title changed from "app" to "LedgerGuard", description updated
-- `web/manifest.json` — name/short_name set to "LedgerGuard", theme colors updated
+- `web/index.html` â title changed from "app" to "LedgerGuard", description updated
+- `web/manifest.json` â name/short_name set to "LedgerGuard", theme colors updated
 
 ### 3. Firebase Hosting Config
-- Created `frontend/app/.firebaserc` — maps to project `ledgerguard-c7557`
-- Updated `frontend/app/firebase.json` — added `hosting` section with SPA rewrites
+- Created `frontend/app/.firebaserc` â maps to project `ledgerguard-c7557`
+- Updated `frontend/app/firebase.json` â added `hosting` section with SPA rewrites
 - Build output: `build/web/` served as static files
 
 ### 4. CI/CD
-- `.github/workflows/ci.yml` — added `flutter build web` to frontend-build job
-- `.github/workflows/deploy.yml` — added `deploy-frontend` job using `FirebaseExtended/action-hosting-deploy@v0`
+- `.github/workflows/ci.yml` â added `flutter build web` to frontend-build job
+- `.github/workflows/deploy.yml` â added `deploy-frontend` job using `FirebaseExtended/action-hosting-deploy@v0`
 - Added `frontend` option to manual dispatch choices
 
 **Files Created:**
@@ -2142,7 +2153,7 @@ Set up Flutter web deployment to Firebase Hosting. Firebase was chosen over Verc
 - `.github/workflows/ci.yml`
 - `.github/workflows/deploy.yml`
 
-**Build Verified:** `flutter build web --release -t lib/main_prod.dart` — success
+**Build Verified:** `flutter build web --release -t lib/main_prod.dart` â success
 
 ---
 
@@ -2158,14 +2169,14 @@ Connected the Flutter web frontend (Firebase Hosting) to the Go backend (GCP Clo
 ### 1. Frontend Staging Environment
 - Added `Environment.staging` to `EnvConfig` pointing to Cloud Run API (`https://ledgerspear-api-ineifpjrdq-uc.a.run.app`)
 - Created `main_staging.dart` entry point for Firebase Hosting builds
-- Fixed `apiBaseUrl` getter — staging case was falling through to `localhost` instead of returning the Cloud Run URL
+- Fixed `apiBaseUrl` getter â staging case was falling through to `localhost` instead of returning the Cloud Run URL
 
 ### 2. Backend CORS Fix
 - Added `ledgerguard-c7557.web.app` and `ledgerguard-c7557.firebaseapp.com` to `AllowedOrigins` in `router.go`
 - Required for Firebase Hosting frontend to call Cloud Run backend
 
 ### 3. Docker Build Fix
-- Fixed `gcp-deploy.sh` — added `--platform linux/amd64` flag to `docker build`
+- Fixed `gcp-deploy.sh` â added `--platform linux/amd64` flag to `docker build`
 - Required for Apple Silicon (ARM) Macs building containers for Cloud Run (x86_64)
 
 ### 4. Database Migration Fix
@@ -2185,10 +2196,10 @@ Connected the Flutter web frontend (Firebase Hosting) to the Go backend (GCP Clo
 - `frontend/app/lib/main_staging.dart`
 
 **Files Modified:**
-- `frontend/app/lib/core/config/env_config.dart` — Added `Environment.staging`, fixed `apiBaseUrl` getter
-- `backend/internal/interfaces/http/router/router.go` — Added Firebase Hosting domains to CORS
-- `scripts/gcp-deploy.sh` — Added `--platform linux/amd64`
-- `.github/workflows/deploy.yml` — Changed build target to `main_staging.dart`
+- `frontend/app/lib/core/config/env_config.dart` â Added `Environment.staging`, fixed `apiBaseUrl` getter
+- `backend/internal/interfaces/http/router/router.go` â Added Firebase Hosting domains to CORS
+- `scripts/gcp-deploy.sh` â Added `--platform linux/amd64`
+- `.github/workflows/deploy.yml` â Changed build target to `main_staging.dart`
 
 **Key Learnings:**
 - Apple Silicon Docker builds must specify `--platform linux/amd64` for Cloud Run
@@ -2206,11 +2217,11 @@ Created 7 Excalidraw diagram files providing hand-drawn-style visual documentati
 | Diagram | Elements | Description |
 |---------|----------|-------------|
 | `system-architecture.excalidraw` | 33 | C4-style container diagram: Flutter, Go Backend (DDD layers), PostgreSQL, Shopify, Firebase |
-| `auth-onboarding-flow.excalidraw` | 56 | Left-to-right sequence: login → auth → onboarding → first sync → dashboard |
-| `sync-ledger-rebuild-flow.excalidraw` | 46 | 10-step vertical pipeline: trigger → fetch → rebuild → snapshot |
-| `risk-engine-flow.excalidraw` | 52 | Decision tree: status checks → days past due → risk state classification |
+| `auth-onboarding-flow.excalidraw` | 56 | Left-to-right sequence: login â auth â onboarding â first sync â dashboard |
+| `sync-ledger-rebuild-flow.excalidraw` | 46 | 10-step vertical pipeline: trigger â fetch â rebuild â snapshot |
+| `risk-engine-flow.excalidraw` | 52 | Decision tree: status checks â days past due â risk state classification |
 | `database-er-diagram.excalidraw` | 62 | ER diagram: 13 tables across 5 tiers with relationship arrows |
-| `frontend-screen-flow.excalidraw` | 55 | Navigation map: auth → dashboard → subscriptions/settings/risk |
+| `frontend-screen-flow.excalidraw` | 55 | Navigation map: auth â dashboard â subscriptions/settings/risk |
 | `snapshot-backfill-flow.excalidraw` | 58 | Daily upsert + first-sync backfill + timeline visualization |
 
 **Color Scheme:**
@@ -2229,7 +2240,7 @@ Created 7 Excalidraw diagram files providing hand-drawn-style visual documentati
 
 ---
 
-## [2026-03-07] AI Chat + Internal GraphQL — Full Implementation
+## [2026-03-07] AI Chat + Internal GraphQL â Full Implementation
 
 **Commits:** 12 commits implementing AI-powered chat assistant
 
@@ -2293,7 +2304,7 @@ Added shop brand data (logo, square logo, cover image) fetched from the Shopify 
 1. **Database Migration (000029):** `shops` table with `myshopify_domain` UNIQUE key, logo URLs, country/currency, indexed by domain
 2. **Domain Layer:** `entity.Shop` struct, `repository.ShopRepository` interface (Upsert, FindByDomain, FindByDomains)
 3. **Persistence Layer:** `PostgresShopRepository` with upsert-on-conflict and batch domain lookup
-4. **Storefront Client:** `ShopifyStorefrontClient.FetchBrand()` — public GraphQL API call (no auth, 5s timeout), graceful failure returns empty Shop
+4. **Storefront Client:** `ShopifyStorefrontClient.FetchBrand()` â public GraphQL API call (no auth, 5s timeout), graceful failure returns empty Shop
 5. **Sync Integration:** After ledger rebuild, collects unique domains from subscriptions, fetches brand data only for **new** domains not already in shops table
 6. **API Response:** Subscription list, detail, and store health endpoints now include `shop_name`, `shop_logo_url`, and `shop_square_logo_url` fields (batch-fetched via `FindByDomains`)
 7. **Flutter Entity:** Added `shopName`, `shopLogoUrl`, and `shopSquareLogoUrl` nullable fields to `Subscription`, plus `displayName` getter (prefers shop name over domain)
@@ -2307,23 +2318,23 @@ Added shop brand data (logo, square logo, cover image) fetched from the Shopify 
 - `backend/internal/infrastructure/external/shopify_storefront_client.go`
 
 **Files Modified:**
-- `backend/internal/application/service/sync_service.go` — ShopBrandFetcher interface + fetchShopBrands method
-- `backend/internal/interfaces/http/handler/subscription.go` — shop logo + name enrichment in List/GetByID
-- `backend/internal/interfaces/http/handler/store_health.go` — shopRepo + logo/name enrichment in SubscriptionResponse
-- `backend/cmd/server/main.go` — wired shopRepo to subscriptionHandler + storeHealthHandler + syncService
-- `frontend/app/lib/domain/entities/subscription.dart` — logo URL + shopName fields, displayName getter
-- `frontend/app/lib/presentation/widgets/subscription_tile.dart` — CachedNetworkImage avatar
-- `frontend/app/lib/presentation/pages/subscription_detail_page.dart` — CachedNetworkImage avatar + displayName
-- `frontend/app/lib/presentation/pages/store_health_page.dart` — CachedNetworkImage avatar + displayName
-- `frontend/app/pubspec.yaml` — cached_network_image dependency
-- `DATABASE_SCHEMA.md` — shops table documentation
+- `backend/internal/application/service/sync_service.go` â ShopBrandFetcher interface + fetchShopBrands method
+- `backend/internal/interfaces/http/handler/subscription.go` â shop logo + name enrichment in List/GetByID
+- `backend/internal/interfaces/http/handler/store_health.go` â shopRepo + logo/name enrichment in SubscriptionResponse
+- `backend/cmd/server/main.go` â wired shopRepo to subscriptionHandler + storeHealthHandler + syncService
+- `frontend/app/lib/domain/entities/subscription.dart` â logo URL + shopName fields, displayName getter
+- `frontend/app/lib/presentation/widgets/subscription_tile.dart` â CachedNetworkImage avatar
+- `frontend/app/lib/presentation/pages/subscription_detail_page.dart` â CachedNetworkImage avatar + displayName
+- `frontend/app/lib/presentation/pages/store_health_page.dart` â CachedNetworkImage avatar + displayName
+- `frontend/app/pubspec.yaml` â cached_network_image dependency
+- `DATABASE_SCHEMA.md` â shops table documentation
 
 ---
 
 ## [2026-03-18] Razorpay Subscriptions Integration (Test Mode)
 
 **Summary:**
-Integrated Razorpay Subscriptions for LedgerSpear B2B SaaS billing (Starter $249/mo, Pro $499/mo). Test mode only — no GST/live mode yet.
+Integrated Razorpay Subscriptions for LedgerSpear B2B SaaS billing (Starter $249/mo, Pro $499/mo). Test mode only â no GST/live mode yet.
 
 **8 Incremental Commits:**
 1. Domain value objects: BillingPlan (STARTER/PRO with PriceUSDCents), BillingSubscriptionStatus (6 states), PlanTierStarter
@@ -2339,7 +2350,7 @@ Integrated Razorpay Subscriptions for LedgerSpear B2B SaaS billing (Starter $249
 - BillingSubscription is separate from Shopify Subscription entity
 - Razorpay plan IDs stored in config (created via Razorpay dashboard)
 - Webhook handler returns 200 always (logs errors) to prevent retries
-- Billing routes are optional — server starts fine without Razorpay config
+- Billing routes are optional â server starts fine without Razorpay config
 
 **Files Created:**
 - `backend/internal/domain/valueobject/billing_plan.go` + test
@@ -2354,10 +2365,10 @@ Integrated Razorpay Subscriptions for LedgerSpear B2B SaaS billing (Starter $249
 - `backend/internal/interfaces/http/handler/billing.go` + test
 
 **Files Modified:**
-- `backend/internal/domain/valueobject/plan_tier.go` — added PlanTierStarter
-- `backend/internal/infrastructure/config/config.go` — added RazorpayConfig
-- `backend/internal/interfaces/http/router/router.go` — billing + webhook routes
-- `backend/cmd/server/main.go` — wired billing components
+- `backend/internal/domain/valueobject/plan_tier.go` â added PlanTierStarter
+- `backend/internal/infrastructure/config/config.go` â added RazorpayConfig
+- `backend/internal/interfaces/http/router/router.go` â billing + webhook routes
+- `backend/cmd/server/main.go` â wired billing components
 
 ---
 
@@ -2369,13 +2380,13 @@ Added backend infrastructure for scraping Shopify App Store reviews. Includes a 
 **Implemented:**
 
 1. **Domain Layer:**
-   - `entity.AppReview` — review entity with rating, body, author, location, time_using
-   - `repository.AppReviewRepository` — interface: UpsertBatch, FindByAppID, CountByAppID
+   - `entity.AppReview` â review entity with rating, body, author, location, time_using
+   - `repository.AppReviewRepository` â interface: UpsertBatch, FindByAppID, CountByAppID
    - Added `AppStoreSlug` field to `entity.App`
 
 2. **Infrastructure Layer:**
-   - `PostgresAppReviewRepository` — Postgres implementation with idempotent upsert
-   - `ShopifyAppStoreClient` — HTML scraper using goquery CSS selectors
+   - `PostgresAppReviewRepository` â Postgres implementation with idempotent upsert
+   - `ShopifyAppStoreClient` â HTML scraper using goquery CSS selectors
      - Parses `div[data-merchant-review]` blocks
      - Extracts rating from aria-label, date, body, author (from span title), location, time_using
      - Pagination via `a[rel="next"]` detection
@@ -2383,17 +2394,17 @@ Added backend infrastructure for scraping Shopify App Store reviews. Includes a 
      - SHA-256 dedup key from author+date+body prefix
 
 3. **Application Layer:**
-   - `SyncService.WithReviewScraper()` — optional review scraping during sync (2 pages)
+   - `SyncService.WithReviewScraper()` â optional review scraping during sync (2 pages)
    - `ReviewScraper` interface for testability
 
 4. **Interfaces Layer:**
-   - `ReviewHandler.List` — `GET /api/v1/apps/{appID}/reviews?page=1&per_page=20`
-   - `ReviewHandler.Scrape` — `POST /api/v1/apps/{appID}/reviews/scrape`
-   - `AppHandler.UpdateStoreSlug` — `PATCH /api/v1/apps/{appID}/store-slug`
+   - `ReviewHandler.List` â `GET /api/v1/apps/{appID}/reviews?page=1&per_page=20`
+   - `ReviewHandler.Scrape` â `POST /api/v1/apps/{appID}/reviews/scrape`
+   - `AppHandler.UpdateStoreSlug` â `PATCH /api/v1/apps/{appID}/store-slug`
 
 5. **Migrations:**
-   - `000031_add_app_store_slug` — adds `app_store_slug TEXT` to apps
-   - `000032_create_app_reviews_table` — creates app_reviews with unique constraint on (app_id, source_review_id)
+   - `000031_add_app_store_slug` â adds `app_store_slug TEXT` to apps
+   - `000032_create_app_reviews_table` â creates app_reviews with unique constraint on (app_id, source_review_id)
 
 **New Files:**
 - `backend/internal/domain/entity/app_review.go`
@@ -2405,12 +2416,12 @@ Added backend infrastructure for scraping Shopify App Store reviews. Includes a 
 - `backend/migrations/000032_create_app_reviews_table.up.sql` + down
 
 **Files Modified:**
-- `backend/internal/domain/entity/app.go` — added AppStoreSlug field
-- `backend/internal/infrastructure/persistence/app_repository.go` — updated all queries for app_store_slug
-- `backend/internal/interfaces/http/handler/app.go` — added UpdateStoreSlug handler, included slug in ListApps
-- `backend/internal/application/service/sync_service.go` — added WithReviewScraper, scrapeAndStoreReviews
-- `backend/internal/interfaces/http/router/router.go` — registered review + store-slug routes
-- `backend/cmd/server/main.go` — wired review handler, repo, and scraper
+- `backend/internal/domain/entity/app.go` â added AppStoreSlug field
+- `backend/internal/infrastructure/persistence/app_repository.go` â updated all queries for app_store_slug
+- `backend/internal/interfaces/http/handler/app.go` â added UpdateStoreSlug handler, included slug in ListApps
+- `backend/internal/application/service/sync_service.go` â added WithReviewScraper, scrapeAndStoreReviews
+- `backend/internal/interfaces/http/router/router.go` â registered review + store-slug routes
+- `backend/cmd/server/main.go` â wired review handler, repo, and scraper
 
 ---
 
@@ -2419,35 +2430,35 @@ Added backend infrastructure for scraping Shopify App Store reviews. Includes a 
 **Commit:** `38bf1c2` feat: implement queue-based async sync system with Redis
 
 **Summary:**
-Replaced the blocking synchronous sync (`POST /api/v1/sync/{appID}`) with an async, queue-based system using Redis queues + PostgreSQL `sync_jobs` table. The old sync endpoints remain untouched — the new queue system runs alongside with zero breakage. Feature-flagged via `QUEUE_ENABLED`.
+Replaced the blocking synchronous sync (`POST /api/v1/sync/{appID}`) with an async, queue-based system using Redis queues + PostgreSQL `sync_jobs` table. The old sync endpoints remain untouched â the new queue system runs alongside with zero breakage. Feature-flagged via `QUEUE_ENABLED`.
 
 **Architecture:**
-- **Redis queues** (LPUSH/BRPOP): two queues — `lg:sync:queue` (regular) and `lg:sync:queue:full` (full sync)
+- **Redis queues** (LPUSH/BRPOP): two queues â `lg:sync:queue` (regular) and `lg:sync:queue:full` (full sync)
 - **Worker pools**: configurable pool sizes (default: 3 regular, 1 full sync)
 - **Distributed locks**: SETNX with 2h TTL, heartbeat every 10min, lock extension every 1h
 - **Dual-write progress**: Redis HSET every 2s (fast polling), PostgreSQL every 30s (durable)
 - **Recovery service**: startup recovery + periodic 10min check for stuck jobs
 - **7 processors**: transaction, snapshot, event, status, store, review, full_sync (orchestrator)
-- **Full sync orchestration**: Wave 1 (transaction + event + review in parallel) → Wave 2 (snapshot + status + store after transaction completes)
+- **Full sync orchestration**: Wave 1 (transaction + event + review in parallel) â Wave 2 (snapshot + status + store after transaction completes)
 
 **New Endpoints:**
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/v1/sync/enqueue/{appID}?type=full&priority=normal` | Enqueue sync → 202 with job_id |
+| POST | `/api/v1/sync/enqueue/{appID}?type=full&priority=normal` | Enqueue sync â 202 with job_id |
 | GET | `/api/v1/sync/jobs/{jobID}` | Job status from DB |
 | GET | `/api/v1/sync/jobs/{jobID}/progress` | Progress with Redis overlay + children |
 | GET | `/api/v1/sync/jobs?app_id={appID}&status=&job_type=&limit=&offset=` | Paginated job history |
 | POST | `/api/v1/sync/jobs/{jobID}/cancel` | Cooperative cancellation |
 
 **New Files (29):**
-- `backend/internal/infrastructure/queue/client.go` — Redis client factory
-- `backend/internal/infrastructure/queue/queue.go` — Enqueue/Dequeue
-- `backend/internal/infrastructure/queue/lock.go` — Distributed locks + heartbeats
-- `backend/internal/infrastructure/queue/progress.go` — Dual-write progress tracker
-- `backend/internal/infrastructure/queue/recovery.go` — Startup + periodic recovery
-- `backend/internal/infrastructure/queue/processor.go` — SyncProcessor interface + registry
-- `backend/internal/infrastructure/queue/processor_context.go` — Shared preamble
-- `backend/internal/infrastructure/queue/worker.go` — WorkerPool
+- `backend/internal/infrastructure/queue/client.go` â Redis client factory
+- `backend/internal/infrastructure/queue/queue.go` â Enqueue/Dequeue
+- `backend/internal/infrastructure/queue/lock.go` â Distributed locks + heartbeats
+- `backend/internal/infrastructure/queue/progress.go` â Dual-write progress tracker
+- `backend/internal/infrastructure/queue/recovery.go` â Startup + periodic recovery
+- `backend/internal/infrastructure/queue/processor.go` â SyncProcessor interface + registry
+- `backend/internal/infrastructure/queue/processor_context.go` â Shared preamble
+- `backend/internal/infrastructure/queue/worker.go` â WorkerPool
 - `backend/internal/infrastructure/queue/processors/transaction_processor.go`
 - `backend/internal/infrastructure/queue/processors/snapshot_processor.go`
 - `backend/internal/infrastructure/queue/processors/event_processor.go`
@@ -2455,22 +2466,22 @@ Replaced the blocking synchronous sync (`POST /api/v1/sync/{appID}`) with an asy
 - `backend/internal/infrastructure/queue/processors/store_processor.go`
 - `backend/internal/infrastructure/queue/processors/review_processor.go`
 - `backend/internal/infrastructure/queue/processors/full_sync_processor.go`
-- `backend/internal/domain/entity/sync_job.go` — SyncJob entity
-- `backend/internal/domain/entity/app_event.go` — AppEvent entity
-- `backend/internal/domain/repository/sync_job_repository.go` — Interface
-- `backend/internal/domain/repository/app_event_repository.go` — Interface
-- `backend/internal/infrastructure/persistence/sync_job_repository.go` — PostgreSQL impl
-- `backend/internal/infrastructure/persistence/app_event_repository.go` — PostgreSQL impl
-- `backend/internal/application/service/queue_sync_service.go` — Application service
-- `backend/internal/interfaces/http/handler/queue_sync.go` — HTTP handler
+- `backend/internal/domain/entity/sync_job.go` â SyncJob entity
+- `backend/internal/domain/entity/app_event.go` â AppEvent entity
+- `backend/internal/domain/repository/sync_job_repository.go` â Interface
+- `backend/internal/domain/repository/app_event_repository.go` â Interface
+- `backend/internal/infrastructure/persistence/sync_job_repository.go` â PostgreSQL impl
+- `backend/internal/infrastructure/persistence/app_event_repository.go` â PostgreSQL impl
+- `backend/internal/application/service/queue_sync_service.go` â Application service
+- `backend/internal/interfaces/http/handler/queue_sync.go` â HTTP handler
 - `backend/migrations/000033_create_sync_jobs_table.up.sql` + down
 - `backend/migrations/000034_create_app_events_table.up.sql` + down
 
 **Files Modified:**
-- `backend/internal/infrastructure/config/config.go` — Added RedisConfig + QueueConfig
-- `backend/internal/interfaces/http/router/router.go` — Added QueueSyncHandler + 5 routes
-- `backend/cmd/server/main.go` — Full wiring: Redis, repos, processors, worker pools, recovery, handler
-- `backend/go.mod` / `go.sum` — Added redis/go-redis/v9, alicebob/miniredis/v2
+- `backend/internal/infrastructure/config/config.go` â Added RedisConfig + QueueConfig
+- `backend/internal/interfaces/http/router/router.go` â Added QueueSyncHandler + 5 routes
+- `backend/cmd/server/main.go` â Full wiring: Redis, repos, processors, worker pools, recovery, handler
+- `backend/go.mod` / `go.sum` â Added redis/go-redis/v9, alicebob/miniredis/v2
 
 **Tests:** All existing tests pass. Queue-specific tests pending.
 
@@ -2483,18 +2494,18 @@ After a user selects an app during onboarding, a `full_sync` is now automaticall
 
 **Implemented:**
 
-1. **`SyncTrigger` interface** — Defined in `handler/app.go` with a single `TriggerSync(ctx, appID, userID, partnerAccountID)` method
-2. **`QueueSyncService.TriggerSync()`** — Enqueues a `full_sync` job with priority=1 (high); silently swallows duplicate-job errors
-3. **`SyncService.TriggerSync()`** — Fire-and-forget goroutine calling `SyncApp()` for non-queue mode
-4. **`SelectApp` integration** — Calls `syncTrigger.TriggerSync()` after `appRepo.Create()` succeeds; adds `sync_triggered` to JSON response
-5. **`main.go` wiring** — `SetSyncTrigger` with `queueSyncService` (preferred) or `syncService` (fallback)
-6. **Scheduler disable** — `SyncScheduler` is skipped when `cfg.Queue.Enabled=true` (already in main.go, now committed)
+1. **`SyncTrigger` interface** â Defined in `handler/app.go` with a single `TriggerSync(ctx, appID, userID, partnerAccountID)` method
+2. **`QueueSyncService.TriggerSync()`** â Enqueues a `full_sync` job with priority=1 (high); silently swallows duplicate-job errors
+3. **`SyncService.TriggerSync()`** â Fire-and-forget goroutine calling `SyncApp()` for non-queue mode
+4. **`SelectApp` integration** â Calls `syncTrigger.TriggerSync()` after `appRepo.Create()` succeeds; adds `sync_triggered` to JSON response
+5. **`main.go` wiring** â `SetSyncTrigger` with `queueSyncService` (preferred) or `syncService` (fallback)
+6. **Scheduler disable** â `SyncScheduler` is skipped when `cfg.Queue.Enabled=true` (already in main.go, now committed)
 
 **Files Modified:**
-- `backend/internal/interfaces/http/handler/app.go` — SyncTrigger interface, field, setter, SelectApp call
-- `backend/internal/application/service/queue_sync_service.go` — TriggerSync method
-- `backend/internal/application/service/sync_service.go` — TriggerSync method
-- `backend/cmd/server/main.go` — Hoisted queueSyncService var, SetSyncTrigger wiring
+- `backend/internal/interfaces/http/handler/app.go` â SyncTrigger interface, field, setter, SelectApp call
+- `backend/internal/application/service/queue_sync_service.go` â TriggerSync method
+- `backend/internal/application/service/sync_service.go` â TriggerSync method
+- `backend/cmd/server/main.go` â Hoisted queueSyncService var, SetSyncTrigger wiring
 
 **Tests:** All existing tests pass (`go test ./...`).
 
@@ -2507,15 +2518,15 @@ Added 4 read-only admin API endpoints for cross-tenant visibility (users, onboar
 
 **Implemented:**
 
-1. **AdminRepository interface + DTOs** — `AdminUserRow`, `OnboardingFunnel`, `AdminSyncJobRow`, `AdminBillingRow` types and `AdminRepository` interface in domain layer
-2. **PostgresAdminRepository** — SQL queries joining existing tables (`users`, `partner_accounts`, `apps`, `sync_jobs`, `billing_subscriptions`) with no new migrations
-3. **AdminHandler** — 4 HTTP handlers: `ListUsers`, `OnboardingFunnel`, `ListSyncJobs`, `ListBilling`
-4. **EventTracker interface** — Domain service interface with `Track()` and `SetUserProperties()` methods
-5. **MixpanelClient** — Fire-and-forget HTTP client using Mixpanel `/track` and `/engage` endpoints (no SDK dependency)
-6. **NoopTracker** — Silent no-op for dev/test when `MIXPANEL_TOKEN` is empty
-7. **Tracker integration** — Wired into `AuthMiddleware` (user_signup), `AppHandler` (app_selected), `QueueSyncService` (sync_started), `BillingService` (billing lifecycle events), `MetricsHandler` (dashboard_viewed)
-8. **Router + config** — Admin routes under `/api/v1/admin` with `AuthMW + AdminMW`, `MixpanelConfig` in config
-9. **Flutter client-side Mixpanel** — `MixpanelService` in `frontend-flutter/` wrapping `mixpanel_flutter` SDK. Tracks login, signup, logout, dashboard_viewed. Token via `--dart-define=MIXPANEL_TOKEN=...`, no-op when empty.
+1. **AdminRepository interface + DTOs** â `AdminUserRow`, `OnboardingFunnel`, `AdminSyncJobRow`, `AdminBillingRow` types and `AdminRepository` interface in domain layer
+2. **PostgresAdminRepository** â SQL queries joining existing tables (`users`, `partner_accounts`, `apps`, `sync_jobs`, `billing_subscriptions`) with no new migrations
+3. **AdminHandler** â 4 HTTP handlers: `ListUsers`, `OnboardingFunnel`, `ListSyncJobs`, `ListBilling`
+4. **EventTracker interface** â Domain service interface with `Track()` and `SetUserProperties()` methods
+5. **MixpanelClient** â Fire-and-forget HTTP client using Mixpanel `/track` and `/engage` endpoints (no SDK dependency)
+6. **NoopTracker** â Silent no-op for dev/test when `MIXPANEL_TOKEN` is empty
+7. **Tracker integration** â Wired into `AuthMiddleware` (user_signup), `AppHandler` (app_selected), `QueueSyncService` (sync_started), `BillingService` (billing lifecycle events), `MetricsHandler` (dashboard_viewed)
+8. **Router + config** â Admin routes under `/api/v1/admin` with `AuthMW + AdminMW`, `MixpanelConfig` in config
+9. **Flutter client-side Mixpanel** â `MixpanelService` in `frontend-flutter/` wrapping `mixpanel_flutter` SDK. Tracks login, signup, logout, dashboard_viewed. Token via `--dart-define=MIXPANEL_TOKEN=...`, no-op when empty.
 
 **New Files:**
 - `backend/internal/domain/repository/admin_repository.go`
@@ -2532,36 +2543,36 @@ Added 4 read-only admin API endpoints for cross-tenant visibility (users, onboar
 - `docs/diagrams/admin-analytics-flow.excalidraw`
 
 **Files Modified:**
-- `backend/internal/infrastructure/config/config.go` — Added `MixpanelConfig` struct and `MIXPANEL_TOKEN` env override
-- `backend/internal/interfaces/http/router/router.go` — Added `AdminHandler` to Config, wired `/api/v1/admin` routes
-- `backend/cmd/server/main.go` — Wired admin repo, admin handler, event tracker, and setter injection
-- `backend/internal/interfaces/http/middleware/auth.go` — Added tracker field and `user_signup` event
-- `backend/internal/interfaces/http/handler/app.go` — Added tracker field and `app_selected` event
-- `backend/internal/application/service/queue_sync_service.go` — Added tracker field and `sync_started` event
-- `backend/internal/application/service/billing_service.go` — Added tracker field and billing lifecycle events
-- `backend/internal/interfaces/http/handler/metrics.go` — Added tracker field and `dashboard_viewed` event
-- `frontend-flutter/lib/main.dart` — MixpanelService init + Provider registration
-- `frontend-flutter/lib/app.dart` — Wires MixpanelService into AuthProvider
-- `frontend-flutter/lib/providers/auth_provider.dart` — Tracks login, signup, logout, identify/reset
-- `frontend-flutter/lib/screens/dashboard/dashboard_screen.dart` — Tracks dashboard_viewed
-- `frontend-flutter/pubspec.yaml` — Added `mixpanel_flutter: ^2.3.1`
-- `docs/developer/00-index.md` — Added entry #32
-- `DECISIONS.md` — Added ADR-025
-- `IMPLEMENTATION_LOG.md` — This entry
+- `backend/internal/infrastructure/config/config.go` â Added `MixpanelConfig` struct and `MIXPANEL_TOKEN` env override
+- `backend/internal/interfaces/http/router/router.go` â Added `AdminHandler` to Config, wired `/api/v1/admin` routes
+- `backend/cmd/server/main.go` â Wired admin repo, admin handler, event tracker, and setter injection
+- `backend/internal/interfaces/http/middleware/auth.go` â Added tracker field and `user_signup` event
+- `backend/internal/interfaces/http/handler/app.go` â Added tracker field and `app_selected` event
+- `backend/internal/application/service/queue_sync_service.go` â Added tracker field and `sync_started` event
+- `backend/internal/application/service/billing_service.go` â Added tracker field and billing lifecycle events
+- `backend/internal/interfaces/http/handler/metrics.go` â Added tracker field and `dashboard_viewed` event
+- `frontend-flutter/lib/main.dart` â MixpanelService init + Provider registration
+- `frontend-flutter/lib/app.dart` â Wires MixpanelService into AuthProvider
+- `frontend-flutter/lib/providers/auth_provider.dart` â Tracks login, signup, logout, identify/reset
+- `frontend-flutter/lib/screens/dashboard/dashboard_screen.dart` â Tracks dashboard_viewed
+- `frontend-flutter/pubspec.yaml` â Added `mixpanel_flutter: ^2.3.1`
+- `docs/developer/00-index.md` â Added entry #32
+- `DECISIONS.md` â Added ADR-025
+- `IMPLEMENTATION_LOG.md` â This entry
 
-**Tests:** 13 new tests (8 admin handler + 5 event tracker). All existing tests pass (`go test ./...`). Flutter: `flutter analyze` — no issues.
+**Tests:** 13 new tests (8 admin handler + 5 event tracker). All existing tests pass (`go test ./...`). Flutter: `flutter analyze` â no issues.
 
 ---
 
 ## [2026-05-07] Daily Catch-Up Sync (Transactions + Events)
 
 **Summary:**
-Added a daily catch-up sync scheduler that re-syncs recent transactions and events for all active apps with a short lookback window (default 2 days). This fills gaps left by the 12-hour full sync scheduler — if a sync fails or the server is down, the catch-up ensures no transaction data is lost. Runs at a configurable UTC hour (default 3 AM), checks every 15 minutes, and prevents double-runs via `lastRunDate` tracking.
+Added a daily catch-up sync scheduler that re-syncs recent transactions and events for all active apps with a short lookback window (default 2 days). This fills gaps left by the 12-hour full sync scheduler â if a sync fails or the server is down, the catch-up ensures no transaction data is lost. Runs at a configurable UTC hour (default 3 AM), checks every 15 minutes, and prevents double-runs via `lastRunDate` tracking.
 
 **Implemented:**
-- `LookbackDays` field on `SyncJobPayload` in `queue.go` — backward-compatible, 0 = default 1-month window
+- `LookbackDays` field on `SyncJobPayload` in `queue.go` â backward-compatible, 0 = default 1-month window
 - `TransactionProcessor` uses `payload.LookbackDays` when > 0, falling back to 1-month default
-- `EnqueueCatchupSync()` on `QueueSyncService` — enqueues jobs with lookback, silently skips duplicates
+- `EnqueueCatchupSync()` on `QueueSyncService` â enqueues jobs with lookback, silently skips duplicates
 - `DailyCatchupScheduler` (follows `NotificationScheduler` pattern):
   - Checks every 15 min, fires at configurable UTC hour (default 3 AM)
   - Enqueues `transaction_sync` + `event_sync` for all active apps with 2-day lookback
@@ -2575,12 +2586,12 @@ Added a daily catch-up sync scheduler that re-syncs recent transactions and even
 - `backend/internal/application/scheduler/daily_catchup_scheduler.go`
 
 **Files Modified:**
-- `backend/internal/infrastructure/queue/queue.go` — Added `LookbackDays` to `SyncJobPayload`
-- `backend/internal/infrastructure/queue/processors/transaction_processor.go` — Lookback-aware date window
-- `backend/internal/application/service/queue_sync_service.go` — `EnqueueCatchupSync()` method
-- `backend/internal/interfaces/http/handler/admin.go` — `TriggerDailyCatchup` handler
-- `backend/internal/interfaces/http/router/router.go` — Admin + internal routes for daily catchup
-- `backend/cmd/server/main.go` — Scheduler creation, start, shutdown, handler wiring
+- `backend/internal/infrastructure/queue/queue.go` â Added `LookbackDays` to `SyncJobPayload`
+- `backend/internal/infrastructure/queue/processors/transaction_processor.go` â Lookback-aware date window
+- `backend/internal/application/service/queue_sync_service.go` â `EnqueueCatchupSync()` method
+- `backend/internal/interfaces/http/handler/admin.go` â `TriggerDailyCatchup` handler
+- `backend/internal/interfaces/http/router/router.go` â Admin + internal routes for daily catchup
+- `backend/cmd/server/main.go` â Scheduler creation, start, shutdown, handler wiring
 
 **Tests:** All existing tests pass (`go test ./...`).
 
@@ -2618,7 +2629,7 @@ Built a Ruby/Sinatra mock server that mimics Shopify Partner API GraphQL endpoin
 
 | Action | File |
 |--------|------|
-| NEW | `mock-shopify-api/` (entire directory — app.rb, lib/, views/, data/) |
+| NEW | `mock-shopify-api/` (entire directory â app.rb, lib/, views/, data/) |
 | MODIFY | `backend/internal/infrastructure/config/config.go` |
 | MODIFY | `backend/internal/infrastructure/external/shopify_partner_client.go` |
 | MODIFY | `backend/cmd/server/main.go` |
@@ -2632,39 +2643,39 @@ Built a Ruby/Sinatra mock server that mimics Shopify Partner API GraphQL endpoin
 **Date:** 2026-05-08
 
 ### Goal
-Complete the org model wiring so all data endpoints resolve ownership via `org_id → partner_account` instead of `user_id → partner_account`. Previously, the org model tables/entities/middleware/handlers were built but data endpoints still used `FindByUserID`.
+Complete the org model wiring so all data endpoints resolve ownership via `org_id â partner_account` instead of `user_id â partner_account`. Previously, the org model tables/entities/middleware/handlers were built but data endpoints still used `FindByUserID`.
 
 ### What was built
 
-**Phase 1 — Entity + Repository + Persistence:**
+**Phase 1 â Entity + Repository + Persistence:**
 - Added `OrgID uuid.UUID` field to `PartnerAccount` entity
 - Added `FindByOrgID(ctx, orgID)` to `PartnerAccountRepository` interface
 - Updated all SQL queries in persistence layer to include `org_id` column (SELECT, INSERT)
 - Refactored persistence to use shared `scanOne()` helper (DRY)
 - Added `FindByOrgID` stub to all 10 test mock implementations
 
-**Phase 2 — Shared Helper:**
+**Phase 2 â Shared Helper:**
 - New `resolvePartnerAccount(r, partnerRepo)` function in `app_lookup.go`
 - Tries org-based lookup (`FindByOrgID`) first when `OrgFromContext` is present
 - Falls back to user-based lookup (`FindByUserID`) for routes without `OrgContextMW`
 - Updated `lookupAppID` to use `resolvePartnerAccount` (auto-fixes 4 handlers: Transaction, Store, Event, Risk)
 
-**Phase 3 — Handler Updates (26 call sites across 14 files):**
-- Replaced `partnerRepo.FindByUserID(ctx, user.ID)` → `resolvePartnerAccount(r, h.partnerRepo)` in:
+**Phase 3 â Handler Updates (26 call sites across 14 files):**
+- Replaced `partnerRepo.FindByUserID(ctx, user.ID)` â `resolvePartnerAccount(r, h.partnerRepo)` in:
   - `app.go` (7), `sync.go` (2), `metrics.go` (2), `insight.go` (1), `integration_status.go` (1)
   - `fee_handler.go` (1), `subscription.go` (2), `store_health.go` (1), `review.go` (1)
   - `queue_sync.go` (2), `revenue_handler.go` (1), `onboarding_handler.go` (2)
   - `manual_token.go` (2), `export_handler.go` (1)
 - Updated `lookupAppByNumericID` signatures in `revenue_handler.go` and `export_handler.go` to accept `*http.Request` instead of `userID`
 
-**Phase 4 — Router Wiring:**
+**Phase 4 â Router Wiring:**
 - Added `OrgContextMW` (guarded with `if cfg.OrgContextMW != nil`) to:
   - `/api/v1/apps/*` route group
   - `/api/v1/sync/*` route group
   - `/api/v1/metrics/aggregate` endpoint
   - `/api/v1/integrations/shopify/status` endpoint
 
-**Phase 5 — Backend Org Persistence:**
+**Phase 5 â Backend Org Persistence:**
 - Migration 000038: `ALTER TABLE user_preferences ADD COLUMN selected_org_id UUID REFERENCES organizations(id)`
 - Added `SelectedOrgID` field to `UserPreferences` struct
 - New `GET/PUT /api/v1/user/preferences/selected-org` endpoints
@@ -2706,15 +2717,15 @@ Complete the org model wiring so all data endpoints resolve ownership via `org_i
 
 ### Events Page Fixes
 - Added 4 missing `EventType` enum values: `appReactivated`, `appDeactivated`, `subscriptionFrozen`, `subscriptionUnfrozen`
-- Added Shopify Partner API aliases in parser (e.g. `RELATIONSHIP_INSTALLED` → `appInstall`, `SUBSCRIPTION_CHARGE_FROZEN` → `subscriptionFrozen`)
-- Previously unknown types silently fell through to `appInstall` — now properly mapped
+- Added Shopify Partner API aliases in parser (e.g. `RELATIONSHIP_INSTALLED` â `appInstall`, `SUBSCRIPTION_CHARGE_FROZEN` â `subscriptionFrozen`)
+- Previously unknown types silently fell through to `appInstall` â now properly mapped
 - Added icons/colors/badge labels for all new types in events_screen and store_detail_screen
 - Fixed KPI cards: were counting from type-filtered `events` list (always 0 when filter active), now count from unfiltered `_allEvents`
 - Wired `eventType` query param through EventsService to backend API for server-side filtering
-- Added `_typeToApiFilter` map in EventsProvider to translate enum → Shopify API event type strings
+- Added `_typeToApiFilter` map in EventsProvider to translate enum â Shopify API event type strings
 
 ### Webhooks Page Fixes
-- Fixed stale "Today" counts: `mockWebhooks` was a `final` computed at import time — changed to getter so `DateTime.now()` is fresh on each access
+- Fixed stale "Today" counts: `mockWebhooks` was a `final` computed at import time â changed to getter so `DateTime.now()` is fresh on each access
 - Added `demoMode` toggle to WebhookProvider; when `!demoMode`, returns empty list (no backend API yet)
 - Wired WebhookProvider into DemoModeCoordinator
 - Added app filter chip (reuses pattern from events_screen)
@@ -2737,39 +2748,39 @@ Complete the org model wiring so all data endpoints resolve ownership via `org_i
 | MODIFY | `frontend-flutter/lib/core/demo_mode_coordinator.dart` |
 | MODIFY | `frontend-flutter/lib/main.dart` |
 
-**Tests:** `flutter analyze` — no issues.
+**Tests:** `flutter analyze` â no issues.
 
 ---
 
-## [2026-05-09] Feat: Analytics & Earnings — Complete Backend Wiring + Missing Features
+## [2026-05-09] Feat: Analytics & Earnings â Complete Backend Wiring + Missing Features
 
 **Summary:**
 Connected all 5 analytics tabs (Revenue, Forecasting, Profit & Expense, Cohorts, Multi-App) and the Earnings page to their backend APIs. Fixed a P1 bug where 8 of 10 analytics getters returned mock data regardless of demo mode. Built 4 new backend endpoints (forecasting, cohorts, monthly profit, revenue concentration). Added 3 enhancement features (historical snapshot browser, revenue concentration, 30-day earnings outlook).
 
-**Phase 1 — P1 Bug Fix:**
+**Phase 1 â P1 Bug Fix:**
 - Guarded all analytics provider getters with `_demoMode` check
 - Added `LgEmptyState` widgets to all 5 tab files for live mode with no data
 - Mock data no longer leaks into live mode
 
-**Phase 2 — Wire Existing APIs:**
+**Phase 2 â Wire Existing APIs:**
 - Earnings page: wired `/api/v1/tiers`, `/fees/breakdown`, `/fees/summary`, `/earnings/status`
 - Added new models: `FeeBreakdownResponse`, `TierFeeBreakdown`, `FeeSummary`, `EarningsStatus`
 - Revenue tab: wired MRR movements via multi-period metrics queries
 
-**Phase 3 — New Backend Endpoints:**
-- **ForecastingEngine** (`forecasting_engine.go`): Linear regression (OLS) and Holt's exponential smoothing models with ±15% confidence bands. Minimum 90 data points required.
+**Phase 3 â New Backend Endpoints:**
+- **ForecastingEngine** (`forecasting_engine.go`): Linear regression (OLS) and Holt's exponential smoothing models with Â±15% confidence bands. Minimum 90 data points required.
 - **Forecast API** (`GET /apps/{appID}/forecast?model=linear|exponential&months=12`): Returns forecast points with expected/optimistic/pessimistic cents.
 - **Cohort Analysis** (`GET /apps/{appID}/cohorts?months=6`): Groups subscriptions by creation month, calculates retention percentages per cohort.
 - **Monthly Profit** (`GET /apps/{appID}/fees/monthly?months=6`): Monthly P&L breakdown using existing fee verification service.
 - **Revenue Concentration** (`GET /apps/{appID}/revenue/concentration?top=10`): Top stores by revenue with percentage of total.
 
-**Phase 4 — Frontend Wiring:**
+**Phase 4 â Frontend Wiring:**
 - Forecasting tab: model selector toggle (Linear/Exponential SegmentedButton), data points used display
 - Cohorts tab: wired to backend cohort endpoint (already had empty state from Phase 1)
 - Profit tab: expenses loaded from `/fees/monthly` via EarningsService
 - Multi-App tab: new `AppComparison` model, wired to `/metrics/aggregate`, removed dependency on mock ShopifyApp
 
-**Phase 5 — Enhancements:**
+**Phase 5 â Enhancements:**
 - **Revenue Concentration**: Top stores card in Revenue tab showing revenue distribution
 - **Historical Snapshot Browser**: Date picker in analytics header, comparison card showing current vs historical MRR with % change
 - **Earnings Improvements**: "Upcoming 30 Days" section and "Fee Savings" card in Earnings tab
@@ -2792,44 +2803,44 @@ Connected all 5 analytics tabs (Revenue, Forecasting, Profit & Expense, Cohorts,
 | feat: add historical snapshot browser | 5b | 3 |
 | feat: add 30-day earnings outlook and fee savings | 5c | 1 |
 
-**Tests:** `go test ./internal/domain/service/... ./internal/interfaces/http/handler/...` — all pass. `flutter analyze` — no issues.
+**Tests:** `go test ./internal/domain/service/... ./internal/interfaces/http/handler/...` â all pass. `flutter analyze` â no issues.
 
 ---
 
-## [2026-05-09] Snapshot Strategy — Daily Backfill, Query-Time Aggregation & Trend API
+## [2026-05-09] Snapshot Strategy â Daily Backfill, Query-Time Aggregation & Trend API
 
 **Commit:** fix + feat + docs across 5 phases (ADR-041)
 
 **Summary:**
-Optimized snapshot backfill from O(365×n) to O(n log n), added query-time downsampling for weekly/monthly granularity, and created a REST + GraphQL trend API. Decision: single daily table serves all granularities — no separate weekly/monthly tables.
+Optimized snapshot backfill from O(365Ãn) to O(n log n), added query-time downsampling for weekly/monthly granularity, and created a REST + GraphQL trend API. Decision: single daily table serves all granularities â no separate weekly/monthly tables.
 
 **Implemented:**
 
-1. **Fix DEV LIMIT** — `snapshot_processor.go` transaction window changed from 1 month to 12 months
-2. **Optimized Backfill** — Sort transactions once, pointer-based advancement (each tx visited once). `UpsertBatch` writes 365 snapshots in ~7 DB round-trips (batches of 50)
-3. **Granularity Value Object** — `valueobject/granularity.go` with DAILY/WEEKLY/MONTHLY constants + ParseGranularity
-4. **DownsampleSnapshots** — Picks last snapshot per period (end-of-week via ISOWeek, end-of-month). `GetTrendSnapshots` on MetricsAggregationService
-5. **REST Trend API** — `GET /api/v1/apps/{appID}/metrics/trend?months=6&granularity=weekly` returns `{granularity, data_points, snapshots}`
-6. **GraphQL Granularity** — `metricsTrend(granularity: WEEKLY)` enum parameter on schema + chat module tool
-7. **Frontend Wiring** — `MetricsService.fetchMrrTrend()` calls trend API with weekly granularity; Revenue tab chart prefers trend data
+1. **Fix DEV LIMIT** â `snapshot_processor.go` transaction window changed from 1 month to 12 months
+2. **Optimized Backfill** â Sort transactions once, pointer-based advancement (each tx visited once). `UpsertBatch` writes 365 snapshots in ~7 DB round-trips (batches of 50)
+3. **Granularity Value Object** â `valueobject/granularity.go` with DAILY/WEEKLY/MONTHLY constants + ParseGranularity
+4. **DownsampleSnapshots** â Picks last snapshot per period (end-of-week via ISOWeek, end-of-month). `GetTrendSnapshots` on MetricsAggregationService
+5. **REST Trend API** â `GET /api/v1/apps/{appID}/metrics/trend?months=6&granularity=weekly` returns `{granularity, data_points, snapshots}`
+6. **GraphQL Granularity** â `metricsTrend(granularity: WEEKLY)` enum parameter on schema + chat module tool
+7. **Frontend Wiring** â `MetricsService.fetchMrrTrend()` calls trend API with weekly granularity; Revenue tab chart prefers trend data
 
 **Files changed:**
 
 | File | Change |
 |------|--------|
-| `infrastructure/queue/processors/snapshot_processor.go` | Fix 1m → 12m transaction window |
+| `infrastructure/queue/processors/snapshot_processor.go` | Fix 1m â 12m transaction window |
 | `domain/repository/daily_metrics_snapshot_repository.go` | Add `UpsertBatch` to interface |
 | `infrastructure/persistence/daily_metrics_snapshot_repository.go` | Implement `UpsertBatch` with chunked multi-row INSERT |
 | `domain/service/ledger_service.go` | Optimized `BackfillHistoricalSnapshots` |
 | `domain/service/ledger_service_test.go` | 4 new backfill tests + mock snapshot repo |
-| `domain/valueobject/granularity.go` | NEW — Granularity value object |
+| `domain/valueobject/granularity.go` | NEW â Granularity value object |
 | `application/service/metrics_aggregation_service.go` | `DownsampleSnapshots` + `GetTrendSnapshots` |
 | `application/service/metrics_aggregation_service_test.go` | 5 downsample tests |
 | `interfaces/http/handler/metrics.go` | `GetMetricsTrend` handler + TrendProvider |
 | `interfaces/http/router/router.go` | Route: `/{appID}/metrics/trend` |
 | `cmd/server/main.go` | Wire TrendProvider |
 | `chat/graphql/schema.graphql` | Granularity enum |
-| `chat/graphql/helpers.go` | NEW — moved helpers from resolvers |
+| `chat/graphql/helpers.go` | NEW â moved helpers from resolvers |
 | `chat/graphql/schema.resolvers.go` | Granularity parameter |
 | `chat/modules/metrics/tools.go` | granularity param on get_metrics_trend |
 | `chat/modules/metrics/executor.go` | Pass granularity variable |
@@ -2837,23 +2848,23 @@ Optimized snapshot backfill from O(365×n) to O(n log n), added query-time downs
 | `frontend-flutter/lib/providers/analytics_provider.dart` | Weekly trend fetch + getter |
 | `frontend-flutter/lib/models/analytics_model.dart` | Accept `active_mrr_cents` key |
 
-**Tests:** `go test ./...` — all pass. 9 new tests (4 backfill + 5 downsample).
+**Tests:** `go test ./...` â all pass. 9 new tests (4 backfill + 5 downsample).
 
 ---
 
-## [2026-05-09] Feat: Wire Dashboard Preferences — Dynamic KPIs + Widgets via Backend API
+## [2026-05-09] Feat: Wire Dashboard Preferences â Dynamic KPIs + Widgets via Backend API
 
 **Summary:**
 Dashboard KPI cards and secondary widgets are now rendered dynamically from user preferences stored in the backend. Users can customize which 4 KPIs appear as primary cards and which secondary widgets are shown, via a new Dashboard section in Settings. Preferences persist across sessions via `GET/PUT /api/v1/user/preferences/dashboard`.
 
 **Changes:**
-- **Backend `defaultPreferences()`** — Updated defaults to match actual dashboard (`active_mrr`, `renewal_success_rate`, `revenue_at_risk`, `usage_revenue` for KPIs; `mrr_trend`, `risk_distribution_chart`, `forecast`, `revenue_mix_chart`, `weekly_activity` for widgets).
-- **UserPreferencesService** — Added `getDashboardPreferences()` and `saveDashboardPreferences()` methods + `DashboardPrefs` data class.
-- **dashboard_registry.dart** (NEW) — Static registry with `KpiDefinition` and `WidgetDefinition` classes, `kAllKpis` (6 available), `kAllWidgets` (6 available), `kDefaultKpiIds`/`kDefaultWidgetIds` lists, and `lookupKpi()` helper.
-- **DashboardProvider** — Accepts optional `UserPreferencesService`. Manages `primaryKpis` and `secondaryWidgets` lists with `loadDashboardPreferences()` (from API) and `saveDashboardPreferences()` (optimistic update + fire-and-forget PUT). Added `totalRevenueFormatted` getter.
-- **DashboardScreen** — KPI cards rendered via registry loop instead of 4 hardcoded cards. Secondary widgets conditionally rendered based on `dp.secondaryWidgets`. New `_EarningsOverviewCard` widget for `earnings_timeline` (Total Earned, Pending, Available from EarningsProvider). Loads preferences on initState.
-- **SettingsScreen** — New "Dashboard" LgCard between Developer and Organization with CheckboxListTiles for all KPIs (max 4 enforced with snackbar) and all widgets.
-- **main.dart** — Passes `userPreferencesService` to `DashboardProvider` constructor.
+- **Backend `defaultPreferences()`** â Updated defaults to match actual dashboard (`active_mrr`, `renewal_success_rate`, `revenue_at_risk`, `usage_revenue` for KPIs; `mrr_trend`, `risk_distribution_chart`, `forecast`, `revenue_mix_chart`, `weekly_activity` for widgets).
+- **UserPreferencesService** â Added `getDashboardPreferences()` and `saveDashboardPreferences()` methods + `DashboardPrefs` data class.
+- **dashboard_registry.dart** (NEW) â Static registry with `KpiDefinition` and `WidgetDefinition` classes, `kAllKpis` (6 available), `kAllWidgets` (6 available), `kDefaultKpiIds`/`kDefaultWidgetIds` lists, and `lookupKpi()` helper.
+- **DashboardProvider** â Accepts optional `UserPreferencesService`. Manages `primaryKpis` and `secondaryWidgets` lists with `loadDashboardPreferences()` (from API) and `saveDashboardPreferences()` (optimistic update + fire-and-forget PUT). Added `totalRevenueFormatted` getter.
+- **DashboardScreen** â KPI cards rendered via registry loop instead of 4 hardcoded cards. Secondary widgets conditionally rendered based on `dp.secondaryWidgets`. New `_EarningsOverviewCard` widget for `earnings_timeline` (Total Earned, Pending, Available from EarningsProvider). Loads preferences on initState.
+- **SettingsScreen** â New "Dashboard" LgCard between Developer and Organization with CheckboxListTiles for all KPIs (max 4 enforced with snackbar) and all widgets.
+- **main.dart** â Passes `userPreferencesService` to `DashboardProvider` constructor.
 
 **Files changed:** 7 (1 new, 6 modified)
 
@@ -2861,7 +2872,7 @@ Dashboard KPI cards and secondary widgets are now rendered dynamically from user
 |------|--------|
 | `backend/internal/interfaces/http/handler/user_preferences.go` | Modified defaults |
 | `frontend-flutter/lib/services/user_preferences_service.dart` | Added dashboard methods + DashboardPrefs |
-| `frontend-flutter/lib/core/dashboard_registry.dart` | NEW — KPI/widget registry |
+| `frontend-flutter/lib/core/dashboard_registry.dart` | NEW â KPI/widget registry |
 | `frontend-flutter/lib/providers/dashboard_provider.dart` | Prefs loading/saving, totalRevenueFormatted |
 | `frontend-flutter/lib/screens/dashboard/dashboard_screen.dart` | Dynamic rendering |
 | `frontend-flutter/lib/screens/settings/settings_screen.dart` | Dashboard customization section |
@@ -2869,22 +2880,22 @@ Dashboard KPI cards and secondary widgets are now rendered dynamically from user
 
 ---
 
-## Wire Settings Preferences — Notification, Sync & Workspace via Backend API
+## Wire Settings Preferences â Notification, Sync & Workspace via Backend API
 
 **Date:** 2026-05-09
 **Scope:** Full-stack wiring of Settings preferences (notification, sync, workspace) to backend API
 
 ### Problem
-Settings page had 11 settings across 3 cards (Notification, Sync, Workspace) — all local-only in SettingsProvider with hardcoded defaults, lost on page refresh. Backend had a `notification_preferences` table with a different schema (only 4 columns), and no sync/workspace columns in `user_preferences`.
+Settings page had 11 settings across 3 cards (Notification, Sync, Workspace) â all local-only in SettingsProvider with hardcoded defaults, lost on page refresh. Backend had a `notification_preferences` table with a different schema (only 4 columns), and no sync/workspace columns in `user_preferences`.
 
 ### Solution
-1. **Migration 000039** — Extended `notification_preferences` with 6 new columns: `email_enabled`, `slack_enabled`, `churn_alerts_enabled`, `revenue_alerts_enabled`, `review_alerts_enabled`, `risk_threshold_days`
-2. **Migration 000040** — Added 5 sync/workspace columns to `user_preferences`: `auto_sync`, `sync_frequency`, `workspace_name`, `currency`, `timezone`
-3. **Backend entity + repo + handler** — Updated `NotificationPreferences` entity with 6 new fields, updated all SQL in repository (Create, FindByUserID, Update, Upsert), expanded request/response structs in handler
-4. **New endpoints** — Added `GET/PUT /api/v1/user/preferences/settings` for sync/workspace prefs
-5. **Frontend service** — Added `NotificationPrefs`, `SyncWorkspacePrefs` data classes and 4 API methods to `UserPreferencesService`
-6. **SettingsProvider** — Now accepts `UserPreferencesService`, loads prefs on demand, each setter does optimistic update + fire-and-forget PUT
-7. **Settings screen** — Converted to `StatefulWidget`, calls `loadPreferences()` in `initState`
+1. **Migration 000039** â Extended `notification_preferences` with 6 new columns: `email_enabled`, `slack_enabled`, `churn_alerts_enabled`, `revenue_alerts_enabled`, `review_alerts_enabled`, `risk_threshold_days`
+2. **Migration 000040** â Added 5 sync/workspace columns to `user_preferences`: `auto_sync`, `sync_frequency`, `workspace_name`, `currency`, `timezone`
+3. **Backend entity + repo + handler** â Updated `NotificationPreferences` entity with 6 new fields, updated all SQL in repository (Create, FindByUserID, Update, Upsert), expanded request/response structs in handler
+4. **New endpoints** â Added `GET/PUT /api/v1/user/preferences/settings` for sync/workspace prefs
+5. **Frontend service** â Added `NotificationPrefs`, `SyncWorkspacePrefs` data classes and 4 API methods to `UserPreferencesService`
+6. **SettingsProvider** â Now accepts `UserPreferencesService`, loads prefs on demand, each setter does optimistic update + fire-and-forget PUT
+7. **Settings screen** â Converted to `StatefulWidget`, calls `loadPreferences()` in `initState`
 
 ### Files Changed (18 files: 6 new, 12 modified)
 
@@ -2903,7 +2914,7 @@ Settings page had 11 settings across 3 cards (Notification, Sync, Workspace) —
 | `frontend-flutter/lib/providers/settings_provider.dart` | Wired to API, load/save, optimistic updates |
 | `frontend-flutter/lib/main.dart` | Passed userPreferencesService to SettingsProvider |
 | `frontend-flutter/lib/screens/settings/settings_screen.dart` | StatefulWidget, loadPreferences on init |
-| `docs/diagrams/puml/39-settings-preferences-sequence.puml` | NEW — sequence diagram |
+| `docs/diagrams/puml/39-settings-preferences-sequence.puml` | NEW â sequence diagram |
 | `DATABASE_SCHEMA.md` | New migration entries |
 | `IMPLEMENTATION_LOG.md` | This entry |
 | `verification.md` | Verification checklist |

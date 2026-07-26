@@ -1,0 +1,109 @@
+# LedgerGuard — CO-HOST variant (runs alongside checkoutmate on the same VPS).
+# Differences vs the standalone docker-compose.prod.yml:
+#   - NO nginx / certbot here (checkoutmate's nginx + certbot are reused).
+#   - api joins checkoutmate's existing docker network so its nginx can reach it.
+#   - memory limits so a heavy sync can't starve checkoutmate production.
+# Deploy from /opt/ledgerguard:
+#   docker compose -f deploy/cohost/docker-compose.cohost.yml up -d --build
+services:
+  postgres:
+    container_name: ledgerguard-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      POSTGRES_USER: ${DB_USER:-ledgerguard}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-ledgerguard}
+    volumes:
+      - lg_pgdata:/var/lib/postgresql/data
+    networks:
+      - lg-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ledgerguard}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    container_name: ledgerguard-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    mem_limit: 256m
+    command: redis-server --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    volumes:
+      - lg_redisdata:/data
+    networks:
+      - lg-internal
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$REDIS_PASSWORD redis-cli ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    container_name: ledgerguard-api
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    mem_limit: 768m
+    # No host port publish — checkoutmate's nginx reaches it via the shared network.
+    environment:
+      SERVER_PORT: "8080"
+      INTERNAL_KEY: "${INTERNAL_KEY}"
+      # Use the UNIQUE container name, not "postgres" — the api also joins
+      # checkoutmate_default where a service named "postgres" already exists
+      # (name collision would route us to checkoutmate's DB).
+      DB_HOST: "ledgerguard-db"
+      DB_PORT: "5432"
+      DB_USER: "${DB_USER:-ledgerguard}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_NAME: "${DB_NAME:-ledgerguard}"
+      DB_SSLMODE: "disable"
+      DB_MIGRATIONS_PATH: "/app/migrations"
+      REDIS_ADDR: "ledgerguard-redis:6379"   # unique name — avoids collision with checkoutmate's "redis"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      REDIS_DB: "0"
+      FIREBASE_CREDENTIALS_FILE: "/app/firebase-credentials.json"
+      SHOPIFY_CLIENT_ID: "${SHOPIFY_CLIENT_ID}"
+      SHOPIFY_CLIENT_SECRET: "${SHOPIFY_CLIENT_SECRET}"
+      SHOPIFY_REDIRECT_URI: "${SHOPIFY_REDIRECT_URI:-https://api.ledgerspear.com/api/v1/integrations/shopify/callback}"
+      SHOPIFY_SCOPES: "${SHOPIFY_SCOPES:-read_analytics}"
+      SHOPIFY_PARTNER_API_URL: "${SHOPIFY_PARTNER_API_URL}"
+      ENCRYPTION_MASTER_KEY: "${ENCRYPTION_MASTER_KEY}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      OPENAI_MODEL: "${OPENAI_MODEL:-gpt-4o}"
+      RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID}"
+      RAZORPAY_KEY_SECRET: "${RAZORPAY_KEY_SECRET}"
+      RAZORPAY_WEBHOOK_SECRET: "${RAZORPAY_WEBHOOK_SECRET}"
+      RAZORPAY_STARTER_PLAN_ID: "${RAZORPAY_STARTER_PLAN_ID}"
+      RAZORPAY_PRO_PLAN_ID: "${RAZORPAY_PRO_PLAN_ID}"
+      QUEUE_ENABLED: "${QUEUE_ENABLED:-true}"
+      QUEUE_NUM_WORKERS: "${QUEUE_NUM_WORKERS:-3}"
+      QUEUE_FULL_SYNC_WORKERS: "${QUEUE_FULL_SYNC_WORKERS:-1}"
+    volumes:
+      - ../../firebase-credentials.json:/app/firebase-credentials.json:ro
+    networks:
+      - lg-internal
+      - checkoutmate_default   # so checkoutmate-nginx can proxy to ledgerguard-api:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+networks:
+  lg-internal:
+    driver: bridge
+  checkoutmate_default:
+    external: true   # checkoutmate's existing compose network
+
+volumes:
+  lg_pgdata:
+  lg_redisdata:

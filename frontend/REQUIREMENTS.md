@@ -48,7 +48,7 @@ lib/
 - Firebase: Development project
 
 ### Production
-- API: `https://api.ledgerguard.com`
+- API: `https://api.ledgerspear.com`
 - Firebase: Production project
 
 ---

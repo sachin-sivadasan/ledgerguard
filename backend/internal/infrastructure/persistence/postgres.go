@@ -38,3 +38,12 @@ func (db *PostgresDB) Ping(ctx context.Context) error {
 func (db *PostgresDB) Close() {
 	db.Pool.Close()
 }
+
+// MigrationStatus reports the current schema version and dirty flag from the
+// golang-migrate `schema_migrations` table. It returns an error if the table
+// does not exist (migrations were never applied) — used by the health check to
+// surface a half-migrated / broken schema instead of falsely reporting healthy.
+func (db *PostgresDB) MigrationStatus(ctx context.Context) (version int64, dirty bool, err error) {
+	err = db.Pool.QueryRow(ctx, "SELECT version, dirty FROM schema_migrations LIMIT 1").Scan(&version, &dirty)
+	return version, dirty, err
+}

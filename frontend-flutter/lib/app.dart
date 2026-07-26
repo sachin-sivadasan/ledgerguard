@@ -15,6 +15,7 @@ import 'screens/auth/sign_up_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/earnings/earnings_screen.dart';
 import 'screens/insights/insights_screen.dart';
+import 'screens/reports/churn_screen.dart';
 import 'screens/reports/reports_screen.dart';
 import 'screens/reports/revenue_at_risk_screen.dart';
 import 'screens/risk/risk_screen.dart';
@@ -194,6 +195,10 @@ class _AppState extends State<App> {
                   GoRoute(
                     path: 'revenue-at-risk',
                     builder: (c, s) => const RevenueAtRiskScreen(),
+                  ),
+                  GoRoute(
+                    path: 'churn',
+                    builder: (c, s) => const ChurnScreen(),
                   ),
                 ],
               ),

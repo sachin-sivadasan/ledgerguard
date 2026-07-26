@@ -178,6 +178,16 @@ func TestReviewsReport_OutOfRangeRatingExcluded(t *testing.T) {
 	if resp.Sentiment.Positive+resp.Sentiment.Neutral+resp.Sentiment.Negative != 2 {
 		t.Errorf("sentiment total: expected 2, got %+v", resp.Sentiment)
 	}
+	// The recent feed must also exclude the malformed reviews (guards the recent-loop
+	// validRating skip, not just the aggregates).
+	if len(resp.Recent) != 2 {
+		t.Errorf("recent: expected 2 (malformed excluded), got %d", len(resp.Recent))
+	}
+	for _, rev := range resp.Recent {
+		if rev.Text == "corrupt-low" || rev.Text == "corrupt-high" {
+			t.Errorf("recent leaked an out-of-range review: %q", rev.Text)
+		}
+	}
 }
 
 // TestReviewsReport_CSVFieldOrder verifies each CSV column maps to the right field

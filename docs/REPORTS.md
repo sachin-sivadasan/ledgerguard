@@ -208,7 +208,8 @@ Index page: `docs/wireframes/19-reports.svg`.
 | **Retention Cohorts** | ✅ **Shipped** — hardened `backend/.../cohort_handler.go` (13 tests, was 0; M0 baseline fix, deterministic churn date, 500→503, CSV, /reports/cohorts alias) + `frontend-flutter/.../cohorts_screen.dart` + reusable `CohortHeatmap` widget. Merged to main (PR #6). |
 | **Reviews** | ✅ **Shipped** — `backend/.../review_report.go` (16 tests, was 0; new `FindAllByAppID` repo method, avg/distribution/sentiment/recent, out-of-range guard, 503, CSV) + `frontend-flutter/.../reviews_screen.dart`, reusing the `AppReview` model. Merged to main (PR #7). |
 | **Uninstall Context** | ✅ **Shipped** — `backend/.../uninstall_context_handler.go` (16 tests; UNINSTALL* events ↔ subs via ShopifyShopGID, inferred pre-uninstall state, %at-risk-first, median tenure, 503, CSV) + `frontend-flutter/.../uninstall_context_screen.dart`. Merged to main (PR #8). **Retention & Risk category complete.** |
-| Earnings · MRR · Revenue Mix · Usage & One-Time · Usage Trends · Subscriptions · Payout Schedule · Payout History | ⬜ Pending (Revenue & Billing) |
+| **Earnings** | ✅ **Shipped** — `backend/.../earnings_report_handler.go` (12 tests + calculator unit test; reuses EarningsCalculator; Net/Pending/Available/Paid Out reconcile, per-charge timeline, 503, CSV) + `frontend-flutter/.../earnings_report_screen.dart`. Merged to main (PR #9). |
+| MRR · Revenue Mix · Usage & One-Time · Usage Trends · Subscriptions · Payout Schedule · Payout History | ⬜ Pending (Revenue & Billing) |
 | Installs · Activation · Net-New Subscriptions | ⬜ Pending (Growth) |
 | Active Customers · Customer Insights | ⬜ Pending (Customers) |
 | 🛡️ Fee Audit · Payout Accuracy · Ledger Reconciliation | ⬜ Pending (Guard — differentiators) |

@@ -39,6 +39,8 @@ class ReportsScreen extends StatelessWidget {
       _ReportEntry('Usage Trends',
           'Week-over-week usage momentum and top usage customers',
           route: '/reports/usage-trends'),
+      _ReportEntry('Subscriptions', 'Active base, ARPU and lifetime value',
+          route: '/reports/subscriptions'),
       _ReportEntry('Payout Schedule', 'Upcoming payout timing'),
     ]),
     _ReportCategory('Growth', Icons.trending_up_outlined, [

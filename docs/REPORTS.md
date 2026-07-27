@@ -35,7 +35,7 @@ A top-level **Reports** nav item → a Reports landing page modeled on Mantle: a
 | Revenue Mix | RECURRING vs USAGE vs ONE_TIME split | ✅ | transactions |
 | Usage & One-Time Charges | usage/one-time billed | ✅ | transactions |
 | Usage Trends | usage over time, top usage stores | ✅ | transactions |
-| Subscriptions (ARPU / LTV) | active subs, ARPU, LTV | ✅ ARPU / 🟡 LTV | subs + txns |
+| Subscriptions (ARPU / LTV) | active subs, ARPU, LTV | ✅ **Shipped** (PR) | subs + snapshot |
 | Payout Schedule | upcoming Shopify payouts + when | ✅ | `AvailableDate`, `EarningsStatus` |
 | Payout History | historical payouts by app/period | ✅ | paid transactions |
 | Discounts | discount impact on revenue | 🔴 | not synced |
@@ -213,7 +213,8 @@ Index page: `docs/wireframes/19-reports.svg`.
 | **Revenue Mix** | ✅ **Shipped** — `backend/.../revenue_mix_report_handler.go` (13 tests; RECURRING/USAGE/ONE_TIME split, refund adjustment, gross/net, composition segments; unknown-type logged; 503, CSV) + `frontend-flutter/.../revenue_mix_screen.dart` (stacked bar + breakdown). Merged to main (PR #14). |
 | **Usage & One-Time Charges** | ✅ **Shipped** — `backend/.../usage_report_handler.go` (10 tests; USAGE+ONE_TIME only, per-store table, snapshot usage trend; 503, CSV) + `frontend-flutter/.../usage_screen.dart`. Merged to main (PR #15). |
 | **Usage Trends** | ✅ **Shipped** — `backend/.../usage_trends_report_handler.go` (13 tests; USAGE-only ISO-week (Monday-anchored) buckets, signed unclamped WoW app- + per-store level, distinct active-store count; 503, CSV) + `frontend-flutter/.../usage_trends_screen.dart` (Usage MRR-equiv / WoW / active-stores KPIs, weekly trend, top-usage-customers table). Merged to main (PR #16). |
-| Subscriptions · Payout Schedule · Payout History | ⬜ Pending (Revenue & Billing) |
+| **Subscriptions (ARPU / LTV)** | ✅ **Shipped** — `backend/.../subscriptions_report_handler.go` (13 tests; Archetype B composition. Active = SAFE subs; ARPU = ActiveMRR ÷ active subs (floored); LTV = ARPU ÷ monthly churn rate (shared `churnRate` helper → consistent with Churn report, rounded, 0/"—" when churn 0); per-plan ARPU/LTV + share-of-subs; 503, CSV) + `frontend-flutter/.../subscriptions_screen.dart` (Active-subs / ARPU / LTV KPIs, subscriptions-by-plan horizontal bars, plan-detail table). Merged to main (PR #TBD). |
+| Payout Schedule · Payout History | ⬜ Pending (Revenue & Billing) |
 | Installs · Activation · Net-New Subscriptions | ⬜ Pending (Growth) |
 | Active Customers · Customer Insights | ⬜ Pending (Customers) |
 | 🛡️ Fee Audit · Payout Accuracy · Ledger Reconciliation | ⬜ Pending (Guard — differentiators) |

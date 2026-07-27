@@ -11,6 +11,7 @@ import '../providers/mrr_report_provider.dart';
 import '../providers/retention_provider.dart';
 import '../providers/usage_provider.dart';
 import '../providers/usage_trends_provider.dart';
+import '../providers/subscriptions_provider.dart';
 import '../providers/uninstall_context_provider.dart';
 import '../providers/reviews_provider.dart';
 import '../providers/revenue_at_risk_provider.dart';
@@ -38,6 +39,7 @@ class DemoModeCoordinator {
   final RetentionProvider _retentionProvider;
   final UsageProvider _usageProvider;
   final UsageTrendsProvider _usageTrendsProvider;
+  final SubscriptionsProvider _subscriptionsProvider;
   final MrrReportProvider _mrrReportProvider;
   final UninstallContextProvider _uninstallContextProvider;
   final ReviewsProvider _reviewsProvider;
@@ -62,6 +64,7 @@ class DemoModeCoordinator {
     required RetentionProvider retentionProvider,
     required UsageProvider usageProvider,
     required UsageTrendsProvider usageTrendsProvider,
+    required SubscriptionsProvider subscriptionsProvider,
     required MrrReportProvider mrrReportProvider,
     required UninstallContextProvider uninstallContextProvider,
     required ReviewsProvider reviewsProvider,
@@ -84,6 +87,7 @@ class DemoModeCoordinator {
         _retentionProvider = retentionProvider,
         _usageProvider = usageProvider,
         _usageTrendsProvider = usageTrendsProvider,
+        _subscriptionsProvider = subscriptionsProvider,
         _mrrReportProvider = mrrReportProvider,
         _uninstallContextProvider = uninstallContextProvider,
         _reviewsProvider = reviewsProvider,
@@ -109,6 +113,7 @@ class DemoModeCoordinator {
     _retentionProvider.setDemoMode(value);
     _usageProvider.setDemoMode(value);
     _usageTrendsProvider.setDemoMode(value);
+    _subscriptionsProvider.setDemoMode(value);
     _mrrReportProvider.setDemoMode(value);
     _uninstallContextProvider.setDemoMode(value);
     _reviewsProvider.setDemoMode(value);
@@ -139,6 +144,7 @@ class DemoModeCoordinator {
       _retentionProvider.setSelectedApp(appId);
       _usageProvider.setSelectedApp(appId);
       _usageTrendsProvider.setSelectedApp(appId);
+      _subscriptionsProvider.setSelectedApp(appId);
       _mrrReportProvider.setSelectedApp(appId);
       _uninstallContextProvider.setSelectedApp(appId);
       _reviewsProvider.setSelectedApp(appId);

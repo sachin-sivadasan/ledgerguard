@@ -34,7 +34,8 @@ class ReportsScreen extends StatelessWidget {
           route: '/reports/mrr'),
       _ReportEntry('Revenue Mix', 'Recurring vs usage vs one-time',
           route: '/reports/revenue-mix'),
-      _ReportEntry('Usage & One-Time Charges', 'Usage and add-on revenue'),
+      _ReportEntry('Usage & One-Time Charges', 'Usage and add-on revenue',
+          route: '/reports/usage'),
       _ReportEntry('Payout Schedule', 'Upcoming payout timing'),
     ]),
     _ReportCategory('Growth', Icons.trending_up_outlined, [

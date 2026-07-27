@@ -9,6 +9,7 @@ import '../providers/events_provider.dart';
 import '../providers/insights_provider.dart';
 import '../providers/mrr_report_provider.dart';
 import '../providers/retention_provider.dart';
+import '../providers/usage_provider.dart';
 import '../providers/uninstall_context_provider.dart';
 import '../providers/reviews_provider.dart';
 import '../providers/revenue_at_risk_provider.dart';
@@ -34,6 +35,7 @@ class DemoModeCoordinator {
   final ChurnProvider _churnProvider;
   final CohortsProvider _cohortsProvider;
   final RetentionProvider _retentionProvider;
+  final UsageProvider _usageProvider;
   final MrrReportProvider _mrrReportProvider;
   final UninstallContextProvider _uninstallContextProvider;
   final ReviewsProvider _reviewsProvider;
@@ -56,6 +58,7 @@ class DemoModeCoordinator {
     required ChurnProvider churnProvider,
     required CohortsProvider cohortsProvider,
     required RetentionProvider retentionProvider,
+    required UsageProvider usageProvider,
     required MrrReportProvider mrrReportProvider,
     required UninstallContextProvider uninstallContextProvider,
     required ReviewsProvider reviewsProvider,
@@ -76,6 +79,7 @@ class DemoModeCoordinator {
         _churnProvider = churnProvider,
         _cohortsProvider = cohortsProvider,
         _retentionProvider = retentionProvider,
+        _usageProvider = usageProvider,
         _mrrReportProvider = mrrReportProvider,
         _uninstallContextProvider = uninstallContextProvider,
         _reviewsProvider = reviewsProvider,
@@ -99,6 +103,7 @@ class DemoModeCoordinator {
     _churnProvider.setDemoMode(value);
     _cohortsProvider.setDemoMode(value);
     _retentionProvider.setDemoMode(value);
+    _usageProvider.setDemoMode(value);
     _mrrReportProvider.setDemoMode(value);
     _uninstallContextProvider.setDemoMode(value);
     _reviewsProvider.setDemoMode(value);
@@ -127,6 +132,7 @@ class DemoModeCoordinator {
       _churnProvider.setSelectedApp(appId);
       _cohortsProvider.setSelectedApp(appId);
       _retentionProvider.setSelectedApp(appId);
+      _usageProvider.setSelectedApp(appId);
       _mrrReportProvider.setSelectedApp(appId);
       _uninstallContextProvider.setSelectedApp(appId);
       _reviewsProvider.setSelectedApp(appId);

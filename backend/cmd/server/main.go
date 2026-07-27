@@ -399,6 +399,13 @@ func run() error {
 		log.Println("Revenue mix report handler initialized")
 	}
 
+	// Initialize usage & one-time charges report handler
+	var usageReportHandler *handler.UsageReportHandler
+	if txRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
+		usageReportHandler = handler.NewUsageReportHandler(txRepo, snapshotRepo, appRepo, partnerRepo)
+		log.Println("Usage report handler initialized")
+	}
+
 	// Initialize uninstall context report handler
 	var uninstallContextHandler *handler.UninstallContextHandler
 	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -811,6 +818,7 @@ func run() error {
 		MRRReportHandler:                mrrReportHandler,
 		EarningsReportHandler:           earningsReportHandler,
 		RevenueMixReportHandler:         revenueMixReportHandler,
+		UsageReportHandler:              usageReportHandler,
 		UninstallContextHandler:         uninstallContextHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,

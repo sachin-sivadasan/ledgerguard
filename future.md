@@ -6,6 +6,9 @@ Postponed ideas and features for later implementation.
 
 ## Backlog
 
+| Shopify Partner API version bump | P3 | `partnerAPIVersion` (backend/internal/infrastructure/external/shopify_partner_client.go) is centralized to one constant, currently `2025-07` (still supported as of 2026-07, verified via a no-token probe returning 401 not 404). Bump it deliberately before end-of-support: first validate all Partner API queries (FetchApps, FetchTransactions, events, install counts, oauth) against the target schema (2026-04/2026-07) via the shopify-partner skill, since Partner API GraphQL fields can change across versions. Not urgent — 2025-07 works today. |
+
+
 | Feature | Priority | Notes |
 |---------|----------|-------|
 | Welcome & Onboarding Flow (Hybrid) | P1 | n8n + Postmark email drip + in-app checklist; custom webhook support for third-party flow builders; see `docs/prompts/welcome-onboarding-flow.md` |

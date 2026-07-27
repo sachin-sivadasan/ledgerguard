@@ -102,6 +102,12 @@ func (tb *tokenBucket) refill() {
 	tb.lastRefill = now
 }
 
+// partnerAPIVersion is the Shopify Partner API version used for all GraphQL calls
+// (single source of truth). 2025-07 is still supported as of 2026-07. Bump this
+// DELIBERATELY (validate the queries against the new schema first) when it nears
+// end-of-support — Shopify supports each version ~1 year. See future.md.
+const partnerAPIVersion = "2025-07"
+
 // ShopifyPartnerClient handles communication with Shopify Partner API
 type ShopifyPartnerClient struct {
 	httpClient   *http.Client
@@ -339,7 +345,7 @@ func (c *ShopifyPartnerClient) FetchApps(ctx context.Context, organizationID, ac
 	`
 	_ = organizationID
 
-	url := fmt.Sprintf("%s/%s/api/2025-07/graphql.json", c.baseURL, organizationID)
+	url := fmt.Sprintf("%s/%s/api/%s/graphql.json", c.baseURL, organizationID, partnerAPIVersion)
 	log.Printf("Fetching apps from: %s (org: %s, token length: %d)", url, organizationID, len(accessToken))
 
 	reqBody, err := json.Marshal(map[string]string{
@@ -530,7 +536,7 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 		variables["appId"] = appGID
 	}
 
-	url := fmt.Sprintf("%s/%s/api/2025-07/graphql.json", c.baseURL, organizationID)
+	url := fmt.Sprintf("%s/%s/api/%s/graphql.json", c.baseURL, organizationID, partnerAPIVersion)
 
 	reqBody, err := json.Marshal(map[string]interface{}{
 		"query":     query,
@@ -801,7 +807,7 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 		variables["shopId"] = shopGID
 	}
 
-	url := fmt.Sprintf("%s/%s/api/2025-07/graphql.json", c.baseURL, organizationID)
+	url := fmt.Sprintf("%s/%s/api/%s/graphql.json", c.baseURL, organizationID, partnerAPIVersion)
 
 	reqBody, err := json.Marshal(map[string]interface{}{
 		"query":     query,
@@ -1036,7 +1042,7 @@ func (c *ShopifyPartnerClient) fetchInstallEventPage(
 		variables["after"] = cursor
 	}
 
-	url := fmt.Sprintf("%s/%s/api/2025-07/graphql.json", c.baseURL, organizationID)
+	url := fmt.Sprintf("%s/%s/api/%s/graphql.json", c.baseURL, organizationID, partnerAPIVersion)
 
 	reqBody, err := json.Marshal(map[string]interface{}{
 		"query":     query,

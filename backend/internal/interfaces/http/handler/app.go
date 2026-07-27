@@ -94,6 +94,9 @@ func (h *AppHandler) GetAvailableApps(w http.ResponseWriter, r *http.Request) {
 	// Fetch apps from Partner API
 	apps, err := h.partnerClient.FetchApps(r.Context(), partnerAccount.PartnerID, string(decryptedToken))
 	if err != nil {
+		// Log the underlying cause (e.g. Partner API status / GraphQL error) — the 502
+		// response is intentionally generic, but the reason must stay diagnosable.
+		log.Printf("apps: FetchApps failed for partner %s: %v", partnerAccount.PartnerID, err)
 		writeJSONError(w, http.StatusBadGateway, "failed to fetch apps from Partner API")
 		return
 	}

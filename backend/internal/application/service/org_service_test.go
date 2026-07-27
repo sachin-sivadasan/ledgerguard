@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -261,8 +262,10 @@ func TestCreateOrganization(t *testing.T) {
 	if org.Name != "My Org" {
 		t.Errorf("expected name 'My Org', got %q", org.Name)
 	}
-	if org.Slug != "my-org" {
-		t.Errorf("expected slug 'my-org', got %q", org.Slug)
+	// Slug is the generated base plus a short unique suffix (org ID fragment) to
+	// avoid UNIQUE-slug collisions across same-named orgs.
+	if !strings.HasPrefix(org.Slug, "my-org-") || len(org.Slug) <= len("my-org-") {
+		t.Errorf("expected slug to start with 'my-org-' plus a unique suffix, got %q", org.Slug)
 	}
 	if org.PlanTier != valueobject.PlanTierFree {
 		t.Errorf("expected FREE plan, got %s", org.PlanTier)
@@ -293,6 +296,39 @@ func TestCreateOrganization(t *testing.T) {
 	}
 	if auditRepo.entries[0].Action != "org.created" {
 		t.Errorf("expected action 'org.created', got %q", auditRepo.entries[0].Action)
+	}
+}
+
+// TestCreateOrganization_UniqueSlugPerSameName is the regression guard for the slug
+// collision: two orgs with the same name must get distinct (both non-colliding) slugs.
+func TestCreateOrganization_UniqueSlugPerSameName(t *testing.T) {
+	svc, _, _, _, _ := setupOrgService()
+	ctx := context.Background()
+
+	org1, err := svc.CreateOrganization(ctx, "My Org", uuid.New())
+	if err != nil {
+		t.Fatalf("org1: %v", err)
+	}
+	org2, err := svc.CreateOrganization(ctx, "My Org", uuid.New())
+	if err != nil {
+		t.Fatalf("org2: %v", err)
+	}
+	if org1.Slug == org2.Slug {
+		t.Errorf("expected distinct slugs for same-named orgs, both got %q", org1.Slug)
+	}
+}
+
+// TestCreateOrganization_SlugFitsColumn verifies a very long name still yields a slug
+// within the slug VARCHAR(100) column limit.
+func TestCreateOrganization_SlugFitsColumn(t *testing.T) {
+	svc, _, _, _, _ := setupOrgService()
+	longName := strings.Repeat("a", 300)
+	org, err := svc.CreateOrganization(context.Background(), longName, uuid.New())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(org.Slug) > 100 {
+		t.Errorf("slug exceeds VARCHAR(100): len=%d", len(org.Slug))
 	}
 }
 

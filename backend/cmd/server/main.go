@@ -557,6 +557,7 @@ func run() error {
 	var orgHandler *handler.OrgHandler
 	var orgAuditHandler *handler.OrgAuditHandler
 	var orgContextMW func(http.Handler) http.Handler
+	var orgService *appservice.OrgService // also used to provision a default org for new users
 	if db != nil && userRepo != nil {
 		orgRepo := persistence.NewPostgresOrganizationRepository(db.Pool)
 		memberRepo := persistence.NewPostgresMemberRepository(db.Pool)
@@ -564,7 +565,7 @@ func run() error {
 		orgAuditRepo := persistence.NewPostgresOrgAuditRepository(db.Pool)
 
 		orgAuditService := appservice.NewOrgAuditService(orgAuditRepo)
-		orgService := appservice.NewOrgService(orgRepo, memberRepo, invitationRepo, orgAuditService)
+		orgService = appservice.NewOrgService(orgRepo, memberRepo, invitationRepo, orgAuditService)
 
 		orgHandler = handler.NewOrgHandler(orgService)
 		orgAuditHandler = handler.NewOrgAuditHandler(orgAuditService)
@@ -742,6 +743,10 @@ func run() error {
 	if firebaseAuth != nil && userRepo != nil {
 		authMiddleware := middleware.NewAuthMiddleware(firebaseAuth, userRepo)
 		authMiddleware.SetTracker(tracker)
+		if orgService != nil {
+			// Provision a default org for each new user on first login.
+			authMiddleware.SetOrgProvisioner(orgService)
+		}
 		authMW = authMiddleware.Authenticate
 		log.Println("Auth middleware initialized")
 	}

@@ -46,6 +46,23 @@ func (m *mockUserRepository) Update(ctx context.Context, user *entity.User) erro
 	return nil
 }
 
+type mockOrgProvisioner struct {
+	called     bool
+	gotName    string
+	gotCreator uuid.UUID
+	err        error
+}
+
+func (m *mockOrgProvisioner) CreateOrganization(ctx context.Context, name string, creatorID uuid.UUID) (*entity.Organization, error) {
+	m.called = true
+	m.gotName = name
+	m.gotCreator = creatorID
+	if m.err != nil {
+		return nil, m.err
+	}
+	return &entity.Organization{ID: uuid.New(), Name: name}, nil
+}
+
 func TestAuthMiddleware_MissingAuthorizationHeader(t *testing.T) {
 	verifier := &mockTokenVerifier{}
 	userRepo := &mockUserRepository{}
@@ -196,6 +213,102 @@ func TestAuthMiddleware_NewUser_AutoCreate(t *testing.T) {
 
 	if ctxUser == nil {
 		t.Fatal("expected user in context")
+	}
+}
+
+func TestAuthMiddleware_NewUser_ProvisionsOrg(t *testing.T) {
+	verifier := &mockTokenVerifier{
+		claims: &service.TokenClaims{UID: "new-uid", Email: "newuser@example.com"},
+	}
+	userRepo := &mockUserRepository{findErr: ErrUserNotFound}
+	provisioner := &mockOrgProvisioner{}
+	mw := NewAuthMiddleware(verifier, userRepo)
+	mw.SetOrgProvisioner(provisioner)
+
+	handler := mw.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if !provisioner.called {
+		t.Fatal("expected org to be provisioned for new user")
+	}
+	if provisioner.gotName != "newuser's Organization" {
+		t.Errorf("org name: expected \"newuser's Organization\", got %q", provisioner.gotName)
+	}
+	if userRepo.created == nil || provisioner.gotCreator != userRepo.created.ID {
+		t.Errorf("org creator: expected new user's ID %v, got %v", userRepo.created.ID, provisioner.gotCreator)
+	}
+}
+
+func TestAuthMiddleware_ExistingUser_NoProvision(t *testing.T) {
+	verifier := &mockTokenVerifier{
+		claims: &service.TokenClaims{UID: "existing-uid", Email: "e@example.com"},
+	}
+	userRepo := &mockUserRepository{user: &entity.User{ID: uuid.New(), FirebaseUID: "existing-uid"}}
+	provisioner := &mockOrgProvisioner{}
+	mw := NewAuthMiddleware(verifier, userRepo)
+	mw.SetOrgProvisioner(provisioner)
+
+	handler := mw.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	if provisioner.called {
+		t.Error("expected NO org provisioning for an existing user")
+	}
+}
+
+func TestAuthMiddleware_ProvisionError_DoesNotBlockLogin(t *testing.T) {
+	verifier := &mockTokenVerifier{
+		claims: &service.TokenClaims{UID: "new-uid", Email: "newuser@example.com"},
+	}
+	userRepo := &mockUserRepository{findErr: ErrUserNotFound}
+	provisioner := &mockOrgProvisioner{err: errors.New("org create failed")}
+	mw := NewAuthMiddleware(verifier, userRepo)
+	mw.SetOrgProvisioner(provisioner)
+
+	var ctxUser *entity.User
+	handler := mw.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctxUser = UserFromContext(r.Context())
+		w.WriteHeader(http.StatusOK)
+	}))
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	// A provisioning failure must not block login — the user is still created and served.
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 despite org-provision failure, got %d", rec.Code)
+	}
+	if ctxUser == nil {
+		t.Error("expected user in context despite org-provision failure")
+	}
+	// The user must still be persisted (this is the state the backfill later recovers).
+	if userRepo.created == nil {
+		t.Error("expected user to be created even when org provisioning fails")
+	}
+}
+
+func TestDefaultOrgName(t *testing.T) {
+	cases := map[string]string{
+		"alice@shop.com": "alice's Organization",
+		"bob@x.io":       "bob's Organization",
+		"":               "My Organization",
+		"@nolocal.com":   "My Organization",
+		"noatsign":       "My Organization",
+	}
+	for email, want := range cases {
+		if got := defaultOrgName(email); got != want {
+			t.Errorf("defaultOrgName(%q): expected %q, got %q", email, want, got)
+		}
 	}
 }
 

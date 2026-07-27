@@ -17,6 +17,7 @@ import 'screens/earnings/earnings_screen.dart';
 import 'screens/insights/insights_screen.dart';
 import 'screens/reports/churn_screen.dart';
 import 'screens/reports/cohorts_screen.dart';
+import 'screens/reports/earnings_report_screen.dart';
 import 'screens/reports/reports_screen.dart';
 import 'screens/reports/retention_screen.dart';
 import 'screens/reports/reviews_screen.dart';
@@ -219,6 +220,10 @@ class _AppState extends State<App> {
                   GoRoute(
                     path: 'uninstall-context',
                     builder: (c, s) => const UninstallContextScreen(),
+                  ),
+                  GoRoute(
+                    path: 'earnings',
+                    builder: (c, s) => const EarningsReportScreen(),
                   ),
                 ],
               ),

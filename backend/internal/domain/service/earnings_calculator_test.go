@@ -165,6 +165,25 @@ func TestEarningsCalculator_ProcessTransaction(t *testing.T) {
 	}
 }
 
+// TestEarningsCalculator_SummarizeEarnings_IgnoresUnknownStatus pins that a
+// transaction with an unrecognized/empty EarningsStatus contributes to no bucket, so
+// TotalCents (used as the Earnings report's Net) never silently includes it.
+func TestEarningsCalculator_SummarizeEarnings_IgnoresUnknownStatus(t *testing.T) {
+	calc := NewEarningsCalculator()
+	txs := []*entity.Transaction{
+		{NetAmountCents: 1000, EarningsStatus: entity.EarningsStatusPending},
+		{NetAmountCents: 5000, EarningsStatus: entity.EarningsStatus("DISPUTED")},
+		{NetAmountCents: 3000, EarningsStatus: entity.EarningsStatus("")},
+	}
+	summary := calc.SummarizeEarnings(txs)
+	if summary.PendingCents != 1000 || summary.AvailableCents != 0 || summary.PaidOutCents != 0 {
+		t.Errorf("unknown-status leaked into a bucket: %+v", summary)
+	}
+	if summary.TotalCents() != 1000 {
+		t.Errorf("TotalCents = %d, want 1000 (unknown-status net excluded)", summary.TotalCents())
+	}
+}
+
 func TestEarningsCalculator_SummarizeEarnings(t *testing.T) {
 	calc := NewEarningsCalculator()
 	now := time.Date(2024, 1, 25, 10, 0, 0, 0, time.UTC)

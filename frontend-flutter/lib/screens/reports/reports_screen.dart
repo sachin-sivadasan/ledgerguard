@@ -47,7 +47,8 @@ class ReportsScreen extends StatelessWidget {
           route: '/reports/payout-history'),
     ]),
     _ReportCategory('Growth', Icons.trending_up_outlined, [
-      _ReportEntry('Installs', 'New installs over time'),
+      _ReportEntry('Installs', 'New installs over time',
+          route: '/reports/installs'),
       _ReportEntry('Activation', 'Install-to-paid funnel'),
       _ReportEntry('Net-New Subscriptions', 'New paying subscriptions'),
     ]),

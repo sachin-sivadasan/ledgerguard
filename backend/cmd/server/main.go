@@ -441,6 +441,13 @@ func run() error {
 		log.Println("Uninstall context handler initialized")
 	}
 
+	// Initialize installs report handler (Growth, Archetype A — install/uninstall trend)
+	var installsReportHandler *handler.InstallsReportHandler
+	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
+		installsReportHandler = handler.NewInstallsReportHandler(subscriptionRepo, appEventRepo, appRepo, partnerRepo)
+		log.Println("Installs report handler initialized")
+	}
+
 	// Initialize risk handler
 	var riskHandler *handler.RiskHandler
 	if subscriptionRepo != nil && partnerRepo != nil && appRepo != nil {
@@ -852,6 +859,7 @@ func run() error {
 		PayoutScheduleReportHandler:     payoutScheduleReportHandler,
 		PayoutHistoryReportHandler:      payoutHistoryReportHandler,
 		UninstallContextHandler:         uninstallContextHandler,
+		InstallsReportHandler:           installsReportHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,
 		OrgAuditHandler:                 orgAuditHandler,

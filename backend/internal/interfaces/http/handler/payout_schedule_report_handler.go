@@ -165,6 +165,10 @@ func buildPayoutScheduleReport(txs []*entity.Transaction) payoutScheduleReport {
 	}
 	sortPayoutScheduleRows(rows)
 
+	// The sort puts the earliest scheduled date first and sinks unscheduled ("") rows
+	// last, so rows[0] is the next payout date — or "" only when every row is
+	// unscheduled (then rows[0].AvailableDate is itself "", so the != "" check is
+	// belt-and-suspenders, kept for intent).
 	nextPayoutDate := ""
 	if len(rows) > 0 && rows[0].AvailableDate != "" {
 		nextPayoutDate = rows[0].AvailableDate

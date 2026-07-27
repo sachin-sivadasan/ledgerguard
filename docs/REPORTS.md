@@ -211,7 +211,8 @@ Index page: `docs/wireframes/19-reports.svg`.
 | **Earnings** | ✅ **Shipped** — `backend/.../earnings_report_handler.go` (12 tests + calculator unit test; reuses EarningsCalculator; Net/Pending/Available/Paid Out reconcile, per-charge timeline, 503, CSV) + `frontend-flutter/.../earnings_report_screen.dart`. Merged to main (PR #9). |
 | **Monthly Recurring Revenue** | ✅ **Shipped** — `backend/.../mrr_report_handler.go` (14 tests; ActiveMRR + signed unclamped MoM, new/churned movement, MRR-by-plan; 503, CSV) + `frontend-flutter/.../mrr_report_screen.dart`. Merged to main (PR #10). |
 | **Revenue Mix** | ✅ **Shipped** — `backend/.../revenue_mix_report_handler.go` (13 tests; RECURRING/USAGE/ONE_TIME split, refund adjustment, gross/net, composition segments; unknown-type logged; 503, CSV) + `frontend-flutter/.../revenue_mix_screen.dart` (stacked bar + breakdown). Merged to main (PR #14). |
-| Usage & One-Time · Usage Trends · Subscriptions · Payout Schedule · Payout History | ⬜ Pending (Revenue & Billing) |
+| **Usage & One-Time Charges** | ✅ **Shipped** — `backend/.../usage_report_handler.go` (10 tests; USAGE+ONE_TIME only, per-store table, snapshot usage trend; 503, CSV) + `frontend-flutter/.../usage_screen.dart`. Merged to main (PR #15). |
+| Usage Trends · Subscriptions · Payout Schedule · Payout History | ⬜ Pending (Revenue & Billing) |
 | Installs · Activation · Net-New Subscriptions | ⬜ Pending (Growth) |
 | Active Customers · Customer Insights | ⬜ Pending (Customers) |
 | 🛡️ Fee Audit · Payout Accuracy · Ledger Reconciliation | ⬜ Pending (Guard — differentiators) |

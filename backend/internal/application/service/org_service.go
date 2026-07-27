@@ -54,7 +54,12 @@ func (s *OrgService) CreateOrganization(ctx context.Context, name string, creato
 	// identically (e.g. two invalid-email signups → "my-organization", or
 	// alice@a.com / alice@b.io) don't collide on the UNIQUE slug column. Slug is
 	// not used for routing (orgs resolve by ID), so the suffix is cosmetic-only.
-	org.Slug = generateSlug(name) + "-" + org.ID.String()[:8]
+	// Cap the base so base(≤91) + "-" + 8-char fragment fits slug's VARCHAR(100).
+	base := generateSlug(name)
+	if len(base) > 91 {
+		base = base[:91]
+	}
+	org.Slug = base + "-" + org.ID.String()[:8]
 
 	if err := s.orgRepo.Create(ctx, org); err != nil {
 		return nil, err

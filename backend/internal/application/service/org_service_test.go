@@ -299,6 +299,39 @@ func TestCreateOrganization(t *testing.T) {
 	}
 }
 
+// TestCreateOrganization_UniqueSlugPerSameName is the regression guard for the slug
+// collision: two orgs with the same name must get distinct (both non-colliding) slugs.
+func TestCreateOrganization_UniqueSlugPerSameName(t *testing.T) {
+	svc, _, _, _, _ := setupOrgService()
+	ctx := context.Background()
+
+	org1, err := svc.CreateOrganization(ctx, "My Org", uuid.New())
+	if err != nil {
+		t.Fatalf("org1: %v", err)
+	}
+	org2, err := svc.CreateOrganization(ctx, "My Org", uuid.New())
+	if err != nil {
+		t.Fatalf("org2: %v", err)
+	}
+	if org1.Slug == org2.Slug {
+		t.Errorf("expected distinct slugs for same-named orgs, both got %q", org1.Slug)
+	}
+}
+
+// TestCreateOrganization_SlugFitsColumn verifies a very long name still yields a slug
+// within the slug VARCHAR(100) column limit.
+func TestCreateOrganization_SlugFitsColumn(t *testing.T) {
+	svc, _, _, _, _ := setupOrgService()
+	longName := strings.Repeat("a", 300)
+	org, err := svc.CreateOrganization(context.Background(), longName, uuid.New())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(org.Slug) > 100 {
+		t.Errorf("slug exceeds VARCHAR(100): len=%d", len(org.Slug))
+	}
+}
+
 func TestInviteMember_Success(t *testing.T) {
 	svc, _, _, _, _ := setupOrgService()
 	ctx := context.Background()

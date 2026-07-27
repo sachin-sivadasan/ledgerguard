@@ -24,6 +24,7 @@ import 'screens/reports/retention_screen.dart';
 import 'screens/reports/reviews_screen.dart';
 import 'screens/reports/revenue_at_risk_screen.dart';
 import 'screens/reports/revenue_mix_screen.dart';
+import 'screens/reports/usage_screen.dart';
 import 'screens/reports/uninstall_context_screen.dart';
 import 'screens/risk/risk_screen.dart';
 import 'screens/settings/connect_shopify_screen.dart';
@@ -210,6 +211,10 @@ class _AppState extends State<App> {
                   GoRoute(
                     path: 'retention',
                     builder: (c, s) => const RetentionScreen(),
+                  ),
+                  GoRoute(
+                    path: 'usage',
+                    builder: (c, s) => const UsageScreen(),
                   ),
                   GoRoute(
                     path: 'cohorts',

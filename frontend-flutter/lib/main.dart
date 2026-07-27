@@ -21,6 +21,7 @@ import 'providers/events_provider.dart';
 import 'providers/insights_provider.dart';
 import 'providers/mrr_report_provider.dart';
 import 'providers/retention_provider.dart';
+import 'providers/usage_provider.dart';
 import 'providers/reviews_provider.dart';
 import 'providers/revenue_at_risk_provider.dart';
 import 'providers/revenue_mix_provider.dart';
@@ -43,6 +44,7 @@ import 'services/insights_service.dart';
 import 'services/metrics_service.dart';
 import 'services/mrr_report_service.dart';
 import 'services/retention_service.dart';
+import 'services/usage_service.dart';
 import 'services/reviews_service.dart';
 import 'services/mixpanel_service.dart';
 import 'services/revenue_at_risk_service.dart';
@@ -78,6 +80,7 @@ void main() async {
   final churnService = ChurnService(apiClient);
   final cohortsService = CohortsService(apiClient);
   final retentionService = RetentionService(apiClient);
+  final usageService = UsageService(apiClient);
   final mrrReportService = MrrReportService(apiClient);
   final uninstallContextService = UninstallContextService(apiClient);
   final reviewsService = ReviewsService(apiClient);
@@ -101,6 +104,7 @@ void main() async {
   final churnProvider = ChurnProvider(churnService);
   final cohortsProvider = CohortsProvider(cohortsService);
   final retentionProvider = RetentionProvider(retentionService);
+  final usageProvider = UsageProvider(usageService);
   final mrrReportProvider = MrrReportProvider(mrrReportService);
   final uninstallContextProvider =
       UninstallContextProvider(uninstallContextService);
@@ -124,6 +128,7 @@ void main() async {
     churnProvider: churnProvider,
     cohortsProvider: cohortsProvider,
     retentionProvider: retentionProvider,
+    usageProvider: usageProvider,
     mrrReportProvider: mrrReportProvider,
     uninstallContextProvider: uninstallContextProvider,
     reviewsProvider: reviewsProvider,
@@ -154,6 +159,7 @@ void main() async {
         ChangeNotifierProvider.value(value: churnProvider),
         ChangeNotifierProvider.value(value: cohortsProvider),
         ChangeNotifierProvider.value(value: retentionProvider),
+        ChangeNotifierProvider.value(value: usageProvider),
         ChangeNotifierProvider.value(value: mrrReportProvider),
         ChangeNotifierProvider.value(value: uninstallContextProvider),
         ChangeNotifierProvider.value(value: reviewsProvider),

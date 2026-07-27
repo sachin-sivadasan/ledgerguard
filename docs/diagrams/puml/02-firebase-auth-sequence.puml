@@ -9,6 +9,7 @@ participant "Firebase Auth" as FBAuth
 participant "AuthMiddleware" as MW
 participant "Firebase Admin SDK" as Admin
 participant "UserRepository" as Repo
+participant "OrgService\n(OrgProvisioner)" as Org
 database "PostgreSQL" as DB
 
 == Login ==
@@ -37,6 +38,12 @@ else First-time user
   Repo -> DB: INSERT INTO users
   DB --> Repo: OK
   Repo --> MW: user
+  MW -> Org: CreateOrganization(defaultOrgName(email), user.ID)
+  note right: Provision a default FREE org +\nOWNER membership so org-scoped\nroutes (/token, metrics, ...) work.\nFailure is logged, not fatal.
+  Org -> DB: INSERT INTO organizations
+  Org -> DB: INSERT INTO org_members (OWNER)
+  DB --> Org: OK
+  Org --> MW: org
 end
 
 MW -> MW: context.WithValue(user)

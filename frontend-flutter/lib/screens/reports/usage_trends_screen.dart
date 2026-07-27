@@ -198,12 +198,12 @@ class _HeroRow extends StatelessWidget {
         label: 'Usage MRR-equiv',
         value: _money(report.usageMrrEquivCents, currency),
         color: LgColors.textPrimary,
-        footnote: 'trailing-window usage (≈ monthly for a 30-day range)',
+        footnote: 'total usage in the selected window (≈ monthly at a 30-day range)',
       ),
       _KpiCard(
         label: 'WoW Change',
         valueWidget: _WowDelta(pct: report.wowChangePct),
-        footnote: 'week-over-week usage growth',
+        footnote: 'latest vs prior weekly bucket (latest week may be partial)',
       ),
       _KpiCard(
         label: 'Active Usage Stores',
@@ -405,7 +405,7 @@ class _TrendCard extends StatelessWidget {
           ),
           const SizedBox(height: LgSpacing.s200),
           Text(
-            'Weekly USAGE revenue — week-over-week momentum drives the WoW figure above.',
+            'Weekly USAGE revenue — the WoW figure above compares the last two weekly buckets.',
             style: Theme.of(context)
                 .textTheme
                 .bodySmall

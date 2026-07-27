@@ -141,20 +141,22 @@ func TestUsageTrends_WeeklyBucketing(t *testing.T) {
 }
 
 // TestUsageTrends_WowSignedPositiveAndNegative verifies wowChangePct is the SIGNED,
-// UNCLAMPED ratio: a doubling week yields +1.0 and a halving week yields -0.5.
+// UNCLAMPED ratio: a >2x growth week yields >+1.0 (proves no min(r,1.0) clamp) and a
+// halving week yields -0.5.
 func TestUsageTrends_WowSignedPositiveAndNegative(t *testing.T) {
 	appID := uuid.New()
 	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
 
-	// Growth: week1=10000 → week2=20000 ⇒ (20000-10000)/10000 = +1.0.
+	// Growth: week1=10000 → week2=35000 ⇒ (35000-10000)/10000 = +2.5 (>1, so a clamp
+	// to 1.0 would be caught).
 	grow := []*entity.Transaction{
 		usageTrendsTx(appID, "a.myshopify.com", "Acme", 10000, utWeek1Mon),
-		usageTrendsTx(appID, "a.myshopify.com", "Acme", 20000, utWeek2Mon),
+		usageTrendsTx(appID, "a.myshopify.com", "Acme", 35000, utWeek2Mon),
 	}
 	h := newUsageTrendsHandler(appID, pa, &mockTxRepo{transactions: grow})
 	resp := decodeUsageTrends(t, doUsageTrends(t, h, appID, pa, ""))
-	if resp.WowChangePct != 1.0 {
-		t.Errorf("wowChangePct (doubling): expected +1.0 (unclamped), got %v", resp.WowChangePct)
+	if resp.WowChangePct != 2.5 {
+		t.Errorf("wowChangePct (2.5x growth): expected +2.5 (unclamped), got %v", resp.WowChangePct)
 	}
 
 	// Shrink: week1=10000 → week2=5000 ⇒ (5000-10000)/10000 = -0.5.

@@ -135,9 +135,9 @@ func wowPct(latest, prior int64) float64 {
 }
 
 // weeklyUsage buckets USAGE transactions into ISO-week buckets keyed by the Monday of
-// each tx's TransactionDate (formatted dateLayout), summing AmountCents() (net). Only
-// USAGE transactions are considered; callers must pre-filter or pass mixed txs — this
-// helper skips every non-USAGE type itself so it stays strictly MRR-separated.
+// each tx's TransactionDate (formatted dateLayout), summing AmountCents() (net). It
+// skips every non-USAGE type itself (callers may pass mixed txs), so the buckets stay
+// strictly MRR-separated.
 func weeklyUsage(txs []*entity.Transaction) map[string]int64 {
 	buckets := map[string]int64{}
 	for _, tx := range txs {

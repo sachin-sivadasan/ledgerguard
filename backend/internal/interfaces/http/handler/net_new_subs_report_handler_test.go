@@ -107,6 +107,54 @@ func TestNetNewSubs_KPIsAndNet(t *testing.T) {
 	}
 }
 
+// TestNetNewSubs_UsesStartDateNotCreatedAt verifies "new" is keyed off StartDate()
+// (ActivatedAt — the real business start), NOT CreatedAt (the record-created timestamp
+// that resets on every rebuild). A sub whose ActivatedAt is in range but CreatedAt is
+// out counts; the reverse does not.
+func TestNetNewSubs_UsesStartDateNotCreatedAt(t *testing.T) {
+	appID := uuid.New()
+	inRangeStart := nnJul10
+	outOfRangeStart := nnJun
+
+	// A: ActivatedAt in range, CreatedAt OUT of range (Sept) → counts as new.
+	a := nnNewSub(appID, "a.myshopify.com", "Pro", 1000, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+	a.ActivatedAt = &inRangeStart
+	// B: ActivatedAt OUT of range (June), CreatedAt in range → does NOT count.
+	b := nnNewSub(appID, "b.myshopify.com", "Pro", 1000, nnJul15)
+	b.ActivatedAt = &outOfRangeStart
+
+	_, pa, h := nnFixture([]*entity.Subscription{a, b})
+	resp := decodeNetNew(t, doNetNew(t, h, appID, pa, nnRange))
+	if resp.NewSubs != 1 {
+		t.Errorf("newSubs: expected 1 (grouped by StartDate/ActivatedAt, not CreatedAt), got %d", resp.NewSubs)
+	}
+	if len(resp.NewStores) != 1 || resp.NewStores[0].Domain != "a.myshopify.com" {
+		t.Fatalf("expected only sub A (ActivatedAt in range), got %+v", resp.NewStores)
+	}
+	if resp.NewStores[0].Started != "2026-07-10" { // the StartDate, not CreatedAt (Sept)
+		t.Errorf("started: expected ActivatedAt date 2026-07-10, got %q", resp.NewStores[0].Started)
+	}
+}
+
+// TestNetNewSubs_NilChurnDateFallsBackToUpdatedAt verifies a churned sub with no charge
+// dates (cancelled before its first charge) is counted via the UpdatedAt fallback rather
+// than silently dropped from the churn count.
+func TestNetNewSubs_NilChurnDateFallsBackToUpdatedAt(t *testing.T) {
+	appID := uuid.New()
+	s := atRiskSub(appID, "x.myshopify.com", "Pro", 1000, valueobject.RiskStateChurned)
+	s.ExpectedNextChargeDate = nil // no charge dates at all → churnedDateOf returns nil
+	s.LastRecurringChargeDate = nil
+	s.UpdatedAt = nnJul20 // cancel time, in range
+	_, pa, h := nnFixture([]*entity.Subscription{s})
+	resp := decodeNetNew(t, doNetNew(t, h, appID, pa, nnRange))
+	if resp.Churned != 1 {
+		t.Errorf("churned: expected 1 (UpdatedAt fallback, not silently dropped), got %d", resp.Churned)
+	}
+	if resp.Net != -1 {
+		t.Errorf("net: expected -1, got %d", resp.Net)
+	}
+}
+
 // TestNetNewSubs_StartAndChurnSamePeriodCountsBoth verifies a sub that both starts and
 // churns in the window counts in BOTH new and churned (net contribution 0).
 func TestNetNewSubs_StartAndChurnSamePeriodCountsBoth(t *testing.T) {

@@ -142,7 +142,10 @@ func buildCohorts(subscriptions []*entity.Subscription, months int, now time.Tim
 	cutoffMonth := time.Date(now.Year(), now.Month()-time.Month(months-1), 1, 0, 0, 0, 0, time.UTC)
 
 	for _, sub := range subscriptions {
-		cohortMonth := time.Date(sub.CreatedAt.Year(), sub.CreatedAt.Month(), 1, 0, 0, 0, 0, time.UTC)
+		// Cohort = the subscription's real start month (StartDate() = ActivatedAt, NOT the
+		// record-created CreatedAt which resets on every ledger rebuild).
+		start := sub.StartDate()
+		cohortMonth := time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, time.UTC)
 		if cohortMonth.Before(cutoffMonth) {
 			continue
 		}
@@ -210,11 +213,11 @@ func monthsBetween(from, to time.Time) int {
 }
 
 // isActiveAt checks if a subscription was still active at the given date. It returns
-// false if the sub did not yet exist at date (CreatedAt after date); a non-churned sub
+// false if the sub had not yet started at date (StartDate after date); a non-churned sub
 // (safe/at-risk) is treated as active; a churned sub is active until its churn date.
 func isActiveAt(sub *entity.Subscription, date time.Time) bool {
-	// If subscription was created after the check date, it wasn't active yet.
-	if sub.CreatedAt.After(date) {
+	// If the subscription started after the check date, it wasn't active yet.
+	if sub.StartDate().After(date) {
 		return false
 	}
 

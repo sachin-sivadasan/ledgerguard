@@ -24,9 +24,10 @@ const recentNewSubsLimit = 50
 // NetNewSubsReportHandler serves the "Net-New Subscriptions" report (REPORTS.md — Growth,
 // Archetype A): new vs churned subscriptions over a period with a daily net-new trend and
 // a recent-new-subscriptions table. Derived entirely from subscriptions — "new" = subs
-// created in range, "churned" = subs whose effective churn date (churnedDateOf) falls in
-// range — so the KPIs, trend and table all reconcile. Mirrors the MRRReportHandler's
-// new/churned movement logic (as counts rather than MRR).
+// whose StartDate() (ActivatedAt, the real business start — NOT the record-created
+// CreatedAt) falls in range, "churned" = subs whose effective churn date (churnedDateOf,
+// or UpdatedAt when no charge date) falls in range — so the KPIs, trend and table all
+// reconcile. Mirrors the MRRReportHandler's new/churned movement logic (as counts).
 type NetNewSubsReportHandler struct {
 	subRepo     repository.SubscriptionRepository
 	appRepo     repository.AppRepository
@@ -117,7 +118,7 @@ func writeNetNewSubsRepoError(w http.ResponseWriter, op string, err error) {
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
-// buildNetNewSubsReport counts new subscriptions (CreatedAt in [from,to]) and churned
+// buildNetNewSubsReport counts new subscriptions (StartDate() in [from,to]) and churned
 // subscriptions (churnedDateOf in [from,to], whole `to` day inclusive), builds a daily
 // net-new trend (only days with activity, ascending), and a recent-new-subs table
 // (newest first, capped). Net = new − churned. A sub that both started and churned in the
@@ -146,21 +147,33 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netN
 		return a
 	}
 
-	var newSubs, churned int
+	var newSubs, churned, noChurnDate int
 	newList := make([]*entity.Subscription, 0)
 
 	for _, s := range subs {
-		if inRange(s.CreatedAt) {
+		start := s.StartDate() // real business start (ActivatedAt), NOT record-created CreatedAt
+		if inRange(start) {
 			newSubs++
-			day(s.CreatedAt.Format(dateLayout)).newCount++
+			day(start.Format(dateLayout)).newCount++
 			newList = append(newList, s)
 		}
 		if s.RiskState == valueobject.RiskStateChurned {
-			if cd := churnedDateOf(s); cd != nil && inRange(*cd) {
+			cd := churnedDateOf(s)
+			if cd == nil {
+				// Churned before any charge date was recorded (e.g. cancelled during a
+				// trial / before the first charge). Fall back to UpdatedAt so the churn
+				// isn't silently dropped from the count (which would inflate Net).
+				cd = &s.UpdatedAt
+				noChurnDate++
+			}
+			if inRange(*cd) {
 				churned++
 				day(cd.Format(dateLayout)).churnedCount++
 			}
 		}
+	}
+	if noChurnDate > 0 {
+		log.Printf("net-new-subs: %d churned subscription(s) had no charge date — used UpdatedAt as the churn date (cancelled before first charge?)", noChurnDate)
 	}
 
 	// Trend: only days with activity, ascending (YYYY-MM-DD keys sort chronologically).
@@ -180,9 +193,9 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netN
 		})
 	}
 
-	// Recent new subscriptions: newest first (by CreatedAt), capped.
+	// Recent new subscriptions: newest first (by StartDate — the business start), capped.
 	sort.SliceStable(newList, func(i, j int) bool {
-		return newList[i].CreatedAt.After(newList[j].CreatedAt)
+		return newList[i].StartDate().After(newList[j].StartDate())
 	})
 	newStores := make([]newSubRow, 0, len(newList))
 	for i, s := range newList {
@@ -194,7 +207,7 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netN
 			ShopName: s.ShopName,
 			PlanName: s.PlanName,
 			MrrCents: s.MRRCents(),
-			Started:  s.CreatedAt.Format(dateLayout),
+			Started:  s.StartDate().Format(dateLayout),
 		})
 	}
 

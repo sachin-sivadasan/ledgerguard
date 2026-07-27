@@ -240,6 +240,16 @@ func (s *LedgerService) buildSubscriptionFromTransactions(appID uuid.UUID, domai
 	sub.ShopifyShopGID = lastRecurring.ShopifyShopGID
 	sub.StableDomainKey = stableDomainKey
 
+	// Set the real business start date from the FIRST recurring charge (recurringTxs is
+	// oldest-first). This is distinct from CreatedAt (the record-created timestamp, reset
+	// on every rebuild); reports use StartDate()/ActivatedAt for "new subscription" logic.
+	firstRecurring := recurringTxs[0]
+	activatedAt := firstRecurring.CreatedDate
+	if activatedAt.IsZero() {
+		activatedAt = firstRecurring.TransactionDate
+	}
+	sub.ActivatedAt = &activatedAt
+
 	// Set subscription status from transaction data
 	sub.Status = status
 

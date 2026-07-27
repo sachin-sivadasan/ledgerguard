@@ -953,3 +953,23 @@ Backend domain is **api.ledgerspear.com** (the owned domain; `ledgerguard.com` i
 - Cost is env-based + Dockerized, so graduating to a dedicated box is copy-`.env` + `up -d` + DNS repoint (no lock-in).
 - Scaffolding: `docs/HETZNER_MIGRATION_PLAN.md`, `docker-compose.prod.yml` (standalone), `deploy/cohost/` (co-host variant).
 - Follow-ups: rotate the OpenAI key; repoint frontend prod to api.ledgerspear.com; update Shopify Partner app redirect URI; tear down GCP once verified.
+
+### ADR-044: subscriptions.activated_at — Real Business Start Date, Distinct from created_at
+
+**Date:** 2026-07-27
+**Status:** Implemented (migration 000043)
+
+**Context:**
+The ledger rebuild (`LedgerService.RebuildFromTransactions`) is a deterministic hard-delete + re-insert of all subscriptions on every sync. `entity.NewSubscription()` sets `CreatedAt = time.Now()`, and the rebuild never overrode it — so `subscriptions.created_at` was the **record-created / ingestion timestamp** (≈ last sync), identical across an app's subs, not the real subscription start. Three reports misused `created_at` as a "subscription start" proxy: **Net-New Subscriptions** (new = created in range), **MRR** (new-MRR movement), and **Retention Cohorts** (cohort month). With live data they collapse (all subs look "new"/one cohort on the sync day). Surfaced by the Net-New PR review; user confirmed `created_at` should remain the record-created date by convention.
+
+**Decision:**
+Add a dedicated nullable `activated_at TIMESTAMPTZ` business-date column. The rebuild sets it to the **earliest RECURRING charge date** (`buildSubscriptionFromTransactions`: `recurringTxs[0]`'s CreatedDate → TransactionDate). `created_at` keeps its record-created semantics untouched. A domain method `Subscription.StartDate()` returns `ActivatedAt` when set, else falls back to `CreatedAt` (backward-compatible). Net-New / MRR / Cohorts now key off `StartDate()`. Migration 000043 backfills existing rows from the earliest recurring transaction per (app, store).
+
+**Alternatives considered:**
+- Repurpose `created_at` to the earliest charge date — rejected: overloads one column with two meanings and corrupts record-created semantics other code relies on.
+- Derive the start at the report layer (join subs→transactions per report) — rejected: leaves MRR + Cohorts still buggy and duplicates logic across reports.
+
+**Consequences:**
+- One column fixes all three reports consistently; `StartDate()` fallback keeps pre-backfill rows working.
+- Deploy runs migration 000043 (schema v42→v43) — NOT rebuild-only.
+- Related: the Net-New churn count now falls back to `UpdatedAt` when a churned sub has no charge date (cancelled before first charge), so churn isn't silently undercounted.

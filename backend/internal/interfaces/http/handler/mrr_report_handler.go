@@ -156,14 +156,16 @@ func buildMRRReport(subs []*entity.Subscription, plans []mrrPlan, snapshots []*e
 
 	// New/churned MRR are period-scoped movements over the [from,to] window,
 	// inclusive of the entire `to` day (matching retention's boundary). "New" counts
-	// only subs that are CURRENTLY SAFE and were created in-range — a sub created
-	// in-range that has since gone at-risk/churned is excluded from New (and, if it
-	// churned in-range, shows under Churned instead).
+	// only subs that are CURRENTLY SAFE and STARTED in-range (StartDate() = the real
+	// business start, NOT the record-created CreatedAt which resets on every rebuild) —
+	// a sub started in-range that has since gone at-risk/churned is excluded from New
+	// (and, if it churned in-range, shows under Churned instead).
 	toExclusive := to.AddDate(0, 0, 1)
 	var newMrrCents, churnedMrrCents int64
 	for _, s := range subs {
+		start := s.StartDate()
 		if s.RiskState == valueobject.RiskStateSafe &&
-			!s.CreatedAt.Before(from) && s.CreatedAt.Before(toExclusive) {
+			!start.Before(from) && start.Before(toExclusive) {
 			newMrrCents += s.MRRCents()
 		}
 		if s.RiskState == valueobject.RiskStateChurned {

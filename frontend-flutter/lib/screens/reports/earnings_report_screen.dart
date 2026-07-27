@@ -132,7 +132,7 @@ class _EarningsReportScreenState extends State<EarningsReportScreen>
     return LgPage(
       title: 'Earnings',
       subtitle:
-          'Developer earnings after Shopify revenue share — net, pending, and available to withdraw',
+          'Developer earnings after Shopify revenue share — net, pending, available, and paid out',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
       secondaryActions: [
@@ -162,7 +162,7 @@ class _EarningsReportScreenState extends State<EarningsReportScreen>
               icon: Icons.account_balance_wallet_outlined,
               heading: 'No earnings in range',
               description:
-                  'Earnings are developer payouts after Shopify takes its revenue share. Once your app records charges in this range, net earnings, pending and available balances, and the charge breakdown will appear here.',
+                  'Earnings are developer payouts after Shopify takes its revenue share. Once your app records charges in this range, net earnings, pending/available/paid-out balances, and the charge breakdown will appear here.',
             )
           else ...[
             _HeroRow(report: report, currency: currency),

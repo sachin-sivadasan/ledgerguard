@@ -189,8 +189,9 @@ func buildEarningsCharges(txs []*entity.Transaction) []earningsCharge {
 	return charges
 }
 
-// earningsStatusLabel maps a stored EarningsStatus to a UI-friendly label. Unknown
-// statuses pass through title-cased so nothing is silently dropped.
+// earningsStatusLabel maps a stored EarningsStatus to a UI-friendly label. The
+// handler filters unknown statuses out upstream (filterKnownEarningsStatus), so the
+// default title-case branch is defensive only — it never runs on the report path.
 func earningsStatusLabel(status entity.EarningsStatus) string {
 	switch status {
 	case entity.EarningsStatusPending:

@@ -103,10 +103,11 @@ func (tb *tokenBucket) refill() {
 }
 
 // partnerAPIVersion is the Shopify Partner API version used for all GraphQL calls
-// (single source of truth). 2025-07 is still supported as of 2026-07. Bump this
-// DELIBERATELY (validate the queries against the new schema first) when it nears
-// end-of-support — Shopify supports each version ~1 year. See future.md.
-const partnerAPIVersion = "2025-07"
+// (single source of truth). 2025-07 fell out of support (Shopify returned
+// {"errors":[{"message":"Invalid API version"}]} with a 404), so this must track a
+// currently-supported version — 2026-04 is the current stable per shopify.dev/docs/api/partner.
+// Bump DELIBERATELY and re-validate the queries against the new schema. See future.md.
+const partnerAPIVersion = "2026-04"
 
 // ShopifyPartnerClient handles communication with Shopify Partner API
 type ShopifyPartnerClient struct {

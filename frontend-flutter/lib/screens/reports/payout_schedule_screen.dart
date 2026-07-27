@@ -168,7 +168,7 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
             _ScheduleTable(report: report, currency: currency),
             const SizedBox(height: LgSpacing.s400),
             Text(
-              'Available Date = charge date + Shopify clearing window. Paid-out earnings live in Payout History.',
+              'Available Date is estimated as charge date + ~7 days (Shopify clears earnings in 7–37 days). Paid-out earnings live in Payout History.',
               style: Theme.of(context)
                   .textTheme
                   .bodySmall

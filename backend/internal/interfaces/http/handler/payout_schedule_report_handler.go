@@ -17,7 +17,9 @@ import (
 
 // PayoutScheduleReportHandler serves the "Payout Schedule" report (REPORTS.md —
 // Archetype D, Schedule/Timeline): the UPCOMING (not-yet-paid) earnings grouped by
-// their Shopify available date into a forward-looking payout timeline. Only PENDING
+// their available date into a forward-looking payout timeline. That date is
+// LedgerGuard-computed (charge date + the earnings-delay estimate from
+// EarningsCalculator, ~7 days in MVP), NOT Shopify's authoritative payout date. Only PENDING
 // and AVAILABLE earnings are shown — PAID_OUT belongs to the Payout History report.
 // Amounts are net (what the developer receives). Mirrors the EarningsReportHandler
 // structure (transactions + stored EarningsStatus, no snapshot repo).
@@ -117,15 +119,10 @@ func buildPayoutScheduleReport(txs []*entity.Transaction) payoutScheduleReport {
 	}
 	byKey := map[string]*agg{}
 
-	currency := "USD"
 	var upcomingPayoutCents, pendingCents int64
 	var unknown int
 
 	for _, tx := range txs {
-		if currency == "USD" && tx.Currency != "" {
-			currency = tx.Currency
-		}
-
 		var status string
 		switch tx.EarningsStatus {
 		case entity.EarningsStatusAvailable:
@@ -174,7 +171,7 @@ func buildPayoutScheduleReport(txs []*entity.Transaction) payoutScheduleReport {
 	}
 
 	return payoutScheduleReport{
-		Currency:            currency,
+		Currency:            earningsCurrency(txs), // default USD + first non-empty (shared helper)
 		UpcomingPayoutCents: upcomingPayoutCents,
 		PendingCents:        pendingCents,
 		NextPayoutDate:      nextPayoutDate,

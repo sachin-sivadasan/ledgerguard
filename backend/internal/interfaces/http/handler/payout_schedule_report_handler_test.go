@@ -94,6 +94,32 @@ func TestPayoutSchedule_KPIsAndGrouping(t *testing.T) {
 	if first.AvailableDate != "2026-07-30" || first.AmountCents != 2980 || first.ChargeCount != 2 || first.Status != "Available" {
 		t.Errorf("row[0] = %+v, want {2026-07-30, 2980, 2, Available}", first)
 	}
+	// Rows are ordered by available date ascending across the whole timeline.
+	wantDates := []string{"2026-07-30", "2026-08-06", "2026-08-13"}
+	for i, want := range wantDates {
+		if report.Rows[i].AvailableDate != want {
+			t.Errorf("row[%d].availableDate = %q, want %q (ascending order)", i, report.Rows[i].AvailableDate, want)
+		}
+	}
+}
+
+// TestPayoutSchedule_AllUnscheduledNextPayoutEmpty verifies that when no charge has an
+// available date, the rows still surface (reconciled) but NextPayoutDate is "".
+func TestPayoutSchedule_AllUnscheduledNextPayoutEmpty(t *testing.T) {
+	txs := []*entity.Transaction{
+		psTx(700, entity.EarningsStatusAvailable, time.Time{}),
+		psTx(500, entity.EarningsStatusPending, time.Time{}),
+	}
+	_, report := servePayoutSchedule(t, txs, "")
+	if report.NextPayoutDate != "" {
+		t.Errorf("nextPayoutDate = %q, want \"\" (all rows unscheduled)", report.NextPayoutDate)
+	}
+	if len(report.Rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(report.Rows))
+	}
+	if report.UpcomingPayoutCents != 700 || report.PendingCents != 500 {
+		t.Errorf("KPIs = %d / %d, want 700 / 500 (unscheduled still counted)", report.UpcomingPayoutCents, report.PendingCents)
+	}
 }
 
 // TestPayoutSchedule_Reconciles verifies upcoming + pending equals the sum of all row

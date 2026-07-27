@@ -87,8 +87,10 @@ class PayoutScheduleProvider extends ChangeNotifier {
   PayoutScheduleReport _mockReport() {
     return PayoutScheduleReport(
       currency: 'USD',
+      // Reconciles with the rows below (the report's invariant): available row
+      // (298000) + pending rows (124000 + 98000 + 61000 = 283000).
       upcomingPayoutCents: 298000,
-      pendingCents: 124000,
+      pendingCents: 283000,
       nextPayoutDate: '2026-07-30',
       rows: [
         PayoutScheduleRow(

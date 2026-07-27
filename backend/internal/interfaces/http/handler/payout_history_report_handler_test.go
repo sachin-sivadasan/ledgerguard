@@ -64,9 +64,12 @@ var (
 )
 
 // phTx builds a PAID_OUT-shaped transaction (reuses the earnings builder), with a
-// caller-supplied created month and available (paid) date.
-func phTx(net int64, status entity.EarningsStatus, created, available time.Time) *entity.Transaction {
-	return earningsTx("shop.myshopify.com", "Shop", "USD", net+100, net, status, created, available)
+// caller-supplied charge month (set as CreatedDate — the field the report groups by,
+// NOT CreatedAt) and availability date.
+func phTx(net int64, status entity.EarningsStatus, charge, available time.Time) *entity.Transaction {
+	tx := earningsTx("shop.myshopify.com", "Shop", "USD", net+100, net, status, charge, available)
+	tx.CreatedDate = charge // the Shopify charge date the period grouping keys off
+	return tx
 }
 
 // TestPayoutHistory_KPIsAndPeriodGrouping verifies Total/Count/Avg and per-month grouping
@@ -96,8 +99,8 @@ func TestPayoutHistory_KPIsAndPeriodGrouping(t *testing.T) {
 	if jun.Period != "2026-06" || jun.AmountCents != 3120 || jun.ChargeCount != 2 {
 		t.Errorf("row[0] = %+v, want {2026-06, 3120, 2}", jun)
 	}
-	if jun.PaidDate != "2026-07-15" { // latest available date in the period
-		t.Errorf("row[0].paidDate = %q, want 2026-07-15 (latest in period)", jun.PaidDate)
+	if jun.AvailableDate != "2026-07-15" { // latest availability date in the period
+		t.Errorf("row[0].availableDate = %q, want 2026-07-15 (latest in period)", jun.AvailableDate)
 	}
 }
 
@@ -144,8 +147,8 @@ func TestPayoutHistory_PaidDateEmptyWhenNoAvailableDate(t *testing.T) {
 	if len(report.Rows) != 1 {
 		t.Fatalf("expected 1 row, got %d", len(report.Rows))
 	}
-	if report.Rows[0].PaidDate != "" {
-		t.Errorf("paidDate = %q, want \"\" (zero available date)", report.Rows[0].PaidDate)
+	if report.Rows[0].AvailableDate != "" {
+		t.Errorf("availableDate = %q, want \"\" (zero availability date)", report.Rows[0].AvailableDate)
 	}
 	if report.TotalPaidCents != 2000 { // money still counted
 		t.Errorf("totalPaidCents = %d, want 2000 (money not dropped)", report.TotalPaidCents)
@@ -163,6 +166,20 @@ func TestPayoutHistory_AvgPayoutFloored(t *testing.T) {
 	// Total 3001 / 3 periods = 1000.33 → floored to 1000.
 	if report.AvgPayoutCents != 1000 {
 		t.Errorf("avgPayoutCents = %d, want 1000 (floored)", report.AvgPayoutCents)
+	}
+}
+
+// TestPayoutHistory_AvgPayoutFloorsNotRounds pins that Avg FLOORS rather than rounding:
+// 2001 ÷ 2 = 1000.5 floors to 1000 but rounds to 1001 — catches a round mutation.
+func TestPayoutHistory_AvgPayoutFloorsNotRounds(t *testing.T) {
+	txs := []*entity.Transaction{
+		phTx(1000, entity.EarningsStatusPaidOut, phJun1, phPaidJul5),
+		phTx(1001, entity.EarningsStatusPaidOut, phMay1, phPaidJun5),
+	}
+	_, report := servePayoutHistory(t, txs, "")
+	// Total 2001 / 2 periods = 1000.5 → floor 1000 (round would give 1001).
+	if report.AvgPayoutCents != 1000 {
+		t.Errorf("avgPayoutCents = %d, want 1000 (floored, not rounded to 1001)", report.AvgPayoutCents)
 	}
 }
 
@@ -252,7 +269,7 @@ func TestPayoutHistory_CSVFormat(t *testing.T) {
 	if len(records) != 3 {
 		t.Fatalf("expected header + 2 rows, got %d: %v", len(records), records)
 	}
-	wantHeader := []string{"period", "amountCents", "chargeCount", "paidDate"}
+	wantHeader := []string{"period", "amountCents", "chargeCount", "availableDate"}
 	for i, want := range wantHeader {
 		if records[0][i] != want {
 			t.Errorf("header[%d] = %q, want %q", i, records[0][i], want)

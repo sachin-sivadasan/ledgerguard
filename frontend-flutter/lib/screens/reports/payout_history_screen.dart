@@ -128,7 +128,7 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
     return LgPage(
       title: 'Payout History',
       subtitle:
-          'Completed Shopify payouts — historical record of paid earnings',
+          'Paid earnings by month — a record of earnings Shopify has disbursed',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
       secondaryActions: [
@@ -198,7 +198,7 @@ class _HeroRow extends StatelessWidget {
         label: 'Payouts',
         value: '${report.payoutCount}',
         color: LgColors.textPrimary,
-        footnote: 'completed monthly payouts',
+        footnote: 'months with paid earnings',
       ),
       _KpiCard(
         label: 'Avg Payout',
@@ -296,7 +296,7 @@ class _PayoutLogTable extends StatelessWidget {
               ),
               _headCell(theme, 'CHARGES'),
               _headCell(theme, 'AMOUNT'),
-              _headCell(theme, 'PAID DATE'),
+              _headCell(theme, 'AVAILABLE DATE'),
             ],
           ),
         ),
@@ -328,8 +328,9 @@ class _PayoutLogRow extends StatelessWidget {
     final periodDate = row.periodDate;
     final periodLabel =
         periodDate != null ? DateFormat('MMM yyyy').format(periodDate) : row.period;
-    final paid = row.paidDateTime;
-    final paidLabel = paid != null ? DateFormat('MMM d, yyyy').format(paid) : '—';
+    final avail = row.availableDateTime;
+    final availLabel =
+        avail != null ? DateFormat('MMM d, yyyy').format(avail) : '—';
 
     return LgCard(
       child: Row(
@@ -354,7 +355,7 @@ class _PayoutLogRow extends StatelessWidget {
           ),
           Expanded(
             flex: 2,
-            child: Text(paidLabel,
+            child: Text(availLabel,
                 textAlign: TextAlign.end,
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: LgColors.textSecondary)),

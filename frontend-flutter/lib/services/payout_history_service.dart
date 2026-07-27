@@ -10,28 +10,29 @@ class PayoutHistoryRow {
   final int amountCents;
   final int chargeCount;
 
-  /// Latest available (paid) date in the period as raw YYYY-MM-DD, or "".
-  final String paidDate;
+  /// Latest availability date in the period as raw YYYY-MM-DD, or "". This is the
+  /// estimated earnings-available date, not Shopify's authoritative disbursement date.
+  final String availableDate;
 
   PayoutHistoryRow({
     required this.period,
     required this.amountCents,
     required this.chargeCount,
-    required this.paidDate,
+    required this.availableDate,
   });
 
   /// Parsed period (first of the month), or null when unparseable.
   DateTime? get periodDate => _parseMonth(period);
 
-  /// Parsed paid date, or null when unset/unparseable (UI renders "—").
-  DateTime? get paidDateTime => _parseDate(paidDate);
+  /// Parsed availability date, or null when unset/unparseable (UI renders "—").
+  DateTime? get availableDateTime => _parseDate(availableDate);
 
   factory PayoutHistoryRow.fromJson(Map<String, dynamic> json) {
     return PayoutHistoryRow(
       period: json['period'] as String? ?? '',
       amountCents: (json['amountCents'] as num?)?.toInt() ?? 0,
       chargeCount: (json['chargeCount'] as num?)?.toInt() ?? 0,
-      paidDate: json['paidDate'] as String? ?? '',
+      availableDate: json['availableDate'] as String? ?? '',
     );
   }
 }

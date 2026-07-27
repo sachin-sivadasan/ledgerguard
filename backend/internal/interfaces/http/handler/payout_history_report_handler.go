@@ -20,10 +20,11 @@ const periodLayout = "2006-01"
 
 // PayoutHistoryReportHandler serves the "Payout History" report (REPORTS.md —
 // Archetype D, Schedule/Timeline): the historical record of PAID_OUT earnings,
-// aggregated by the calendar month the charges were billed. It is the completed-payout
-// counterpart to Payout Schedule (which shows only the not-yet-paid PENDING/AVAILABLE
-// earnings). Amounts are net (what the developer received). Mirrors the
-// EarningsReportHandler structure (transactions + stored EarningsStatus, no snapshot).
+// aggregated by the calendar month the charge was billed on Shopify (the charge date,
+// NOT the row-ingestion time). It is the completed-payout counterpart to Payout Schedule
+// (which shows only the not-yet-paid PENDING/AVAILABLE earnings). Amounts are net (what
+// the developer received). Mirrors the EarningsReportHandler structure (transactions +
+// stored EarningsStatus, no snapshot).
 type PayoutHistoryReportHandler struct {
 	txRepo      repository.TransactionRepository
 	appRepo     repository.AppRepository
@@ -48,7 +49,10 @@ type payoutHistoryRow struct {
 	Period      string `json:"period"`      // charge month, "YYYY-MM"
 	AmountCents int64  `json:"amountCents"` // Σ net paid in the period
 	ChargeCount int    `json:"chargeCount"`
-	PaidDate    string `json:"paidDate"` // latest available date in the period, "YYYY-MM-DD" or ""
+	// AvailableDate is the latest date the period's earnings became available for payout
+	// ("YYYY-MM-DD", or "" when unset). It is EarningsCalculator's ~7-day availability
+	// estimate, NOT Shopify's authoritative disbursement date.
+	AvailableDate string `json:"availableDate"`
 }
 
 // payoutHistoryReport is the full JSON contract for the Payout History report.
@@ -105,29 +109,49 @@ func writePayoutHistoryRepoError(w http.ResponseWriter, op string, err error) {
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
+// chargeDate returns the Shopify charge date to group by — CreatedDate, falling back to
+// TransactionDate when unset — matching EarningsCalculator. NOT CreatedAt, which is the
+// row-ingestion time (time.Now() at sync) and would collapse all historical charges into
+// the sync month.
+func chargeDate(tx *entity.Transaction) time.Time {
+	if !tx.CreatedDate.IsZero() {
+		return tx.CreatedDate
+	}
+	return tx.TransactionDate
+}
+
 // buildPayoutHistoryReport aggregates PAID_OUT earnings into per-calendar-month payout
-// periods. Only PAID_OUT transactions count — PENDING/AVAILABLE (still upcoming) belong
-// to Payout Schedule and are skipped silently by design. Amounts are net
-// (AmountCents = NetAmountCents). Each period's PaidDate is the LATEST available date
-// among its charges (when the month's earnings finished clearing). Rows are sorted by
-// period descending (most recent first). TotalPaid is the sum of all periods; PayoutCount
-// is the number of periods; AvgPayout = TotalPaid ÷ PayoutCount (0 when none).
+// periods, keyed by the Shopify charge date (see chargeDate). Only PAID_OUT transactions
+// count — PENDING/AVAILABLE (still upcoming) belong to Payout Schedule and are skipped
+// silently by design. Amounts are net (AmountCents = NetAmountCents). Each period's
+// AvailableDate is the LATEST availability date among its charges (EarningsCalculator's
+// ~7-day estimate, not Shopify's actual disbursement date). Rows are sorted by period
+// descending (most recent first). TotalPaid is the sum of all periods; PayoutCount is the
+// number of periods; AvgPayout = TotalPaid ÷ PayoutCount (0 when none).
 func buildPayoutHistoryReport(txs []*entity.Transaction) payoutHistoryReport {
 	type agg struct {
-		amount      int64
-		count       int
-		latestPaid  time.Time
-		hasPaidDate bool
+		amount           int64
+		count            int
+		latestAvailable  time.Time
+		hasAvailableDate bool
 	}
 	byPeriod := map[string]*agg{}
 
 	var totalPaidCents int64
+	var noChargeDate int
 	for _, tx := range txs {
 		if tx.EarningsStatus != entity.EarningsStatusPaidOut {
 			continue // not yet paid → Payout Schedule, not history
 		}
 
-		period := tx.CreatedAt.Format(periodLayout)
+		cd := chargeDate(tx)
+		if cd.IsZero() {
+			// A PAID_OUT charge with no charge date is a data anomaly; it would bucket
+			// under "0001-01". Count it so the situation is diagnosable rather than a
+			// silent garbage row, but keep the money in (still added below).
+			noChargeDate++
+		}
+		period := cd.Format(periodLayout)
 		a, ok := byPeriod[period]
 		if !ok {
 			a = &agg{}
@@ -136,24 +160,28 @@ func buildPayoutHistoryReport(txs []*entity.Transaction) payoutHistoryReport {
 		a.amount += tx.AmountCents()
 		a.count++
 		totalPaidCents += tx.AmountCents()
-		// Track the latest available date in the period as its representative paid date.
-		if !tx.AvailableDate.IsZero() && (!a.hasPaidDate || tx.AvailableDate.After(a.latestPaid)) {
-			a.latestPaid = tx.AvailableDate
-			a.hasPaidDate = true
+		// Track the latest availability date in the period as its representative date.
+		if !tx.AvailableDate.IsZero() && (!a.hasAvailableDate || tx.AvailableDate.After(a.latestAvailable)) {
+			a.latestAvailable = tx.AvailableDate
+			a.hasAvailableDate = true
 		}
+	}
+
+	if noChargeDate > 0 {
+		log.Printf("payout-history: %d PAID_OUT transaction(s) had no charge date (CreatedDate/TransactionDate) — bucketed under 0001-01", noChargeDate)
 	}
 
 	rows := make([]payoutHistoryRow, 0, len(byPeriod))
 	for period, a := range byPeriod {
-		paidDate := ""
-		if a.hasPaidDate {
-			paidDate = a.latestPaid.Format(dateLayout)
+		availableDate := ""
+		if a.hasAvailableDate {
+			availableDate = a.latestAvailable.Format(dateLayout)
 		}
 		rows = append(rows, payoutHistoryRow{
-			Period:      period,
-			AmountCents: a.amount,
-			ChargeCount: a.count,
-			PaidDate:    paidDate,
+			Period:        period,
+			AmountCents:   a.amount,
+			ChargeCount:   a.count,
+			AvailableDate: availableDate,
 		})
 	}
 	// Most recent period first (period keys are "YYYY-MM", so lexical == chronological).
@@ -182,13 +210,13 @@ func writePayoutHistoryCSV(w http.ResponseWriter, rows []payoutHistoryRow) {
 	w.Header().Set("Content-Disposition", `attachment; filename="payout-history.csv"`)
 
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"period", "amountCents", "chargeCount", "paidDate"})
+	_ = cw.Write([]string{"period", "amountCents", "chargeCount", "availableDate"})
 	for _, row := range rows {
 		_ = cw.Write([]string{
 			row.Period,
 			strconv.FormatInt(row.AmountCents, 10),
 			strconv.Itoa(row.ChargeCount),
-			row.PaidDate,
+			row.AvailableDate,
 		})
 	}
 	cw.Flush()

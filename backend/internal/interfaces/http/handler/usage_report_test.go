@@ -111,6 +111,41 @@ func TestUsage_HeadlineSumsUsageAndOneTimeOnly(t *testing.T) {
 	}
 }
 
+// TestUsage_UnknownChargeTypeExcluded verifies a tx with an unrecognized/empty
+// ChargeType contributes to neither the headline, the charge count, nor a store row —
+// the report is USAGE+ONE_TIME only (guards against a refactor that leaks unknowns).
+func TestUsage_UnknownChargeTypeExcluded(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	txs := []*entity.Transaction{
+		usageTx(appID, "a.myshopify.com", "Acme", valueobject.ChargeTypeUsage, 5000),
+		usageTx(appID, "b.myshopify.com", "Beta", valueobject.ChargeType("DISPUTED"), 9000),
+		usageTx(appID, "c.myshopify.com", "Gamma", valueobject.ChargeType(""), 3000),
+	}
+	h := NewUsageReportHandler(
+		&mockTxRepo{transactions: txs},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+	rec := doUsage(t, h, appID, pa, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var resp usageReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.UsageCents != 5000 || resp.OneTimeCents != 0 || resp.ChargesCount != 1 {
+		t.Errorf("unknown types leaked: usage=%d oneTime=%d charges=%d, want 5000/0/1",
+			resp.UsageCents, resp.OneTimeCents, resp.ChargesCount)
+	}
+	if len(resp.Stores) != 1 || resp.Stores[0].Domain != "a.myshopify.com" {
+		t.Errorf("expected only the USAGE store, got %+v", resp.Stores)
+	}
+}
+
 // TestUsage_PerStoreGroupingAndSort verifies per-store usage/oneTime/chargeCount
 // aggregation, first-non-empty shop name, and sort by usageCents descending.
 func TestUsage_PerStoreGroupingAndSort(t *testing.T) {

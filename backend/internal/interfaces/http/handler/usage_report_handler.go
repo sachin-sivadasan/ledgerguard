@@ -208,7 +208,10 @@ func usageCurrency(txs []*entity.Transaction) string {
 }
 
 // buildUsageTrend converts daily snapshots (ascending) to the usage-revenue time
-// series, one point per snapshot.
+// series, one point per snapshot from snap.UsageRevenueCents. NOTE: that snapshot
+// field is USAGE-only and a rolling 12-month figure (see DailyMetricsSnapshot), so
+// the trend is intentionally narrower than the headline (which is the windowed
+// USAGE+ONE_TIME transaction sum) — its last point need not equal the KPI.
 func buildUsageTrend(snapshots []*entity.DailyMetricsSnapshot) []usageTrendPoint {
 	trend := make([]usageTrendPoint, 0, len(snapshots))
 	for _, snap := range snapshots {

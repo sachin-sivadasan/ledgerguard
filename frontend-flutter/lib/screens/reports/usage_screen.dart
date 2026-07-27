@@ -310,7 +310,10 @@ class _TrendCard extends StatelessWidget {
 
     return LgCard(
       title: 'Usage Revenue — trend',
-      child: SizedBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
         height: 200,
         child: LineChart(
           LineChartData(
@@ -371,6 +374,16 @@ class _TrendCard extends StatelessWidget {
             ],
           ),
         ),
+          ),
+          const SizedBox(height: LgSpacing.s200),
+          Text(
+            'From daily snapshots (rolling 12-month USAGE revenue) — may differ from the windowed total above.',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: LgColors.textSecondary),
+          ),
+        ],
       ),
     );
   }

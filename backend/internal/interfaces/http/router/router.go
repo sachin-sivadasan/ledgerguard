@@ -47,6 +47,7 @@ type Config struct {
 	UsageReportHandler              *handler.UsageReportHandler
 	UsageTrendsReportHandler        *handler.UsageTrendsReportHandler
 	SubscriptionsReportHandler      *handler.SubscriptionsReportHandler
+	PayoutScheduleReportHandler     *handler.PayoutScheduleReportHandler
 	UninstallContextHandler         *handler.UninstallContextHandler
 	RiskHandler                     *handler.RiskHandler
 	OrgHandler                      *handler.OrgHandler
@@ -293,6 +294,11 @@ func New(cfg Config) *chi.Mux {
 				// Subscriptions (ARPU / LTV) report route (Archetype B — composition)
 				if cfg.SubscriptionsReportHandler != nil {
 					r.Get("/{appID}/reports/subscriptions", cfg.SubscriptionsReportHandler.GetSubscriptions)
+				}
+
+				// Payout Schedule report route (Archetype D — schedule/timeline)
+				if cfg.PayoutScheduleReportHandler != nil {
+					r.Get("/{appID}/reports/payout-schedule", cfg.PayoutScheduleReportHandler.GetPayoutSchedule)
 				}
 
 				// Uninstall Context report route

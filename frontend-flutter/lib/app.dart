@@ -27,6 +27,7 @@ import 'screens/reports/revenue_mix_screen.dart';
 import 'screens/reports/usage_screen.dart';
 import 'screens/reports/usage_trends_screen.dart';
 import 'screens/reports/subscriptions_screen.dart';
+import 'screens/reports/payout_schedule_screen.dart';
 import 'screens/reports/uninstall_context_screen.dart';
 import 'screens/risk/risk_screen.dart';
 import 'screens/settings/connect_shopify_screen.dart';
@@ -225,6 +226,10 @@ class _AppState extends State<App> {
                   GoRoute(
                     path: 'subscriptions',
                     builder: (c, s) => const SubscriptionsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'payout-schedule',
+                    builder: (c, s) => const PayoutScheduleScreen(),
                   ),
                   GoRoute(
                     path: 'cohorts',

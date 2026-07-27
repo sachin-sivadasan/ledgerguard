@@ -13,6 +13,7 @@ import '../providers/usage_provider.dart';
 import '../providers/usage_trends_provider.dart';
 import '../providers/subscriptions_provider.dart';
 import '../providers/payout_schedule_provider.dart';
+import '../providers/payout_history_provider.dart';
 import '../providers/uninstall_context_provider.dart';
 import '../providers/reviews_provider.dart';
 import '../providers/revenue_at_risk_provider.dart';
@@ -42,6 +43,7 @@ class DemoModeCoordinator {
   final UsageTrendsProvider _usageTrendsProvider;
   final SubscriptionsProvider _subscriptionsProvider;
   final PayoutScheduleProvider _payoutScheduleProvider;
+  final PayoutHistoryProvider _payoutHistoryProvider;
   final MrrReportProvider _mrrReportProvider;
   final UninstallContextProvider _uninstallContextProvider;
   final ReviewsProvider _reviewsProvider;
@@ -68,6 +70,7 @@ class DemoModeCoordinator {
     required UsageTrendsProvider usageTrendsProvider,
     required SubscriptionsProvider subscriptionsProvider,
     required PayoutScheduleProvider payoutScheduleProvider,
+    required PayoutHistoryProvider payoutHistoryProvider,
     required MrrReportProvider mrrReportProvider,
     required UninstallContextProvider uninstallContextProvider,
     required ReviewsProvider reviewsProvider,
@@ -92,6 +95,7 @@ class DemoModeCoordinator {
         _usageTrendsProvider = usageTrendsProvider,
         _subscriptionsProvider = subscriptionsProvider,
         _payoutScheduleProvider = payoutScheduleProvider,
+        _payoutHistoryProvider = payoutHistoryProvider,
         _mrrReportProvider = mrrReportProvider,
         _uninstallContextProvider = uninstallContextProvider,
         _reviewsProvider = reviewsProvider,
@@ -119,6 +123,7 @@ class DemoModeCoordinator {
     _usageTrendsProvider.setDemoMode(value);
     _subscriptionsProvider.setDemoMode(value);
     _payoutScheduleProvider.setDemoMode(value);
+    _payoutHistoryProvider.setDemoMode(value);
     _mrrReportProvider.setDemoMode(value);
     _uninstallContextProvider.setDemoMode(value);
     _reviewsProvider.setDemoMode(value);
@@ -151,6 +156,7 @@ class DemoModeCoordinator {
       _usageTrendsProvider.setSelectedApp(appId);
       _subscriptionsProvider.setSelectedApp(appId);
       _payoutScheduleProvider.setSelectedApp(appId);
+      _payoutHistoryProvider.setSelectedApp(appId);
       _mrrReportProvider.setSelectedApp(appId);
       _uninstallContextProvider.setSelectedApp(appId);
       _reviewsProvider.setSelectedApp(appId);

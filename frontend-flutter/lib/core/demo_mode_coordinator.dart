@@ -4,6 +4,7 @@ import '../providers/churn_provider.dart';
 import '../providers/cohorts_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/earnings_provider.dart';
+import '../providers/earnings_report_provider.dart';
 import '../providers/events_provider.dart';
 import '../providers/insights_provider.dart';
 import '../providers/retention_provider.dart';
@@ -34,6 +35,7 @@ class DemoModeCoordinator {
   final ReviewsProvider _reviewsProvider;
   final AnalyticsProvider _analyticsProvider;
   final EarningsProvider _earningsProvider;
+  final EarningsReportProvider _earningsReportProvider;
   final InsightsProvider _insightsProvider;
   final WebhookProvider _webhookProvider;
 
@@ -53,6 +55,7 @@ class DemoModeCoordinator {
     required ReviewsProvider reviewsProvider,
     required AnalyticsProvider analyticsProvider,
     required EarningsProvider earningsProvider,
+    required EarningsReportProvider earningsReportProvider,
     required InsightsProvider insightsProvider,
     required WebhookProvider webhookProvider,
   })  : _appsProvider = appsProvider,
@@ -70,6 +73,7 @@ class DemoModeCoordinator {
         _reviewsProvider = reviewsProvider,
         _analyticsProvider = analyticsProvider,
         _earningsProvider = earningsProvider,
+        _earningsReportProvider = earningsReportProvider,
         _insightsProvider = insightsProvider,
         _webhookProvider = webhookProvider;
 
@@ -90,6 +94,7 @@ class DemoModeCoordinator {
     _reviewsProvider.setDemoMode(value);
     _analyticsProvider.setDemoMode(value);
     _earningsProvider.setDemoMode(value);
+    _earningsReportProvider.setDemoMode(value);
     _insightsProvider.setDemoMode(value);
     _webhookProvider.setDemoMode(value);
   }
@@ -115,6 +120,7 @@ class DemoModeCoordinator {
       _reviewsProvider.setSelectedApp(appId);
       _analyticsProvider.setSelectedApp(appId);
       _earningsProvider.setSelectedApp(appId);
+      _earningsReportProvider.setSelectedApp(appId);
       _insightsProvider.setSelectedApp(appId);
     }
   }

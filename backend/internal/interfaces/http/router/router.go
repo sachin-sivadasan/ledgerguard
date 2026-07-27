@@ -41,6 +41,7 @@ type Config struct {
 	RevenueAtRiskHandler            *handler.RevenueAtRiskHandler
 	ChurnHandler                    *handler.ChurnHandler
 	RetentionHandler                *handler.RetentionHandler
+	EarningsReportHandler           *handler.EarningsReportHandler
 	UninstallContextHandler         *handler.UninstallContextHandler
 	RiskHandler                     *handler.RiskHandler
 	OrgHandler                      *handler.OrgHandler
@@ -257,6 +258,11 @@ func New(cfg Config) *chi.Mux {
 				// Retention/Renewal report route
 				if cfg.RetentionHandler != nil {
 					r.Get("/{appID}/reports/retention", cfg.RetentionHandler.GetRetention)
+				}
+
+				// Earnings report route
+				if cfg.EarningsReportHandler != nil {
+					r.Get("/{appID}/reports/earnings", cfg.EarningsReportHandler.GetEarningsReport)
 				}
 
 				// Uninstall Context report route

@@ -16,6 +16,7 @@ import 'providers/churn_provider.dart';
 import 'providers/cohorts_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/earnings_provider.dart';
+import 'providers/earnings_report_provider.dart';
 import 'providers/events_provider.dart';
 import 'providers/insights_provider.dart';
 import 'providers/retention_provider.dart';
@@ -33,6 +34,7 @@ import 'providers/webhook_provider.dart';
 import 'services/app_service.dart';
 import 'services/churn_service.dart';
 import 'services/cohorts_service.dart';
+import 'services/earnings_report_service.dart';
 import 'services/earnings_service.dart';
 import 'services/events_service.dart';
 import 'services/insights_service.dart';
@@ -65,6 +67,7 @@ void main() async {
   final subscriptionService = SubscriptionService(apiClient);
   final transactionService = TransactionService(apiClient);
   final earningsService = EarningsService(apiClient);
+  final earningsReportService = EarningsReportService(apiClient);
   final riskService = RiskService(apiClient);
   final revenueAtRiskService = RevenueAtRiskService(apiClient);
   final churnService = ChurnService(apiClient);
@@ -96,6 +99,7 @@ void main() async {
   final reviewsProvider = ReviewsProvider(reviewsService);
   final analyticsProvider = AnalyticsProvider(metricsService, earningsService);
   final earningsProvider = EarningsProvider(earningsService);
+  final earningsReportProvider = EarningsReportProvider(earningsReportService);
   final insightsProvider = InsightsProvider(insightsService);
   final webhookProvider = WebhookProvider();
 
@@ -115,6 +119,7 @@ void main() async {
     reviewsProvider: reviewsProvider,
     analyticsProvider: analyticsProvider,
     earningsProvider: earningsProvider,
+    earningsReportProvider: earningsReportProvider,
     insightsProvider: insightsProvider,
     webhookProvider: webhookProvider,
   );
@@ -142,6 +147,7 @@ void main() async {
         ChangeNotifierProvider.value(value: reviewsProvider),
         ChangeNotifierProvider.value(value: analyticsProvider),
         ChangeNotifierProvider.value(value: earningsProvider),
+        ChangeNotifierProvider.value(value: earningsReportProvider),
         ChangeNotifierProvider.value(value: appsProvider),
         ChangeNotifierProvider(create: (_) => ApiKeyProvider()),
         ChangeNotifierProvider.value(value: insightsProvider),

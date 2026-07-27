@@ -378,6 +378,13 @@ func run() error {
 		log.Println("Retention handler initialized")
 	}
 
+	// Initialize earnings report handler
+	var earningsReportHandler *handler.EarningsReportHandler
+	if txRepo != nil && appRepo != nil && partnerRepo != nil {
+		earningsReportHandler = handler.NewEarningsReportHandler(txRepo, appRepo, partnerRepo)
+		log.Println("Earnings report handler initialized")
+	}
+
 	// Initialize uninstall context report handler
 	var uninstallContextHandler *handler.UninstallContextHandler
 	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -782,6 +789,7 @@ func run() error {
 		RevenueAtRiskHandler:            revenueAtRiskHandler,
 		ChurnHandler:                    churnHandler,
 		RetentionHandler:                retentionHandler,
+		EarningsReportHandler:           earningsReportHandler,
 		UninstallContextHandler:         uninstallContextHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,

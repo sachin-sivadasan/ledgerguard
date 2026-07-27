@@ -416,11 +416,21 @@ class _EventsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // The table is capped server-side; installs + uninstalls is the true in-window
+    // total, so surface "showing latest N of M" rather than silently truncating.
+    final total = report.installs + report.uninstalls;
+    final shown = report.events.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Recent install / uninstall events',
             style: theme.textTheme.titleMedium),
+        if (total > shown) ...[
+          const SizedBox(height: LgSpacing.s100),
+          Text('Showing the latest $shown of $total events',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: LgColors.textSecondary)),
+        ],
         const SizedBox(height: LgSpacing.s300),
         // Column header row: STORE | EVENT | DATE
         Padding(

@@ -15,9 +15,14 @@ class InstallTrendPoint {
     required this.uninstalls,
   });
 
-  factory InstallTrendPoint.fromJson(Map<String, dynamic> json) {
+  /// Returns null when the date is missing/unparseable so the caller can DROP the point
+  /// rather than plot it at a sentinel date (an invented DateTime(1970) would silently
+  /// mislabel the chart axis). The backend always emits a valid YYYY-MM-DD.
+  static InstallTrendPoint? tryFromJson(Map<String, dynamic> json) {
+    final date = _parseDate(json['date'] as String?);
+    if (date == null) return null;
     return InstallTrendPoint(
-      date: _parseDate(json['date'] as String?) ?? DateTime(1970),
+      date: date,
       installs: (json['installs'] as num?)?.toInt() ?? 0,
       uninstalls: (json['uninstalls'] as num?)?.toInt() ?? 0,
     );
@@ -66,7 +71,8 @@ class InstallsReport {
       uninstalls: (json['uninstalls'] as num?)?.toInt() ?? 0,
       net: (json['net'] as num?)?.toInt() ?? 0,
       trend: (json['trend'] as List<dynamic>?)
-              ?.map((e) => InstallTrendPoint.fromJson(e as Map<String, dynamic>))
+              ?.map((e) => InstallTrendPoint.tryFromJson(e as Map<String, dynamic>))
+              .whereType<InstallTrendPoint>()
               .toList() ??
           [],
       events: (json['events'] as List<dynamic>?)

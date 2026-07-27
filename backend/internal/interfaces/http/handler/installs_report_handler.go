@@ -121,15 +121,19 @@ func writeInstallsRepoError(w http.ResponseWriter, op string, err error) {
 }
 
 // installEventKind classifies an app event as "Install", "Uninstall", or "" (neither).
-// UNINSTALL is checked FIRST because "RELATIONSHIP_UNINSTALLED" also contains the
-// substring "INSTALL" — an install-first check would misclassify every uninstall.
+// It matches the exact Shopify relationship event types rather than a substring, because
+// (a) "RELATIONSHIP_UNINSTALLED" contains the substring "INSTALL" (a substring match
+// would misclassify every uninstall), and (b) the synced app_events table is NOT filtered
+// to lifecycle types — it also holds RELATIONSHIP_REACTIVATED / RELATIONSHIP_DEACTIVATED
+// and SUBSCRIPTION_CHARGE_* events, which are intentionally excluded here (they are not
+// installs/uninstalls). Exact matching keeps a future "RELATIONSHIP_REINSTALLED"-style
+// type from silently counting as an install.
 func installEventKind(eventType string) string {
-	up := strings.ToUpper(eventType)
-	switch {
-	case strings.Contains(up, "UNINSTALL"):
-		return "Uninstall"
-	case strings.Contains(up, "INSTALL"):
+	switch strings.ToUpper(strings.TrimSpace(eventType)) {
+	case "RELATIONSHIP_INSTALLED":
 		return "Install"
+	case "RELATIONSHIP_UNINSTALLED":
+		return "Uninstall"
 	default:
 		return ""
 	}
@@ -139,7 +143,8 @@ func installEventKind(eventType string) string {
 // `to` day inclusive, matching the other event reports' boundary), builds a daily trend
 // (only days with activity, ascending), and a recent-events table (newest first, capped
 // at recentInstallEventsLimit). Net = installs − uninstalls. A store domain is resolved
-// from the correlated subscription, falling back to the raw shop GID.
+// from the correlated subscription when the join hits, falling back to the event's stored
+// shop identifier (which may be a myshopify domain or a GID depending on the sync source).
 func buildInstallsReport(events []*entity.AppEvent, subsByShop map[string]*entity.Subscription, from, to time.Time) installsReport {
 	toExclusive := to.AddDate(0, 0, 1)
 

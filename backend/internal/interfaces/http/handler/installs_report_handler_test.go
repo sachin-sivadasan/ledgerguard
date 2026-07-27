@@ -97,6 +97,28 @@ func TestInstalls_KPIsAndUninstallSubstringTrap(t *testing.T) {
 	}
 }
 
+// TestInstalls_NonLifecycleEventsExcluded verifies that the other real event types the
+// (unfiltered) sync writes — RELATIONSHIP_REACTIVATED / RELATIONSHIP_DEACTIVATED and
+// SUBSCRIPTION_CHARGE_* — are excluded from the counts, trend and table. Only the exact
+// INSTALLED/UNINSTALLED types count.
+func TestInstalls_NonLifecycleEventsExcluded(t *testing.T) {
+	events := []*entity.AppEvent{
+		installEvt("gid://shop/1", "RELATIONSHIP_INSTALLED", insDay),
+		installEvt("gid://shop/2", "RELATIONSHIP_REACTIVATED", insDay),
+		installEvt("gid://shop/3", "RELATIONSHIP_DEACTIVATED", insDay),
+		installEvt("gid://shop/4", "SUBSCRIPTION_CHARGE_ACCEPTED", insDay),
+		installEvt("gid://shop/5", "SUBSCRIPTION_CHARGE_CANCELED", insDay),
+	}
+	appID, pa, h := installsFixture(nil, events)
+	resp := decodeInstalls(t, doInstalls(t, h, appID, pa, "from=2026-07-01&to=2026-07-31"))
+	if resp.Installs != 1 || resp.Uninstalls != 0 {
+		t.Errorf("expected only the 1 install counted (reactivate/deactivate/charge excluded), got %+v", resp)
+	}
+	if len(resp.Events) != 1 {
+		t.Errorf("expected 1 event row, got %d", len(resp.Events))
+	}
+}
+
 // TestInstalls_NetCanBeNegative verifies net = installs − uninstalls can go negative.
 func TestInstalls_NetCanBeNegative(t *testing.T) {
 	events := []*entity.AppEvent{

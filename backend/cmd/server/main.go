@@ -406,6 +406,13 @@ func run() error {
 		log.Println("Usage report handler initialized")
 	}
 
+	// Initialize usage trends report handler (Archetype A — weekly momentum, no snapshot repo)
+	var usageTrendsReportHandler *handler.UsageTrendsReportHandler
+	if txRepo != nil && appRepo != nil && partnerRepo != nil {
+		usageTrendsReportHandler = handler.NewUsageTrendsReportHandler(txRepo, appRepo, partnerRepo)
+		log.Println("Usage trends report handler initialized")
+	}
+
 	// Initialize uninstall context report handler
 	var uninstallContextHandler *handler.UninstallContextHandler
 	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -819,6 +826,7 @@ func run() error {
 		EarningsReportHandler:           earningsReportHandler,
 		RevenueMixReportHandler:         revenueMixReportHandler,
 		UsageReportHandler:              usageReportHandler,
+		UsageTrendsReportHandler:        usageTrendsReportHandler,
 		UninstallContextHandler:         uninstallContextHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,

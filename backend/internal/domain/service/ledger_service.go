@@ -240,15 +240,24 @@ func (s *LedgerService) buildSubscriptionFromTransactions(appID uuid.UUID, domai
 	sub.ShopifyShopGID = lastRecurring.ShopifyShopGID
 	sub.StableDomainKey = stableDomainKey
 
-	// Set the real business start date from the FIRST recurring charge (recurringTxs is
-	// oldest-first). This is distinct from CreatedAt (the record-created timestamp, reset
-	// on every rebuild); reports use StartDate()/ActivatedAt for "new subscription" logic.
-	firstRecurring := recurringTxs[0]
-	activatedAt := firstRecurring.CreatedDate
-	if activatedAt.IsZero() {
-		activatedAt = firstRecurring.TransactionDate
+	// Set the real business start date = earliest recurring charge date. Computed as the
+	// MIN over recurring txs of (CreatedDate, falling back to TransactionDate) so it
+	// exactly matches migration 000043's backfill (MIN(COALESCE(created_date,
+	// transaction_date))) — the two paths must agree. Distinct from CreatedAt (the
+	// record-created timestamp, reset on every rebuild); reports use StartDate().
+	var activatedAt time.Time
+	for _, tx := range recurringTxs {
+		cd := tx.CreatedDate
+		if cd.IsZero() {
+			cd = tx.TransactionDate
+		}
+		if activatedAt.IsZero() || cd.Before(activatedAt) {
+			activatedAt = cd
+		}
 	}
-	sub.ActivatedAt = &activatedAt
+	if !activatedAt.IsZero() {
+		sub.ActivatedAt = &activatedAt
+	}
 
 	// Set subscription status from transaction data
 	sub.Status = status

@@ -16,9 +16,10 @@ import (
 )
 
 // cohortSub builds a subscription with explicit created/updated timestamps and risk
-// state, for deterministic cohort tests. buildCohorts groups by CreatedAt month; for
-// churned subs isActiveAt prefers churnedDateOf (ExpectedNextChargeDate/
-// LastRecurringChargeDate) and falls back to UpdatedAt only when those are unset.
+// state, for deterministic cohort tests. buildCohorts groups by StartDate() month
+// (ActivatedAt, falling back to CreatedAt when nil — these fixtures leave ActivatedAt
+// nil, so they group by CreatedAt); for churned subs isActiveAt prefers churnedDateOf
+// (ExpectedNextChargeDate/LastRecurringChargeDate), falling back to UpdatedAt when unset.
 func cohortSub(appID uuid.UUID, created, updated time.Time, state valueobject.RiskState) *entity.Subscription {
 	return &entity.Subscription{
 		ID:              uuid.New(),
@@ -65,6 +66,25 @@ func TestBuildCohorts_GroupsAndM0IsFull(t *testing.T) {
 		if len(c.RetentionPcts) == 0 || c.RetentionPcts[0] != 100 {
 			t.Errorf("cohort %s: expected M0=100, got %+v", c.CohortMonth, c.RetentionPcts)
 		}
+	}
+}
+
+// TestBuildCohorts_UsesStartDateNotCreatedAt verifies a sub is assigned to its
+// StartDate() (ActivatedAt) cohort month, NOT its CreatedAt (record-created) month.
+func TestBuildCohorts_UsesStartDateNotCreatedAt(t *testing.T) {
+	appID := uuid.New()
+	now := time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC)
+	// CreatedAt = June (record/ingestion month), ActivatedAt = May (real start month).
+	s := cohortSub(appID, month(2026, 6), now, valueobject.RiskStateSafe)
+	activated := month(2026, 5)
+	s.ActivatedAt = &activated
+
+	cohorts := buildCohorts([]*entity.Subscription{s}, 6, now)
+	if len(cohorts) != 1 {
+		t.Fatalf("expected 1 cohort, got %d: %+v", len(cohorts), cohorts)
+	}
+	if cohorts[0].CohortMonth != "2026-05" {
+		t.Errorf("cohort month: expected 2026-05 (ActivatedAt/StartDate), not the CreatedAt month 2026-06, got %q", cohorts[0].CohortMonth)
 	}
 }
 

@@ -147,15 +147,20 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netN
 		return a
 	}
 
-	var newSubs, churned, noChurnDate int
+	var newSubs, churned, noChurnDate, noStartDate int
 	newList := make([]*entity.Subscription, 0)
 
 	for _, s := range subs {
-		start := s.StartDate() // real business start (ActivatedAt), NOT record-created CreatedAt
+		start := s.StartDate() // business start (ActivatedAt); falls back to CreatedAt when nil
 		if inRange(start) {
 			newSubs++
 			day(start.Format(dateLayout)).newCount++
 			newList = append(newList, s)
+			if s.ActivatedAt == nil {
+				// No real start date — dated by the CreatedAt (ingestion) fallback, which
+				// can misdate a recurring-less (e.g. trial) sub. Count so it's diagnosable.
+				noStartDate++
+			}
 		}
 		if s.RiskState == valueobject.RiskStateChurned {
 			cd := churnedDateOf(s)
@@ -174,6 +179,9 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netN
 	}
 	if noChurnDate > 0 {
 		log.Printf("net-new-subs: %d churned subscription(s) had no charge date — used UpdatedAt as the churn date (cancelled before first charge?)", noChurnDate)
+	}
+	if noStartDate > 0 {
+		log.Printf("net-new-subs: %d new subscription(s) had no activated_at — dated by the CreatedAt (ingestion) fallback, may be misdated", noStartDate)
 	}
 
 	// Trend: only days with activity, ascending (YYYY-MM-DD keys sort chronologically).

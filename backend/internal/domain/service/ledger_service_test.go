@@ -682,18 +682,21 @@ func TestBackfillOptimized_ProducesSameResults(t *testing.T) {
 func TestLedgerService_SetsActivatedAtFromFirstRecurringCharge(t *testing.T) {
 	appID := uuid.New()
 	now := time.Date(2026, 2, 26, 12, 0, 0, 0, time.UTC)
-	firstCharge := now.AddDate(0, -3, 0) // 3 months ago = the real start
+	firstCharge := now.AddDate(0, -3, 0) // 3 months ago = the real start (earliest CreatedDate)
 
+	// CreatedDate ordering is deliberately INVERTED vs TransactionDate to prove the rebuild
+	// takes MIN(CreatedDate) (matching migration 000043's backfill), not the
+	// recurringTxs[0]-by-TransactionDate row's CreatedDate.
 	transactions := []*entity.Transaction{
-		{ // latest charge, deliberately added first (rebuild must sort oldest-first)
+		{ // latest by TransactionDate, but EARLIEST by CreatedDate (= the real start)
 			ID: uuid.New(), AppID: appID, MyshopifyDomain: "store1.myshopify.com",
 			ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2999, Currency: "USD",
-			TransactionDate: now,
+			TransactionDate: now, CreatedDate: firstCharge,
 		},
-		{ // earliest recurring charge = subscription start
+		{ // earliest by TransactionDate, but LATEST by CreatedDate
 			ID: uuid.New(), AppID: appID, MyshopifyDomain: "store1.myshopify.com",
 			ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2999, Currency: "USD",
-			TransactionDate: firstCharge,
+			TransactionDate: firstCharge, CreatedDate: now,
 		},
 	}
 	subRepo := &mockSubRepoForLedger{}

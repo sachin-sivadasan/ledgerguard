@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -261,8 +262,10 @@ func TestCreateOrganization(t *testing.T) {
 	if org.Name != "My Org" {
 		t.Errorf("expected name 'My Org', got %q", org.Name)
 	}
-	if org.Slug != "my-org" {
-		t.Errorf("expected slug 'my-org', got %q", org.Slug)
+	// Slug is the generated base plus a short unique suffix (org ID fragment) to
+	// avoid UNIQUE-slug collisions across same-named orgs.
+	if !strings.HasPrefix(org.Slug, "my-org-") || len(org.Slug) <= len("my-org-") {
+		t.Errorf("expected slug to start with 'my-org-' plus a unique suffix, got %q", org.Slug)
 	}
 	if org.PlanTier != valueobject.PlanTierFree {
 		t.Errorf("expected FREE plan, got %s", org.PlanTier)

@@ -6,6 +6,7 @@ Postponed ideas and features for later implementation.
 
 ## Backlog
 
+| Transactional CreateOrganization | P3 | `OrgService.CreateOrganization` (org_service.go) does two independent writes — `orgRepo.Create` then `memberRepo.Create` — with no enclosing DB transaction. If the member insert fails after the org insert succeeds, you get an orphaned org with no members; worse, the org backfill keys on `org_members` so it would then create a *second* org for that user. Pre-existing (also affects `POST /orgs`), but now exercised on every signup via the auth provisioner. Wrap both writes (and ideally the audit log) in a single tx once the repos support a shared querier/tx. Also: the default-org-name logic is duplicated in Go (`defaultOrgName`, auth.go) and SQL (migration 000042) — keep them in sync or centralize. |
 | Feature | Priority | Notes |
 |---------|----------|-------|
 | Welcome & Onboarding Flow (Hybrid) | P1 | n8n + Postmark email drip + in-app checklist; custom webhook support for third-party flow builders; see `docs/prompts/welcome-onboarding-flow.md` |

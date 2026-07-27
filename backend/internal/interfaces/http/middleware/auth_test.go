@@ -291,6 +291,10 @@ func TestAuthMiddleware_ProvisionError_DoesNotBlockLogin(t *testing.T) {
 	if ctxUser == nil {
 		t.Error("expected user in context despite org-provision failure")
 	}
+	// The user must still be persisted (this is the state the backfill later recovers).
+	if userRepo.created == nil {
+		t.Error("expected user to be created even when org provisioning fails")
+	}
 }
 
 func TestDefaultOrgName(t *testing.T) {

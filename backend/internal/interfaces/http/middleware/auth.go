@@ -92,7 +92,10 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 				// than block login.
 				if m.orgProvisioner != nil {
 					if _, perr := m.orgProvisioner.CreateOrganization(r.Context(), defaultOrgName(user.Email), user.ID); perr != nil {
-						log.Printf("auth: failed to provision default org for user %s: %v — run the org backfill", user.ID, perr)
+						// This runs once (new-user branch only), so a failure leaves the user
+						// org-less until the backfill (000042) is re-applied for them. Log with
+						// identity so it's actionable without a table scan.
+						log.Printf("auth: failed to provision default org for user id=%s email=%s uid=%s: %v", user.ID, user.Email, claims.UID, perr)
 					}
 				}
 			} else {
@@ -107,8 +110,10 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 	})
 }
 
-// defaultOrgName derives a friendly default org name from the user's email, e.g.
-// "alice@shop.com" → "alice's Organization"; falls back to "My Organization".
+// defaultOrgName builds a default org name from the email local-part (text before
+// "@"), e.g. "alice@shop.com" → "alice's Organization"; falls back to
+// "My Organization" when there's no local-part. Kept in sync with the SQL backfill
+// (migration 000042), which derives the same name via split_part(email,'@',1).
 func defaultOrgName(email string) string {
 	if i := strings.IndexByte(email, '@'); i > 0 {
 		return email[:i] + "'s Organization"

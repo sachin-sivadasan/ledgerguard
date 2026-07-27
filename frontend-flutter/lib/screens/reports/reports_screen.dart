@@ -30,7 +30,8 @@ class ReportsScreen extends StatelessWidget {
     _ReportCategory('Revenue & Billing', Icons.attach_money_outlined, [
       _ReportEntry('Earnings', 'Net payouts after Shopify fees',
           route: '/reports/earnings'),
-      _ReportEntry('Monthly Recurring Revenue', 'MRR trend and movements'),
+      _ReportEntry('Monthly Recurring Revenue', 'MRR trend and movements',
+          route: '/reports/mrr'),
       _ReportEntry('Revenue Mix', 'Recurring vs usage vs one-time'),
       _ReportEntry('Usage & One-Time Charges', 'Usage and add-on revenue'),
       _ReportEntry('Payout Schedule', 'Upcoming payout timing'),

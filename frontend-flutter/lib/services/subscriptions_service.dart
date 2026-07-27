@@ -92,18 +92,14 @@ class SubscriptionsService {
 
   SubscriptionsService(this._client);
 
+  // Note: no from/to params — this report is point-in-time (current active base +
+  // latest-snapshot churn), so the backend ignores a date range by design.
   Future<SubscriptionsReport> fetchReport(
     String appId, {
-    String? from,
-    String? to,
     CancelToken? cancelToken,
   }) async {
-    final queryParameters = <String, dynamic>{};
-    if (from != null) queryParameters['from'] = from;
-    if (to != null) queryParameters['to'] = to;
     final response = await _client.get(
       '/api/v1/apps/$appId/reports/subscriptions',
-      queryParameters: queryParameters,
       cancelToken: cancelToken,
     );
     return SubscriptionsReport.fromJson(response.data as Map<String, dynamic>);
@@ -117,13 +113,9 @@ class SubscriptionsService {
   /// 401 because it carries no auth header).
   Future<Uint8List> fetchCsvBytes(
     String appId, {
-    String? from,
-    String? to,
     CancelToken? cancelToken,
   }) async {
     final queryParameters = <String, dynamic>{'format': 'csv'};
-    if (from != null) queryParameters['from'] = from;
-    if (to != null) queryParameters['to'] = to;
     final response = await _client.get<List<int>>(
       '/api/v1/apps/$appId/reports/subscriptions',
       queryParameters: queryParameters,

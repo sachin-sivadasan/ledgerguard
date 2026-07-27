@@ -390,6 +390,12 @@ class _PlanTable extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: LgSpacing.s200),
               child: _PlanRow(plan: p, currency: currency),
             )),
+        const SizedBox(height: LgSpacing.s200),
+        Text(
+          'Per-plan LTV uses the blended (app-level) churn rate.',
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: LgColors.textSecondary),
+        ),
       ],
     );
   }

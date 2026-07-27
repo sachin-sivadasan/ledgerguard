@@ -105,6 +105,28 @@ func TestSubscriptions_ArpuFlooredIntegerDivision(t *testing.T) {
 	}
 }
 
+// TestSubscriptions_ArpuFloorsNotRounds pins that ARPU FLOORS (integer division) rather
+// than rounding: 10000 ÷ 6 = 1666.67, which floors to 1666 but would round to 1667 — so
+// a round-instead-of-floor regression is caught.
+func TestSubscriptions_ArpuFloorsNotRounds(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	subs := []*entity.Subscription{
+		safeSub(appID, "a.myshopify.com", "Pro", 2000),
+		safeSub(appID, "b.myshopify.com", "Pro", 2000),
+		safeSub(appID, "c.myshopify.com", "Pro", 2000),
+		safeSub(appID, "d.myshopify.com", "Pro", 2000),
+		safeSub(appID, "e.myshopify.com", "Pro", 1000),
+		safeSub(appID, "f.myshopify.com", "Pro", 1000),
+	}
+	h := newSubscriptionsHandler(appID, pa, subs, nil)
+	resp := decodeSubscriptions(t, doSubscriptions(t, h, appID, pa, ""))
+	// 10000 / 6 = 1666.67 → floor 1666 (round would give 1667).
+	if resp.ArpuCents != 1666 {
+		t.Errorf("arpuCents: expected 1666 (floored, not rounded to 1667), got %d", resp.ArpuCents)
+	}
+}
+
 // TestSubscriptions_LtvIsArpuOverChurnRate verifies LTV = ARPU ÷ churn rate, where the
 // churn rate is churned subs ÷ snapshot total (the shared churnRate definition), and
 // that the quotient is ROUNDED to the nearest cent (2000/0.2 must be 10000, not 9999).
@@ -129,6 +151,34 @@ func TestSubscriptions_LtvIsArpuOverChurnRate(t *testing.T) {
 	}
 	if resp.LtvCents != 10000 {
 		t.Errorf("ltvCents: expected 10000 (rounded, 2000/0.2), got %d", resp.LtvCents)
+	}
+}
+
+// TestSubscriptions_LtvRoundedNotTruncated pins that LTV ROUNDS to the nearest cent
+// rather than truncating. ARPU 1000 ÷ churn 0.7 = 1428.57… → rounds to 1429; a plain
+// int64() truncation (or math.Floor) would give 1428, so this catches that regression.
+func TestSubscriptions_LtvRoundedNotTruncated(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	subs := []*entity.Subscription{
+		// 1 safe sub @ 1000 → ARPU 1000.
+		safeSub(appID, "a.myshopify.com", "Pro", 1000),
+	}
+	// 7 churned subs, snapshot total 10 → rate 0.7.
+	for range 7 {
+		subs = append(subs, atRiskSub(appID, "c.myshopify.com", "Pro", 500, valueobject.RiskStateChurned))
+	}
+	h := newSubscriptionsHandler(appID, pa, subs, []*entity.DailyMetricsSnapshot{subsSnap(appID, 10)})
+	resp := decodeSubscriptions(t, doSubscriptions(t, h, appID, pa, ""))
+	if resp.ChurnRate != 0.7 {
+		t.Fatalf("churnRate: expected 0.7, got %v", resp.ChurnRate)
+	}
+	if resp.ArpuCents != 1000 {
+		t.Fatalf("arpuCents: expected 1000, got %d", resp.ArpuCents)
+	}
+	// 1000 / 0.7 = 1428.57… → rounds to 1429 (truncation would give 1428).
+	if resp.LtvCents != 1429 {
+		t.Errorf("ltvCents: expected 1429 (rounded, not truncated to 1428), got %d", resp.LtvCents)
 	}
 }
 

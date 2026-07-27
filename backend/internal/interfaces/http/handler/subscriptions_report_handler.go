@@ -87,9 +87,9 @@ func (h *SubscriptionsReportHandler) GetSubscriptions(w http.ResponseWriter, r *
 		return
 	}
 
-	// The churn rate for LTV uses the latest snapshot's total-subscription count as
-	// its denominator, matching the Churn report's definition exactly (via the shared
-	// churnRate helper) so the two reports never disagree on churn.
+	// The churn rate for LTV uses the latest snapshot's total-subscription count as its
+	// denominator via the shared churnRate helper — the same churn definition as the
+	// Churn report (over the default range both select the same newest snapshot).
 	now := time.Now().UTC()
 	from := now.AddDate(0, 0, -90)
 	snapshots, err := h.snapshotRepo.FindByAppIDRange(r.Context(), app.ID, from, now)
@@ -98,6 +98,12 @@ func (h *SubscriptionsReportHandler) GetSubscriptions(w http.ResponseWriter, r *
 		return
 	}
 	latest := latestSnapshot(snapshots)
+	if latest == nil {
+		// No snapshot in the trailing window → the churn denominator is unavailable, so
+		// LTV will be undefined (rendered "—"). Log so this data-freshness gap stays
+		// distinguishable from a genuine zero churn rate.
+		log.Printf("subscriptions: no snapshot in 90d window for app %s — churn denominator unavailable, LTV undefined", app.ID)
+	}
 
 	report := buildSubscriptionsReport(subs, latest)
 
@@ -170,6 +176,12 @@ func buildSubscriptionsReport(subs []*entity.Subscription, latest *entity.DailyM
 	if latest != nil {
 		total = latest.TotalSubscriptions
 	}
+	// Mirror the Churn report's drift log: when the live churned count exceeds the
+	// snapshot total the snapshot is stale/behind, and churnRate silently clamps to 1.0
+	// (collapsing LTV to ARPU). Log so the clamp never hides the drift.
+	if total > 0 && churnedCount > total {
+		log.Printf("subscriptions: live churned count %d exceeds latest snapshot total %d — clamping churn to 1.0 (stale snapshot?)", churnedCount, total)
+	}
 	rate := churnRate(churnedCount, total)
 
 	plans := make([]subscriptionsPlan, 0, len(byPlan))
@@ -213,8 +225,8 @@ func arpuCents(mrrCents int64, activeSubs int) int64 {
 // ltvCents returns ARPU ÷ monthly churn rate rounded to the nearest whole cent, or 0
 // when the churn rate is 0 (LTV is mathematically undefined — an infinite lifetime — so
 // we surface 0 and let the frontend show "—" rather than a misleading $0 or ∞). Rounds
-// (not truncates) because binary float can render an exact quotient like 2000/0.2 as
-// 9999.999…, which a plain int64() cast would drop to 9999.
+// (not truncates) because ARPU ÷ churn rarely lands on a whole cent (e.g. 1000 ÷ 0.7 =
+// 1428.57…); a plain int64() cast would truncate, systematically understating LTV.
 func ltvCents(arpuCents int64, churnRate float64) int64 {
 	if churnRate <= 0 {
 		return 0

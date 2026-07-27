@@ -118,11 +118,13 @@ func writeMRRRepoError(w http.ResponseWriter, op string, err error) {
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
-// momChangePct returns the signed month-over-month growth ratio of MRR:
-// (latest − baseline) / baseline, where baseline is the FIRST in-range snapshot's
-// ActiveMRRCents and latest is the last. This is a growth ratio, NOT a rate — it
-// is intentionally not clamped to [0,1] (a doubling → 1.0, a halving → -0.5).
-// Returns 0 when there are fewer than 2 snapshots or the baseline is <= 0.
+// momChangePct returns the signed growth ratio of MRR: (latest − baseline) / baseline,
+// where baseline is the FIRST in-range snapshot's ActiveMRRCents and latest is the last.
+// The "mom" name reflects the default 30-day range (start-vs-latest ≈ month-over-month);
+// with a wider selected range this is range-start-to-latest, not a trailing calendar
+// month. This is a growth ratio, NOT a rate — intentionally not clamped to [0,1] (a
+// doubling → 1.0, a halving → -0.5). Returns 0 when there are fewer than 2 snapshots or
+// the baseline is <= 0 (the frontend hides the delta when there are <2 snapshots).
 func momChangePct(snapshots []*entity.DailyMetricsSnapshot) float64 {
 	if len(snapshots) < 2 {
 		return 0
@@ -153,7 +155,10 @@ func buildMRRReport(subs []*entity.Subscription, plans []mrrPlan, snapshots []*e
 	}
 
 	// New/churned MRR are period-scoped movements over the [from,to] window,
-	// inclusive of the entire `to` day (matching retention's boundary).
+	// inclusive of the entire `to` day (matching retention's boundary). "New" counts
+	// only subs that are CURRENTLY SAFE and were created in-range — a sub created
+	// in-range that has since gone at-risk/churned is excluded from New (and, if it
+	// churned in-range, shows under Churned instead).
 	toExclusive := to.AddDate(0, 0, 1)
 	var newMrrCents, churnedMrrCents int64
 	for _, s := range subs {

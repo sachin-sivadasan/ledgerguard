@@ -257,6 +257,84 @@ func TestMRR_ChurnedMrrInRange(t *testing.T) {
 	}
 }
 
+// TestMRR_MovementDateBoundary pins the [from,to] window edges for New/Churned MRR:
+// created/churned exactly at `from` and any time on the `to` day are included; the day
+// after `to` is excluded.
+func TestMRR_MovementDateBoundary(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	fromMidnight := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	toAfternoon := time.Date(2026, 7, 31, 14, 30, 0, 0, time.UTC)
+	dayAfter := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+
+	nAtFrom := safeSub(appID, "n1.myshopify.com", "Pro", 1000)
+	nAtFrom.CreatedAt = fromMidnight
+	nToDay := safeSub(appID, "n2.myshopify.com", "Pro", 2000)
+	nToDay.CreatedAt = toAfternoon
+	nAfter := safeSub(appID, "n3.myshopify.com", "Pro", 4000)
+	nAfter.CreatedAt = dayAfter
+
+	cAtFrom := atRiskSub(appID, "c1.myshopify.com", "Pro", 500, valueobject.RiskStateChurned)
+	cAtFrom.ExpectedNextChargeDate = &fromMidnight
+	cAfter := atRiskSub(appID, "c2.myshopify.com", "Pro", 800, valueobject.RiskStateChurned)
+	cAfter.ExpectedNextChargeDate = &dayAfter
+
+	subs := []*entity.Subscription{nAtFrom, nToDay, nAfter, cAtFrom, cAfter}
+	h := NewMRRReportHandler(
+		&mockSubscriptionRepo{subscriptions: subs},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+	resp := decodeMRR(t, doMRR(t, h, appID, pa, "from=2026-07-01&to=2026-07-31"))
+	// New: 1000 (at from) + 2000 (to-day afternoon) = 3000; day-after 4000 excluded.
+	if resp.NewMrrCents != 3000 {
+		t.Errorf("newMrrCents boundary: expected 3000 (from + to-day, day-after excluded), got %d", resp.NewMrrCents)
+	}
+	// Churned: 500 (at from); day-after 800 excluded.
+	if resp.ChurnedMrrCents != 500 {
+		t.Errorf("churnedMrrCents boundary: expected 500 (from included, day-after excluded), got %d", resp.ChurnedMrrCents)
+	}
+}
+
+// TestMRR_CurrencyNonUSD verifies a non-USD subscription currency surfaces.
+func TestMRR_CurrencyNonUSD(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	eur := safeSub(appID, "eu.myshopify.com", "Pro", 5000)
+	eur.Currency = "EUR"
+	h := NewMRRReportHandler(
+		&mockSubscriptionRepo{subscriptions: []*entity.Subscription{eur}},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+	resp := decodeMRR(t, doMRR(t, h, appID, pa, ""))
+	if resp.Currency != "EUR" {
+		t.Errorf("currency: expected EUR, got %q", resp.Currency)
+	}
+}
+
+// TestMRR_EmptyPlanNameBucket verifies a sub with an empty plan name forms its own bucket.
+func TestMRR_EmptyPlanNameBucket(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	s := safeSub(appID, "noplan.myshopify.com", "", 4000)
+	h := NewMRRReportHandler(
+		&mockSubscriptionRepo{subscriptions: []*entity.Subscription{s}},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+	resp := decodeMRR(t, doMRR(t, h, appID, pa, ""))
+	if len(resp.Plans) != 1 || resp.Plans[0].PlanName != "" || resp.Plans[0].MrrCents != 4000 {
+		t.Errorf("expected one empty-name plan bucket with 4000, got %+v", resp.Plans)
+	}
+}
+
 // TestMRR_PlanGrouping verifies per-plan activeSubs, mrrCents, pctOfTotal and sort
 // by MRR descending.
 func TestMRR_PlanGrouping(t *testing.T) {

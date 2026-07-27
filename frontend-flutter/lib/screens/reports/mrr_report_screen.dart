@@ -190,7 +190,11 @@ class _HeroRow extends StatelessWidget {
         label: 'MRR',
         value: _money(report.mrrCents, currency),
         color: LgColors.textPrimary,
-        delta: _MomDelta(momChangePct: report.momChangePct),
+        // Only show the change delta when there are ≥2 snapshots to compare; with
+        // 0/1 the backend returns 0 and a green "+0.0%" would be misleading.
+        delta: report.trend.length >= 2
+            ? _MomDelta(momChangePct: report.momChangePct)
+            : null,
         footnote: 'active recurring revenue (latest snapshot)',
       ),
       _KpiCard(
@@ -273,7 +277,7 @@ class _KpiCard extends StatelessWidget {
   }
 }
 
-/// Signed month-over-month delta line, e.g. "▲ +6.2% vs last month".
+/// Signed change delta line vs the start of the selected range, e.g. "▲ +6.2% vs range start".
 class _MomDelta extends StatelessWidget {
   final double momChangePct;
   const _MomDelta({required this.momChangePct});
@@ -287,7 +291,7 @@ class _MomDelta extends StatelessWidget {
     final sign = isUp ? '+' : '';
     final pct = '$sign${(momChangePct * 100).toStringAsFixed(1)}%';
     return Text(
-      '$arrow $pct vs last month',
+      '$arrow $pct vs range start',
       style: theme.textTheme.bodySmall
           ?.copyWith(color: color, fontWeight: FontWeight.w600),
     );

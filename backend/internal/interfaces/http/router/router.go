@@ -51,6 +51,7 @@ type Config struct {
 	PayoutHistoryReportHandler      *handler.PayoutHistoryReportHandler
 	UninstallContextHandler         *handler.UninstallContextHandler
 	InstallsReportHandler           *handler.InstallsReportHandler
+	NetNewSubsReportHandler         *handler.NetNewSubsReportHandler
 	RiskHandler                     *handler.RiskHandler
 	OrgHandler                      *handler.OrgHandler
 	OrgAuditHandler                 *handler.OrgAuditHandler
@@ -316,6 +317,11 @@ func New(cfg Config) *chi.Mux {
 				// Installs report route (Growth, Archetype A — install/uninstall trend)
 				if cfg.InstallsReportHandler != nil {
 					r.Get("/{appID}/reports/installs", cfg.InstallsReportHandler.GetInstalls)
+				}
+
+				// Net-New Subscriptions report route (Growth, Archetype A — new vs churned)
+				if cfg.NetNewSubsReportHandler != nil {
+					r.Get("/{appID}/reports/net-new-subscriptions", cfg.NetNewSubsReportHandler.GetNetNewSubs)
 				}
 
 				// Cohort retention route. Both paths hit the same handler: /cohorts is

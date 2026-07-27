@@ -27,6 +27,7 @@ import 'providers/subscriptions_provider.dart';
 import 'providers/payout_schedule_provider.dart';
 import 'providers/payout_history_provider.dart';
 import 'providers/installs_provider.dart';
+import 'providers/net_new_subs_provider.dart';
 import 'providers/reviews_provider.dart';
 import 'providers/revenue_at_risk_provider.dart';
 import 'providers/revenue_mix_provider.dart';
@@ -55,6 +56,7 @@ import 'services/subscriptions_service.dart';
 import 'services/payout_schedule_service.dart';
 import 'services/payout_history_service.dart';
 import 'services/installs_service.dart';
+import 'services/net_new_subs_service.dart';
 import 'services/reviews_service.dart';
 import 'services/mixpanel_service.dart';
 import 'services/revenue_at_risk_service.dart';
@@ -96,6 +98,7 @@ void main() async {
   final payoutScheduleService = PayoutScheduleService(apiClient);
   final payoutHistoryService = PayoutHistoryService(apiClient);
   final installsService = InstallsService(apiClient);
+  final netNewSubsService = NetNewSubsService(apiClient);
   final mrrReportService = MrrReportService(apiClient);
   final uninstallContextService = UninstallContextService(apiClient);
   final reviewsService = ReviewsService(apiClient);
@@ -125,6 +128,7 @@ void main() async {
   final payoutScheduleProvider = PayoutScheduleProvider(payoutScheduleService);
   final payoutHistoryProvider = PayoutHistoryProvider(payoutHistoryService);
   final installsProvider = InstallsProvider(installsService);
+  final netNewSubsProvider = NetNewSubsProvider(netNewSubsService);
   final mrrReportProvider = MrrReportProvider(mrrReportService);
   final uninstallContextProvider =
       UninstallContextProvider(uninstallContextService);
@@ -154,6 +158,7 @@ void main() async {
     payoutScheduleProvider: payoutScheduleProvider,
     payoutHistoryProvider: payoutHistoryProvider,
     installsProvider: installsProvider,
+    netNewSubsProvider: netNewSubsProvider,
     mrrReportProvider: mrrReportProvider,
     uninstallContextProvider: uninstallContextProvider,
     reviewsProvider: reviewsProvider,
@@ -190,6 +195,7 @@ void main() async {
         ChangeNotifierProvider.value(value: payoutScheduleProvider),
         ChangeNotifierProvider.value(value: payoutHistoryProvider),
         ChangeNotifierProvider.value(value: installsProvider),
+        ChangeNotifierProvider.value(value: netNewSubsProvider),
         ChangeNotifierProvider.value(value: mrrReportProvider),
         ChangeNotifierProvider.value(value: uninstallContextProvider),
         ChangeNotifierProvider.value(value: reviewsProvider),

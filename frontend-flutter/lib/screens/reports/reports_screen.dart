@@ -50,7 +50,8 @@ class ReportsScreen extends StatelessWidget {
       _ReportEntry('Installs', 'New installs over time',
           route: '/reports/installs'),
       _ReportEntry('Activation', 'Install-to-paid funnel'),
-      _ReportEntry('Net-New Subscriptions', 'New paying subscriptions'),
+      _ReportEntry('Net-New Subscriptions', 'New paying subscriptions',
+          route: '/reports/net-new-subscriptions'),
     ]),
     _ReportCategory('Customers', Icons.people_outline, [
       _ReportEntry('Active Customers', 'Active paying merchants'),

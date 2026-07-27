@@ -23,6 +23,7 @@ import 'providers/mrr_report_provider.dart';
 import 'providers/retention_provider.dart';
 import 'providers/usage_provider.dart';
 import 'providers/usage_trends_provider.dart';
+import 'providers/subscriptions_provider.dart';
 import 'providers/reviews_provider.dart';
 import 'providers/revenue_at_risk_provider.dart';
 import 'providers/revenue_mix_provider.dart';
@@ -47,6 +48,7 @@ import 'services/mrr_report_service.dart';
 import 'services/retention_service.dart';
 import 'services/usage_service.dart';
 import 'services/usage_trends_service.dart';
+import 'services/subscriptions_service.dart';
 import 'services/reviews_service.dart';
 import 'services/mixpanel_service.dart';
 import 'services/revenue_at_risk_service.dart';
@@ -84,6 +86,7 @@ void main() async {
   final retentionService = RetentionService(apiClient);
   final usageService = UsageService(apiClient);
   final usageTrendsService = UsageTrendsService(apiClient);
+  final subscriptionsService = SubscriptionsService(apiClient);
   final mrrReportService = MrrReportService(apiClient);
   final uninstallContextService = UninstallContextService(apiClient);
   final reviewsService = ReviewsService(apiClient);
@@ -109,6 +112,7 @@ void main() async {
   final retentionProvider = RetentionProvider(retentionService);
   final usageProvider = UsageProvider(usageService);
   final usageTrendsProvider = UsageTrendsProvider(usageTrendsService);
+  final subscriptionsProvider = SubscriptionsProvider(subscriptionsService);
   final mrrReportProvider = MrrReportProvider(mrrReportService);
   final uninstallContextProvider =
       UninstallContextProvider(uninstallContextService);
@@ -134,6 +138,7 @@ void main() async {
     retentionProvider: retentionProvider,
     usageProvider: usageProvider,
     usageTrendsProvider: usageTrendsProvider,
+    subscriptionsProvider: subscriptionsProvider,
     mrrReportProvider: mrrReportProvider,
     uninstallContextProvider: uninstallContextProvider,
     reviewsProvider: reviewsProvider,
@@ -166,6 +171,7 @@ void main() async {
         ChangeNotifierProvider.value(value: retentionProvider),
         ChangeNotifierProvider.value(value: usageProvider),
         ChangeNotifierProvider.value(value: usageTrendsProvider),
+        ChangeNotifierProvider.value(value: subscriptionsProvider),
         ChangeNotifierProvider.value(value: mrrReportProvider),
         ChangeNotifierProvider.value(value: uninstallContextProvider),
         ChangeNotifierProvider.value(value: reviewsProvider),

@@ -46,6 +46,7 @@ type Config struct {
 	RevenueMixReportHandler         *handler.RevenueMixReportHandler
 	UsageReportHandler              *handler.UsageReportHandler
 	UsageTrendsReportHandler        *handler.UsageTrendsReportHandler
+	SubscriptionsReportHandler      *handler.SubscriptionsReportHandler
 	UninstallContextHandler         *handler.UninstallContextHandler
 	RiskHandler                     *handler.RiskHandler
 	OrgHandler                      *handler.OrgHandler
@@ -287,6 +288,11 @@ func New(cfg Config) *chi.Mux {
 				// Usage Trends report route (Archetype A — weekly momentum)
 				if cfg.UsageTrendsReportHandler != nil {
 					r.Get("/{appID}/reports/usage-trends", cfg.UsageTrendsReportHandler.GetUsageTrends)
+				}
+
+				// Subscriptions (ARPU / LTV) report route (Archetype B — composition)
+				if cfg.SubscriptionsReportHandler != nil {
+					r.Get("/{appID}/reports/subscriptions", cfg.SubscriptionsReportHandler.GetSubscriptions)
 				}
 
 				// Uninstall Context report route

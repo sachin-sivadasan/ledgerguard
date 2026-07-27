@@ -406,6 +406,13 @@ func run() error {
 		log.Println("Usage report handler initialized")
 	}
 
+	// Initialize subscriptions (ARPU / LTV) report handler (Archetype B — composition)
+	var subscriptionsReportHandler *handler.SubscriptionsReportHandler
+	if subscriptionRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
+		subscriptionsReportHandler = handler.NewSubscriptionsReportHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo)
+		log.Println("Subscriptions report handler initialized")
+	}
+
 	// Initialize usage trends report handler (Archetype A — weekly momentum, no snapshot repo)
 	var usageTrendsReportHandler *handler.UsageTrendsReportHandler
 	if txRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -827,6 +834,7 @@ func run() error {
 		RevenueMixReportHandler:         revenueMixReportHandler,
 		UsageReportHandler:              usageReportHandler,
 		UsageTrendsReportHandler:        usageTrendsReportHandler,
+		SubscriptionsReportHandler:      subscriptionsReportHandler,
 		UninstallContextHandler:         uninstallContextHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,

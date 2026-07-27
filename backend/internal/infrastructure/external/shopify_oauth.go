@@ -45,7 +45,7 @@ func (s *ShopifyOAuthService) FetchOrganizationID(ctx context.Context, accessTok
 	}
 
 	// Use the partners API endpoint
-	apiURL := "https://partners.shopify.com/api/2025-07/graphql.json"
+	apiURL := "https://partners.shopify.com/api/" + partnerAPIVersion + "/graphql.json"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewReader(reqBody))
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)

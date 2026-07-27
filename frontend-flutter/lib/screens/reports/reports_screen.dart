@@ -43,6 +43,8 @@ class ReportsScreen extends StatelessWidget {
           route: '/reports/subscriptions'),
       _ReportEntry('Payout Schedule', 'Upcoming payout timing',
           route: '/reports/payout-schedule'),
+      _ReportEntry('Payout History', 'Completed payouts by month',
+          route: '/reports/payout-history'),
     ]),
     _ReportCategory('Growth', Icons.trending_up_outlined, [
       _ReportEntry('Installs', 'New installs over time'),

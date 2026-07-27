@@ -399,6 +399,13 @@ func run() error {
 		log.Println("Payout schedule report handler initialized")
 	}
 
+	// Initialize payout history report handler (Archetype D — completed payouts)
+	var payoutHistoryReportHandler *handler.PayoutHistoryReportHandler
+	if txRepo != nil && appRepo != nil && partnerRepo != nil {
+		payoutHistoryReportHandler = handler.NewPayoutHistoryReportHandler(txRepo, appRepo, partnerRepo)
+		log.Println("Payout history report handler initialized")
+	}
+
 	// Initialize revenue mix report handler
 	var revenueMixReportHandler *handler.RevenueMixReportHandler
 	if txRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -843,6 +850,7 @@ func run() error {
 		UsageTrendsReportHandler:        usageTrendsReportHandler,
 		SubscriptionsReportHandler:      subscriptionsReportHandler,
 		PayoutScheduleReportHandler:     payoutScheduleReportHandler,
+		PayoutHistoryReportHandler:      payoutHistoryReportHandler,
 		UninstallContextHandler:         uninstallContextHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,

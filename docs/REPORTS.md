@@ -37,7 +37,7 @@ A top-level **Reports** nav item → a Reports landing page modeled on Mantle: a
 | Usage Trends | usage over time, top usage stores | ✅ | transactions |
 | Subscriptions (ARPU / LTV) | active subs, ARPU, LTV | ✅ **Shipped** (PR) | subs + snapshot |
 | Payout Schedule | upcoming Shopify payouts + when | ✅ **Shipped** (PR) | `AvailableDate`, `EarningsStatus` |
-| Payout History | historical payouts by app/period | ✅ | paid transactions |
+| Payout History | historical payouts by app/period | ✅ **Shipped** (PR) | paid transactions |
 | Discounts | discount impact on revenue | 🔴 | not synced |
 
 **Retention & Risk**
@@ -215,7 +215,7 @@ Index page: `docs/wireframes/19-reports.svg`.
 | **Usage Trends** | ✅ **Shipped** — `backend/.../usage_trends_report_handler.go` (13 tests; USAGE-only ISO-week (Monday-anchored) buckets, signed unclamped WoW app- + per-store level, distinct active-store count; 503, CSV) + `frontend-flutter/.../usage_trends_screen.dart` (Usage MRR-equiv / WoW / active-stores KPIs, weekly trend, top-usage-customers table). Merged to main (PR #16). |
 | **Subscriptions (ARPU / LTV)** | ✅ **Shipped** — `backend/.../subscriptions_report_handler.go` (13 tests; Archetype B composition. Active = SAFE subs; ARPU = ActiveMRR ÷ active subs (floored); LTV = ARPU ÷ monthly churn rate (shared `churnRate` helper → consistent with Churn report, rounded, 0/"—" when churn 0); per-plan ARPU/LTV + share-of-subs; 503, CSV) + `frontend-flutter/.../subscriptions_screen.dart` (Active-subs / ARPU / LTV KPIs, subscriptions-by-plan horizontal bars, plan-detail table). Merged to main (PR #17). |
 | **Payout Schedule** | ✅ **Shipped** — `backend/.../payout_schedule_report_handler.go` (11 tests; Archetype D schedule/timeline. Upcoming (PENDING+AVAILABLE) net earnings grouped by (AvailableDate, status); PAID_OUT excluded [→ Payout History], unknown status logged+dropped, KPIs reconcile with rows; Upcoming/Next-date/Pending KPIs; rows sorted scheduled-asc, Available-before-Pending, unscheduled last; 503, CSV) + `frontend-flutter/.../payout_schedule_screen.dart` (3 KPIs + upcoming-payouts timeline with status pills). Merged to main (PR #18). |
-| Payout History | ⬜ Pending (Revenue & Billing) |
+| **Payout History** | ✅ **Shipped** — `backend/.../payout_history_report_handler.go` (11 tests; Archetype D completed-payouts. PAID_OUT-only [PENDING/AVAILABLE → Payout Schedule], grouped by charge-month period; Total-Paid / Payout-count / Avg-payout KPIs; per-period amount + charge count + paidDate=latest available date in period; rows sorted period-desc; reuses shared `earningsCurrency`; 503, CSV) + `frontend-flutter/.../payout_history_screen.dart` (3 KPIs + payout-log timeline). Merged to main (PR #TBD). **Revenue & Billing category COMPLETE (9 reports).** |
 | Installs · Activation · Net-New Subscriptions | ⬜ Pending (Growth) |
 | Active Customers · Customer Insights | ⬜ Pending (Customers) |
 | 🛡️ Fee Audit · Payout Accuracy · Ledger Reconciliation | ⬜ Pending (Guard — differentiators) |

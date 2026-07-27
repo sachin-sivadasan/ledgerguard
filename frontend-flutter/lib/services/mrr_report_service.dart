@@ -50,8 +50,9 @@ class MrrReport {
   final String currency;
   final int mrrCents;
 
-  /// Signed month-over-month growth ratio (e.g. 0.062 == +6.2%). Can be
-  /// negative or >1 — NOT clamped, since it represents a growth rate.
+  /// Signed growth ratio of MRR vs the start of the selected range
+  /// ((latest − baseline) / baseline; e.g. 0.062 == +6.2%). Can be negative or
+  /// >1 — NOT clamped; it is a growth ratio, not a rate. 0 when <2 snapshots.
   final double momChangePct;
   final int newMrrCents;
   final int churnedMrrCents;

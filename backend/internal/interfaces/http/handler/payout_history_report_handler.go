@@ -49,9 +49,9 @@ type payoutHistoryRow struct {
 	Period      string `json:"period"`      // charge month, "YYYY-MM"
 	AmountCents int64  `json:"amountCents"` // Σ net paid in the period
 	ChargeCount int    `json:"chargeCount"`
-	// AvailableDate is the latest date the period's earnings became available for payout
-	// ("YYYY-MM-DD", or "" when unset). It is EarningsCalculator's ~7-day availability
-	// estimate, NOT Shopify's authoritative disbursement date.
+	// AvailableDate is the latest estimated availability date among the period's charges
+	// ("YYYY-MM-DD", or "" when unset) — EarningsCalculator's ~7-day estimate, NOT
+	// Shopify's authoritative disbursement date.
 	AvailableDate string `json:"availableDate"`
 }
 

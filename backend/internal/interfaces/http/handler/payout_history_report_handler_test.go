@@ -61,6 +61,7 @@ var (
 	phPaidJul5  = time.Date(2026, 7, 5, 0, 0, 0, 0, time.UTC)
 	phPaidJul15 = time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC)
 	phPaidJun5  = time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC)
+	phIngestJul = time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC) // sync/ingestion time (CreatedAt)
 )
 
 // phTx builds a PAID_OUT-shaped transaction (reuses the earnings builder), with a
@@ -101,6 +102,31 @@ func TestPayoutHistory_KPIsAndPeriodGrouping(t *testing.T) {
 	}
 	if jun.AvailableDate != "2026-07-15" { // latest availability date in the period
 		t.Errorf("row[0].availableDate = %q, want 2026-07-15 (latest in period)", jun.AvailableDate)
+	}
+}
+
+// TestPayoutHistory_GroupsByChargeDateNotIngestion pins that periods key off the Shopify
+// charge date (CreatedDate), NOT the row-ingestion time (CreatedAt). A charge billed in
+// May but synced (CreatedAt) in July must land in the May period — reverting the grouping
+// to CreatedAt would fail this.
+func TestPayoutHistory_GroupsByChargeDateNotIngestion(t *testing.T) {
+	tx := earningsTx("shop.myshopify.com", "Shop", "USD", 2100, 2000, entity.EarningsStatusPaidOut, phIngestJul, phPaidJul5)
+	tx.CreatedDate = phMay1 // real Shopify charge date (May); CreatedAt above is the July sync time
+	_, report := servePayoutHistory(t, []*entity.Transaction{tx}, "")
+	if len(report.Rows) != 1 || report.Rows[0].Period != "2026-05" {
+		t.Fatalf("expected the charge in its CreatedDate month 2026-05 (not the CreatedAt sync month 2026-07), got %+v", report.Rows)
+	}
+}
+
+// TestPayoutHistory_ChargeDateFallsBackToTransactionDate pins the TransactionDate fallback
+// when CreatedDate is unset.
+func TestPayoutHistory_ChargeDateFallsBackToTransactionDate(t *testing.T) {
+	tx := earningsTx("shop.myshopify.com", "Shop", "USD", 2100, 2000, entity.EarningsStatusPaidOut, phIngestJul, phPaidJul5)
+	// CreatedDate zero; TransactionDate set to April → period comes from TransactionDate.
+	tx.TransactionDate = phApr1
+	_, report := servePayoutHistory(t, []*entity.Transaction{tx}, "")
+	if len(report.Rows) != 1 || report.Rows[0].Period != "2026-04" {
+		t.Fatalf("expected fallback to TransactionDate month 2026-04, got %+v", report.Rows)
 	}
 }
 

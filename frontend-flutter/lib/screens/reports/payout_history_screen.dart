@@ -127,8 +127,7 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
 
     return LgPage(
       title: 'Payout History',
-      subtitle:
-          'Paid earnings by month — a record of earnings Shopify has disbursed',
+      subtitle: 'Earnings marked paid out, grouped by charge month',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
       secondaryActions: [
@@ -158,7 +157,7 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
               icon: Icons.history_outlined,
               heading: 'No completed payouts yet',
               description:
-                  'Once your earnings clear and Shopify pays them out, a monthly record of those payouts will appear here. Upcoming (not-yet-paid) earnings live in Payout Schedule.',
+                  'Once earnings are marked paid out, a monthly summary appears here. Upcoming (not-yet-paid) earnings live in Payout Schedule.',
             )
           else ...[
             _HeroRow(report: report, currency: currency),
@@ -282,7 +281,7 @@ class _PayoutLogTable extends StatelessWidget {
       children: [
         Text('Payout Log', style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        // Column header row: PERIOD | CHARGES | AMOUNT | PAID DATE
+        // Column header row: PERIOD | CHARGES | AMOUNT | AVAILABLE DATE
         Padding(
           padding: const EdgeInsets.symmetric(
               horizontal: LgSpacing.s400, vertical: LgSpacing.s200),

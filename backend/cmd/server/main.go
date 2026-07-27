@@ -378,6 +378,13 @@ func run() error {
 		log.Println("Retention handler initialized")
 	}
 
+	// Initialize MRR report handler
+	var mrrReportHandler *handler.MRRReportHandler
+	if subscriptionRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
+		mrrReportHandler = handler.NewMRRReportHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo)
+		log.Println("MRR report handler initialized")
+	}
+
 	// Initialize earnings report handler
 	var earningsReportHandler *handler.EarningsReportHandler
 	if txRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -789,6 +796,7 @@ func run() error {
 		RevenueAtRiskHandler:            revenueAtRiskHandler,
 		ChurnHandler:                    churnHandler,
 		RetentionHandler:                retentionHandler,
+		MRRReportHandler:                mrrReportHandler,
 		EarningsReportHandler:           earningsReportHandler,
 		UninstallContextHandler:         uninstallContextHandler,
 		RiskHandler:                     riskHandler,

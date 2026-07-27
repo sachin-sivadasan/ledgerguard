@@ -12,6 +12,7 @@ import '../providers/retention_provider.dart';
 import '../providers/uninstall_context_provider.dart';
 import '../providers/reviews_provider.dart';
 import '../providers/revenue_at_risk_provider.dart';
+import '../providers/revenue_mix_provider.dart';
 import '../providers/risk_provider.dart';
 import '../providers/store_provider.dart';
 import '../providers/subscription_provider.dart';
@@ -29,6 +30,7 @@ class DemoModeCoordinator {
   final EventsProvider _eventsProvider;
   final RiskProvider _riskProvider;
   final RevenueAtRiskProvider _revenueAtRiskProvider;
+  final RevenueMixProvider _revenueMixProvider;
   final ChurnProvider _churnProvider;
   final CohortsProvider _cohortsProvider;
   final RetentionProvider _retentionProvider;
@@ -50,6 +52,7 @@ class DemoModeCoordinator {
     required EventsProvider eventsProvider,
     required RiskProvider riskProvider,
     required RevenueAtRiskProvider revenueAtRiskProvider,
+    required RevenueMixProvider revenueMixProvider,
     required ChurnProvider churnProvider,
     required CohortsProvider cohortsProvider,
     required RetentionProvider retentionProvider,
@@ -69,6 +72,7 @@ class DemoModeCoordinator {
         _eventsProvider = eventsProvider,
         _riskProvider = riskProvider,
         _revenueAtRiskProvider = revenueAtRiskProvider,
+        _revenueMixProvider = revenueMixProvider,
         _churnProvider = churnProvider,
         _cohortsProvider = cohortsProvider,
         _retentionProvider = retentionProvider,
@@ -91,6 +95,7 @@ class DemoModeCoordinator {
     _eventsProvider.setDemoMode(value);
     _riskProvider.setDemoMode(value);
     _revenueAtRiskProvider.setDemoMode(value);
+    _revenueMixProvider.setDemoMode(value);
     _churnProvider.setDemoMode(value);
     _cohortsProvider.setDemoMode(value);
     _retentionProvider.setDemoMode(value);
@@ -118,6 +123,7 @@ class DemoModeCoordinator {
       _eventsProvider.setSelectedApp(appId);
       _riskProvider.setSelectedApp(appId);
       _revenueAtRiskProvider.setSelectedApp(appId);
+      _revenueMixProvider.setSelectedApp(appId);
       _churnProvider.setSelectedApp(appId);
       _cohortsProvider.setSelectedApp(appId);
       _retentionProvider.setSelectedApp(appId);

@@ -23,6 +23,7 @@ import 'providers/mrr_report_provider.dart';
 import 'providers/retention_provider.dart';
 import 'providers/reviews_provider.dart';
 import 'providers/revenue_at_risk_provider.dart';
+import 'providers/revenue_mix_provider.dart';
 import 'providers/risk_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/store_provider.dart';
@@ -45,6 +46,7 @@ import 'services/retention_service.dart';
 import 'services/reviews_service.dart';
 import 'services/mixpanel_service.dart';
 import 'services/revenue_at_risk_service.dart';
+import 'services/revenue_mix_service.dart';
 import 'services/risk_service.dart';
 import 'services/store_service.dart';
 import 'services/subscription_service.dart';
@@ -72,6 +74,7 @@ void main() async {
   final earningsReportService = EarningsReportService(apiClient);
   final riskService = RiskService(apiClient);
   final revenueAtRiskService = RevenueAtRiskService(apiClient);
+  final revenueMixService = RevenueMixService(apiClient);
   final churnService = ChurnService(apiClient);
   final cohortsService = CohortsService(apiClient);
   final retentionService = RetentionService(apiClient);
@@ -94,6 +97,7 @@ void main() async {
   final eventsProvider = EventsProvider(eventsService);
   final riskProvider = RiskProvider(riskService);
   final revenueAtRiskProvider = RevenueAtRiskProvider(revenueAtRiskService);
+  final revenueMixProvider = RevenueMixProvider(revenueMixService);
   final churnProvider = ChurnProvider(churnService);
   final cohortsProvider = CohortsProvider(cohortsService);
   final retentionProvider = RetentionProvider(retentionService);
@@ -116,6 +120,7 @@ void main() async {
     eventsProvider: eventsProvider,
     riskProvider: riskProvider,
     revenueAtRiskProvider: revenueAtRiskProvider,
+    revenueMixProvider: revenueMixProvider,
     churnProvider: churnProvider,
     cohortsProvider: cohortsProvider,
     retentionProvider: retentionProvider,
@@ -145,6 +150,7 @@ void main() async {
         ChangeNotifierProvider.value(value: webhookProvider),
         ChangeNotifierProvider.value(value: riskProvider),
         ChangeNotifierProvider.value(value: revenueAtRiskProvider),
+        ChangeNotifierProvider.value(value: revenueMixProvider),
         ChangeNotifierProvider.value(value: churnProvider),
         ChangeNotifierProvider.value(value: cohortsProvider),
         ChangeNotifierProvider.value(value: retentionProvider),

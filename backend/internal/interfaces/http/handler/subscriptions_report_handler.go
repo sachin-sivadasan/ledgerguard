@@ -88,8 +88,10 @@ func (h *SubscriptionsReportHandler) GetSubscriptions(w http.ResponseWriter, r *
 	}
 
 	// The churn rate for LTV uses the latest snapshot's total-subscription count as its
-	// denominator via the shared churnRate helper — the same churn definition as the
-	// Churn report (over the default range both select the same newest snapshot).
+	// denominator via the shared churnRate helper — the same churn *definition* as the
+	// Churn report. Both pick the newest snapshot ending at `now`, but the windows
+	// differ (here 90d, Churn's default 30d), so the two can diverge if the latest
+	// snapshot is older than 30 days.
 	now := time.Now().UTC()
 	from := now.AddDate(0, 0, -90)
 	snapshots, err := h.snapshotRepo.FindByAppIDRange(r.Context(), app.ID, from, now)

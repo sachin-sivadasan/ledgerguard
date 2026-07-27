@@ -24,6 +24,7 @@ import 'providers/retention_provider.dart';
 import 'providers/usage_provider.dart';
 import 'providers/usage_trends_provider.dart';
 import 'providers/subscriptions_provider.dart';
+import 'providers/payout_schedule_provider.dart';
 import 'providers/reviews_provider.dart';
 import 'providers/revenue_at_risk_provider.dart';
 import 'providers/revenue_mix_provider.dart';
@@ -49,6 +50,7 @@ import 'services/retention_service.dart';
 import 'services/usage_service.dart';
 import 'services/usage_trends_service.dart';
 import 'services/subscriptions_service.dart';
+import 'services/payout_schedule_service.dart';
 import 'services/reviews_service.dart';
 import 'services/mixpanel_service.dart';
 import 'services/revenue_at_risk_service.dart';
@@ -87,6 +89,7 @@ void main() async {
   final usageService = UsageService(apiClient);
   final usageTrendsService = UsageTrendsService(apiClient);
   final subscriptionsService = SubscriptionsService(apiClient);
+  final payoutScheduleService = PayoutScheduleService(apiClient);
   final mrrReportService = MrrReportService(apiClient);
   final uninstallContextService = UninstallContextService(apiClient);
   final reviewsService = ReviewsService(apiClient);
@@ -113,6 +116,7 @@ void main() async {
   final usageProvider = UsageProvider(usageService);
   final usageTrendsProvider = UsageTrendsProvider(usageTrendsService);
   final subscriptionsProvider = SubscriptionsProvider(subscriptionsService);
+  final payoutScheduleProvider = PayoutScheduleProvider(payoutScheduleService);
   final mrrReportProvider = MrrReportProvider(mrrReportService);
   final uninstallContextProvider =
       UninstallContextProvider(uninstallContextService);
@@ -139,6 +143,7 @@ void main() async {
     usageProvider: usageProvider,
     usageTrendsProvider: usageTrendsProvider,
     subscriptionsProvider: subscriptionsProvider,
+    payoutScheduleProvider: payoutScheduleProvider,
     mrrReportProvider: mrrReportProvider,
     uninstallContextProvider: uninstallContextProvider,
     reviewsProvider: reviewsProvider,
@@ -172,6 +177,7 @@ void main() async {
         ChangeNotifierProvider.value(value: usageProvider),
         ChangeNotifierProvider.value(value: usageTrendsProvider),
         ChangeNotifierProvider.value(value: subscriptionsProvider),
+        ChangeNotifierProvider.value(value: payoutScheduleProvider),
         ChangeNotifierProvider.value(value: mrrReportProvider),
         ChangeNotifierProvider.value(value: uninstallContextProvider),
         ChangeNotifierProvider.value(value: reviewsProvider),

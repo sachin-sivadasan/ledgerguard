@@ -50,6 +50,7 @@ type Config struct {
 	PayoutScheduleReportHandler     *handler.PayoutScheduleReportHandler
 	PayoutHistoryReportHandler      *handler.PayoutHistoryReportHandler
 	UninstallContextHandler         *handler.UninstallContextHandler
+	InstallsReportHandler           *handler.InstallsReportHandler
 	RiskHandler                     *handler.RiskHandler
 	OrgHandler                      *handler.OrgHandler
 	OrgAuditHandler                 *handler.OrgAuditHandler
@@ -310,6 +311,11 @@ func New(cfg Config) *chi.Mux {
 				// Uninstall Context report route
 				if cfg.UninstallContextHandler != nil {
 					r.Get("/{appID}/reports/uninstall-context", cfg.UninstallContextHandler.GetUninstallContext)
+				}
+
+				// Installs report route (Growth, Archetype A — install/uninstall trend)
+				if cfg.InstallsReportHandler != nil {
+					r.Get("/{appID}/reports/installs", cfg.InstallsReportHandler.GetInstalls)
 				}
 
 				// Cohort retention route. Both paths hit the same handler: /cohorts is

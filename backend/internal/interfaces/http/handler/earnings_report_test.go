@@ -109,11 +109,43 @@ func TestEarningsReport_KPISumsByStatus(t *testing.T) {
 	}
 }
 
-func TestEarningsReport_NetEqualsSumOfBuckets(t *testing.T) {
-	_, report := serveEarnings(t, mixedEarningsTxs(), "")
-	if report.NetEarningsCents != report.PendingCents+report.AvailableCents+report.PaidOutCents {
-		t.Errorf("invariant broken: net=%d != pending+available+paid=%d",
-			report.NetEarningsCents, report.PendingCents+report.AvailableCents+report.PaidOutCents)
+// TestEarningsReport_UnknownStatusExcludedAndReconciles verifies a tx with an
+// unrecognized EarningsStatus is dropped from BOTH the KPIs and the charge table, so
+// the visible rows' net sums to NetEarningsCents (no phantom row that isn't in a KPI).
+func TestEarningsReport_UnknownStatusExcludedAndReconciles(t *testing.T) {
+	txs := append(mixedEarningsTxs(),
+		earningsTx("x.myshopify.com", "Xenon", "USD", 5000, 4000, entity.EarningsStatus("DISPUTED"), dayC1, dayA),
+		earningsTx("y.myshopify.com", "Yttrium", "USD", 3000, 2400, entity.EarningsStatus(""), dayC2, dayA),
+	)
+	_, report := serveEarnings(t, txs, "")
+
+	// Only the 3 known-status charges survive; the 2 unknown ones are dropped.
+	if len(report.Charges) != 3 {
+		t.Fatalf("charges: expected 3 (unknown-status excluded), got %d", len(report.Charges))
+	}
+	var chargeNetSum int64
+	for _, c := range report.Charges {
+		chargeNetSum += c.NetCents
+	}
+	if chargeNetSum != report.NetEarningsCents {
+		t.Errorf("charge net sum %d != netEarningsCents %d (reconciliation broken)", chargeNetSum, report.NetEarningsCents)
+	}
+	// Net still equals only the known buckets (unknown 4000/2400 excluded).
+	if report.NetEarningsCents != 3920+1500+800 {
+		t.Errorf("netEarningsCents = %d, want 6220 (unknown-status net excluded)", report.NetEarningsCents)
+	}
+}
+
+// TestEarningsReport_ZeroAvailableDateBlank verifies an unset AvailableDate serializes
+// as "" (not "0001-01-01") so the UI can render its "—" fallback.
+func TestEarningsReport_ZeroAvailableDateBlank(t *testing.T) {
+	tx := earningsTx("a.myshopify.com", "Acme", "USD", 4900, 3920, entity.EarningsStatusPaidOut, dayC1, time.Time{})
+	_, report := serveEarnings(t, []*entity.Transaction{tx}, "")
+	if len(report.Charges) != 1 {
+		t.Fatalf("expected 1 charge, got %d", len(report.Charges))
+	}
+	if report.Charges[0].AvailableDate != "" {
+		t.Errorf("zero AvailableDate: expected \"\", got %q", report.Charges[0].AvailableDate)
 	}
 }
 
@@ -254,7 +286,7 @@ func TestEarningsReport_CSVFormatAndEscaping(t *testing.T) {
 		t.Fatalf("expected header + 1 row, got %d records", len(records))
 	}
 	header := records[0]
-	wantHeader := []string{"date", "store", "gross", "net", "status", "availableDate"}
+	wantHeader := []string{"date", "store", "domain", "gross", "net", "status", "availableDate"}
 	if len(header) != len(wantHeader) {
 		t.Fatalf("header = %v, want %v", header, wantHeader)
 	}
@@ -264,16 +296,19 @@ func TestEarningsReport_CSVFormatAndEscaping(t *testing.T) {
 		}
 	}
 	row := records[1]
-	if len(row) != 6 {
-		t.Fatalf("data row has %d fields, want 6: %v", len(row), row)
+	if len(row) != 7 {
+		t.Fatalf("data row has %d fields, want 7: %v", len(row), row)
 	}
 	if row[1] != "Acme, Inc." {
 		t.Errorf("store field = %q, want %q (comma must stay in one field)", row[1], "Acme, Inc.")
 	}
-	if row[2] != "4900" || row[3] != "3920" {
-		t.Errorf("gross/net = %q/%q, want 4900/3920", row[2], row[3])
+	if row[2] != `weird"quote.myshopify.com` {
+		t.Errorf("domain field = %q, want the embedded-quote domain in one field", row[2])
 	}
-	if row[4] != "Pending" {
-		t.Errorf("status = %q, want Pending", row[4])
+	if row[3] != "4900" || row[4] != "3920" {
+		t.Errorf("gross/net = %q/%q, want 4900/3920", row[3], row[4])
+	}
+	if row[5] != "Pending" {
+		t.Errorf("status = %q, want Pending", row[5])
 	}
 }

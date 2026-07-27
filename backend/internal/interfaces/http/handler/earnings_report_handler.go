@@ -84,6 +84,15 @@ func (h *EarningsReportHandler) GetEarningsReport(w http.ResponseWriter, r *http
 		return
 	}
 
+	// Exclude transactions without a recognized earnings status from BOTH the KPI
+	// summary and the charge table, so the headline Net always reconciles with the
+	// sum of the visible rows. SummarizeEarnings ignores unknown statuses anyway;
+	// filtering here keeps the table consistent with it and logs any drops.
+	txs, skipped := filterKnownEarningsStatus(txs)
+	if skipped > 0 {
+		log.Printf("earnings: excluded %d transaction(s) with an unrecognized EarningsStatus (would not reconcile with KPIs)", skipped)
+	}
+
 	calc := service.NewEarningsCalculator()
 	summary := calc.SummarizeEarnings(txs)
 
@@ -125,6 +134,39 @@ func earningsCurrency(txs []*entity.Transaction) string {
 	return "USD"
 }
 
+// isKnownEarningsStatus reports whether a status is one of the three recognized
+// payout states the summary buckets by.
+func isKnownEarningsStatus(s entity.EarningsStatus) bool {
+	switch s {
+	case entity.EarningsStatusPending, entity.EarningsStatusAvailable, entity.EarningsStatusPaidOut:
+		return true
+	}
+	return false
+}
+
+// filterKnownEarningsStatus splits transactions into those with a recognized earnings
+// status (kept) and a count of the rest (dropped), so KPIs and charges reconcile.
+func filterKnownEarningsStatus(txs []*entity.Transaction) (known []*entity.Transaction, skipped int) {
+	known = make([]*entity.Transaction, 0, len(txs))
+	for _, tx := range txs {
+		if isKnownEarningsStatus(tx.EarningsStatus) {
+			known = append(known, tx)
+		} else {
+			skipped++
+		}
+	}
+	return known, skipped
+}
+
+// formatReportDate formats a date as YYYY-MM-DD, or "" for a zero value so the
+// frontend renders its "—" fallback instead of a nonsensical "0001-01-01".
+func formatReportDate(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format(dateLayout)
+}
+
 // buildEarningsCharges converts each transaction to a report row, sorted by charge
 // date (CreatedAt) descending. Initialized with make so an empty set serializes []
 // rather than null.
@@ -132,13 +174,13 @@ func buildEarningsCharges(txs []*entity.Transaction) []earningsCharge {
 	charges := make([]earningsCharge, 0, len(txs))
 	for _, tx := range txs {
 		charges = append(charges, earningsCharge{
-			Date:          tx.CreatedAt.Format(dateLayout),
+			Date:          formatReportDate(tx.CreatedAt),
 			Domain:        tx.MyshopifyDomain,
 			ShopName:      tx.ShopName,
 			GrossCents:    tx.GrossAmountCents,
 			NetCents:      tx.NetAmountCents,
 			Status:        earningsStatusLabel(tx.EarningsStatus),
-			AvailableDate: tx.AvailableDate.Format(dateLayout),
+			AvailableDate: formatReportDate(tx.AvailableDate),
 		})
 	}
 	sort.SliceStable(charges, func(i, j int) bool {
@@ -173,11 +215,12 @@ func writeEarningsChargesCSV(w http.ResponseWriter, charges []earningsCharge) {
 	w.Header().Set("Content-Disposition", `attachment; filename="earnings.csv"`)
 
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"date", "store", "gross", "net", "status", "availableDate"})
+	_ = cw.Write([]string{"date", "store", "domain", "gross", "net", "status", "availableDate"})
 	for _, c := range charges {
 		_ = cw.Write([]string{
 			c.Date,
 			c.ShopName,
+			c.Domain,
 			strconv.FormatInt(c.GrossCents, 10),
 			strconv.FormatInt(c.NetCents, 10),
 			c.Status,

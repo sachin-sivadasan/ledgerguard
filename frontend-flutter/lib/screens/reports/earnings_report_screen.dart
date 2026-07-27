@@ -188,7 +188,7 @@ class _HeroRow extends StatelessWidget {
         label: 'Net Earnings',
         value: _money(report.netEarningsCents, currency),
         color: LgColors.textPrimary,
-        footnote: 'gross minus Shopify revenue share',
+        footnote: 'net after Shopify share — pending + available + paid',
       ),
       _KpiCard(
         label: 'Pending',
@@ -201,6 +201,12 @@ class _HeroRow extends StatelessWidget {
         value: _money(report.availableCents, currency),
         color: LgColors.success,
         footnote: 'cleared & withdrawable now',
+      ),
+      _KpiCard(
+        label: 'Paid Out',
+        value: _money(report.paidOutCents, currency),
+        color: LgColors.textSecondary,
+        footnote: 'already disbursed',
       ),
     ];
 

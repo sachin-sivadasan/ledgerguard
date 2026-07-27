@@ -59,9 +59,9 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
         );
       }
     } catch (e) {
-      // Don't swallow the cause — surface a 503 with the same "service
-      // unavailable" copy the report body uses, and log everything else so
-      // export failures stay diagnosable.
+      // Don't swallow the cause — surface a 503 with a matching
+      // service-unavailable message, and log everything else so export
+      // failures stay diagnosable.
       debugPrint('usage-trends: CSV export failed: $e');
       if (!mounted) return;
       final isUnavailable = e is DioException && e.response?.statusCode == 503;

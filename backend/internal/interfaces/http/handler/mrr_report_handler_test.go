@@ -220,6 +220,39 @@ func TestMRR_NewMrrInRange(t *testing.T) {
 	}
 }
 
+// TestMRR_NewMrrUsesStartDateNotCreatedAt verifies newMrrCents is gated on StartDate()
+// (ActivatedAt — the real business start), NOT CreatedAt (the record-created timestamp
+// that resets on every rebuild). A SAFE sub with ActivatedAt in range but CreatedAt out
+// counts; the reverse does not.
+func TestMRR_NewMrrUsesStartDateNotCreatedAt(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	from := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	inRangeStart := from.AddDate(0, 0, 10)
+	outOfRangeStart := from.AddDate(0, 0, -40)
+
+	// A: ActivatedAt in range, CreatedAt OUT (Sept) → counts toward new MRR.
+	a := safeSub(appID, "a.myshopify.com", "Pro", 5000)
+	a.CreatedAt = time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	a.ActivatedAt = &inRangeStart
+	// B: ActivatedAt OUT of range, CreatedAt in range → excluded.
+	b := safeSub(appID, "b.myshopify.com", "Pro", 3000)
+	b.CreatedAt = inRangeStart
+	b.ActivatedAt = &outOfRangeStart
+
+	h := NewMRRReportHandler(
+		&mockSubscriptionRepo{subscriptions: []*entity.Subscription{a, b}},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+	resp := decodeMRR(t, doMRR(t, h, appID, pa, "from=2026-07-01&to=2026-07-31"))
+	if resp.NewMrrCents != 5000 {
+		t.Errorf("newMrrCents: expected 5000 (A via StartDate/ActivatedAt; B's ActivatedAt out of range), got %d", resp.NewMrrCents)
+	}
+}
+
 // TestMRR_ChurnedMrrInRange verifies churnedMrrCents sums CHURNED subs whose
 // churnedDateOf falls in [from,to] (incl. an annual sub ÷12) and excludes
 // out-of-range churn dates. Returned as a positive number.

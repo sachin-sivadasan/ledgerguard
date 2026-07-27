@@ -448,6 +448,13 @@ func run() error {
 		log.Println("Installs report handler initialized")
 	}
 
+	// Initialize net-new subscriptions report handler (Growth, Archetype A — new vs churned)
+	var netNewSubsReportHandler *handler.NetNewSubsReportHandler
+	if subscriptionRepo != nil && appRepo != nil && partnerRepo != nil {
+		netNewSubsReportHandler = handler.NewNetNewSubsReportHandler(subscriptionRepo, appRepo, partnerRepo)
+		log.Println("Net-new subscriptions report handler initialized")
+	}
+
 	// Initialize risk handler
 	var riskHandler *handler.RiskHandler
 	if subscriptionRepo != nil && partnerRepo != nil && appRepo != nil {
@@ -860,6 +867,7 @@ func run() error {
 		PayoutHistoryReportHandler:      payoutHistoryReportHandler,
 		UninstallContextHandler:         uninstallContextHandler,
 		InstallsReportHandler:           installsReportHandler,
+		NetNewSubsReportHandler:         netNewSubsReportHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,
 		OrgAuditHandler:                 orgAuditHandler,

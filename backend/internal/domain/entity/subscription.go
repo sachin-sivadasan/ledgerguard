@@ -23,9 +23,23 @@ type Subscription struct {
 	LastRecurringChargeDate *time.Time
 	ExpectedNextChargeDate  *time.Time
 	RiskState               valueobject.RiskState
-	CreatedAt               time.Time
-	UpdatedAt               time.Time
-	DeletedAt               *time.Time // Soft delete timestamp (nil = not deleted)
+	// ActivatedAt is the real business subscription-start date (the earliest charge
+	// date, set at rebuild). Distinct from CreatedAt, which is the record-created /
+	// ingestion timestamp (reset on every ledger rebuild). Nil when unknown.
+	ActivatedAt *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time // Soft delete timestamp (nil = not deleted)
+}
+
+// StartDate returns the business subscription-start date: ActivatedAt when known,
+// falling back to CreatedAt (the record-created timestamp) otherwise. Use this — NOT
+// CreatedAt — for "new subscription" / signup-cohort / start-date logic in reports.
+func (s *Subscription) StartDate() time.Time {
+	if s.ActivatedAt != nil {
+		return *s.ActivatedAt
+	}
+	return s.CreatedAt
 }
 
 func NewSubscription(

@@ -119,7 +119,8 @@ Current state of each subscription.
 | last_recurring_charge_date | TIMESTAMPTZ | | Last successful charge |
 | expected_next_charge_date | TIMESTAMPTZ | | Next expected charge |
 | risk_state | VARCHAR(30) | NOT NULL | SAFE, ONE_CYCLE_MISSED, TWO_CYCLE_MISSED, CHURNED |
-| created_at | TIMESTAMPTZ | DEFAULT NOW() | First seen |
+| activated_at | TIMESTAMPTZ | NULL | **Real business subscription-start** = earliest RECURRING charge date. Set at rebuild (migration 000043). Use for new-sub/cohort/start logic — NOT created_at. |
+| created_at | TIMESTAMPTZ | DEFAULT NOW() | **Record-created / ingestion** timestamp — RESET on every ledger rebuild (hard-delete + re-insert), so NOT the business start. |
 | updated_at | TIMESTAMPTZ | DEFAULT NOW() | Last updated |
 | deleted_at | TIMESTAMPTZ | NULL | Soft delete timestamp (NULL = active) |
 | stable_domain_key | VARCHAR(255) | NULL | Deterministic ID from domain (`lg_sub_` + SHA1), stable across reinstalls |

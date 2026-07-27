@@ -30,6 +30,7 @@ import 'screens/reports/subscriptions_screen.dart';
 import 'screens/reports/payout_schedule_screen.dart';
 import 'screens/reports/payout_history_screen.dart';
 import 'screens/reports/installs_screen.dart';
+import 'screens/reports/net_new_subs_screen.dart';
 import 'screens/reports/uninstall_context_screen.dart';
 import 'screens/risk/risk_screen.dart';
 import 'screens/settings/connect_shopify_screen.dart';
@@ -240,6 +241,10 @@ class _AppState extends State<App> {
                   GoRoute(
                     path: 'installs',
                     builder: (c, s) => const InstallsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'net-new-subscriptions',
+                    builder: (c, s) => const NetNewSubsScreen(),
                   ),
                   GoRoute(
                     path: 'cohorts',

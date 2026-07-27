@@ -140,7 +140,7 @@ func TestLedgerService_RebuildFromTransactions_Success(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			NetAmountCents:     2999,
+			NetAmountCents:  2999,
 			Currency:        "USD",
 			TransactionDate: now.AddDate(0, -1, 0), // 1 month ago
 		},
@@ -150,7 +150,7 @@ func TestLedgerService_RebuildFromTransactions_Success(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/2",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			NetAmountCents:     2999,
+			NetAmountCents:  2999,
 			Currency:        "USD",
 			TransactionDate: now, // Today
 		},
@@ -160,7 +160,7 @@ func TestLedgerService_RebuildFromTransactions_Success(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/3",
 			MyshopifyDomain: "store2.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			NetAmountCents:     4999,
+			NetAmountCents:  4999,
 			Currency:        "USD",
 			TransactionDate: now,
 		},
@@ -210,7 +210,7 @@ func TestLedgerService_RebuildFromTransactions_SeparatesRecurringAndUsage(t *tes
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			NetAmountCents:     2999,
+			NetAmountCents:  2999,
 			Currency:        "USD",
 			TransactionDate: now,
 		},
@@ -220,7 +220,7 @@ func TestLedgerService_RebuildFromTransactions_SeparatesRecurringAndUsage(t *tes
 			ShopifyGID:      "gid://shopify/Transaction/2",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeUsage,
-			NetAmountCents:     500,
+			NetAmountCents:  500,
 			Currency:        "USD",
 			TransactionDate: now,
 		},
@@ -230,7 +230,7 @@ func TestLedgerService_RebuildFromTransactions_SeparatesRecurringAndUsage(t *tes
 			ShopifyGID:      "gid://shopify/Transaction/3",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeUsage,
-			NetAmountCents:     300,
+			NetAmountCents:  300,
 			Currency:        "USD",
 			TransactionDate: now,
 		},
@@ -270,7 +270,7 @@ func TestLedgerService_RebuildFromTransactions_ComputesExpectedRenewalDate(t *te
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			NetAmountCents:     2999,
+			NetAmountCents:  2999,
 			Currency:        "USD",
 			TransactionDate: lastChargeDate,
 		},
@@ -326,7 +326,7 @@ func TestLedgerService_RebuildFromTransactions_ClassifiesRiskState(t *testing.T)
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			NetAmountCents:     2999,
+			NetAmountCents:  2999,
 			Currency:        "USD",
 			TransactionDate: oldChargeDate,
 		},
@@ -392,7 +392,7 @@ func TestLedgerService_RebuildFromTransactions_Deterministic(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store-b.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			NetAmountCents:     2999,
+			NetAmountCents:  2999,
 			TransactionDate: now,
 		},
 		{
@@ -401,7 +401,7 @@ func TestLedgerService_RebuildFromTransactions_Deterministic(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/2",
 			MyshopifyDomain: "store-a.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			NetAmountCents:     4999,
+			NetAmountCents:  4999,
 			TransactionDate: now,
 		},
 	}
@@ -508,7 +508,7 @@ func TestLedgerService_DetectsBillingInterval_Annual(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			NetAmountCents:     29900, // $299/year
+			NetAmountCents:  29900,                 // $299/year
 			TransactionDate: now.AddDate(-1, 0, 0), // 1 year ago
 		},
 		{
@@ -517,7 +517,7 @@ func TestLedgerService_DetectsBillingInterval_Annual(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/2",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			NetAmountCents:     29900,
+			NetAmountCents:  29900,
 			TransactionDate: now,
 		},
 	}
@@ -673,5 +673,56 @@ func TestBackfillOptimized_ProducesSameResults(t *testing.T) {
 		if !s1.Date.Equal(s2.Date) {
 			t.Errorf("day %d: date mismatch %v vs %v", i, s1.Date, s2.Date)
 		}
+	}
+}
+
+// TestLedgerService_SetsActivatedAtFromFirstRecurringCharge verifies the rebuild sets a
+// subscription's ActivatedAt (the real business start) to its EARLIEST recurring charge
+// date — distinct from CreatedAt, which is the record-created/rebuild timestamp.
+func TestLedgerService_SetsActivatedAtFromFirstRecurringCharge(t *testing.T) {
+	appID := uuid.New()
+	now := time.Date(2026, 2, 26, 12, 0, 0, 0, time.UTC)
+	firstCharge := now.AddDate(0, -3, 0) // 3 months ago = the real start (earliest CreatedDate)
+
+	// CreatedDate ordering is deliberately INVERTED vs TransactionDate to prove the rebuild
+	// takes MIN(CreatedDate) (matching migration 000043's backfill), not the
+	// recurringTxs[0]-by-TransactionDate row's CreatedDate.
+	transactions := []*entity.Transaction{
+		{ // latest by TransactionDate, but EARLIEST by CreatedDate (= the real start)
+			ID: uuid.New(), AppID: appID, MyshopifyDomain: "store1.myshopify.com",
+			ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2999, Currency: "USD",
+			TransactionDate: now, CreatedDate: firstCharge,
+		},
+		{ // earliest by TransactionDate, but LATEST by CreatedDate
+			ID: uuid.New(), AppID: appID, MyshopifyDomain: "store1.myshopify.com",
+			ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2999, Currency: "USD",
+			TransactionDate: firstCharge, CreatedDate: now,
+		},
+	}
+	subRepo := &mockSubRepoForLedger{}
+	service := NewLedgerService(&mockTxRepoForLedger{transactions: transactions}, subRepo)
+	if _, err := service.RebuildFromTransactions(context.Background(), appID, now); err != nil {
+		t.Fatalf("rebuild: %v", err)
+	}
+
+	var sub *entity.Subscription
+	for _, s := range subRepo.subscriptions {
+		if s.MyshopifyDomain == "store1.myshopify.com" {
+			sub = s
+		}
+	}
+	if sub == nil {
+		t.Fatal("store1 subscription not built")
+	}
+	if sub.ActivatedAt == nil || !sub.ActivatedAt.Equal(firstCharge) {
+		t.Errorf("ActivatedAt: expected first recurring charge %v, got %v", firstCharge, sub.ActivatedAt)
+	}
+	// CreatedAt is the rebuild/record time (time.Now()), NOT the business start.
+	if sub.CreatedAt.Equal(firstCharge) {
+		t.Error("CreatedAt should be the record-created time, not the business start date")
+	}
+	// StartDate() must surface the business start, not CreatedAt.
+	if !sub.StartDate().Equal(firstCharge) {
+		t.Errorf("StartDate(): expected %v, got %v", firstCharge, sub.StartDate())
 	}
 }

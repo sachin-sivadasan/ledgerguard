@@ -97,11 +97,13 @@ func (h *RevenueMixReportHandler) GetRevenueMix(w http.ResponseWriter, r *http.R
 	}
 }
 
-// buildRevenueMixReport sums net amounts by ChargeType and composes the report.
-// It mirrors the GraphQL earnings resolver's switch exactly: RECURRING, USAGE, and
-// ONE_TIME are the three positive streams, REFUND is a separate negative adjustment.
+// buildRevenueMixReport sums net amounts by ChargeType and composes the report. The
+// per-ChargeType summing mirrors the GraphQL earnings resolver (RECURRING, USAGE, and
+// ONE_TIME are the three positive streams, REFUND a separate negative adjustment); the
+// gross-vs-net split and the composition segments are additions specific to this report.
 func buildRevenueMixReport(txs []*entity.Transaction) revenueMixReport {
-	var recurringCents, usageCents, oneTimeCents, refundCents int64
+	var recurringCents, usageCents, oneTimeCents, refundCents, unknownCents int64
+	var unknownCount int
 	for _, tx := range txs {
 		switch tx.ChargeType {
 		case valueobject.ChargeTypeRecurring:
@@ -112,7 +114,16 @@ func buildRevenueMixReport(txs []*entity.Transaction) revenueMixReport {
 			oneTimeCents += tx.AmountCents()
 		case valueobject.ChargeTypeRefund:
 			refundCents += tx.AmountCents()
+		default:
+			// An unrecognized/empty ChargeType (e.g. a new Partner API charge type)
+			// is excluded from gross so segments stay internally consistent — but log
+			// it so the resulting gross under-count is diagnosable, not silent.
+			unknownCount++
+			unknownCents += tx.AmountCents()
 		}
+	}
+	if unknownCount > 0 {
+		log.Printf("revenue-mix: %d transaction(s) with unrecognized ChargeType (%d cents) excluded from gross — total under-reports true revenue", unknownCount, unknownCents)
 	}
 
 	// Gross is the sum of the three positive streams; net subtracts refunds.

@@ -53,7 +53,10 @@ func mixTx(ct valueobject.ChargeType, netCents int64, currency string) *entity.T
 		AppID:          uuid.New(),
 		ChargeType:     ct,
 		NetAmountCents: netCents,
-		Currency:       currency,
+		// Deliberately different from net so a regression to summing gross instead of
+		// net (AmountCents) would change every total and fail the tests.
+		GrossAmountCents: netCents + 9999,
+		Currency:         currency,
 	}
 }
 
@@ -72,14 +75,15 @@ func serveRevenueMix(t *testing.T, txs []*entity.Transaction, query string) (*ht
 	return rec, report
 }
 
-// mixedRevenueTxs: recurring 5000+1000=6000, usage 2000, one-time 2000, refund 500.
-// gross = 10000, net = 9500.
+// mixedRevenueTxs: recurring 5000+1000=6000, usage 3000, one-time 1000, refund 500.
+// gross = 10000, net = 9500. Usage != One-time so a Usage↔One-time case-label swap
+// would be caught.
 func mixedRevenueTxs() []*entity.Transaction {
 	return []*entity.Transaction{
 		mixTx(valueobject.ChargeTypeRecurring, 5000, "USD"),
 		mixTx(valueobject.ChargeTypeRecurring, 1000, "USD"),
-		mixTx(valueobject.ChargeTypeUsage, 2000, "USD"),
-		mixTx(valueobject.ChargeTypeOneTime, 2000, "USD"),
+		mixTx(valueobject.ChargeTypeUsage, 3000, "USD"),
+		mixTx(valueobject.ChargeTypeOneTime, 1000, "USD"),
 		mixTx(valueobject.ChargeTypeRefund, 500, "USD"),
 	}
 }
@@ -90,11 +94,11 @@ func TestRevenueMix_PerTypeSums(t *testing.T) {
 	if report.RecurringCents != 6000 {
 		t.Errorf("recurringCents = %d, want 6000", report.RecurringCents)
 	}
-	if report.UsageCents != 2000 {
-		t.Errorf("usageCents = %d, want 2000", report.UsageCents)
+	if report.UsageCents != 3000 {
+		t.Errorf("usageCents = %d, want 3000", report.UsageCents)
 	}
-	if report.OneTimeCents != 2000 {
-		t.Errorf("oneTimeCents = %d, want 2000", report.OneTimeCents)
+	if report.OneTimeCents != 1000 {
+		t.Errorf("oneTimeCents = %d, want 1000", report.OneTimeCents)
 	}
 	if report.RefundCents != 500 {
 		t.Errorf("refundCents = %d, want 500", report.RefundCents)
@@ -105,7 +109,7 @@ func TestRevenueMix_GrossExcludesRefund(t *testing.T) {
 	_, report := serveRevenueMix(t, mixedRevenueTxs(), "")
 
 	// gross = recurring + usage + oneTime, refund excluded.
-	if report.GrossCents != 6000+2000+2000 {
+	if report.GrossCents != 6000+3000+1000 {
 		t.Errorf("grossCents = %d, want 10000 (refund excluded)", report.GrossCents)
 	}
 }
@@ -141,19 +145,41 @@ func TestRevenueMix_SegmentPctsSumToOneAndKnownSplit(t *testing.T) {
 	if got := pctByType["Recurring"]; math.Abs(got-0.6) > 1e-9 {
 		t.Errorf("Recurring pct = %v, want 0.6", got)
 	}
-	if got := pctByType["Usage"]; math.Abs(got-0.2) > 1e-9 {
-		t.Errorf("Usage pct = %v, want 0.2", got)
+	if got := pctByType["Usage"]; math.Abs(got-0.3) > 1e-9 {
+		t.Errorf("Usage pct = %v, want 0.3", got)
 	}
-	if got := pctByType["One-time"]; math.Abs(got-0.2) > 1e-9 {
-		t.Errorf("One-time pct = %v, want 0.2", got)
+	if got := pctByType["One-time"]; math.Abs(got-0.1) > 1e-9 {
+		t.Errorf("One-time pct = %v, want 0.1", got)
 	}
 	if math.Abs(sum-1.0) > 1e-9 {
 		t.Errorf("segment pcts sum = %v, want ~1.0", sum)
 	}
 
 	// Amounts are of the positive streams.
-	if amtByType["Recurring"] != 6000 || amtByType["Usage"] != 2000 || amtByType["One-time"] != 2000 {
-		t.Errorf("segment amounts = %+v, want 6000/2000/2000", amtByType)
+	if amtByType["Recurring"] != 6000 || amtByType["Usage"] != 3000 || amtByType["One-time"] != 1000 {
+		t.Errorf("segment amounts = %+v, want 6000/3000/1000", amtByType)
+	}
+	// Refund is NOT a composition segment — the 3 segment amounts sum to gross.
+	if amtByType["Recurring"]+amtByType["Usage"]+amtByType["One-time"] != report.GrossCents {
+		t.Errorf("segment amounts should sum to gross %d; refund must not be a segment", report.GrossCents)
+	}
+}
+
+// TestRevenueMix_UnknownChargeTypeExcludedFromGross verifies a tx with an unrecognized
+// ChargeType is excluded from gross/segments (and logged) rather than silently counted.
+func TestRevenueMix_UnknownChargeTypeExcludedFromGross(t *testing.T) {
+	txs := []*entity.Transaction{
+		mixTx(valueobject.ChargeTypeRecurring, 5000, "USD"),
+		mixTx(valueobject.ChargeType("DISPUTED"), 9000, "USD"),
+		mixTx(valueobject.ChargeType(""), 3000, "USD"),
+	}
+	_, report := serveRevenueMix(t, txs, "")
+	// Only the recognized RECURRING tx counts; the unknown ones are excluded from gross.
+	if report.RecurringCents != 5000 || report.GrossCents != 5000 {
+		t.Errorf("recurring=%d gross=%d, want 5000/5000 (unknown types excluded)", report.RecurringCents, report.GrossCents)
+	}
+	if report.UsageCents != 0 || report.OneTimeCents != 0 || report.RefundCents != 0 {
+		t.Errorf("unknown types leaked into a bucket: %+v", report)
 	}
 }
 

@@ -184,7 +184,8 @@ func buildInstallsReport(events []*entity.AppEvent, subsByShop map[string]*entit
 	}
 
 	// Trend: only buckets with activity, ascending (bucket keys are YYYY-MM-DD → lexical
-	// order == chronological), at the resolved interval (day/week/month).
+	// order == chronological), at the resolved interval (day/week/month). Counts are
+	// SUMMED within each bucket (installs/uninstalls are flow metrics), not sampled as-of.
 	days := make([]string, 0, len(byDay))
 	for day := range byDay {
 		days = append(days, day)

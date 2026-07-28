@@ -20,7 +20,8 @@ enum DateRangePreset {
 }
 
 /// A resolved [from, to] window as YYYY-MM-DD day strings (the format the report
-/// endpoints expect). `from` is null only for all-time (no lower bound sent).
+/// endpoints expect). `from` is nullable for callers that want no lower bound, but
+/// [resolveDateRange] always populates it (all-time uses a far-past sentinel).
 class DateRange {
   final String? from;
   final String? to;

@@ -83,6 +83,7 @@ class _MrrReportScreenState extends State<MrrReportScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Monthly Recurring Revenue',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.show_chart_outlined,
@@ -99,6 +100,7 @@ class _MrrReportScreenState extends State<MrrReportScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Monthly Recurring Revenue',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -107,6 +109,7 @@ class _MrrReportScreenState extends State<MrrReportScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Monthly Recurring Revenue',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -115,6 +118,7 @@ class _MrrReportScreenState extends State<MrrReportScreen>
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Monthly Recurring Revenue',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );

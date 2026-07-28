@@ -285,6 +285,31 @@ func TestNetNewSubs_CurrencyFirstNonEmpty(t *testing.T) {
 	}
 }
 
+// TestNetNewSubs_AdaptiveGranularityMonthly verifies a wide (>92-day) window buckets the
+// new/churned trend by month (first-of-month keys) and reports interval="month".
+func TestNetNewSubs_AdaptiveGranularityMonthly(t *testing.T) {
+	appID := uuid.New()
+	subs := []*entity.Subscription{
+		nnNewSub(appID, "a.myshopify.com", "Pro", 1000, time.Date(2026, 5, 10, 0, 0, 0, 0, time.UTC)),
+		nnNewSub(appID, "b.myshopify.com", "Pro", 1000, time.Date(2026, 5, 20, 0, 0, 0, 0, time.UTC)),
+		nnChurnedSub(appID, "c.myshopify.com", nnJan, time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)),
+	}
+	_, pa, h := nnFixture(subs)
+	resp := decodeNetNew(t, doNetNew(t, h, appID, pa, "from=2026-03-01&to=2026-06-30"))
+	if resp.Interval != "month" {
+		t.Errorf("interval: expected month for a ~4-month range, got %q", resp.Interval)
+	}
+	if len(resp.Trend) != 2 {
+		t.Fatalf("expected 2 monthly buckets, got %d: %+v", len(resp.Trend), resp.Trend)
+	}
+	if resp.Trend[0].Date != "2026-05-01" || resp.Trend[0].New != 2 || resp.Trend[0].Net != 2 {
+		t.Errorf("trend[0]: expected {2026-05-01, new 2, net 2}, got %+v", resp.Trend[0])
+	}
+	if resp.Trend[1].Date != "2026-06-01" || resp.Trend[1].Churned != 1 || resp.Trend[1].Net != -1 {
+		t.Errorf("trend[1]: expected {2026-06-01, churned 1, net -1}, got %+v", resp.Trend[1])
+	}
+}
+
 // TestNetNewSubs_Empty verifies the empty case yields zeros and []-serialized slices.
 func TestNetNewSubs_Empty(t *testing.T) {
 	appID, pa, h := nnFixture(nil)

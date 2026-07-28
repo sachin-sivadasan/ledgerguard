@@ -16,6 +16,7 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class PayoutHistoryScreen extends StatefulWidget {
   const PayoutHistoryScreen({super.key});
@@ -283,91 +284,43 @@ class _PayoutLogTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final secondary =
+        theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Payout Log', style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        // Column header row: PERIOD | CHARGES | AMOUNT | AVAILABLE DATE
-        Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: LgSpacing.s400, vertical: LgSpacing.s200),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Text('PERIOD',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-              _headCell(theme, 'CHARGES'),
-              _headCell(theme, 'AMOUNT'),
-              _headCell(theme, 'AVAILABLE DATE'),
-            ],
-          ),
+        LgTable(
+          columns: const [
+            LgTableColumn('PERIOD', flex: 3),
+            LgTableColumn('CHARGES', flex: 2, numeric: true),
+            LgTableColumn('AMOUNT', flex: 2, numeric: true),
+            LgTableColumn('AVAILABLE DATE', flex: 2, numeric: true),
+          ],
+          rows: [
+            for (final row in report.rows)
+              [
+                Text(
+                  row.periodDate != null
+                      ? DateFormat('MMM yyyy').format(row.periodDate!)
+                      : row.period,
+                  style: theme.textTheme.titleSmall,
+                ),
+                Text('${row.chargeCount}', style: secondary),
+                Text(_money(row.amountCents, currency),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(color: LgColors.success)),
+                Text(
+                  row.availableDateTime != null
+                      ? DateFormat('MMM d, yyyy').format(row.availableDateTime!)
+                      : '—',
+                  style: secondary,
+                ),
+              ],
+          ],
         ),
-        ...report.rows.map((row) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _PayoutLogRow(row: row, currency: currency),
-            )),
       ],
-    );
-  }
-
-  Widget _headCell(ThemeData theme, String label) => Expanded(
-        flex: 2,
-        child: Text(label,
-            textAlign: TextAlign.end,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: LgColors.textSecondary)),
-      );
-}
-
-class _PayoutLogRow extends StatelessWidget {
-  final PayoutHistoryRow row;
-  final String currency;
-  const _PayoutLogRow({required this.row, required this.currency});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final periodDate = row.periodDate;
-    final periodLabel =
-        periodDate != null ? DateFormat('MMM yyyy').format(periodDate) : row.period;
-    final avail = row.availableDateTime;
-    final availLabel =
-        avail != null ? DateFormat('MMM d, yyyy').format(avail) : '—';
-
-    return LgCard(
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Text(periodLabel, style: theme.textTheme.titleSmall),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text('${row.chargeCount}',
-                textAlign: TextAlign.end,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(_money(row.amountCents, currency),
-                textAlign: TextAlign.end,
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(color: LgColors.success)),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(availLabel,
-                textAlign: TextAlign.end,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
-          ),
-        ],
-      ),
     );
   }
 }

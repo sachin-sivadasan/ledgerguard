@@ -16,6 +16,7 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class UninstallContextScreen extends StatefulWidget {
   const UninstallContextScreen({super.key});
@@ -320,84 +321,33 @@ class _StoresTable extends StatelessWidget {
         Text('Uninstalled Stores (pre-churn state)',
             style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        ...stores.map((s) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _StoreRow(store: s),
-            )),
-      ],
-    );
-  }
-}
-
-class _StoreRow extends StatelessWidget {
-  final UninstallStore store;
-  const _StoreRow({required this.store});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final domain = store.domain.isNotEmpty ? store.domain : '—';
-    final plan = store.planName.isNotEmpty ? store.planName : '—';
-    final uninstalled = store.uninstalledDate != null
-        ? DateFormat('MMM dd').format(store.uninstalledDate!)
-        : '—';
-
-    return LgCard(
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(domain, style: theme.textTheme.titleSmall),
-                const SizedBox(height: LgSpacing.s100),
-                _StateBadge(state: store.stateBeforeUninstall),
-              ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(plan, style: theme.textTheme.titleSmall),
-                Text('plan',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_months(store.tenureMonths),
+        LgTable(
+          columns: const [
+            LgTableColumn('STORE', flex: 4),
+            LgTableColumn('STATE BEFORE UNINSTALL', flex: 3),
+            LgTableColumn('PLAN', flex: 2, numeric: true),
+            LgTableColumn('TENURE', flex: 2, numeric: true),
+            LgTableColumn('UNINSTALLED', flex: 2, numeric: true),
+          ],
+          rows: [
+            for (final s in stores)
+              [
+                Text(s.domain.isNotEmpty ? s.domain : '—',
                     style: theme.textTheme.titleSmall),
-                Text('tenure',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
+                _StateBadge(state: s.stateBeforeUninstall),
+                Text(s.planName.isNotEmpty ? s.planName : '—',
+                    style: theme.textTheme.titleSmall),
+                Text(_months(s.tenureMonths), style: theme.textTheme.titleSmall),
+                Text(
+                  s.uninstalledDate != null
+                      ? DateFormat('MMM dd').format(s.uninstalledDate!)
+                      : '—',
+                  style: theme.textTheme.titleSmall,
+                ),
               ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(uninstalled, style: theme.textTheme.titleSmall),
-                Text('uninstalled',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ],
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 }

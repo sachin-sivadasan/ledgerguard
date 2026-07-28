@@ -17,6 +17,7 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class RetentionScreen extends StatefulWidget {
   const RetentionScreen({super.key});
@@ -392,74 +393,28 @@ class _PlansTable extends StatelessWidget {
         Text('Retention by Plan (ranked by retained MRR)',
             style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        ...plans.map((p) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _PlanRow(plan: p, currency: currency),
-            )),
-      ],
-    );
-  }
-}
-
-class _PlanRow extends StatelessWidget {
-  final RetentionPlan plan;
-  final String currency;
-  const _PlanRow({required this.plan, required this.currency});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final name = plan.planName.isNotEmpty ? plan.planName : '—';
-
-    return LgCard(
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: theme.textTheme.titleSmall),
-                const SizedBox(height: LgSpacing.s100),
-                Text(
-                  '${plan.activeSubs} active subs',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: LgColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_percent(plan.renewalRate),
+        LgTable(
+          columns: const [
+            LgTableColumn('PLAN', flex: 3),
+            LgTableColumn('ACTIVE SUBS', flex: 2, numeric: true),
+            LgTableColumn('RENEWAL RATE', flex: 2, numeric: true),
+            LgTableColumn('RETAINED MRR', flex: 2, numeric: true),
+          ],
+          rows: [
+            for (final p in plans)
+              [
+                Text(p.planName.isNotEmpty ? p.planName : '—',
+                    style: theme.textTheme.titleSmall),
+                Text('${p.activeSubs}', style: theme.textTheme.titleSmall),
+                Text(_percent(p.renewalRate),
                     style: theme.textTheme.titleSmall
                         ?.copyWith(color: LgColors.success)),
-                Text('renewal rate',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_money(plan.retainedMrrCents, currency),
+                Text(_money(p.retainedMrrCents, currency),
                     style: theme.textTheme.titleSmall),
-                Text('retained MRR',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
               ],
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 }

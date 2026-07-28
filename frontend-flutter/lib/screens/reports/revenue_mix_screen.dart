@@ -15,6 +15,7 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class RevenueMixScreen extends StatefulWidget {
   const RevenueMixScreen({super.key});
@@ -307,120 +308,70 @@ class _BreakdownTable extends StatelessWidget {
     final theme = Theme.of(context);
     final hasRefunds = report.refundCents > 0;
 
+    // Cell builders preserving the prior per-row styling: segment rows use
+    // bodyMedium with a color swatch, Total/Net rows use titleSmall (bold),
+    // "Less refunds" is muted.
+    Widget typeCell(String label, {Color? swatch, TextStyle? style}) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (swatch != null) ...[
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: swatch,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: LgSpacing.s200),
+            ],
+            Flexible(child: Text(label, style: style)),
+          ],
+        );
+
+    final segmentStyle = theme.textTheme.bodyMedium
+        ?.copyWith(color: LgColors.textPrimary);
+    final mutedStyle = theme.textTheme.bodyMedium
+        ?.copyWith(color: LgColors.textSecondary);
+    final totalStyle = theme.textTheme.titleSmall;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Breakdown', style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        LgCard(
-          child: Column(
-            children: [
-              _BreakdownRow(
-                type: 'TYPE',
-                amount: 'AMOUNT',
-                percent: '%',
-                isHeader: true,
-              ),
-              const Divider(height: LgSpacing.s400),
-              for (final s in report.segments) ...[
-                _BreakdownRow(
-                  type: s.type,
-                  amount: _money(s.amountCents, currency),
-                  percent: _pct(s.pct),
-                  swatch: _segmentColor(s.type),
-                ),
-                const SizedBox(height: LgSpacing.s300),
+        LgTable(
+          columns: const [
+            LgTableColumn('TYPE', flex: 3),
+            LgTableColumn('AMOUNT', flex: 2, numeric: true),
+            LgTableColumn('%', flex: 1, numeric: true),
+          ],
+          rows: [
+            for (final s in report.segments)
+              [
+                typeCell(s.type, swatch: _segmentColor(s.type), style: segmentStyle),
+                Text(_money(s.amountCents, currency), style: segmentStyle),
+                Text(_pct(s.pct), style: segmentStyle),
               ],
-              const Divider(height: LgSpacing.s200),
-              const SizedBox(height: LgSpacing.s300),
-              _BreakdownRow(
-                type: 'Total',
-                amount: _money(report.grossCents, currency),
-                percent: '100%',
-                isTotal: true,
-              ),
-              if (hasRefunds) ...[
-                const SizedBox(height: LgSpacing.s300),
-                _BreakdownRow(
-                  type: 'Less refunds',
-                  amount: '-${_money(report.refundCents, currency)}',
-                  percent: '',
-                  muted: true,
-                ),
-                const SizedBox(height: LgSpacing.s300),
-                _BreakdownRow(
-                  type: 'Net',
-                  amount: _money(report.netCents, currency),
-                  percent: '',
-                  isTotal: true,
-                ),
+            [
+              typeCell('Total', style: totalStyle),
+              Text(_money(report.grossCents, currency), style: totalStyle),
+              Text('100%', style: totalStyle),
+            ],
+            if (hasRefunds) ...[
+              [
+                typeCell('Less refunds', style: mutedStyle),
+                Text('-${_money(report.refundCents, currency)}',
+                    style: mutedStyle),
+                const Text(''),
+              ],
+              [
+                typeCell('Net', style: totalStyle),
+                Text(_money(report.netCents, currency), style: totalStyle),
+                const Text(''),
               ],
             ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _BreakdownRow extends StatelessWidget {
-  final String type;
-  final String amount;
-  final String percent;
-  final bool isHeader;
-  final bool isTotal;
-  final bool muted;
-  final Color? swatch;
-  const _BreakdownRow({
-    required this.type,
-    required this.amount,
-    required this.percent,
-    this.isHeader = false,
-    this.isTotal = false,
-    this.muted = false,
-    this.swatch,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final baseStyle = isHeader
-        ? theme.textTheme.bodySmall
-            ?.copyWith(color: LgColors.textSecondary, letterSpacing: 0.5)
-        : isTotal
-            ? theme.textTheme.titleSmall
-            : theme.textTheme.bodyMedium?.copyWith(
-                color: muted ? LgColors.textSecondary : LgColors.textPrimary,
-              );
-
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: Row(
-            children: [
-              if (swatch != null) ...[
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: swatch,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: LgSpacing.s200),
-              ],
-              Flexible(child: Text(type, style: baseStyle)),
-            ],
-          ),
-        ),
-        Expanded(
-          flex: 2,
-          child: Text(amount, style: baseStyle, textAlign: TextAlign.end),
-        ),
-        Expanded(
-          flex: 1,
-          child: Text(percent, style: baseStyle, textAlign: TextAlign.end),
+          ],
         ),
       ],
     );

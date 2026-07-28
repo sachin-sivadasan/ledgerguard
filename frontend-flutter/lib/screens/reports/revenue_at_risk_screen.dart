@@ -17,6 +17,7 @@ import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_risk_badge.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class RevenueAtRiskScreen extends StatefulWidget {
   const RevenueAtRiskScreen({super.key});
@@ -378,19 +379,44 @@ class _StoresTable extends StatelessWidget {
         Text('Ranked Stores (${stores.length})',
             style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        ...stores.map((s) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _StoreRow(store: s, currency: currency),
-            )),
+        LgTable(
+          columns: const [
+            LgTableColumn('STORE', flex: 4),
+            LgTableColumn('MRR', flex: 2, numeric: true),
+            LgTableColumn('RISK', flex: 3),
+            LgTableColumn('DAYS LATE', flex: 2, numeric: true),
+            LgTableColumn('EXPECTED CHARGE', flex: 2, numeric: true),
+            LgTableColumn('RECOVERABLE', flex: 2, numeric: true),
+          ],
+          rows: [
+            for (final s in stores)
+              [
+                _StoreCell(store: s),
+                Text('${_money(s.mrrCents, currency)}/mo',
+                    style: theme.textTheme.titleSmall),
+                LgRiskBadge(riskState: s.riskState),
+                Text('${s.daysLate}d', style: theme.textTheme.bodySmall),
+                Text(
+                  s.expectedChargeDate != null
+                      ? DateFormat('MMM d').format(s.expectedChargeDate!)
+                      : '—',
+                  style: theme.textTheme.bodySmall,
+                ),
+                Text(_money(s.recoverableCents, currency),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(color: LgColors.success)),
+              ],
+          ],
+        ),
       ],
     );
   }
 }
 
-class _StoreRow extends StatelessWidget {
+/// Two-line store cell: shop name over plan — links to store detail.
+class _StoreCell extends StatelessWidget {
   final RevenueAtRiskStore store;
-  final String currency;
-  const _StoreRow({required this.store, required this.currency});
+  const _StoreCell({required this.store});
 
   @override
   Widget build(BuildContext context) {
@@ -401,61 +427,21 @@ class _StoreRow extends StatelessWidget {
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: LgCard(
-        child: InkWell(
-          onTap: () => context.go('/stores/${store.domain}'),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name, style: theme.textTheme.titleSmall),
-                    const SizedBox(height: LgSpacing.s100),
-                    Text(
-                      '${store.planName.isNotEmpty ? '${store.planName} · ' : ''}${_money(store.mrrCents, currency)}/mo',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: LgColors.textSecondary),
-                    ),
-                  ],
-                ),
+      child: InkWell(
+        onTap: () => context.go('/stores/${store.domain}'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(name, style: theme.textTheme.titleSmall),
+            if (store.planName.isNotEmpty) ...[
+              const SizedBox(height: LgSpacing.s100),
+              Text(
+                store.planName,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: LgColors.textSecondary),
               ),
-              const SizedBox(width: LgSpacing.s200),
-              LgRiskBadge(riskState: store.riskState),
-              const SizedBox(width: LgSpacing.s300),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('${store.daysLate}d late',
-                        style: theme.textTheme.bodySmall),
-                    if (store.expectedChargeDate != null)
-                      Text(
-                        'due ${DateFormat('MMM d').format(store.expectedChargeDate!)}',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: LgColors.textSecondary),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: LgSpacing.s300),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(_money(store.recoverableCents, currency),
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(color: LgColors.success)),
-                  Text('recoverable',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: LgColors.textSecondary)),
-                ],
-              ),
-              const SizedBox(width: LgSpacing.s200),
-              const Icon(Icons.chevron_right, color: LgColors.textSecondary),
             ],
-          ),
+          ],
         ),
       ),
     );

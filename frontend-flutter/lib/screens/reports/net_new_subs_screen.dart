@@ -17,6 +17,7 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class NetNewSubsScreen extends StatefulWidget {
   const NetNewSubsScreen({super.key});
@@ -429,94 +430,38 @@ class _NewSubsTable extends StatelessWidget {
                   ?.copyWith(color: LgColors.textSecondary)),
         ],
         const SizedBox(height: LgSpacing.s300),
-        // Column header row: STORE | PLAN | MRR | STARTED
-        Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: LgSpacing.s400, vertical: LgSpacing.s200),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 4,
-                child: Text('STORE',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text('PLAN',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text('MRR',
-                    textAlign: TextAlign.end,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text('STARTED',
-                    textAlign: TextAlign.end,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-            ],
-          ),
+        LgTable(
+          columns: const [
+            LgTableColumn('STORE', flex: 4),
+            LgTableColumn('PLAN', flex: 2),
+            LgTableColumn('MRR', flex: 2, numeric: true),
+            LgTableColumn('STARTED', flex: 2, numeric: true),
+          ],
+          rows: [
+            for (final s in report.newStores)
+              [
+                Text(
+                  s.domain.isNotEmpty
+                      ? s.domain
+                      : (s.shopName.isNotEmpty ? s.shopName : '—'),
+                  style: theme.textTheme.titleSmall,
+                ),
+                Text(s.planName.isNotEmpty ? s.planName : '—',
+                    style: theme.textTheme.bodyMedium),
+                Text(_money(s.mrrCents, report.currency),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(color: LgColors.success)),
+                Text(
+                  s.startedDate != null
+                      ? DateFormat('MMM d, yyyy').format(s.startedDate!)
+                      : (s.started.isNotEmpty ? s.started : '—'),
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: LgColors.textSecondary),
+                ),
+              ],
+          ],
         ),
-        ...report.newStores.map((s) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _NewSubRowTile(row: s, currency: report.currency),
-            )),
       ],
-    );
-  }
-}
-
-class _NewSubRowTile extends StatelessWidget {
-  final NewSubRow row;
-  final String currency;
-  const _NewSubRowTile({required this.row, required this.currency});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final name = row.domain.isNotEmpty
-        ? row.domain
-        : (row.shopName.isNotEmpty ? row.shopName : '—');
-    final started = row.startedDate;
-    final startedLabel = started != null
-        ? DateFormat('MMM d, yyyy').format(started)
-        : (row.started.isNotEmpty ? row.started : '—');
-    final plan = row.planName.isNotEmpty ? row.planName : '—';
-
-    return LgCard(
-      child: Row(
-        children: [
-          Expanded(
-            flex: 4,
-            child: Text(name, style: theme.textTheme.titleSmall),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(plan, style: theme.textTheme.bodyMedium),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(_money(row.mrrCents, currency),
-                textAlign: TextAlign.end,
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(color: LgColors.success)),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(startedLabel,
-                textAlign: TextAlign.end,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
-          ),
-        ],
-      ),
     );
   }
 }

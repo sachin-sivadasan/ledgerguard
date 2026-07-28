@@ -126,7 +126,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
 
     final report = provider.report ?? SubscriptionsReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasData = report.activeSubs > 0 || report.plans.isNotEmpty;
 

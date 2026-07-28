@@ -125,7 +125,7 @@ class _RevenueMixScreenState extends State<RevenueMixScreen>
 
     final report = provider.report ?? RevenueMixReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasData = report.grossCents > 0 || report.segments.isNotEmpty;
 
@@ -186,18 +186,18 @@ class _RevenueMixScreenState extends State<RevenueMixScreen>
   }
 }
 
-/// Color per charge type: Recurring=primary/indigo, Usage=success/teal-green,
-/// One-time=warning/amber. Falls back to a muted color for anything else.
+/// Color per charge type: Recurring=primary/indigo, Usage=warning/amber,
+/// One-time=success/green. Falls back to a muted color for anything else.
 Color _segmentColor(String type) {
   switch (type.toLowerCase()) {
     case 'recurring':
       return LgColors.primary;
     case 'usage':
-      return LgColors.success;
+      return LgColors.warning;
     case 'one-time':
     case 'onetime':
     case 'one time':
-      return LgColors.warning;
+      return LgColors.success;
     default:
       return LgColors.textSecondary;
   }

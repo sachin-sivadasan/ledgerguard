@@ -126,7 +126,7 @@ class _EarningsReportScreenState extends State<EarningsReportScreen>
 
     final report = provider.report ?? EarningsReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasData = report.charges.isNotEmpty ||
         report.netEarningsCents > 0 ||
@@ -195,7 +195,7 @@ class _HeroRow extends StatelessWidget {
       _KpiCard(
         label: 'Net Earnings',
         value: _money(report.netEarningsCents, currency),
-        color: LgColors.textPrimary,
+        color: LgColors.success,
         footnote: 'net after Shopify share — pending + available + paid',
       ),
       _KpiCard(

@@ -126,7 +126,7 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
 
     final report = provider.report ?? ChurnReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasChurn = report.stores.isNotEmpty ||
         report.churnedCount > 0 ||
@@ -307,7 +307,16 @@ class _TrendCard extends StatelessWidget {
 
     return LgCard(
       title: 'Churn Rate — trend',
-      child: SizedBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _LegendDot(color: LgColors.critical, label: 'Churn rate'),
+            ],
+          ),
+          const SizedBox(height: LgSpacing.s200),
+          SizedBox(
         height: 200,
         child: LineChart(
           LineChartData(
@@ -368,7 +377,31 @@ class _TrendCard extends StatelessWidget {
             ],
           ),
         ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 10, height: 10, color: color),
+        const SizedBox(width: LgSpacing.s100),
+        Text(label,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: LgColors.textSecondary)),
+      ],
     );
   }
 }

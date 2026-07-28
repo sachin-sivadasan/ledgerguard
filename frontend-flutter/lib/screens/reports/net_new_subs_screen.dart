@@ -127,7 +127,7 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
 
     final report = provider.report ?? NetNewSubsReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final hasData = report.newStores.isNotEmpty ||
         report.trend.isNotEmpty ||
         report.newSubs > 0 ||

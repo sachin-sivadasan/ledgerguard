@@ -126,7 +126,7 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
 
     final report = provider.report ?? InstallsReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final hasData = report.events.isNotEmpty ||
         report.trend.isNotEmpty ||
         report.installs > 0 ||

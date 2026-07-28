@@ -127,7 +127,7 @@ class _MrrReportScreenState extends State<MrrReportScreen>
 
     final report = provider.report ?? MrrReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasData = report.plans.isNotEmpty ||
         report.mrrCents > 0 ||
@@ -392,12 +392,12 @@ class _TrendCard extends StatelessWidget {
               LineChartBarData(
                 spots: spots,
                 isCurved: true,
-                color: LgColors.success,
+                color: LgColors.primary,
                 barWidth: 2,
                 dotData: const FlDotData(show: false),
                 belowBarData: BarAreaData(
                   show: true,
-                  color: LgColors.success.withValues(alpha: 0.10),
+                  color: LgColors.primary.withValues(alpha: 0.10),
                 ),
               ),
             ],

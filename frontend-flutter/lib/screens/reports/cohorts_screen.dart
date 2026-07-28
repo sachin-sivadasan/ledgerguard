@@ -123,7 +123,7 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
 
     final cohorts = provider.cohorts;
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
 
     return LgPage(
       title: 'Retention Cohorts',

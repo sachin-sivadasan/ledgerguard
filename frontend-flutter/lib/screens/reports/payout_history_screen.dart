@@ -126,7 +126,7 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
 
     final report = provider.report ?? PayoutHistoryReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasData = report.rows.isNotEmpty || report.totalPaidCents > 0;
 

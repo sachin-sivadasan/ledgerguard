@@ -118,7 +118,7 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
 
     final report = provider.report ?? RevenueAtRiskReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasRisk = report.stores.isNotEmpty || report.totalAtRiskCents > 0;
 
@@ -195,8 +195,20 @@ class _HeroRow extends StatelessWidget {
         label: 'At-Risk Stores',
         value: '${report.atRiskStoreCount}',
         color: LgColors.primary,
-        footnote:
-            '${report.oneCycleCount} × 1-cycle · ${report.twoCycleCount} × 2-cycle',
+        footnoteWidget: Wrap(
+          spacing: LgSpacing.s100,
+          runSpacing: LgSpacing.s100,
+          children: [
+            _CyclePill(
+              color: LgColors.warning,
+              label: '${report.oneCycleCount} × 1-cycle',
+            ),
+            _CyclePill(
+              color: LgColors.riskTwoCycle,
+              label: '${report.twoCycleCount} × 2-cycle',
+            ),
+          ],
+        ),
       ),
     ];
 
@@ -226,12 +238,12 @@ class _KpiCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  final String? footnote;
+  final Widget? footnoteWidget;
   const _KpiCard({
     required this.label,
     required this.value,
     required this.color,
-    this.footnote,
+    this.footnoteWidget,
   });
 
   @override
@@ -248,14 +260,55 @@ class _KpiCard extends StatelessWidget {
           Text(value,
               style: theme.textTheme.headlineMedium
                   ?.copyWith(color: color, fontWeight: FontWeight.w700)),
-          if (footnote != null) ...[
+          if (footnoteWidget != null) ...[
             const SizedBox(height: LgSpacing.s100),
-            Text(footnote!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            footnoteWidget!,
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Small rounded cycle-breakdown pill (same style as report status chips).
+class _CyclePill extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _CyclePill({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 10, height: 10, color: color),
+        const SizedBox(width: LgSpacing.s100),
+        Text(label,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: LgColors.textSecondary)),
+      ],
     );
   }
 }
@@ -295,7 +348,16 @@ class _TrendCard extends StatelessWidget {
 
     return LgCard(
       title: 'At-Risk MRR Trend',
-      child: SizedBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _LegendDot(color: LgColors.critical, label: 'At risk'),
+            ],
+          ),
+          const SizedBox(height: LgSpacing.s200),
+          SizedBox(
         height: 200,
         child: LineChart(
           LineChartData(
@@ -356,6 +418,8 @@ class _TrendCard extends StatelessWidget {
             ],
           ),
         ),
+          ),
+        ],
       ),
     );
   }

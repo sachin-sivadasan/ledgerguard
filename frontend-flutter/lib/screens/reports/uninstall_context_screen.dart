@@ -126,7 +126,7 @@ class _UninstallContextScreenState extends State<UninstallContextScreen>
 
     final report = provider.report ?? UninstallContextReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final hasData = report.stores.isNotEmpty || report.uninstalls > 0;
 
     return LgPage(
@@ -204,8 +204,10 @@ class _CaveatLine extends StatelessWidget {
           Expanded(
             child: Text(
               'Inferred state, NOT a self-reported reason — LedgerGuard is read-only (no uninstall survey).',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textPrimary),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: LgColors.textPrimary,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ),
         ],
@@ -353,7 +355,7 @@ class _StoresTable extends StatelessWidget {
 }
 
 /// Colored chip for the inferred pre-uninstall state:
-/// Healthy=green, At-Risk=amber, Frozen=red/critical, Unknown=grey.
+/// Healthy=green, At-Risk=amber, Frozen=orange, Unknown=grey.
 class _StateBadge extends StatelessWidget {
   final String state;
   const _StateBadge({required this.state});
@@ -363,7 +365,7 @@ class _StateBadge extends StatelessWidget {
     final (fg, bg) = switch (state.toLowerCase()) {
       'healthy' => (LgColors.success, LgColors.successBg),
       'at-risk' => (LgColors.warning, LgColors.warningBg),
-      'frozen' => (LgColors.critical, LgColors.criticalBg),
+      'frozen' => (LgColors.riskTwoCycle, LgColors.warningBg),
       _ => (LgColors.textSecondary, LgColors.surfaceSecondary),
     };
     final label = state.isNotEmpty ? state : 'Unknown';

@@ -126,7 +126,7 @@ class _UsageScreenState extends State<UsageScreen> with DataLoadingMixin {
 
     final report = provider.report ?? UsageReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasData = report.stores.isNotEmpty ||
         report.usageCents > 0 ||
@@ -204,13 +204,13 @@ class _HeroRow extends StatelessWidget {
       _KpiCard(
         label: 'Usage Revenue',
         value: _money(report.usageCents, currency),
-        color: LgColors.textPrimary,
+        color: LgColors.warning,
         footnote: 'USAGE charges only',
       ),
       _KpiCard(
         label: 'One-Time',
         value: _money(report.oneTimeCents, currency),
-        color: LgColors.textPrimary,
+        color: LgColors.success,
         footnote: 'setup fees & add-ons',
       ),
       _KpiCard(
@@ -371,12 +371,12 @@ class _TrendCard extends StatelessWidget {
               LineChartBarData(
                 spots: spots,
                 isCurved: true,
-                color: LgColors.primary,
+                color: LgColors.warning,
                 barWidth: 2,
                 dotData: const FlDotData(show: false),
                 belowBarData: BarAreaData(
                   show: true,
-                  color: LgColors.primary.withValues(alpha: 0.10),
+                  color: LgColors.warning.withValues(alpha: 0.10),
                 ),
               ),
             ],

@@ -126,7 +126,7 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
 
     final report = provider.report ?? PayoutScheduleReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasData = report.rows.isNotEmpty ||
         report.upcomingPayoutCents > 0 ||

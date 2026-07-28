@@ -327,7 +327,7 @@ class _StoresTable extends StatelessWidget {
           columns: const [
             LgTableColumn('STORE', flex: 4),
             LgTableColumn('STATE BEFORE UNINSTALL', flex: 3),
-            LgTableColumn('PLAN', flex: 2, numeric: true),
+            LgTableColumn('PLAN', flex: 2),
             LgTableColumn('TENURE', flex: 2, numeric: true),
             LgTableColumn('UNINSTALLED', flex: 2, numeric: true),
           ],

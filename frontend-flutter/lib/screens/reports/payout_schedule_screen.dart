@@ -300,7 +300,7 @@ class _ScheduleTable extends StatelessWidget {
             LgTableColumn('AVAILABLE DATE', flex: 3),
             LgTableColumn('AMOUNT', flex: 2, numeric: true),
             LgTableColumn('# CHARGES', flex: 2, numeric: true),
-            LgTableColumn('STATUS', flex: 2, numeric: true),
+            LgTableColumn('STATUS', flex: 2),
           ],
           rows: [
             for (final row in report.rows)

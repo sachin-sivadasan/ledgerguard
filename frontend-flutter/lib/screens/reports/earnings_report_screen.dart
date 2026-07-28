@@ -15,6 +15,7 @@ import '../../widgets/lg_card.dart';
 import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
+import '../../widgets/lg_table.dart';
 import '../../widgets/lg_service_unavailable.dart';
 
 class EarningsReportScreen extends StatefulWidget {
@@ -289,95 +290,41 @@ class _ChargesTable extends StatelessWidget {
     final charges = [...report.charges]
       ..sort((a, b) => (b.date ?? DateTime(0)).compareTo(a.date ?? DateTime(0)));
 
+    final secondary =
+        theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Charges', style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        ...charges.map((c) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _ChargeRow(charge: c, currency: currency),
-            )),
-      ],
-    );
-  }
-}
-
-class _ChargeRow extends StatelessWidget {
-  final EarningsCharge charge;
-  final String currency;
-  const _ChargeRow({required this.charge, required this.currency});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final store = charge.shopName.isNotEmpty
-        ? charge.shopName
-        : (charge.domain.isNotEmpty ? charge.domain : '—');
-
-    return LgCard(
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(store, style: theme.textTheme.titleSmall),
-                const SizedBox(height: LgSpacing.s100),
+        LgTable(
+          columns: const [
+            LgTableColumn('DATE', flex: 2),
+            LgTableColumn('STORE', flex: 4),
+            LgTableColumn('GROSS', flex: 2, numeric: true),
+            LgTableColumn('NET', flex: 2, numeric: true),
+            LgTableColumn('STATUS', flex: 2),
+            LgTableColumn('AVAILABLE DATE', flex: 3, numeric: true),
+          ],
+          rows: [
+            for (final c in charges)
+              [
+                Text(_date(c.date), style: secondary),
                 Text(
-                  _date(charge.date),
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: LgColors.textSecondary),
+                  c.shopName.isNotEmpty
+                      ? c.shopName
+                      : (c.domain.isNotEmpty ? c.domain : '—'),
+                  style: theme.textTheme.titleSmall,
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_money(charge.grossCents, currency),
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-                Text('gross',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_money(charge.netCents, currency),
+                Text(_money(c.grossCents, currency), style: secondary),
+                Text(_money(c.netCents, currency),
                     style: theme.textTheme.titleSmall),
-                Text('net',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
+                _StatusChip(status: c.status),
+                Text(_date(c.availableDate), style: secondary),
               ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _StatusChip(status: charge.status),
-                const SizedBox(height: LgSpacing.s100),
-                Text(_date(charge.availableDate),
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ],
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 }

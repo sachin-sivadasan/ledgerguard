@@ -80,6 +80,7 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Retention Cohorts',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.group_work,
@@ -96,6 +97,7 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Retention Cohorts',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -104,6 +106,7 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Retention Cohorts',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -112,6 +115,7 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
     if (provider.isLoading && provider.cohorts.isEmpty) {
       return LgPage(
         title: 'Retention Cohorts',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -123,6 +127,7 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
 
     return LgPage(
       title: 'Retention Cohorts',
+      breadcrumb: 'Reports › Retention & Risk',
       subtitle:
           '% of each signup-month cohort still retained N months later',
       backAction: () => context.go('/reports'),

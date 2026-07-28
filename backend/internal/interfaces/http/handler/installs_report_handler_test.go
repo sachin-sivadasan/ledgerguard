@@ -240,6 +240,30 @@ func TestInstalls_RecentEventsCapped(t *testing.T) {
 	}
 }
 
+// TestInstalls_AdaptiveGranularityMonthly verifies a wide (>92-day) window buckets the
+// trend by month (first-of-month keys) and reports interval="month".
+func TestInstalls_AdaptiveGranularityMonthly(t *testing.T) {
+	events := []*entity.AppEvent{
+		installEvt("gid://shop/1", "RELATIONSHIP_INSTALLED", time.Date(2026, 5, 10, 0, 0, 0, 0, time.UTC)),
+		installEvt("gid://shop/2", "RELATIONSHIP_INSTALLED", time.Date(2026, 5, 20, 0, 0, 0, 0, time.UTC)),
+		installEvt("gid://shop/3", "RELATIONSHIP_UNINSTALLED", time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC)),
+	}
+	appID, pa, h := installsFixture(nil, events)
+	resp := decodeInstalls(t, doInstalls(t, h, appID, pa, "from=2026-03-01&to=2026-06-30"))
+	if resp.Interval != "month" {
+		t.Errorf("interval: expected month for a ~4-month range, got %q", resp.Interval)
+	}
+	if len(resp.Trend) != 2 {
+		t.Fatalf("expected 2 monthly buckets, got %d: %+v", len(resp.Trend), resp.Trend)
+	}
+	if resp.Trend[0].Date != "2026-05-01" || resp.Trend[0].Installs != 2 {
+		t.Errorf("trend[0]: expected {2026-05-01, installs 2}, got %+v", resp.Trend[0])
+	}
+	if resp.Trend[1].Date != "2026-06-01" || resp.Trend[1].Uninstalls != 1 {
+		t.Errorf("trend[1]: expected {2026-06-01, uninstalls 1}, got %+v", resp.Trend[1])
+	}
+}
+
 // TestInstalls_Empty verifies the empty case yields zeros and []-serialized slices.
 func TestInstalls_Empty(t *testing.T) {
 	appID, pa, h := installsFixture(nil, nil)

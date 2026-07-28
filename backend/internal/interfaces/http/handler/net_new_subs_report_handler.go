@@ -70,6 +70,7 @@ type netNewSubsReport struct {
 	NewSubs   int                `json:"newSubs"`
 	Churned   int                `json:"churned"`
 	Net       int                `json:"net"`
+	Interval  string             `json:"interval"` // trend granularity: day / week / month
 	Trend     []netNewTrendPoint `json:"trend"`
 	NewStores []newSubRow        `json:"newStores"`
 }
@@ -126,6 +127,7 @@ func writeNetNewSubsRepoError(w http.ResponseWriter, op string, err error) {
 func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netNewSubsReport {
 	toExclusive := to.AddDate(0, 0, 1)
 	inRange := func(t time.Time) bool { return !t.Before(from) && t.Before(toExclusive) }
+	interval := resolveTrendInterval(from, to)
 
 	// Currency: first non-empty wins (break avoids the "USD"-sentinel-collision bug).
 	currency := "USD"
@@ -154,7 +156,7 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netN
 		start := s.StartDate() // business start (ActivatedAt); falls back to CreatedAt when nil
 		if inRange(start) {
 			newSubs++
-			day(start.Format(dateLayout)).newCount++
+			day(bucketKeyOf(start, interval)).newCount++
 			newList = append(newList, s)
 			if s.ActivatedAt == nil {
 				// No real start date — dated by the CreatedAt (ingestion) fallback, which
@@ -173,7 +175,7 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netN
 			}
 			if inRange(*cd) {
 				churned++
-				day(cd.Format(dateLayout)).churnedCount++
+				day(bucketKeyOf(*cd, interval)).churnedCount++
 			}
 		}
 	}
@@ -224,6 +226,7 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netN
 		NewSubs:   newSubs,
 		Churned:   churned,
 		Net:       newSubs - churned,
+		Interval:  string(interval),
 		Trend:     trend,
 		NewStores: newStores,
 	}

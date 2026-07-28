@@ -66,6 +66,7 @@ type installsReport struct {
 	Installs   int                 `json:"installs"`
 	Uninstalls int                 `json:"uninstalls"`
 	Net        int                 `json:"net"`
+	Interval   string              `json:"interval"` // trend granularity: day / week / month
 	Trend      []installTrendPoint `json:"trend"`
 	Events     []installEvent      `json:"events"`
 }
@@ -147,6 +148,7 @@ func installEventKind(eventType string) string {
 // shop identifier (which may be a myshopify domain or a GID depending on the sync source).
 func buildInstallsReport(events []*entity.AppEvent, subsByShop map[string]*entity.Subscription, from, to time.Time) installsReport {
 	toExclusive := to.AddDate(0, 0, 1)
+	interval := resolveTrendInterval(from, to)
 
 	type dayAgg struct{ installs, uninstalls int }
 	byDay := map[string]*dayAgg{}
@@ -164,7 +166,7 @@ func buildInstallsReport(events []*entity.AppEvent, subsByShop map[string]*entit
 			continue
 		}
 
-		day := e.OccurredAt.Format(dateLayout)
+		day := bucketKeyOf(e.OccurredAt, interval)
 		d, ok := byDay[day]
 		if !ok {
 			d = &dayAgg{}
@@ -181,8 +183,9 @@ func buildInstallsReport(events []*entity.AppEvent, subsByShop map[string]*entit
 		kindOf[e] = kind
 	}
 
-	// Trend: only days with activity, ascending (date keys are YYYY-MM-DD → lexical
-	// order == chronological).
+	// Trend: only buckets with activity, ascending (bucket keys are YYYY-MM-DD → lexical
+	// order == chronological), at the resolved interval (day/week/month). Counts are
+	// SUMMED within each bucket (installs/uninstalls are flow metrics), not sampled as-of.
 	days := make([]string, 0, len(byDay))
 	for day := range byDay {
 		days = append(days, day)
@@ -218,6 +221,7 @@ func buildInstallsReport(events []*entity.AppEvent, subsByShop map[string]*entit
 		Installs:   installs,
 		Uninstalls: uninstalls,
 		Net:        installs - uninstalls,
+		Interval:   string(interval),
 		Trend:      trend,
 		Events:     recent,
 	}

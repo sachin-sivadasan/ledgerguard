@@ -82,6 +82,7 @@ class _EarningsReportScreenState extends State<EarningsReportScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Earnings',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.account_balance_wallet_outlined,
@@ -98,6 +99,7 @@ class _EarningsReportScreenState extends State<EarningsReportScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Earnings',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -106,6 +108,7 @@ class _EarningsReportScreenState extends State<EarningsReportScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Earnings',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -114,6 +117,7 @@ class _EarningsReportScreenState extends State<EarningsReportScreen>
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Earnings',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -131,10 +135,13 @@ class _EarningsReportScreenState extends State<EarningsReportScreen>
 
     return LgPage(
       title: 'Earnings',
+      breadcrumb: 'Reports › Revenue & Billing',
       subtitle:
           'Developer earnings after Shopify revenue share — net, pending, available, and paid out',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

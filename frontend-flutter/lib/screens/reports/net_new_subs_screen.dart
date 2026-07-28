@@ -83,6 +83,7 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Net-New Subscriptions',
+        breadcrumb: 'Reports › Growth',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.group_add_outlined,
@@ -99,6 +100,7 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Net-New Subscriptions',
+        breadcrumb: 'Reports › Growth',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -107,6 +109,7 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Net-New Subscriptions',
+        breadcrumb: 'Reports › Growth',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -115,6 +118,7 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Net-New Subscriptions',
+        breadcrumb: 'Reports › Growth',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -130,10 +134,13 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
 
     return LgPage(
       title: 'Net-New Subscriptions',
+      breadcrumb: 'Reports › Growth',
       subtitle:
           'New vs churned subscriptions — net subscriber growth over the period',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

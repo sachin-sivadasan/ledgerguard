@@ -65,7 +65,9 @@ type retentionReport struct {
 	RetainedMrrCents int64                 `json:"retainedMrrCents"`
 	Reactivations    int                   `json:"reactivations"`
 	Trend            []retentionTrendPoint `json:"trend"`
-	Plans            []retentionPlan       `json:"plans"`
+	// Interval is the trend granularity: day / week / month.
+	Interval string          `json:"interval"`
+	Plans    []retentionPlan `json:"plans"`
 }
 
 // GetRetention returns the Retention/Renewal report for an app.
@@ -104,10 +106,12 @@ func (h *RetentionHandler) GetRetention(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	interval := resolveTrendInterval(from, to)
 	plans := buildRetentionPlans(subs)
 	report := buildRetentionReport(subs, plans, latestSnapshot(snapshots))
 	report.Reactivations = countReactivations(events, from, to)
-	report.Trend = buildRetentionTrend(snapshots)
+	report.Interval = string(interval)
+	report.Trend = buildRetentionTrend(downsampleSnapshots(snapshots, interval))
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
 		writeRetentionPlansCSV(w, plans)

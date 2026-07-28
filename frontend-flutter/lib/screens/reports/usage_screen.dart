@@ -82,6 +82,7 @@ class _UsageScreenState extends State<UsageScreen> with DataLoadingMixin {
     if (!hasApps) {
       return LgPage(
         title: 'Usage & One-Time Charges',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.receipt_long_outlined,
@@ -98,6 +99,7 @@ class _UsageScreenState extends State<UsageScreen> with DataLoadingMixin {
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Usage & One-Time Charges',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -106,6 +108,7 @@ class _UsageScreenState extends State<UsageScreen> with DataLoadingMixin {
     if (provider.error != null) {
       return LgPage(
         title: 'Usage & One-Time Charges',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -114,6 +117,7 @@ class _UsageScreenState extends State<UsageScreen> with DataLoadingMixin {
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Usage & One-Time Charges',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -130,10 +134,13 @@ class _UsageScreenState extends State<UsageScreen> with DataLoadingMixin {
 
     return LgPage(
       title: 'Usage & One-Time Charges',
+      breadcrumb: 'Reports › Revenue & Billing',
       subtitle:
           'USAGE and ONE-TIME revenue — tracked separately from recurring MRR',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

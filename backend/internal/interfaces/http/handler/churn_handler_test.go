@@ -124,7 +124,8 @@ func TestChurn_ChurnRateFromSnapshot(t *testing.T) {
 		&mockPartnerRepoForSub{account: partnerAccount},
 	)
 
-	req := newChurnRequest(t, appID, partnerAccount, "from=2026-06-01&to=2026-07-31")
+	// ≤31-day window → daily granularity, so each snapshot is its own trend point.
+	req := newChurnRequest(t, appID, partnerAccount, "from=2026-07-01&to=2026-07-15")
 	rec := httptest.NewRecorder()
 	h.GetChurn(rec, req)
 
@@ -146,6 +147,52 @@ func TestChurn_ChurnRateFromSnapshot(t *testing.T) {
 	}
 	if resp.Trend[1].ChurnRate != 0.25 {
 		t.Errorf("trend[1].churnRate: expected 0.25, got %v", resp.Trend[1].ChurnRate)
+	}
+}
+
+// TestChurn_AdaptiveGranularityDownsamples verifies a wide (>92-day) window downsamples
+// the trend to monthly (last snapshot per month) while the HEADLINE churn rate still reads
+// the full-slice latest snapshot.
+func TestChurn_AdaptiveGranularityDownsamples(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	subs := []*entity.Subscription{
+		churnedSub(appID, "a.myshopify.com", "Pro", 5000),
+		churnedSub(appID, "b.myshopify.com", "Basic", 3000),
+	}
+	snapshots := []*entity.DailyMetricsSnapshot{
+		{ID: uuid.New(), AppID: appID, Date: time.Date(2026, 5, 10, 0, 0, 0, 0, time.UTC), ChurnedCount: 1, TotalSubscriptions: 10},
+		{ID: uuid.New(), AppID: appID, Date: time.Date(2026, 5, 28, 0, 0, 0, 0, time.UTC), ChurnedCount: 3, TotalSubscriptions: 10}, // last May → wins the May bucket (0.3)
+		{ID: uuid.New(), AppID: appID, Date: time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC), ChurnedCount: 2, TotalSubscriptions: 8}, // latest overall (0.25)
+	}
+	h := NewChurnHandler(
+		&mockSubscriptionRepo{subscriptions: subs},
+		&mockSnapshotRepoForForecast{snapshots: snapshots},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+	req := newChurnRequest(t, appID, pa, "from=2026-03-01&to=2026-06-30")
+	rec := httptest.NewRecorder()
+	h.GetChurn(rec, req)
+	var resp churnReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Interval != "month" {
+		t.Errorf("interval: expected month, got %q", resp.Interval)
+	}
+	if len(resp.Trend) != 2 {
+		t.Fatalf("expected 2 monthly trend points (downsampled), got %d: %+v", len(resp.Trend), resp.Trend)
+	}
+	// May bucket keeps the LAST May snapshot (May 28, 3/10 = 0.3).
+	if resp.Trend[0].Date != "2026-05-28" || resp.Trend[0].ChurnRate != 0.3 {
+		t.Errorf("trend[0]: expected {2026-05-28, 0.3} (last May snapshot), got {%s,%v}", resp.Trend[0].Date, resp.Trend[0].ChurnRate)
+	}
+	// Headline reads the FULL slice's latest snapshot (2 live churned / total 8 = 0.25),
+	// independent of trend downsampling.
+	if resp.ChurnRate != 0.25 {
+		t.Errorf("headline churnRate: expected 0.25 (full-slice latest), got %v", resp.ChurnRate)
 	}
 }
 

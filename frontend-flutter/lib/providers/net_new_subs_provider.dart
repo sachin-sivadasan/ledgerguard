@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../core/date_range.dart';
 import '../services/net_new_subs_service.dart';
 
 class NetNewSubsProvider extends ChangeNotifier {
@@ -10,6 +11,7 @@ class NetNewSubsProvider extends ChangeNotifier {
   String? _error;
   bool _isServiceUnavailable = false;
   String? _selectedAppId;
+  DateRangePreset _dateRange = DateRangePreset.defaultPreset;
   CancelToken? _cancelToken;
 
   NetNewSubsReport? _report;
@@ -20,6 +22,19 @@ class NetNewSubsProvider extends ChangeNotifier {
   String? get error => _error;
   bool get isServiceUnavailable => _isServiceUnavailable;
   String? get selectedAppId => _selectedAppId;
+  DateRangePreset get dateRange => _dateRange;
+
+  /// Wired from the LgPage date-range selector. Re-loads the report for the new window.
+  void setDateRange(DateRangePreset preset) {
+    if (preset == _dateRange) return;
+    _dateRange = preset;
+    notifyListeners();
+    final appId = _selectedAppId;
+    if (!_demoMode && appId != null) {
+      loadReport(appId);
+    }
+  }
+
   NetNewSubsReport? get report => _report;
 
   /// Wired via DemoModeCoordinator. In demo mode the report shows a mock
@@ -50,8 +65,10 @@ class NetNewSubsProvider extends ChangeNotifier {
     _isServiceUnavailable = false;
     notifyListeners();
     final token = _cancelToken;
+    final range = resolveDateRange(_dateRange, DateTime.now());
     try {
-      _report = await _service.fetchReport(appId, cancelToken: token);
+      _report = await _service.fetchReport(appId,
+          from: range.from, to: range.to, cancelToken: token);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) {
         // A newer load superseded this one and will manage loading state.
@@ -81,7 +98,8 @@ class NetNewSubsProvider extends ChangeNotifier {
   Future<Uint8List?> fetchCsvBytes() {
     final appId = _selectedAppId;
     if (appId == null) return Future.value(null);
-    return _service.fetchCsvBytes(appId);
+    final range = resolveDateRange(_dateRange, DateTime.now());
+    return _service.fetchCsvBytes(appId, from: range.from, to: range.to);
   }
 
   NetNewSubsReport _mockReport() {

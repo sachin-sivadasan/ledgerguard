@@ -81,7 +81,8 @@ func TestMRR_HeadlineFromLatestSnapshot(t *testing.T) {
 		&mockAppRepoForSub{app: app},
 		&mockPartnerRepoForSub{account: pa},
 	)
-	rec := doMRR(t, h, appID, pa, "from=2026-06-01&to=2026-07-31")
+	// ≤31-day window → daily granularity, so each snapshot is its own trend point.
+	rec := doMRR(t, h, appID, pa, "from=2026-07-01&to=2026-07-15")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -97,6 +98,64 @@ func TestMRR_HeadlineFromLatestSnapshot(t *testing.T) {
 	}
 	if resp.MrrCents != resp.Trend[len(resp.Trend)-1].MrrCents {
 		t.Errorf("headline %d != last trend point %d", resp.MrrCents, resp.Trend[len(resp.Trend)-1].MrrCents)
+	}
+}
+
+// TestMRR_AdaptiveGranularityDownsamples verifies that a wide window (>92 days)
+// resolves to the "month" interval and the trend collapses to one point per calendar
+// month, keeping the LAST snapshot's value in each month (as-of/stock semantics). The
+// headline stays on the full snapshot slice, so mrrCents equals the very last day's
+// value, not the last month-bucket value (they coincide here since the last snapshot is
+// the last day of its month).
+func TestMRR_AdaptiveGranularityDownsamples(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+
+	// Daily snapshots for the whole of Apr, May, Jun, Jul 2026 (~4 months). The MRR
+	// value encodes the month (Apr=4xx…) and day so we can assert the last-in-month
+	// value survives downsampling.
+	start := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2026, 7, 31, 0, 0, 0, 0, time.UTC)
+	var snaps []*entity.DailyMetricsSnapshot
+	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
+		mrr := int64(int(d.Month())*100_000 + d.Day()) // e.g. Apr 30 → 400030
+		snaps = append(snaps, mrrSnap(appID, d, mrr))
+	}
+
+	h := NewMRRReportHandler(
+		&mockSubscriptionRepo{},
+		&mockSnapshotRepoForForecast{snapshots: snaps},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+	// from/to > 92 days apart → month granularity.
+	resp := decodeMRR(t, doMRR(t, h, appID, pa, "from=2026-04-01&to=2026-07-31"))
+
+	if resp.Interval != "month" {
+		t.Fatalf("interval: expected month, got %q", resp.Interval)
+	}
+	// One point per month: Apr, May, Jun, Jul.
+	if len(resp.Trend) != 4 {
+		t.Fatalf("expected 4 monthly trend points, got %d: %+v", len(resp.Trend), resp.Trend)
+	}
+	// Each point is the LAST snapshot in its month (last-in-bucket wins). buildMRRTrend
+	// stamps the point with that snapshot's own Date (the last day of the month), not the
+	// bucket key.
+	want := []mrrTrendPoint{
+		{Date: "2026-04-30", MrrCents: 400_030}, // Apr 30
+		{Date: "2026-05-31", MrrCents: 500_031}, // May 31
+		{Date: "2026-06-30", MrrCents: 600_030}, // Jun 30
+		{Date: "2026-07-31", MrrCents: 700_031}, // Jul 31
+	}
+	for i, w := range want {
+		if resp.Trend[i].Date != w.Date || resp.Trend[i].MrrCents != w.MrrCents {
+			t.Errorf("trend[%d]: expected {%s,%d}, got {%s,%d}", i, w.Date, w.MrrCents, resp.Trend[i].Date, resp.Trend[i].MrrCents)
+		}
+	}
+	// Headline stays on the FULL snapshot slice (last day = Jul 31).
+	if resp.MrrCents != 700_031 {
+		t.Errorf("mrrCents headline: expected 700031 (last full-slice snapshot), got %d", resp.MrrCents)
 	}
 }
 

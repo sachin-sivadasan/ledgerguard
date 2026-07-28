@@ -17,6 +17,7 @@ import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_risk_badge.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class RevenueAtRiskScreen extends StatefulWidget {
   const RevenueAtRiskScreen({super.key});
@@ -117,7 +118,7 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
 
     final report = provider.report ?? RevenueAtRiskReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasRisk = report.stores.isNotEmpty || report.totalAtRiskCents > 0;
 
@@ -194,8 +195,20 @@ class _HeroRow extends StatelessWidget {
         label: 'At-Risk Stores',
         value: '${report.atRiskStoreCount}',
         color: LgColors.primary,
-        footnote:
-            '${report.oneCycleCount} × 1-cycle · ${report.twoCycleCount} × 2-cycle',
+        footnoteWidget: Wrap(
+          spacing: LgSpacing.s100,
+          runSpacing: LgSpacing.s100,
+          children: [
+            _CyclePill(
+              color: LgColors.warning,
+              label: '${report.oneCycleCount} × 1-cycle',
+            ),
+            _CyclePill(
+              color: LgColors.riskTwoCycle,
+              label: '${report.twoCycleCount} × 2-cycle',
+            ),
+          ],
+        ),
       ),
     ];
 
@@ -225,12 +238,12 @@ class _KpiCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  final String? footnote;
+  final Widget? footnoteWidget;
   const _KpiCard({
     required this.label,
     required this.value,
     required this.color,
-    this.footnote,
+    this.footnoteWidget,
   });
 
   @override
@@ -247,14 +260,55 @@ class _KpiCard extends StatelessWidget {
           Text(value,
               style: theme.textTheme.headlineMedium
                   ?.copyWith(color: color, fontWeight: FontWeight.w700)),
-          if (footnote != null) ...[
+          if (footnoteWidget != null) ...[
             const SizedBox(height: LgSpacing.s100),
-            Text(footnote!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            footnoteWidget!,
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Small rounded cycle-breakdown pill (same style as report status chips).
+class _CyclePill extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _CyclePill({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 10, height: 10, color: color),
+        const SizedBox(width: LgSpacing.s100),
+        Text(label,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: LgColors.textSecondary)),
+      ],
     );
   }
 }
@@ -294,7 +348,16 @@ class _TrendCard extends StatelessWidget {
 
     return LgCard(
       title: 'At-Risk MRR Trend',
-      child: SizedBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _LegendDot(color: LgColors.critical, label: 'At risk'),
+            ],
+          ),
+          const SizedBox(height: LgSpacing.s200),
+          SizedBox(
         height: 200,
         child: LineChart(
           LineChartData(
@@ -355,6 +418,8 @@ class _TrendCard extends StatelessWidget {
             ],
           ),
         ),
+          ),
+        ],
       ),
     );
   }
@@ -378,19 +443,44 @@ class _StoresTable extends StatelessWidget {
         Text('Ranked Stores (${stores.length})',
             style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        ...stores.map((s) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _StoreRow(store: s, currency: currency),
-            )),
+        LgTable(
+          columns: const [
+            LgTableColumn('STORE', flex: 4),
+            LgTableColumn('MRR', flex: 2, numeric: true),
+            LgTableColumn('RISK', flex: 3),
+            LgTableColumn('DAYS LATE', flex: 2, numeric: true),
+            LgTableColumn('EXPECTED CHARGE', flex: 2, numeric: true),
+            LgTableColumn('RECOVERABLE', flex: 2, numeric: true),
+          ],
+          rows: [
+            for (final s in stores)
+              [
+                _StoreCell(store: s),
+                Text('${_money(s.mrrCents, currency)}/mo',
+                    style: theme.textTheme.titleSmall),
+                LgRiskBadge(riskState: s.riskState),
+                Text('${s.daysLate}d', style: theme.textTheme.bodySmall),
+                Text(
+                  s.expectedChargeDate != null
+                      ? DateFormat('MMM d').format(s.expectedChargeDate!)
+                      : '—',
+                  style: theme.textTheme.bodySmall,
+                ),
+                Text(_money(s.recoverableCents, currency),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(color: LgColors.success)),
+              ],
+          ],
+        ),
       ],
     );
   }
 }
 
-class _StoreRow extends StatelessWidget {
+/// Two-line store cell: shop name over plan — links to store detail.
+class _StoreCell extends StatelessWidget {
   final RevenueAtRiskStore store;
-  final String currency;
-  const _StoreRow({required this.store, required this.currency});
+  const _StoreCell({required this.store});
 
   @override
   Widget build(BuildContext context) {
@@ -401,61 +491,21 @@ class _StoreRow extends StatelessWidget {
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: LgCard(
-        child: InkWell(
-          onTap: () => context.go('/stores/${store.domain}'),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name, style: theme.textTheme.titleSmall),
-                    const SizedBox(height: LgSpacing.s100),
-                    Text(
-                      '${store.planName.isNotEmpty ? '${store.planName} · ' : ''}${_money(store.mrrCents, currency)}/mo',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: LgColors.textSecondary),
-                    ),
-                  ],
-                ),
+      child: InkWell(
+        onTap: () => context.go('/stores/${store.domain}'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(name, style: theme.textTheme.titleSmall),
+            if (store.planName.isNotEmpty) ...[
+              const SizedBox(height: LgSpacing.s100),
+              Text(
+                store.planName,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: LgColors.textSecondary),
               ),
-              const SizedBox(width: LgSpacing.s200),
-              LgRiskBadge(riskState: store.riskState),
-              const SizedBox(width: LgSpacing.s300),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('${store.daysLate}d late',
-                        style: theme.textTheme.bodySmall),
-                    if (store.expectedChargeDate != null)
-                      Text(
-                        'due ${DateFormat('MMM d').format(store.expectedChargeDate!)}',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: LgColors.textSecondary),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: LgSpacing.s300),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(_money(store.recoverableCents, currency),
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(color: LgColors.success)),
-                  Text('recoverable',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: LgColors.textSecondary)),
-                ],
-              ),
-              const SizedBox(width: LgSpacing.s200),
-              const Icon(Icons.chevron_right, color: LgColors.textSecondary),
             ],
-          ),
+          ],
         ),
       ),
     );

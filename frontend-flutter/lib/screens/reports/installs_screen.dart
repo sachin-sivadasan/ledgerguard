@@ -17,6 +17,7 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class InstallsScreen extends StatefulWidget {
   const InstallsScreen({super.key});
@@ -125,7 +126,7 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
 
     final report = provider.report ?? InstallsReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final hasData = report.events.isNotEmpty ||
         report.trend.isNotEmpty ||
         report.installs > 0 ||
@@ -439,79 +440,29 @@ class _EventsTable extends StatelessWidget {
                   ?.copyWith(color: LgColors.textSecondary)),
         ],
         const SizedBox(height: LgSpacing.s300),
-        // Column header row: STORE | EVENT | DATE
-        Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: LgSpacing.s400, vertical: LgSpacing.s200),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 4,
-                child: Text('STORE',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text('EVENT',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text('DATE',
-                    textAlign: TextAlign.end,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-            ],
-          ),
+        LgTable(
+          columns: const [
+            LgTableColumn('STORE', flex: 4),
+            LgTableColumn('EVENT', flex: 2),
+            LgTableColumn('DATE', flex: 2, numeric: true),
+          ],
+          rows: [
+            for (final e in report.events)
+              [
+                Text(e.domain.isNotEmpty ? e.domain : '—',
+                    style: theme.textTheme.titleSmall),
+                _EventChip(event: e.event),
+                Text(
+                  e.dateTime != null
+                      ? DateFormat('MMM d, yyyy').format(e.dateTime!)
+                      : (e.date.isNotEmpty ? e.date : '—'),
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: LgColors.textSecondary),
+                ),
+              ],
+          ],
         ),
-        ...report.events.map((e) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _EventRow(event: e),
-            )),
       ],
-    );
-  }
-}
-
-class _EventRow extends StatelessWidget {
-  final InstallEvent event;
-  const _EventRow({required this.event});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dt = event.dateTime;
-    final dateLabel = dt != null
-        ? DateFormat('MMM d, yyyy').format(dt)
-        : (event.date.isNotEmpty ? event.date : '—');
-    final domain = event.domain.isNotEmpty ? event.domain : '—';
-
-    return LgCard(
-      child: Row(
-        children: [
-          Expanded(
-            flex: 4,
-            child: Text(domain, style: theme.textTheme.titleSmall),
-          ),
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: _EventChip(event: event.event),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(dateLabel,
-                textAlign: TextAlign.end,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
-          ),
-        ],
-      ),
     );
   }
 }

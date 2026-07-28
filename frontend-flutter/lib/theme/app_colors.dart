@@ -6,9 +6,9 @@ class LgColors {
   static const Color primaryDark = Color(0xFF4959BD);
 
   // Status colors
-  static const Color success = Color(0xFF008060);
-  static const Color warning = Color(0xFFB98900);
-  static const Color critical = Color(0xFFD72C0D);
+  static const Color success = Color(0xFF059669);
+  static const Color warning = Color(0xFFD97706);
+  static const Color critical = Color(0xFFDC2626);
   static const Color info = Color(0xFF2C6ECB);
 
   // Badge backgrounds

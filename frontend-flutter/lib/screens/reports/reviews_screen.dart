@@ -128,7 +128,7 @@ class _ReviewsReportScreenState extends State<ReviewsReportScreen>
 
     final report = provider.report ?? ReviewsReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final hasData = report.totalReviews > 0 || report.recent.isNotEmpty;
 
     return LgPage(
@@ -170,9 +170,19 @@ class _ReviewsReportScreenState extends State<ReviewsReportScreen>
           else ...[
             _Hero(report: report),
             const SizedBox(height: LgSpacing.s600),
-            _DistributionCard(report: report),
-            const SizedBox(height: LgSpacing.s600),
-            _RecentReviews(report: report),
+            if (LgBreakpoints.isMobile(context)) ...[
+              _DistributionCard(report: report),
+              const SizedBox(height: LgSpacing.s600),
+              _RecentReviews(report: report),
+            ] else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _DistributionCard(report: report)),
+                  const SizedBox(width: LgSpacing.s600),
+                  Expanded(child: _RecentReviews(report: report)),
+                ],
+              ),
           ],
         ],
       ),

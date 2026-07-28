@@ -17,6 +17,7 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class UsageScreen extends StatefulWidget {
   const UsageScreen({super.key});
@@ -125,7 +126,7 @@ class _UsageScreenState extends State<UsageScreen> with DataLoadingMixin {
 
     final report = provider.report ?? UsageReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasData = report.stores.isNotEmpty ||
         report.usageCents > 0 ||
@@ -203,13 +204,13 @@ class _HeroRow extends StatelessWidget {
       _KpiCard(
         label: 'Usage Revenue',
         value: _money(report.usageCents, currency),
-        color: LgColors.textPrimary,
+        color: LgColors.warning,
         footnote: 'USAGE charges only',
       ),
       _KpiCard(
         label: 'One-Time',
         value: _money(report.oneTimeCents, currency),
-        color: LgColors.textPrimary,
+        color: LgColors.success,
         footnote: 'setup fees & add-ons',
       ),
       _KpiCard(
@@ -370,12 +371,12 @@ class _TrendCard extends StatelessWidget {
               LineChartBarData(
                 spots: spots,
                 isCurved: true,
-                color: LgColors.primary,
+                color: LgColors.warning,
                 barWidth: 2,
                 dotData: const FlDotData(show: false),
                 belowBarData: BarAreaData(
                   show: true,
-                  color: LgColors.primary.withValues(alpha: 0.10),
+                  color: LgColors.warning.withValues(alpha: 0.10),
                 ),
               ),
             ],
@@ -414,19 +415,34 @@ class _StoresTable extends StatelessWidget {
         Text('Top Usage Stores (ranked by usage revenue)',
             style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        ...stores.map((s) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _StoreRow(store: s, currency: currency),
-            )),
+        LgTable(
+          columns: const [
+            LgTableColumn('STORE', flex: 3),
+            LgTableColumn('USAGE \$', flex: 2, numeric: true),
+            LgTableColumn('ONE-TIME \$', flex: 2, numeric: true),
+            LgTableColumn('CHARGES', flex: 1, numeric: true),
+          ],
+          rows: [
+            for (final s in stores)
+              [
+                _StoreCell(store: s),
+                Text(_money(s.usageCents, currency),
+                    style: theme.textTheme.titleSmall),
+                Text(_money(s.oneTimeCents, currency),
+                    style: theme.textTheme.titleSmall),
+                Text('${s.chargeCount}', style: theme.textTheme.titleSmall),
+              ],
+          ],
+        ),
       ],
     );
   }
 }
 
-class _StoreRow extends StatelessWidget {
+/// Two-line store cell: name over domain (domain hidden when absent).
+class _StoreCell extends StatelessWidget {
   final UsageStore store;
-  final String currency;
-  const _StoreRow({required this.store, required this.currency});
+  const _StoreCell({required this.store});
 
   @override
   Widget build(BuildContext context) {
@@ -435,70 +451,19 @@ class _StoreRow extends StatelessWidget {
         ? store.shopName
         : (store.domain.isNotEmpty ? store.domain : '—');
 
-    return LgCard(
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: theme.textTheme.titleSmall),
-                if (store.domain.isNotEmpty) ...[
-                  const SizedBox(height: LgSpacing.s100),
-                  Text(
-                    store.domain,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_money(store.usageCents, currency),
-                    style: theme.textTheme.titleSmall),
-                Text('usage',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_money(store.oneTimeCents, currency),
-                    style: theme.textTheme.titleSmall),
-                Text('one-time',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 1,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text('${store.chargeCount}',
-                    style: theme.textTheme.titleSmall),
-                Text('charges',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ],
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(name, style: theme.textTheme.titleSmall),
+        if (store.domain.isNotEmpty) ...[
+          const SizedBox(height: LgSpacing.s100),
+          Text(
+            store.domain,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: LgColors.textSecondary),
           ),
         ],
-      ),
+      ],
     );
   }
 }

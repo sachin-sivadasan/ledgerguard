@@ -16,6 +16,7 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
@@ -125,7 +126,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
 
     final report = provider.report ?? SubscriptionsReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasData = report.activeSubs > 0 || report.plans.isNotEmpty;
 
@@ -373,28 +374,29 @@ class _PlanTable extends StatelessWidget {
       children: [
         Text('Plan Detail', style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        // Column header row: PLAN | SUBS | ARPU | LTV
-        Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: LgSpacing.s400, vertical: LgSpacing.s200),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Text('PLAN',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-              _headCell(theme, 'SUBS'),
-              _headCell(theme, 'ARPU'),
-              _headCell(theme, 'LTV'),
-            ],
-          ),
+        LgTable(
+          columns: const [
+            LgTableColumn('PLAN', flex: 3),
+            LgTableColumn('SUBS', flex: 2, numeric: true),
+            LgTableColumn('ARPU', flex: 2, numeric: true),
+            LgTableColumn('LTV', flex: 2, numeric: true),
+          ],
+          rows: [
+            for (final p in plans)
+              [
+                Text(p.planName.isNotEmpty ? p.planName : '(no plan)',
+                    style: theme.textTheme.titleSmall),
+                Text('${p.activeSubs}', style: theme.textTheme.titleSmall),
+                Text(_money(p.arpuCents, currency),
+                    style: theme.textTheme.titleSmall),
+                Text(
+                  // "—" when LTV is undefined (churn rate 0), matching the hero card.
+                  p.ltvCents > 0 ? _money(p.ltvCents, currency) : '—',
+                  style: theme.textTheme.titleSmall,
+                ),
+              ],
+          ],
         ),
-        ...plans.map((p) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _PlanRow(plan: p, currency: currency),
-            )),
         const SizedBox(height: LgSpacing.s200),
         Text(
           'Per-plan LTV uses the blended (app-level) churn rate.',
@@ -402,56 +404,6 @@ class _PlanTable extends StatelessWidget {
               ?.copyWith(color: LgColors.textSecondary),
         ),
       ],
-    );
-  }
-
-  Widget _headCell(ThemeData theme, String label) => Expanded(
-        flex: 2,
-        child: Text(label,
-            textAlign: TextAlign.end,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: LgColors.textSecondary)),
-      );
-}
-
-class _PlanRow extends StatelessWidget {
-  final SubscriptionsPlan plan;
-  final String currency;
-  const _PlanRow({required this.plan, required this.currency});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final name = plan.planName.isNotEmpty ? plan.planName : '(no plan)';
-
-    return LgCard(
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Text(name, style: theme.textTheme.titleSmall),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text('${plan.activeSubs}',
-                textAlign: TextAlign.end, style: theme.textTheme.titleSmall),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(_money(plan.arpuCents, currency),
-                textAlign: TextAlign.end, style: theme.textTheme.titleSmall),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              // "—" when LTV is undefined (churn rate 0), matching the hero card.
-              plan.ltvCents > 0 ? _money(plan.ltvCents, currency) : '—',
-              textAlign: TextAlign.end,
-              style: theme.textTheme.titleSmall,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

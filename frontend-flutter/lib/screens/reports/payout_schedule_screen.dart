@@ -16,6 +16,7 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class PayoutScheduleScreen extends StatefulWidget {
   const PayoutScheduleScreen({super.key});
@@ -125,7 +126,7 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
 
     final report = provider.report ?? PayoutScheduleReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasData = report.rows.isNotEmpty ||
         report.upcomingPayoutCents > 0 ||
@@ -287,91 +288,37 @@ class _ScheduleTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final secondary =
+        theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Upcoming Payouts', style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        // Column header row: AVAILABLE DATE | AMOUNT | # CHARGES | STATUS
-        Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: LgSpacing.s400, vertical: LgSpacing.s200),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Text('AVAILABLE DATE',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-              _headCell(theme, 'AMOUNT', TextAlign.end),
-              _headCell(theme, '# CHARGES', TextAlign.end),
-              Expanded(
-                flex: 2,
-                child: Text('STATUS',
-                    textAlign: TextAlign.end,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-            ],
-          ),
+        LgTable(
+          columns: const [
+            LgTableColumn('AVAILABLE DATE', flex: 3),
+            LgTableColumn('AMOUNT', flex: 2, numeric: true),
+            LgTableColumn('# CHARGES', flex: 2, numeric: true),
+            LgTableColumn('STATUS', flex: 2),
+          ],
+          rows: [
+            for (final row in report.rows)
+              [
+                Text(
+                  row.date != null
+                      ? DateFormat('MMM d, yyyy').format(row.date!)
+                      : '—',
+                  style: theme.textTheme.titleSmall,
+                ),
+                Text(_money(row.amountCents, currency),
+                    style: theme.textTheme.titleSmall),
+                Text('${row.chargeCount}', style: secondary),
+                _StatusChip(status: row.status),
+              ],
+          ],
         ),
-        ...report.rows.map((row) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _ScheduleRow(row: row, currency: currency),
-            )),
       ],
-    );
-  }
-
-  Widget _headCell(ThemeData theme, String label, TextAlign align) => Expanded(
-        flex: 2,
-        child: Text(label,
-            textAlign: align,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: LgColors.textSecondary)),
-      );
-}
-
-class _ScheduleRow extends StatelessWidget {
-  final PayoutScheduleRow row;
-  final String currency;
-  const _ScheduleRow({required this.row, required this.currency});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final date = row.date;
-    final dateLabel = date != null ? DateFormat('MMM d, yyyy').format(date) : '—';
-
-    return LgCard(
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Text(dateLabel, style: theme.textTheme.titleSmall),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(_money(row.amountCents, currency),
-                textAlign: TextAlign.end, style: theme.textTheme.titleSmall),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text('${row.chargeCount}',
-                textAlign: TextAlign.end,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
-          ),
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: _StatusChip(status: row.status),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

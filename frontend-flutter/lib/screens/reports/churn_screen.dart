@@ -17,6 +17,7 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class ChurnScreen extends StatefulWidget {
   const ChurnScreen({super.key});
@@ -125,7 +126,7 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
 
     final report = provider.report ?? ChurnReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasChurn = report.stores.isNotEmpty ||
         report.churnedCount > 0 ||
@@ -306,7 +307,16 @@ class _TrendCard extends StatelessWidget {
 
     return LgCard(
       title: 'Churn Rate — trend',
-      child: SizedBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _LegendDot(color: LgColors.critical, label: 'Churn rate'),
+            ],
+          ),
+          const SizedBox(height: LgSpacing.s200),
+          SizedBox(
         height: 200,
         child: LineChart(
           LineChartData(
@@ -367,7 +377,31 @@ class _TrendCard extends StatelessWidget {
             ],
           ),
         ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 10, height: 10, color: color),
+        const SizedBox(width: LgSpacing.s100),
+        Text(label,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: LgColors.textSecondary)),
+      ],
     );
   }
 }
@@ -390,19 +424,41 @@ class _StoresTable extends StatelessWidget {
         Text('Churned Stores (ranked by MRR lost)',
             style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        ...stores.map((s) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _StoreRow(store: s, currency: currency),
-            )),
+        LgTable(
+          columns: const [
+            LgTableColumn('STORE', flex: 4),
+            LgTableColumn('MRR LOST', flex: 2, numeric: true),
+            LgTableColumn('CHURNED DATE', flex: 2, numeric: true),
+            LgTableColumn('TENURE', flex: 2, numeric: true),
+          ],
+          rows: [
+            for (final s in stores)
+              [
+                _StoreCell(store: s),
+                Text('-${_money(s.mrrLostCents, currency)}',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(color: LgColors.critical)),
+                Text(
+                  s.churnedDate != null
+                      ? DateFormat('MMM d').format(s.churnedDate!)
+                      : '—',
+                  style: theme.textTheme.bodySmall,
+                ),
+                Text(_tenure(s.tenureDays),
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: LgColors.textSecondary)),
+              ],
+          ],
+        ),
       ],
     );
   }
 }
 
-class _StoreRow extends StatelessWidget {
+/// Two-line store cell: shop name over plan (or domain) — links to store detail.
+class _StoreCell extends StatelessWidget {
   final ChurnStore store;
-  final String currency;
-  const _StoreRow({required this.store, required this.currency});
+  const _StoreCell({required this.store});
 
   @override
   Widget build(BuildContext context) {
@@ -413,65 +469,19 @@ class _StoreRow extends StatelessWidget {
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: LgCard(
-        child: InkWell(
-          onTap: () => context.go('/stores/${store.domain}'),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name, style: theme.textTheme.titleSmall),
-                    const SizedBox(height: LgSpacing.s100),
-                    Text(
-                      store.planName.isNotEmpty
-                          ? store.planName
-                          : store.domain,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: LgColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: LgSpacing.s300),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('-${_money(store.mrrLostCents, currency)}',
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(color: LgColors.critical)),
-                    Text('MRR lost',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: LgColors.textSecondary)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: LgSpacing.s300),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      store.churnedDate != null
-                          ? DateFormat('MMM d').format(store.churnedDate!)
-                          : '—',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    Text(_tenure(store.tenureDays),
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: LgColors.textSecondary)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: LgSpacing.s200),
-              const Icon(Icons.chevron_right, color: LgColors.textSecondary),
-            ],
-          ),
+      child: InkWell(
+        onTap: () => context.go('/stores/${store.domain}'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(name, style: theme.textTheme.titleSmall),
+            const SizedBox(height: LgSpacing.s100),
+            Text(
+              store.planName.isNotEmpty ? store.planName : store.domain,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: LgColors.textSecondary),
+            ),
+          ],
         ),
       ),
     );

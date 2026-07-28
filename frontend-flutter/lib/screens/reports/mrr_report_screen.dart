@@ -17,6 +17,7 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class MrrReportScreen extends StatefulWidget {
   const MrrReportScreen({super.key});
@@ -126,7 +127,7 @@ class _MrrReportScreenState extends State<MrrReportScreen>
 
     final report = provider.report ?? MrrReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasData = report.plans.isNotEmpty ||
         report.mrrCents > 0 ||
@@ -391,12 +392,12 @@ class _TrendCard extends StatelessWidget {
               LineChartBarData(
                 spots: spots,
                 isCurved: true,
-                color: LgColors.success,
+                color: LgColors.primary,
                 barWidth: 2,
                 dotData: const FlDotData(show: false),
                 belowBarData: BarAreaData(
                   show: true,
-                  color: LgColors.success.withValues(alpha: 0.10),
+                  color: LgColors.primary.withValues(alpha: 0.10),
                 ),
               ),
             ],
@@ -419,78 +420,34 @@ class _PlansTable extends StatelessWidget {
     final plans = [...report.plans]
       ..sort((a, b) => b.mrrCents.compareTo(a.mrrCents));
 
+    final secondary =
+        theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('MRR by Plan (ranked by MRR)', style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        ...plans.map((p) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _PlanRow(plan: p, currency: currency),
-            )),
+        LgTable(
+          columns: const [
+            LgTableColumn('PLAN', flex: 3),
+            LgTableColumn('ACTIVE SUBS', flex: 2, numeric: true),
+            LgTableColumn('MRR', flex: 2, numeric: true),
+            LgTableColumn('% OF TOTAL', flex: 2, numeric: true),
+          ],
+          rows: [
+            for (final p in plans)
+              [
+                Text(p.planName.isNotEmpty ? p.planName : '—',
+                    style: theme.textTheme.titleSmall),
+                Text('${p.activeSubs}', style: secondary),
+                Text(_money(p.mrrCents, currency),
+                    style: theme.textTheme.titleSmall),
+                Text(_percent(p.pctOfTotal),
+                    style: theme.textTheme.titleSmall),
+              ],
+          ],
+        ),
       ],
-    );
-  }
-}
-
-class _PlanRow extends StatelessWidget {
-  final MrrPlan plan;
-  final String currency;
-  const _PlanRow({required this.plan, required this.currency});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final name = plan.planName.isNotEmpty ? plan.planName : '—';
-
-    return LgCard(
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: theme.textTheme.titleSmall),
-                const SizedBox(height: LgSpacing.s100),
-                Text(
-                  '${plan.activeSubs} active subs',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: LgColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_money(plan.mrrCents, currency),
-                    style: theme.textTheme.titleSmall),
-                Text('MRR',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_percent(plan.pctOfTotal),
-                    style: theme.textTheme.titleSmall),
-                Text('% of total',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

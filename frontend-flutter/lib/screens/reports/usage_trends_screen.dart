@@ -17,6 +17,7 @@ import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_service_unavailable.dart';
+import '../../widgets/lg_table.dart';
 
 class UsageTrendsScreen extends StatefulWidget {
   const UsageTrendsScreen({super.key});
@@ -126,7 +127,7 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
 
     final report = provider.report ?? UsageTrendsReport.empty();
     final appsList = appsProvider.apps;
-    final showAppFilter = appsList.length > 1;
+    final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
     final hasData = report.stores.isNotEmpty ||
         report.usageMrrEquivCents > 0 ||
@@ -204,7 +205,7 @@ class _HeroRow extends StatelessWidget {
       _KpiCard(
         label: 'Usage MRR-equiv',
         value: _money(report.usageMrrEquivCents, currency),
-        color: LgColors.textPrimary,
+        color: LgColors.warning,
         footnote: 'total usage in the selected window (≈ monthly at a 30-day range)',
       ),
       _KpiCard(
@@ -398,12 +399,12 @@ class _TrendCard extends StatelessWidget {
                   LineChartBarData(
                     spots: spots,
                     isCurved: true,
-                    color: LgColors.primary,
+                    color: LgColors.warning,
                     barWidth: 2,
                     dotData: const FlDotData(show: false),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: LgColors.primary.withValues(alpha: 0.10),
+                      color: LgColors.warning.withValues(alpha: 0.10),
                     ),
                   ),
                 ],
@@ -443,50 +444,31 @@ class _StoresTable extends StatelessWidget {
         Text('Top Usage Customers (ranked by usage revenue)',
             style: theme.textTheme.titleMedium),
         const SizedBox(height: LgSpacing.s300),
-        // Column header row: STORE | USAGE $ | TREND
-        Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: LgSpacing.s400, vertical: LgSpacing.s200),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Text('STORE',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-              const SizedBox(width: LgSpacing.s300),
-              Expanded(
-                flex: 2,
-                child: Text('USAGE \$',
-                    textAlign: TextAlign.end,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-              const SizedBox(width: LgSpacing.s300),
-              Expanded(
-                flex: 2,
-                child: Text('TREND',
-                    textAlign: TextAlign.end,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary)),
-              ),
-            ],
-          ),
+        LgTable(
+          columns: const [
+            LgTableColumn('STORE', flex: 3),
+            LgTableColumn('USAGE \$', flex: 2, numeric: true),
+            LgTableColumn('TREND', flex: 2, numeric: true),
+          ],
+          rows: [
+            for (final s in stores)
+              [
+                _StoreCell(store: s),
+                Text(_money(s.usageCents, currency),
+                    style: theme.textTheme.titleSmall),
+                _TrendDelta(pct: s.wowPct),
+              ],
+          ],
         ),
-        ...stores.map((s) => Padding(
-              padding: const EdgeInsets.only(bottom: LgSpacing.s200),
-              child: _StoreRow(store: s, currency: currency),
-            )),
       ],
     );
   }
 }
 
-class _StoreRow extends StatelessWidget {
+/// Two-line store cell: name over domain (domain hidden when absent).
+class _StoreCell extends StatelessWidget {
   final UsageTrendStore store;
-  final String currency;
-  const _StoreRow({required this.store, required this.currency});
+  const _StoreCell({required this.store});
 
   @override
   Widget build(BuildContext context) {
@@ -495,45 +477,19 @@ class _StoreRow extends StatelessWidget {
         ? store.shopName
         : (store.domain.isNotEmpty ? store.domain : '—');
 
-    return LgCard(
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: theme.textTheme.titleSmall),
-                if (store.domain.isNotEmpty) ...[
-                  const SizedBox(height: LgSpacing.s100),
-                  Text(
-                    store.domain,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Text(
-              _money(store.usageCents, currency),
-              textAlign: TextAlign.end,
-              style: theme.textTheme.titleSmall,
-            ),
-          ),
-          const SizedBox(width: LgSpacing.s300),
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: _TrendDelta(pct: store.wowPct),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(name, style: theme.textTheme.titleSmall),
+        if (store.domain.isNotEmpty) ...[
+          const SizedBox(height: LgSpacing.s100),
+          Text(
+            store.domain,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: LgColors.textSecondary),
           ),
         ],
-      ),
+      ],
     );
   }
 }

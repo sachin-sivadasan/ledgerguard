@@ -104,6 +104,8 @@ func (h *UsageReportHandler) GetUsageReport(w http.ResponseWriter, r *http.Reque
 	interval := resolveTrendInterval(from, to)
 	report := buildUsageReport(txs)
 	report.Interval = string(interval)
+	// UsageRevenueCents is a rolling-12mo (as-of) figure, so last-in-bucket downsampling
+	// is correct — a monthly point is the rolling value as of end of month, not a sum.
 	report.Trend = buildUsageTrend(downsampleSnapshots(snapshots, interval))
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {

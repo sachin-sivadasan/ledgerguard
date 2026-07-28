@@ -124,7 +124,8 @@ func TestChurn_ChurnRateFromSnapshot(t *testing.T) {
 		&mockPartnerRepoForSub{account: partnerAccount},
 	)
 
-	req := newChurnRequest(t, appID, partnerAccount, "from=2026-06-01&to=2026-07-31")
+	// ≤31-day window → daily granularity, so each snapshot is its own trend point.
+	req := newChurnRequest(t, appID, partnerAccount, "from=2026-07-01&to=2026-07-15")
 	rec := httptest.NewRecorder()
 	h.GetChurn(rec, req)
 

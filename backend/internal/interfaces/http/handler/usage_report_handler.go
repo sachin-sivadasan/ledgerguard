@@ -66,7 +66,9 @@ type usageReport struct {
 	OneTimeCents int64             `json:"oneTimeCents"`
 	ChargesCount int               `json:"chargesCount"`
 	Trend        []usageTrendPoint `json:"trend"`
-	Stores       []usageStore      `json:"stores"`
+	// Interval is the trend granularity: day / week / month.
+	Interval string       `json:"interval"`
+	Stores   []usageStore `json:"stores"`
 }
 
 // GetUsageReport returns the Usage & One-Time Charges report for an app.
@@ -99,8 +101,10 @@ func (h *UsageReportHandler) GetUsageReport(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	interval := resolveTrendInterval(from, to)
 	report := buildUsageReport(txs)
-	report.Trend = buildUsageTrend(snapshots)
+	report.Interval = string(interval)
+	report.Trend = buildUsageTrend(downsampleSnapshots(snapshots, interval))
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
 		writeUsageStoresCSV(w, report.Stores)

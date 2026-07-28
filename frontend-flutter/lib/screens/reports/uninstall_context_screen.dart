@@ -186,19 +186,29 @@ class _CaveatLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Icon(Icons.info_outline, size: 16, color: LgColors.textSecondary),
-        const SizedBox(width: LgSpacing.s200),
-        Expanded(
-          child: Text(
-            'Inferred state, NOT a self-reported reason — LedgerGuard is read-only (no uninstall survey).',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: LgColors.textSecondary),
+    // Amber info banner (matches the wireframe callout) rather than a plain inline line.
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: LgSpacing.s300, vertical: LgSpacing.s200),
+      decoration: BoxDecoration(
+        color: LgColors.warning.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: LgColors.warning.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, size: 16, color: LgColors.warning),
+          const SizedBox(width: LgSpacing.s200),
+          Expanded(
+            child: Text(
+              'Inferred state, NOT a self-reported reason — LedgerGuard is read-only (no uninstall survey).',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: LgColors.textPrimary),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

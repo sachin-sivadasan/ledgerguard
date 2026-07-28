@@ -63,7 +63,9 @@ type churnReport struct {
 	ChurnedMrrLostCents int64             `json:"churnedMrrLostCents"`
 	ChurnedCount        int               `json:"churnedCount"`
 	Trend               []churnTrendPoint `json:"trend"`
-	Stores              []churnStore      `json:"stores"`
+	// Interval is the trend granularity: day / week / month.
+	Interval string       `json:"interval"`
+	Stores   []churnStore `json:"stores"`
 }
 
 // GetChurn returns the Churn report for an app.
@@ -96,9 +98,11 @@ func (h *ChurnHandler) GetChurn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	interval := resolveTrendInterval(from, to)
 	stores := buildChurnStores(churned, now)
 	report := buildChurnReport(churned, stores, latestSnapshot(snapshots))
-	report.Trend = buildChurnTrend(snapshots)
+	report.Interval = string(interval)
+	report.Trend = buildChurnTrend(downsampleSnapshots(snapshots, interval))
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
 		writeChurnStoresCSV(w, stores)

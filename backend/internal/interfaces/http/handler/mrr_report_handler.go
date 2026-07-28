@@ -63,7 +63,9 @@ type mrrReport struct {
 	NewMrrCents     int64           `json:"newMrrCents"`
 	ChurnedMrrCents int64           `json:"churnedMrrCents"`
 	Trend           []mrrTrendPoint `json:"trend"`
-	Plans           []mrrPlan       `json:"plans"`
+	// Interval is the trend granularity: day / week / month.
+	Interval string    `json:"interval"`
+	Plans    []mrrPlan `json:"plans"`
 }
 
 // GetMRRReport returns the MRR report for an app.
@@ -96,9 +98,11 @@ func (h *MRRReportHandler) GetMRRReport(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	interval := resolveTrendInterval(from, to)
 	plans := buildMRRPlans(subs)
 	report := buildMRRReport(subs, plans, snapshots, from, to)
-	report.Trend = buildMRRTrend(snapshots)
+	report.Interval = string(interval)
+	report.Trend = buildMRRTrend(downsampleSnapshots(snapshots, interval))
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
 		writeMRRPlansCSV(w, plans)

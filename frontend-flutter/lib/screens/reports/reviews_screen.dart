@@ -275,6 +275,11 @@ class _DistRow extends StatelessWidget {
     required this.maxCount,
   });
 
+  // Severity color per the wireframe: 4–5★ green, 3★ amber, 1–2★ red.
+  Color get _barColor => star >= 4
+      ? LgColors.success
+      : (star == 3 ? LgColors.warning : LgColors.critical);
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -299,7 +304,7 @@ class _DistRow extends StatelessWidget {
               value: pct,
               minHeight: 10,
               backgroundColor: LgColors.surfaceSecondary,
-              color: _starColor,
+              color: _barColor,
             ),
           ),
         ),

@@ -234,7 +234,8 @@ func TestUsage_TrendFromSnapshots(t *testing.T) {
 		&mockAppRepoForSub{app: app},
 		&mockPartnerRepoForSub{account: pa},
 	)
-	rec := doUsage(t, h, appID, pa, "from=2026-06-01&to=2026-07-31")
+	// ≤31-day window → daily granularity, so each snapshot is its own trend point.
+	rec := doUsage(t, h, appID, pa, "from=2026-07-01&to=2026-07-15")
 	var resp usageReport
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode: %v", err)

@@ -83,6 +83,7 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Usage Charge Trends',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.show_chart_outlined,
@@ -99,6 +100,7 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Usage Charge Trends',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -107,6 +109,7 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Usage Charge Trends',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -115,6 +118,7 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Usage Charge Trends',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -131,10 +135,13 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
 
     return LgPage(
       title: 'Usage Charge Trends',
+      breadcrumb: 'Reports › Revenue & Billing',
       subtitle:
           'Week-over-week USAGE momentum — top usage customers ranked by revenue',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

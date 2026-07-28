@@ -82,6 +82,7 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
     if (!hasApps) {
       return LgPage(
         title: 'Installs',
+        breadcrumb: 'Reports › Growth',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.download_outlined,
@@ -98,6 +99,7 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Installs',
+        breadcrumb: 'Reports › Growth',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -106,6 +108,7 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
     if (provider.error != null) {
       return LgPage(
         title: 'Installs',
+        breadcrumb: 'Reports › Growth',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -114,6 +117,7 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Installs',
+        breadcrumb: 'Reports › Growth',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -129,9 +133,12 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
 
     return LgPage(
       title: 'Installs',
+      breadcrumb: 'Reports › Growth',
       subtitle: 'Install and uninstall activity — net app adoption over the period',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

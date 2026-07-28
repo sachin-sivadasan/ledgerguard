@@ -82,6 +82,7 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
     if (!hasApps) {
       return LgPage(
         title: 'Churn',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.trending_down_outlined,
@@ -98,6 +99,7 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Churn',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -106,6 +108,7 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
     if (provider.error != null) {
       return LgPage(
         title: 'Churn',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -114,6 +117,7 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Churn',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -131,8 +135,11 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
       title: 'Churn',
       subtitle:
           'Stores currently churned — MRR lost, count, and ranking; churn-rate trend over the selected range',
+      breadcrumb: 'Reports › Retention & Risk',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

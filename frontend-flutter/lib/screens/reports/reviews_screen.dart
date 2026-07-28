@@ -85,6 +85,7 @@ class _ReviewsReportScreenState extends State<ReviewsReportScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Reviews',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.star_outline_rounded,
@@ -101,6 +102,7 @@ class _ReviewsReportScreenState extends State<ReviewsReportScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Reviews',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -109,6 +111,7 @@ class _ReviewsReportScreenState extends State<ReviewsReportScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Reviews',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -117,6 +120,7 @@ class _ReviewsReportScreenState extends State<ReviewsReportScreen>
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Reviews',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -129,6 +133,7 @@ class _ReviewsReportScreenState extends State<ReviewsReportScreen>
 
     return LgPage(
       title: 'Reviews',
+      breadcrumb: 'Reports › Retention & Risk',
       subtitle:
           'App Store ratings — distribution, average, and most recent feedback',
       backAction: () => context.go('/reports'),

@@ -74,6 +74,7 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Revenue at Risk',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.shield_outlined,
@@ -90,6 +91,7 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Revenue at Risk',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -98,6 +100,7 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Revenue at Risk',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -106,6 +109,7 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Revenue at Risk',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -120,8 +124,11 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
     return LgPage(
       title: 'Revenue at Risk',
       subtitle: 'At-risk MRR, recoverable revenue, and ranked stores',
+      breadcrumb: 'Reports › Retention & Risk',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

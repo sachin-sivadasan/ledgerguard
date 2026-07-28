@@ -131,10 +131,13 @@ class _MrrReportScreenState extends State<MrrReportScreen>
 
     return LgPage(
       title: 'Monthly Recurring Revenue',
+      breadcrumb: 'Reports › Revenue & Billing',
       subtitle:
           'RECURRING revenue normalized to monthly — trend and breakdown by plan',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

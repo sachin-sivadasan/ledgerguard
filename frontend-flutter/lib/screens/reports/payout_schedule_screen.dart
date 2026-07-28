@@ -82,6 +82,7 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Payout Schedule',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.event_outlined,
@@ -98,6 +99,7 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Payout Schedule',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -106,6 +108,7 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Payout Schedule',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -114,6 +117,7 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Payout Schedule',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -129,10 +133,13 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
 
     return LgPage(
       title: 'Payout Schedule',
+      breadcrumb: 'Reports › Revenue & Billing',
       subtitle:
           'Upcoming Shopify payouts — when cleared earnings become available',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

@@ -82,6 +82,7 @@ class _UninstallContextScreenState extends State<UninstallContextScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Uninstall Context',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.link_off_outlined,
@@ -98,6 +99,7 @@ class _UninstallContextScreenState extends State<UninstallContextScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Uninstall Context',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -106,6 +108,7 @@ class _UninstallContextScreenState extends State<UninstallContextScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Uninstall Context',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -114,6 +117,7 @@ class _UninstallContextScreenState extends State<UninstallContextScreen>
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Uninstall Context',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -128,8 +132,11 @@ class _UninstallContextScreenState extends State<UninstallContextScreen>
       title: 'Uninstall Context',
       subtitle:
           'What state stores were in just before they uninstalled — inferred from risk signals',
+      breadcrumb: 'Reports › Retention & Risk',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

@@ -81,6 +81,7 @@ class _RevenueMixScreenState extends State<RevenueMixScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Revenue Mix',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.pie_chart_outline,
@@ -97,6 +98,7 @@ class _RevenueMixScreenState extends State<RevenueMixScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Revenue Mix',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -105,6 +107,7 @@ class _RevenueMixScreenState extends State<RevenueMixScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Revenue Mix',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -113,6 +116,7 @@ class _RevenueMixScreenState extends State<RevenueMixScreen>
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Revenue Mix',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -126,10 +130,13 @@ class _RevenueMixScreenState extends State<RevenueMixScreen>
 
     return LgPage(
       title: 'Revenue Mix',
+      breadcrumb: 'Reports › Revenue & Billing',
       subtitle:
           'Composition of revenue by charge type — RECURRING vs USAGE vs ONE-TIME',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

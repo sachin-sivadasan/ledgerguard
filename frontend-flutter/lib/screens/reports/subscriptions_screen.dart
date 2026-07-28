@@ -82,6 +82,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Subscriptions',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.people_outline,
@@ -98,6 +99,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Subscriptions',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -106,6 +108,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Subscriptions',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -114,6 +117,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Subscriptions',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -127,6 +131,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
 
     return LgPage(
       title: 'Subscriptions',
+      breadcrumb: 'Reports › Revenue & Billing',
       subtitle:
           'Active subscription base by plan — ARPU and lifetime value composition',
       backAction: () => context.go('/reports'),

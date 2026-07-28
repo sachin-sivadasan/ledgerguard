@@ -83,6 +83,7 @@ class _RetentionScreenState extends State<RetentionScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Retention',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.favorite_outline,
@@ -99,6 +100,7 @@ class _RetentionScreenState extends State<RetentionScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Retention',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -107,6 +109,7 @@ class _RetentionScreenState extends State<RetentionScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Retention',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -115,6 +118,7 @@ class _RetentionScreenState extends State<RetentionScreen>
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Retention',
+        breadcrumb: 'Reports › Retention & Risk',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -133,8 +137,11 @@ class _RetentionScreenState extends State<RetentionScreen>
       title: 'Retention',
       subtitle:
           'How well recurring revenue is retained. Renewal rate & trend follow the selected range; retained MRR and the plan table are current-state; reactivations are counted in-range.',
+      breadcrumb: 'Reports › Retention & Risk',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

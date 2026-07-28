@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../core/date_range.dart';
 import '../services/uninstall_context_service.dart';
 
 class UninstallContextProvider extends ChangeNotifier {
@@ -10,6 +11,7 @@ class UninstallContextProvider extends ChangeNotifier {
   String? _error;
   bool _isServiceUnavailable = false;
   String? _selectedAppId;
+  DateRangePreset _dateRange = DateRangePreset.defaultPreset;
   CancelToken? _cancelToken;
 
   UninstallContextReport? _report;
@@ -20,7 +22,19 @@ class UninstallContextProvider extends ChangeNotifier {
   String? get error => _error;
   bool get isServiceUnavailable => _isServiceUnavailable;
   String? get selectedAppId => _selectedAppId;
+  DateRangePreset get dateRange => _dateRange;
   UninstallContextReport? get report => _report;
+
+  /// Wired from the LgPage date-range selector. Re-loads the report for the new window.
+  void setDateRange(DateRangePreset preset) {
+    if (preset == _dateRange) return;
+    _dateRange = preset;
+    notifyListeners();
+    final appId = _selectedAppId;
+    if (!_demoMode && appId != null) {
+      loadReport(appId);
+    }
+  }
 
   /// Wired via DemoModeCoordinator. In demo mode the report shows a mock
   /// dataset (consistent with every other screen) and no API call is made.
@@ -50,8 +64,10 @@ class UninstallContextProvider extends ChangeNotifier {
     _isServiceUnavailable = false;
     notifyListeners();
     final token = _cancelToken;
+    final range = resolveDateRange(_dateRange, DateTime.now());
     try {
-      _report = await _service.fetchReport(appId, cancelToken: token);
+      _report = await _service.fetchReport(appId,
+          from: range.from, to: range.to, cancelToken: token);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) {
         // A newer load superseded this one and will manage loading state.
@@ -81,7 +97,8 @@ class UninstallContextProvider extends ChangeNotifier {
   Future<Uint8List?> fetchCsvBytes() {
     final appId = _selectedAppId;
     if (appId == null) return Future.value(null);
-    return _service.fetchCsvBytes(appId);
+    final range = resolveDateRange(_dateRange, DateTime.now());
+    return _service.fetchCsvBytes(appId, from: range.from, to: range.to);
   }
 
   UninstallContextReport _mockReport() {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/date_range.dart';
 import '../providers/apps_provider.dart';
 import '../providers/sync_status_provider.dart';
 import '../theme/app_breakpoints.dart';
@@ -18,6 +19,12 @@ class LgPageAction {
 class LgPage extends StatelessWidget {
   final String title;
   final String? subtitle;
+  /// Optional breadcrumb rendered above the title, e.g. "Reports › Growth".
+  final String? breadcrumb;
+  /// When set, renders a date-range preset selector in the header. Requires
+  /// [onDateRangeChanged] to be wired.
+  final DateRangePreset? dateRange;
+  final ValueChanged<DateRangePreset>? onDateRangeChanged;
   final LgPageAction? primaryAction;
   final List<LgPageAction> secondaryActions;
   final VoidCallback? backAction;
@@ -29,6 +36,9 @@ class LgPage extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.breadcrumb,
+    this.dateRange,
+    this.onDateRangeChanged,
     this.primaryAction,
     this.secondaryActions = const [],
     this.backAction,
@@ -77,6 +87,12 @@ class LgPage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (breadcrumb != null) ...[
+                          Text(breadcrumb!,
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: LgColors.textSecondary)),
+                          const SizedBox(height: LgSpacing.s100),
+                        ],
                         Row(
                           children: [
                             Flexible(
@@ -107,6 +123,13 @@ class LgPage extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (dateRange != null && onDateRangeChanged != null) ...[
+                    DateRangeSelector(
+                      value: dateRange!,
+                      onChanged: onDateRangeChanged!,
+                    ),
+                    const SizedBox(width: LgSpacing.s200),
+                  ],
                   if (onRefresh != null)
                     IconButton(
                       icon: const Icon(Icons.refresh),

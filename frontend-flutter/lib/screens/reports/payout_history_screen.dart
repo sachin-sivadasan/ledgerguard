@@ -82,6 +82,7 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
     if (!hasApps) {
       return LgPage(
         title: 'Payout History',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgEmptyState(
           icon: Icons.history_outlined,
@@ -98,6 +99,7 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
     if (provider.isServiceUnavailable) {
       return LgPage(
         title: 'Payout History',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgServiceUnavailable(onRetry: retryLoad),
       );
@@ -106,6 +108,7 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
     if (provider.error != null) {
       return LgPage(
         title: 'Payout History',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: LgErrorState(message: provider.error!, onRetry: retryLoad),
       );
@@ -114,6 +117,7 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
     if (provider.isLoading && provider.report == null) {
       return LgPage(
         title: 'Payout History',
+        breadcrumb: 'Reports › Revenue & Billing',
         backAction: () => context.go('/reports'),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -127,9 +131,12 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
 
     return LgPage(
       title: 'Payout History',
+      breadcrumb: 'Reports › Revenue & Billing',
       subtitle: 'Earnings marked paid out, grouped by charge month',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
+      dateRange: provider.dateRange,
+      onDateRangeChanged: provider.setDateRange,
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_breakpoints.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
@@ -12,13 +13,29 @@ class LgTableColumn {
   const LgTableColumn(this.label, {this.flex = 2, this.numeric = false});
 }
 
-/// Shared header row: shaded (rx=8), 16px inter-column gaps (skipped before the
-/// first column so a right-aligned numeric header can't abut the next left header
-/// — e.g. "NET"+"STATUS" -> "NETSTATUS").
-Widget _lgHeaderRow(ThemeData theme, List<LgTableColumn> columns) {
+/// On mobile, tables are data-dense: shrink all cell/header text ~10% and tighten
+/// padding so wide tables (many columns) fit without cramping. Applied centrally so
+/// every report table (incl. screen-built cells) benefits without per-screen styling.
+Widget _maybeDense(BuildContext context, Widget table) {
+  if (!LgBreakpoints.isMobile(context)) return table;
+  final mq = MediaQuery.of(context);
+  return MediaQuery(
+    data: mq.copyWith(textScaler: const TextScaler.linear(0.9)),
+    child: table,
+  );
+}
+
+double _hPad(bool dense) => dense ? LgSpacing.s300 : LgSpacing.s400;
+double _vPad(bool dense) => dense ? LgSpacing.s200 : LgSpacing.s300;
+double _gap(bool dense) => dense ? LgSpacing.s200 : LgSpacing.s400;
+
+/// Shared header row: shaded (rx=8), inter-column gaps (skipped before the first
+/// column so a right-aligned numeric header can't abut the next left header —
+/// e.g. "NET"+"STATUS" -> "NETSTATUS").
+Widget _lgHeaderRow(ThemeData theme, List<LgTableColumn> columns, bool dense) {
   return Container(
-    padding: const EdgeInsets.symmetric(
-        horizontal: LgSpacing.s400, vertical: LgSpacing.s300),
+    padding:
+        EdgeInsets.symmetric(horizontal: _hPad(dense), vertical: _vPad(dense)),
     decoration: BoxDecoration(
       color: LgColors.surfaceSecondary,
       borderRadius: BorderRadius.circular(8),
@@ -26,12 +43,16 @@ Widget _lgHeaderRow(ThemeData theme, List<LgTableColumn> columns) {
     child: Row(
       children: [
         for (var i = 0; i < columns.length; i++) ...[
-          if (i > 0) const SizedBox(width: LgSpacing.s400),
+          if (i > 0) SizedBox(width: _gap(dense)),
           Expanded(
             flex: columns[i].flex,
             child: Text(
               columns[i].label,
               textAlign: columns[i].numeric ? TextAlign.end : TextAlign.start,
+              // Keep headers on one line — a narrow numeric column otherwise
+              // breaks a single word mid-character ("CHARGE\nS").
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: LgColors.textSecondary,
                 fontWeight: FontWeight.w600,
@@ -46,10 +67,10 @@ Widget _lgHeaderRow(ThemeData theme, List<LgTableColumn> columns) {
 
 /// Shared data row: flat, thin bottom divider, cells aligned per column.
 Widget _lgDataRow(
-    ThemeData theme, List<LgTableColumn> columns, List<Widget> row) {
+    ThemeData theme, List<LgTableColumn> columns, List<Widget> row, bool dense) {
   return Container(
-    padding: const EdgeInsets.symmetric(
-        horizontal: LgSpacing.s400, vertical: LgSpacing.s300),
+    padding:
+        EdgeInsets.symmetric(horizontal: _hPad(dense), vertical: _vPad(dense)),
     decoration: const BoxDecoration(
       border: Border(bottom: BorderSide(color: LgColors.border)),
     ),
@@ -57,7 +78,7 @@ Widget _lgDataRow(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         for (var i = 0; i < columns.length; i++) ...[
-          if (i > 0) const SizedBox(width: LgSpacing.s400),
+          if (i > 0) SizedBox(width: _gap(dense)),
           Expanded(
             flex: columns[i].flex,
             child: Align(
@@ -85,12 +106,16 @@ class LgTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _lgHeaderRow(theme, columns),
-        for (final row in rows) _lgDataRow(theme, columns, row),
-      ],
+    final dense = LgBreakpoints.isMobile(context);
+    return _maybeDense(
+      context,
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _lgHeaderRow(theme, columns, dense),
+          for (final row in rows) _lgDataRow(theme, columns, row, dense),
+        ],
+      ),
     );
   }
 }
@@ -136,6 +161,7 @@ class LgPaginatedTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final dense = LgBreakpoints.isMobile(context);
     final secondary =
         theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary);
 
@@ -151,43 +177,49 @@ class LgPaginatedTable extends StatelessWidget {
         opacity: loading ? 0.5 : 1,
         child: ListView.builder(
           itemCount: rows.length,
-          itemBuilder: (_, i) => _lgDataRow(theme, columns, rows[i]),
+          itemBuilder: (_, i) => _lgDataRow(theme, columns, rows[i], dense),
         ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _lgHeaderRow(theme, columns), // sticky
-        Expanded(child: body), // scrolls under the header
-        // Fixed footer pager.
-        Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: LgSpacing.s400, vertical: LgSpacing.s300),
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: LgColors.border)),
+    return _maybeDense(
+      context,
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _lgHeaderRow(theme, columns, dense), // sticky
+          Expanded(child: body), // scrolls under the header
+          // Fixed footer pager.
+          Container(
+            padding: EdgeInsets.symmetric(
+                horizontal: _hPad(dense), vertical: _vPad(dense)),
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: LgColors.border)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    total == 0 ? '0 rows' : 'Showing $from–$to of $total',
+                    style: secondary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                OutlinedButton(
+                  onPressed: canPrev ? onPrev : null,
+                  child: const Text('← Prev'),
+                ),
+                const SizedBox(width: LgSpacing.s200),
+                OutlinedButton(
+                  onPressed: canNext ? onNext : null,
+                  child: const Text('Next →'),
+                ),
+              ],
+            ),
           ),
-          child: Row(
-            children: [
-              Text(
-                total == 0 ? '0 rows' : 'Showing $from–$to of $total',
-                style: secondary,
-              ),
-              const Spacer(),
-              OutlinedButton(
-                onPressed: canPrev ? onPrev : null,
-                child: const Text('← Prev'),
-              ),
-              const SizedBox(width: LgSpacing.s200),
-              OutlinedButton(
-                onPressed: canNext ? onNext : null,
-                child: const Text('Next →'),
-              ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

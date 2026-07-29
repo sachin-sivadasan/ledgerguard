@@ -973,3 +973,22 @@ Add a dedicated nullable `activated_at TIMESTAMPTZ` business-date column. The re
 - One column fixes all three reports consistently; `StartDate()` fallback keeps pre-backfill rows working.
 - Deploy runs migration 000043 (schema v42→v43) — NOT rebuild-only.
 - Related: the Net-New churn count now falls back to `UpdatedAt` when a churned sub has no charge date (cancelled before first charge), so churn isn't silently undercounted.
+
+### ADR-045: Active Customers headline — Live subscription count, not the daily snapshot
+
+**Date:** 2026-07-29
+**Status:** Implemented
+
+**Context:**
+The Active Customers report (Customers · Archetype A) rendered a headline "Active Customers" that disagreed with its own "Active by plan" table on live data: **1016** (headline) vs **926** (table sum), a 90-sub gap. Root cause: the KPI row mixed two data sources. The headline (and the trend line) were sourced from the **latest in-range daily snapshot** (`snapshotActiveCount = TotalSubscriptions − ChurnedCount`), while the plan table, New, Churned and Net-Change were all computed from the **current live `subscriptions` rows** (`RiskState != CHURNED`). Because the snapshot's per-day risk bucketing (`MetricsEngine.ComputeAllMetrics`) drifts from the current stored `RiskState`, the two sources diverge whenever the latest snapshot's active tally ≠ the live non-churned count. Users sum the table and expect it to equal the big number.
+
+**Decision:**
+Source the Active Customers headline from the **live non-churned count**, taken as the **sum of the per-plan breakdown** so the big number *always* reconciles with the "Active by plan" table (and with New/Churned/Net, which are already live). The daily-snapshot series now feeds the **trend line only**. `buildActiveCustomersReport` no longer takes `snapshots` and no longer overrides the live count with `latestSnapshot(...)`.
+
+**Alternatives considered:**
+- Keep the snapshot headline and reconcile the table to it — rejected: snapshots store no per-plan breakdown, and the snapshot data is itself suspect (see below).
+- Label the headline "as of <snapshot date>" and the table "current" — rejected: papers over an internal inconsistency instead of removing it.
+
+**Consequences:**
+- Headline == plan-table sum == New/Churned/Net basis; the report is internally consistent and matches the wireframe intent ("paying subscriptions (Safe + at-risk)").
+- Trade-off: the trend line's last point may sit slightly above/below the headline until the deeper issue is fixed — the snapshot pipeline records more active subs (1016) than the live table holds non-churned (926). That **snapshot-vs-live divergence is a separate data-pipeline bug** affecting every snapshot-based report (MRR, Risk) and is tracked for follow-up, not resolved here.

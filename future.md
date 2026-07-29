@@ -363,3 +363,19 @@ Add a real backend API for webhooks instead of relying on mock data. This includ
 - [DONE 2026-07-26] Tore down GCP `ledgerspear` (Cloud SQL, VPC connector, Cloud Run, Artifact Registry deleted; Secret Manager secrets kept as backup). Billing ~₹0.
 - **Backup cron** for self-hosted Postgres (pg_dump â gzip â optional Storage Box).
 - **CI/CD**: replace `scripts/gcp-deploy.sh` with SSH-based deploy to Hetzner.
+
+## Snapshot-vs-live reconciliation — subscription grain mismatch (data-pipeline bug, cross-report)
+**Status:** root-caused 2026-07-29 (DB-confirmed, churn ruled out); grain decision DEFERRED — see options below.
+
+- **Symptom:** daily snapshots over-count subscriptions vs the live table. On app `a4d7dfd1…` the Jul-29 snapshot recorded **1016** subs (all SAFE, 0 churned, `updated_at` = last sync 03:12) while the live `subscriptions` table holds **926** (all SAFE, 0 churned) — a 90-row gap. Surfaced by the Active Customers report; **ADR-045** already moved that report's *headline* to the live count as a workaround, but the **trend line** and every other snapshot-sourced number (MRR trend, Risk counts) still over-count.
+- **Root cause — grain mismatch between counting and storage:**
+  - `LedgerService.rebuildSubscriptions` (`ledger_service.go:156`) builds **one subscription per `myshopify_domain`** → 1016 in-memory.
+  - The snapshot is computed from that **in-memory pre-persist** slice — in `RebuildFromTransactions` (`:133`) *and* in `BackfillHistoricalSnapshots` (`:379`) — so it records 1016.
+  - But `subscriptions` persists with **`ON CONFLICT (shopify_gid)`** (`subscription_repository.go:36`), and `ShopifyGID = lastRecurring.SubscriptionGID`. When multiple domains share one non-empty Shopify AppSubscription GID (store renamed / reinstalled / dev→prod, or repeated GIDs in Partner API data), the upsert collapses them → 926 rows. (Empty GID → per-domain hash fallback, unique, no collapse.)
+  - Net: metric counts **per-domain (1016)**, system of record stores **per-shopify_gid (926)**.
+- **Two aggravators (both real):** (1) *two writers for today's snapshot* — `RebuildFromTransactions` writes it, then `BackfillHistoricalSnapshots` overwrites it, neither reflecting the persisted 926; (2) the *backfill trend never reflects churn* — `allTxsSoFar` is cumulative and an `ACTIVE`-status sub short-circuits to SAFE in the risk engine, so the line is monotonic (49→1016) by construction.
+- **Confirming queries (run on Hetzner `ledgerguard-db`):** (1) `SELECT count(DISTINCT myshopify_domain) FROM transactions WHERE app_id=… AND charge_type='RECURRING' AND transaction_date >= now()-interval '1 year';` (expect ~1016); (2) group those recurring txs by `subscription_gid HAVING count(DISTINCT myshopify_domain) > 1` (expect ~90 excess domains). If a GID spans genuinely-distinct stores, per-domain is right; if it's dev/prod dupes of one store, per-gid is right.
+- **Fix — DECIDE THE GRAIN, then align both sides (counting == storage):**
+  - **Option A — per `shopify_gid` (→926):** dedup the rebuilt list by `shopify_gid` before metrics + persist. Snapshot == live, no migration, smallest change. Merges domains sharing a GID.
+  - **Option B — per store/domain (→1016):** change the UNIQUE constraint to `(app_id, stable_domain_key)` (matches the `stable_domain_key` "survives reinstalls" design + "paying merchants" wording). Needs a migration; splits genuinely-shared GIDs.
+- **Regardless of grain:** (a) stop double-writing today's snapshot (let the backfill own the whole series, or have the rebuild skip today when backfill runs); (b) add a reconciliation validator (snapshot subs == live subs on the sync day) to catch future drift; (c) make the backfill trend reflect churn so it isn't monotonic.

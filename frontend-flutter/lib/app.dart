@@ -21,6 +21,7 @@ import 'screens/reports/earnings_charges_screen.dart';
 import 'screens/reports/earnings_report_screen.dart';
 import 'screens/reports/mrr_report_screen.dart';
 import 'screens/reports/active_customers_screen.dart';
+import 'screens/reports/activation_screen.dart';
 import 'screens/reports/reports_screen.dart';
 import 'screens/reports/retention_screen.dart';
 import 'screens/reports/reviews_screen.dart';
@@ -97,14 +98,8 @@ class _AppState extends State<App> {
         return null;
       },
       routes: [
-        GoRoute(
-          path: '/login',
-          builder: (c, s) => const LoginScreen(),
-        ),
-        GoRoute(
-          path: '/sign-up',
-          builder: (c, s) => const SignUpScreen(),
-        ),
+        GoRoute(path: '/login', builder: (c, s) => const LoginScreen()),
+        GoRoute(path: '/sign-up', builder: (c, s) => const SignUpScreen()),
         GoRoute(
           path: '/forgot-password',
           builder: (c, s) => const ForgotPasswordScreen(),
@@ -113,81 +108,111 @@ class _AppState extends State<App> {
           builder: (context, state, navigationShell) =>
               AppShell(navigationShell: navigationShell),
           branches: [
-            StatefulShellBranch(routes: [
-              GoRoute(
-                  path: '/', builder: (c, s) => const DashboardScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: '/subscriptions',
-                builder: (c, s) => const SubscriptionListScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':id',
-                    builder: (c, s) => SubscriptionDetailScreen(
-                        subscriptionId: s.pathParameters['id']!),
-                  ),
-                ],
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: '/stores',
-                builder: (c, s) => const StoreListScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':id',
-                    builder: (c, s) =>
-                        StoreDetailScreen(storeId: s.pathParameters['id']!),
-                  ),
-                ],
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
+            StatefulShellBranch(
+              routes: [
+                GoRoute(path: '/', builder: (c, s) => const DashboardScreen()),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/subscriptions',
+                  builder: (c, s) => const SubscriptionListScreen(),
+                  routes: [
+                    GoRoute(
+                      path: ':id',
+                      builder: (c, s) => SubscriptionDetailScreen(
+                        subscriptionId: s.pathParameters['id']!,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/stores',
+                  builder: (c, s) => const StoreListScreen(),
+                  routes: [
+                    GoRoute(
+                      path: ':id',
+                      builder: (c, s) =>
+                          StoreDetailScreen(storeId: s.pathParameters['id']!),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
                   path: '/transactions',
-                  builder: (c, s) => const TransactionsScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
+                  builder: (c, s) => const TransactionsScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
                   path: '/events',
-                  builder: (c, s) => const EventsScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
+                  builder: (c, s) => const EventsScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
                   path: '/webhooks',
-                  builder: (c, s) => const WebhooksScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                  path: '/risk', builder: (c, s) => const RiskScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
+                  builder: (c, s) => const WebhooksScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(path: '/risk', builder: (c, s) => const RiskScreen()),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
                   path: '/analytics',
-                  builder: (c, s) => const AnalyticsScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
+                  builder: (c, s) => const AnalyticsScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
                   path: '/earnings',
-                  builder: (c, s) => const EarningsScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                  path: '/apps', builder: (c, s) => const AppsScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
+                  builder: (c, s) => const EarningsScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(path: '/apps', builder: (c, s) => const AppsScreen()),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
                   path: '/api-keys',
-                  builder: (c, s) => const ApiKeysScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
+                  builder: (c, s) => const ApiKeysScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
                   path: '/insights',
-                  builder: (c, s) => const InsightsScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
+                  builder: (c, s) => const InsightsScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
                   path: '/settings',
                   builder: (c, s) => const SettingsScreen(),
                   routes: [
@@ -207,117 +232,125 @@ class _AppState extends State<App> {
                       path: 'audit-log',
                       builder: (c, s) => const AuditLogScreen(),
                     ),
-                  ]),
-            ]),
+                  ],
+                ),
+              ],
+            ),
             // Reports — appended LAST so existing branch indices don't shift.
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: '/reports',
-                builder: (c, s) => const ReportsScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'revenue-at-risk',
-                    builder: (c, s) => const RevenueAtRiskScreen(),
-                  ),
-                  GoRoute(
-                    path: 'revenue-at-risk/stores',
-                    builder: (c, s) => const RevenueAtRiskStoresScreen(),
-                  ),
-                  GoRoute(
-                    path: 'churn',
-                    builder: (c, s) => const ChurnScreen(),
-                  ),
-                  GoRoute(
-                    path: 'churn/stores',
-                    builder: (c, s) => const ChurnStoresScreen(),
-                  ),
-                  GoRoute(
-                    path: 'retention',
-                    builder: (c, s) => const RetentionScreen(),
-                  ),
-                  GoRoute(
-                    path: 'usage',
-                    builder: (c, s) => const UsageScreen(),
-                  ),
-                  GoRoute(
-                    path: 'usage/stores',
-                    builder: (c, s) => const UsageStoresScreen(),
-                  ),
-                  GoRoute(
-                    path: 'usage-trends',
-                    builder: (c, s) => const UsageTrendsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'subscriptions',
-                    builder: (c, s) => const SubscriptionsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'payout-schedule',
-                    builder: (c, s) => const PayoutScheduleScreen(),
-                  ),
-                  GoRoute(
-                    path: 'payout-schedule/payouts',
-                    builder: (c, s) => const PayoutSchedulePayoutsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'payout-history',
-                    builder: (c, s) => const PayoutHistoryScreen(),
-                  ),
-                  GoRoute(
-                    path: 'payout-history/payouts',
-                    builder: (c, s) => const PayoutHistoryPayoutsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'installs',
-                    builder: (c, s) => const InstallsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'installs/events',
-                    builder: (c, s) => const InstallsEventsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'net-new-subscriptions',
-                    builder: (c, s) => const NetNewSubsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'net-new-subscriptions/subscriptions',
-                    builder: (c, s) => const NetNewSubsSubscriptionsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'cohorts',
-                    builder: (c, s) => const CohortsReportScreen(),
-                  ),
-                  GoRoute(
-                    path: 'reviews',
-                    builder: (c, s) => const ReviewsReportScreen(),
-                  ),
-                  GoRoute(
-                    path: 'uninstall-context',
-                    builder: (c, s) => const UninstallContextScreen(),
-                  ),
-                  GoRoute(
-                    path: 'earnings',
-                    builder: (c, s) => const EarningsReportScreen(),
-                  ),
-                  GoRoute(
-                    path: 'earnings/charges',
-                    builder: (c, s) => const EarningsChargesScreen(),
-                  ),
-                  GoRoute(
-                    path: 'mrr',
-                    builder: (c, s) => const MrrReportScreen(),
-                  ),
-                  GoRoute(
-                    path: 'active-customers',
-                    builder: (c, s) => const ActiveCustomersScreen(),
-                  ),
-                  GoRoute(
-                    path: 'revenue-mix',
-                    builder: (c, s) => const RevenueMixScreen(),
-                  ),
-                ],
-              ),
-            ]),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/reports',
+                  builder: (c, s) => const ReportsScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'revenue-at-risk',
+                      builder: (c, s) => const RevenueAtRiskScreen(),
+                    ),
+                    GoRoute(
+                      path: 'revenue-at-risk/stores',
+                      builder: (c, s) => const RevenueAtRiskStoresScreen(),
+                    ),
+                    GoRoute(
+                      path: 'churn',
+                      builder: (c, s) => const ChurnScreen(),
+                    ),
+                    GoRoute(
+                      path: 'churn/stores',
+                      builder: (c, s) => const ChurnStoresScreen(),
+                    ),
+                    GoRoute(
+                      path: 'retention',
+                      builder: (c, s) => const RetentionScreen(),
+                    ),
+                    GoRoute(
+                      path: 'usage',
+                      builder: (c, s) => const UsageScreen(),
+                    ),
+                    GoRoute(
+                      path: 'usage/stores',
+                      builder: (c, s) => const UsageStoresScreen(),
+                    ),
+                    GoRoute(
+                      path: 'usage-trends',
+                      builder: (c, s) => const UsageTrendsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'subscriptions',
+                      builder: (c, s) => const SubscriptionsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'payout-schedule',
+                      builder: (c, s) => const PayoutScheduleScreen(),
+                    ),
+                    GoRoute(
+                      path: 'payout-schedule/payouts',
+                      builder: (c, s) => const PayoutSchedulePayoutsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'payout-history',
+                      builder: (c, s) => const PayoutHistoryScreen(),
+                    ),
+                    GoRoute(
+                      path: 'payout-history/payouts',
+                      builder: (c, s) => const PayoutHistoryPayoutsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'installs',
+                      builder: (c, s) => const InstallsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'installs/events',
+                      builder: (c, s) => const InstallsEventsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'net-new-subscriptions',
+                      builder: (c, s) => const NetNewSubsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'net-new-subscriptions/subscriptions',
+                      builder: (c, s) => const NetNewSubsSubscriptionsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'cohorts',
+                      builder: (c, s) => const CohortsReportScreen(),
+                    ),
+                    GoRoute(
+                      path: 'reviews',
+                      builder: (c, s) => const ReviewsReportScreen(),
+                    ),
+                    GoRoute(
+                      path: 'uninstall-context',
+                      builder: (c, s) => const UninstallContextScreen(),
+                    ),
+                    GoRoute(
+                      path: 'earnings',
+                      builder: (c, s) => const EarningsReportScreen(),
+                    ),
+                    GoRoute(
+                      path: 'earnings/charges',
+                      builder: (c, s) => const EarningsChargesScreen(),
+                    ),
+                    GoRoute(
+                      path: 'mrr',
+                      builder: (c, s) => const MrrReportScreen(),
+                    ),
+                    GoRoute(
+                      path: 'active-customers',
+                      builder: (c, s) => const ActiveCustomersScreen(),
+                    ),
+                    GoRoute(
+                      path: 'activation',
+                      builder: (c, s) => const ActivationScreen(),
+                    ),
+                    GoRoute(
+                      path: 'revenue-mix',
+                      builder: (c, s) => const RevenueMixScreen(),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ],
         ),
       ],
@@ -334,7 +367,9 @@ class _AppState extends State<App> {
 
   void _onOrgChanged() {
     final orgProvider = context.read<OrganizationProvider>();
-    debugPrint('[App] _onOrgChanged – currentOrg=${orgProvider.currentOrg?.name}');
+    debugPrint(
+      '[App] _onOrgChanged – currentOrg=${orgProvider.currentOrg?.name}',
+    );
     if (orgProvider.currentOrg != null && orgProvider.error == null) {
       debugPrint('[App] → calling loadApps()');
       // Idempotent: provider's own _isLoading guard prevents concurrent calls.

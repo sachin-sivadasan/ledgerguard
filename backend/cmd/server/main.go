@@ -454,6 +454,13 @@ func run() error {
 		log.Println("Installs report handler initialized")
 	}
 
+	// Initialize activation report handler (Growth, Archetype E — install→paid funnel)
+	var activationReportHandler *handler.ActivationReportHandler
+	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
+		activationReportHandler = handler.NewActivationReportHandler(subscriptionRepo, appEventRepo, appRepo, partnerRepo)
+		log.Println("Activation report handler initialized")
+	}
+
 	// Initialize net-new subscriptions report handler (Growth, Archetype A — new vs churned)
 	var netNewSubsReportHandler *handler.NetNewSubsReportHandler
 	if subscriptionRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -874,6 +881,7 @@ func run() error {
 		PayoutHistoryReportHandler:      payoutHistoryReportHandler,
 		UninstallContextHandler:         uninstallContextHandler,
 		InstallsReportHandler:           installsReportHandler,
+		ActivationReportHandler:         activationReportHandler,
 		NetNewSubsReportHandler:         netNewSubsReportHandler,
 		RiskHandler:                     riskHandler,
 		OrgHandler:                      orgHandler,

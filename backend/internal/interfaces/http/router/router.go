@@ -52,6 +52,7 @@ type Config struct {
 	PayoutHistoryReportHandler      *handler.PayoutHistoryReportHandler
 	UninstallContextHandler         *handler.UninstallContextHandler
 	InstallsReportHandler           *handler.InstallsReportHandler
+	ActivationReportHandler         *handler.ActivationReportHandler
 	NetNewSubsReportHandler         *handler.NetNewSubsReportHandler
 	RiskHandler                     *handler.RiskHandler
 	OrgHandler                      *handler.OrgHandler
@@ -323,6 +324,11 @@ func New(cfg Config) *chi.Mux {
 				// Installs report route (Growth, Archetype A — install/uninstall trend)
 				if cfg.InstallsReportHandler != nil {
 					r.Get("/{appID}/reports/installs", cfg.InstallsReportHandler.GetInstalls)
+				}
+
+				// Activation report route (Growth, Archetype E — install→paid funnel)
+				if cfg.ActivationReportHandler != nil {
+					r.Get("/{appID}/reports/activation", cfg.ActivationReportHandler.GetActivation)
 				}
 
 				// Net-New Subscriptions report route (Growth, Archetype A — new vs churned)

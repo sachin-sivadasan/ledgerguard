@@ -21,6 +21,7 @@ import 'providers/events_provider.dart';
 import 'providers/insights_provider.dart';
 import 'providers/mrr_report_provider.dart';
 import 'providers/active_customers_provider.dart';
+import 'providers/activation_provider.dart';
 import 'providers/retention_provider.dart';
 import 'providers/usage_provider.dart';
 import 'providers/usage_trends_provider.dart';
@@ -51,6 +52,7 @@ import 'services/insights_service.dart';
 import 'services/metrics_service.dart';
 import 'services/mrr_report_service.dart';
 import 'services/active_customers_service.dart';
+import 'services/activation_service.dart';
 import 'services/retention_service.dart';
 import 'services/usage_service.dart';
 import 'services/usage_trends_service.dart';
@@ -103,6 +105,7 @@ void main() async {
   final netNewSubsService = NetNewSubsService(apiClient);
   final mrrReportService = MrrReportService(apiClient);
   final activeCustomersService = ActiveCustomersService(apiClient);
+  final activationService = ActivationService(apiClient);
   final uninstallContextService = UninstallContextService(apiClient);
   final reviewsService = ReviewsService(apiClient);
   final eventsService = EventsService(apiClient);
@@ -114,7 +117,10 @@ void main() async {
 
   // Create providers (kept as local vars for coordinator wiring)
   final appsProvider = AppsProvider(appService, userPreferencesService);
-  final dashboardProvider = DashboardProvider(metricsService, userPreferencesService);
+  final dashboardProvider = DashboardProvider(
+    metricsService,
+    userPreferencesService,
+  );
   final subscriptionProvider = SubscriptionProvider(subscriptionService);
   final storeProvider = StoreProvider(storeService, subscriptionService);
   final transactionProvider = TransactionProvider(transactionService);
@@ -133,10 +139,13 @@ void main() async {
   final installsProvider = InstallsProvider(installsService);
   final netNewSubsProvider = NetNewSubsProvider(netNewSubsService);
   final mrrReportProvider = MrrReportProvider(mrrReportService);
-  final activeCustomersProvider =
-      ActiveCustomersProvider(activeCustomersService);
-  final uninstallContextProvider =
-      UninstallContextProvider(uninstallContextService);
+  final activeCustomersProvider = ActiveCustomersProvider(
+    activeCustomersService,
+  );
+  final activationProvider = ActivationProvider(activationService);
+  final uninstallContextProvider = UninstallContextProvider(
+    uninstallContextService,
+  );
   final reviewsProvider = ReviewsProvider(reviewsService);
   final analyticsProvider = AnalyticsProvider(metricsService, earningsService);
   final earningsProvider = EarningsProvider(earningsService);
@@ -166,6 +175,7 @@ void main() async {
     netNewSubsProvider: netNewSubsProvider,
     mrrReportProvider: mrrReportProvider,
     activeCustomersProvider: activeCustomersProvider,
+    activationProvider: activationProvider,
     uninstallContextProvider: uninstallContextProvider,
     reviewsProvider: reviewsProvider,
     analyticsProvider: analyticsProvider,
@@ -204,6 +214,7 @@ void main() async {
         ChangeNotifierProvider.value(value: netNewSubsProvider),
         ChangeNotifierProvider.value(value: mrrReportProvider),
         ChangeNotifierProvider.value(value: activeCustomersProvider),
+        ChangeNotifierProvider.value(value: activationProvider),
         ChangeNotifierProvider.value(value: uninstallContextProvider),
         ChangeNotifierProvider.value(value: reviewsProvider),
         ChangeNotifierProvider.value(value: analyticsProvider),
@@ -212,12 +223,19 @@ void main() async {
         ChangeNotifierProvider.value(value: appsProvider),
         ChangeNotifierProvider(create: (_) => ApiKeyProvider()),
         ChangeNotifierProvider.value(value: insightsProvider),
-        ChangeNotifierProvider(create: (_) => SyncStatusProvider(syncStatusService)),
-        ChangeNotifierProvider(create: (_) => SettingsProvider(userPreferencesService)),
         ChangeNotifierProvider(
-            create: (_) => OrganizationProvider(organizationService,
-                apiClient: apiClient,
-                prefsService: userPreferencesService)),
+          create: (_) => SyncStatusProvider(syncStatusService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SettingsProvider(userPreferencesService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => OrganizationProvider(
+            organizationService,
+            apiClient: apiClient,
+            prefsService: userPreferencesService,
+          ),
+        ),
       ],
       child: const App(),
     ),

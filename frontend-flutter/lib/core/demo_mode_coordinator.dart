@@ -9,6 +9,7 @@ import '../providers/events_provider.dart';
 import '../providers/insights_provider.dart';
 import '../providers/mrr_report_provider.dart';
 import '../providers/active_customers_provider.dart';
+import '../providers/activation_provider.dart';
 import '../providers/retention_provider.dart';
 import '../providers/usage_provider.dart';
 import '../providers/usage_trends_provider.dart';
@@ -51,6 +52,7 @@ class DemoModeCoordinator {
   final NetNewSubsProvider _netNewSubsProvider;
   final MrrReportProvider _mrrReportProvider;
   final ActiveCustomersProvider _activeCustomersProvider;
+  final ActivationProvider _activationProvider;
   final UninstallContextProvider _uninstallContextProvider;
   final ReviewsProvider _reviewsProvider;
   final AnalyticsProvider _analyticsProvider;
@@ -81,6 +83,7 @@ class DemoModeCoordinator {
     required NetNewSubsProvider netNewSubsProvider,
     required MrrReportProvider mrrReportProvider,
     required ActiveCustomersProvider activeCustomersProvider,
+    required ActivationProvider activationProvider,
     required UninstallContextProvider uninstallContextProvider,
     required ReviewsProvider reviewsProvider,
     required AnalyticsProvider analyticsProvider,
@@ -88,34 +91,35 @@ class DemoModeCoordinator {
     required EarningsReportProvider earningsReportProvider,
     required InsightsProvider insightsProvider,
     required WebhookProvider webhookProvider,
-  })  : _appsProvider = appsProvider,
-        _dashboardProvider = dashboardProvider,
-        _subscriptionProvider = subscriptionProvider,
-        _storeProvider = storeProvider,
-        _transactionProvider = transactionProvider,
-        _eventsProvider = eventsProvider,
-        _riskProvider = riskProvider,
-        _revenueAtRiskProvider = revenueAtRiskProvider,
-        _revenueMixProvider = revenueMixProvider,
-        _churnProvider = churnProvider,
-        _cohortsProvider = cohortsProvider,
-        _retentionProvider = retentionProvider,
-        _usageProvider = usageProvider,
-        _usageTrendsProvider = usageTrendsProvider,
-        _subscriptionsProvider = subscriptionsProvider,
-        _payoutScheduleProvider = payoutScheduleProvider,
-        _payoutHistoryProvider = payoutHistoryProvider,
-        _installsProvider = installsProvider,
-        _netNewSubsProvider = netNewSubsProvider,
-        _mrrReportProvider = mrrReportProvider,
-        _activeCustomersProvider = activeCustomersProvider,
-        _uninstallContextProvider = uninstallContextProvider,
-        _reviewsProvider = reviewsProvider,
-        _analyticsProvider = analyticsProvider,
-        _earningsProvider = earningsProvider,
-        _earningsReportProvider = earningsReportProvider,
-        _insightsProvider = insightsProvider,
-        _webhookProvider = webhookProvider;
+  }) : _appsProvider = appsProvider,
+       _dashboardProvider = dashboardProvider,
+       _subscriptionProvider = subscriptionProvider,
+       _storeProvider = storeProvider,
+       _transactionProvider = transactionProvider,
+       _eventsProvider = eventsProvider,
+       _riskProvider = riskProvider,
+       _revenueAtRiskProvider = revenueAtRiskProvider,
+       _revenueMixProvider = revenueMixProvider,
+       _churnProvider = churnProvider,
+       _cohortsProvider = cohortsProvider,
+       _retentionProvider = retentionProvider,
+       _usageProvider = usageProvider,
+       _usageTrendsProvider = usageTrendsProvider,
+       _subscriptionsProvider = subscriptionsProvider,
+       _payoutScheduleProvider = payoutScheduleProvider,
+       _payoutHistoryProvider = payoutHistoryProvider,
+       _installsProvider = installsProvider,
+       _netNewSubsProvider = netNewSubsProvider,
+       _mrrReportProvider = mrrReportProvider,
+       _activeCustomersProvider = activeCustomersProvider,
+       _activationProvider = activationProvider,
+       _uninstallContextProvider = uninstallContextProvider,
+       _reviewsProvider = reviewsProvider,
+       _analyticsProvider = analyticsProvider,
+       _earningsProvider = earningsProvider,
+       _earningsReportProvider = earningsReportProvider,
+       _insightsProvider = insightsProvider,
+       _webhookProvider = webhookProvider;
 
   /// Set demo mode on all providers at once.
   void setDemoMode(bool value) {
@@ -140,6 +144,7 @@ class DemoModeCoordinator {
     _netNewSubsProvider.setDemoMode(value);
     _mrrReportProvider.setDemoMode(value);
     _activeCustomersProvider.setDemoMode(value);
+    _activationProvider.setDemoMode(value);
     _uninstallContextProvider.setDemoMode(value);
     _reviewsProvider.setDemoMode(value);
     _analyticsProvider.setDemoMode(value);
@@ -176,6 +181,7 @@ class DemoModeCoordinator {
       _netNewSubsProvider.setSelectedApp(appId);
       _mrrReportProvider.setSelectedApp(appId);
       _activeCustomersProvider.setSelectedApp(appId);
+      _activationProvider.setSelectedApp(appId);
       _uninstallContextProvider.setSelectedApp(appId);
       _reviewsProvider.setSelectedApp(appId);
       _analyticsProvider.setSelectedApp(appId);

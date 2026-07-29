@@ -115,7 +115,7 @@ Current state of each subscription.
 | base_price_cents | BIGINT | NOT NULL | Price in cents |
 | currency | VARCHAR(3) | DEFAULT 'USD' | Currency code |
 | billing_interval | VARCHAR(20) | DEFAULT 'MONTHLY' | MONTHLY / ANNUAL |
-| status | VARCHAR(20) | NOT NULL | ACTIVE, CANCELLED, FROZEN, PENDING |
+| status | VARCHAR(20) | NOT NULL | ACTIVE, CANCELLED, FROZEN, PENDING, UNINSTALLED |
 | last_recurring_charge_date | TIMESTAMPTZ | | Last successful charge |
 | expected_next_charge_date | TIMESTAMPTZ | | Next expected charge |
 | risk_state | VARCHAR(30) | NOT NULL | SAFE, ONE_CYCLE_MISSED, TWO_CYCLE_MISSED, CHURNED |
@@ -259,7 +259,7 @@ CQRS read model for subscription payment status.
 | months_overdue | INT | DEFAULT 0, CHECK >= 0 | Months without payment |
 | last_successful_charge_date | TIMESTAMPTZ | | Last successful charge |
 | expected_next_charge_date | TIMESTAMPTZ | | Next expected charge |
-| status | VARCHAR(20) | NOT NULL | ACTIVE, CANCELLED, FROZEN, PENDING |
+| status | VARCHAR(20) | NOT NULL | ACTIVE, CANCELLED, FROZEN, PENDING, UNINSTALLED |
 | last_synced_at | TIMESTAMPTZ | NOT NULL | When read model updated |
 
 ### api_usage_status

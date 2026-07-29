@@ -542,44 +542,47 @@ func TestFetchAppEvents_PaginatesForwardWithFirstAfter(t *testing.T) {
 		if !strings.Contains(q, "first: 100") {
 			t.Errorf("query must forward-paginate with `first: 100`; got: %s", q)
 		}
+		if strings.Contains(q, "endCursor") {
+			t.Errorf("query must NOT request pageInfo.endCursor (not on Partner API PageInfo); got: %s", q)
+		}
 
 		var response map[string]interface{}
 		if callCount == 1 {
-			if strings.Contains(q, `"cursor"`) {
-				t.Errorf("first page must not send a cursor; got: %s", q)
+			if strings.Contains(q, `"cursor":`) {
+				t.Errorf("first page must not send a cursor variable; got: %s", q)
 			}
 			response = map[string]interface{}{
 				"data": map[string]interface{}{
 					"app": map[string]interface{}{
 						"events": map[string]interface{}{
 							"edges": []map[string]interface{}{
-								{"node": map[string]interface{}{
+								{"cursor": "c1", "node": map[string]interface{}{
 									"type":       "RELATIONSHIP_INSTALLED",
 									"occurredAt": "2024-02-15T10:00:00Z",
 									"shop":       map[string]interface{}{"id": "gid://partners/Shop/1", "name": "Shop One"},
 								}},
 							},
-							"pageInfo": map[string]interface{}{"hasNextPage": true, "endCursor": "c1"},
+							"pageInfo": map[string]interface{}{"hasNextPage": true},
 						},
 					},
 				},
 			}
 		} else {
 			if !strings.Contains(q, "c1") {
-				t.Errorf("second page must send the endCursor `c1`; got: %s", q)
+				t.Errorf("second page must send the last edge cursor `c1` as after; got: %s", q)
 			}
 			response = map[string]interface{}{
 				"data": map[string]interface{}{
 					"app": map[string]interface{}{
 						"events": map[string]interface{}{
 							"edges": []map[string]interface{}{
-								{"node": map[string]interface{}{
+								{"cursor": "c2", "node": map[string]interface{}{
 									"type":       "SUBSCRIPTION_CHARGE_ACCEPTED",
 									"occurredAt": "2024-02-16T10:00:00Z",
 									"shop":       map[string]interface{}{"id": "gid://partners/Shop/1", "name": "Shop One"},
 								}},
 							},
-							"pageInfo": map[string]interface{}{"hasNextPage": false, "endCursor": "c2"},
+							"pageInfo": map[string]interface{}{"hasNextPage": false},
 						},
 					},
 				},
@@ -619,7 +622,7 @@ func TestFetchAppEvents_SinglePageStops(t *testing.T) {
 				"app": map[string]interface{}{
 					"events": map[string]interface{}{
 						"edges":    []map[string]interface{}{},
-						"pageInfo": map[string]interface{}{"hasNextPage": false, "endCursor": ""},
+						"pageInfo": map[string]interface{}{"hasNextPage": false},
 					},
 				},
 			},

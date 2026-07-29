@@ -1326,6 +1326,12 @@
                   "key": "format",
                   "value": "csv",
                   "disabled": true
+                },
+                {
+                  "key": "months",
+                  "value": "6",
+                  "description": "Cohort months to compute (default 6). Same handler as /cohorts.",
+                  "disabled": true
                 }
               ]
             }

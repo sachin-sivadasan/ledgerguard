@@ -149,7 +149,8 @@ class _EarningsReportScreenState extends State<EarningsReportScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: the charges table.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -172,22 +173,19 @@ class _EarningsReportScreenState extends State<EarningsReportScreen>
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasData)
-            const LgEmptyState(
+          if (hasData) _HeroRow(report: report, currency: currency),
+        ],
+      ),
+      child: !hasData
+          ? const LgEmptyState(
               icon: Icons.account_balance_wallet_outlined,
               heading: 'No earnings in range',
               description:
                   'Earnings are developer payouts after Shopify takes its revenue share. Once your app records charges in this range, net earnings, pending/available/paid-out balances, and the charge breakdown will appear here.',
             )
-          else ...[
-            _HeroRow(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s600),
-            _ChargesTable(report: report, currency: currency),
-          ],
-        ],
-      ),
+          : _ChargesTable(report: report, currency: currency),
     );
   }
 }
@@ -229,6 +227,7 @@ class _HeroRow extends StatelessWidget {
 
     if (LgBreakpoints.isMobile(context)) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: LgSpacing.s300),
@@ -360,6 +359,18 @@ class _ChargesTable extends StatelessWidget {
                 ],
             ],
           ),
+        if (report.chargesTotal > charges.length) ...[
+          const SizedBox(height: LgSpacing.s300),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => context.go('/reports/earnings/charges'),
+              child: Text(
+                'View all ${report.chargesTotal} charges  →',
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

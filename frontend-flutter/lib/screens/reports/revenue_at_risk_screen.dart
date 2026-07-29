@@ -135,7 +135,8 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -158,24 +159,26 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasRisk) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasRisk)
-            const LgEmptyState(
+          if (hasRisk) _HeroRow(report: report, currency: currency),
+        ],
+      ),
+      child: !hasRisk
+          ? const LgEmptyState(
               icon: Icons.check_circle_outline,
               heading: 'No revenue at risk 🎉',
               description:
                   'All subscriptions are on track. Nothing needs recovery right now.',
             )
-          else ...[
-            _HeroRow(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s600),
-            _TrendCard(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s600),
-            _StoresTable(report: report, currency: currency),
-          ],
-        ],
-      ),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _TrendCard(report: report, currency: currency),
+                const SizedBox(height: LgSpacing.s600),
+                _StoresTable(report: report, currency: currency),
+              ],
+            ),
     );
   }
 }
@@ -222,6 +225,7 @@ class _HeroRow extends StatelessWidget {
 
     if (LgBreakpoints.isMobile(context)) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: LgSpacing.s300),

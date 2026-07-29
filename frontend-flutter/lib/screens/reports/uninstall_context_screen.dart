@@ -143,7 +143,8 @@ class _UninstallContextScreenState extends State<UninstallContextScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -166,24 +167,26 @@ class _UninstallContextScreenState extends State<UninstallContextScreen>
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasData)
-            const LgEmptyState(
+          if (hasData) _HeroRow(report: report),
+        ],
+      ),
+      child: !hasData
+          ? const LgEmptyState(
               icon: Icons.link_off_outlined,
               heading: 'No uninstalls in range',
               description:
                   'When a store uninstalls your app, LedgerGuard infers the state it was in beforehand from risk signals. LedgerGuard is read-only, so there is no self-reported reason — once uninstalls occur in this range, they will appear here.',
             )
-          else ...[
-            _HeroRow(report: report),
-            const SizedBox(height: LgSpacing.s300),
-            const _CaveatLine(),
-            const SizedBox(height: LgSpacing.s600),
-            _StoresTable(report: report),
-          ],
-        ],
-      ),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _CaveatLine(),
+                const SizedBox(height: LgSpacing.s600),
+                _StoresTable(report: report),
+              ],
+            ),
     );
   }
 }
@@ -257,6 +260,7 @@ class _HeroRow extends StatelessWidget {
 
     if (LgBreakpoints.isMobile(context)) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: LgSpacing.s300),

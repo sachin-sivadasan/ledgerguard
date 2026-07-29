@@ -149,7 +149,8 @@ class _MrrReportScreenState extends State<MrrReportScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -172,24 +173,26 @@ class _MrrReportScreenState extends State<MrrReportScreen>
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasData)
-            const LgEmptyState(
+          if (hasData) _HeroRow(report: report, currency: currency),
+        ],
+      ),
+      child: !hasData
+          ? const LgEmptyState(
               icon: Icons.show_chart_outlined,
               heading: 'No MRR data yet',
               description:
                   'MRR is your RECURRING revenue normalized to a monthly figure. Once your app has active recurring subscriptions and a completed sync, your MRR, its trend, and the per-plan breakdown will appear here.',
             )
-          else ...[
-            _HeroRow(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s600),
-            _TrendCard(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s600),
-            _PlansTable(report: report, currency: currency),
-          ],
-        ],
-      ),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _TrendCard(report: report, currency: currency),
+                const SizedBox(height: LgSpacing.s600),
+                _PlansTable(report: report, currency: currency),
+              ],
+            ),
     );
   }
 }
@@ -230,6 +233,7 @@ class _HeroRow extends StatelessWidget {
 
     if (LgBreakpoints.isMobile(context)) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: LgSpacing.s300),

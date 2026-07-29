@@ -142,7 +142,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -165,31 +166,33 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasData)
-            const LgEmptyState(
+          if (hasData) _HeroRow(report: report, currency: currency),
+        ],
+      ),
+      child: !hasData
+          ? const LgEmptyState(
               icon: Icons.people_outline,
               heading: 'No active subscriptions in range',
               description:
                   'Once your app has active recurring subscriptions, ARPU, lifetime value and your per-plan composition will appear here.',
             )
-          else ...[
-            _HeroRow(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s600),
-            _CompositionCard(report: report),
-            const SizedBox(height: LgSpacing.s600),
-            _PlanTable(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s400),
-            Text(
-              'RECURRING subscriptions only — USAGE charges are excluded from ARPU / LTV.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _CompositionCard(report: report),
+                const SizedBox(height: LgSpacing.s600),
+                _PlanTable(report: report, currency: currency),
+                const SizedBox(height: LgSpacing.s400),
+                Text(
+                  'RECURRING subscriptions only — USAGE charges are excluded from ARPU / LTV.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: LgColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ],
-      ),
     );
   }
 }
@@ -228,6 +231,7 @@ class _HeroRow extends StatelessWidget {
 
     if (LgBreakpoints.isMobile(context)) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: LgSpacing.s300),

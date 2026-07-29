@@ -148,7 +148,8 @@ class _UsageScreenState extends State<UsageScreen> with DataLoadingMixin {
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: the trend + stores table.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -171,31 +172,33 @@ class _UsageScreenState extends State<UsageScreen> with DataLoadingMixin {
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasData)
-            const LgEmptyState(
+          if (hasData) _HeroRow(report: report, currency: currency),
+        ],
+      ),
+      child: !hasData
+          ? const LgEmptyState(
               icon: Icons.receipt_long_outlined,
               heading: 'No usage or one-time charges in range',
               description:
                   'USAGE and ONE-TIME charges are tracked separately from recurring MRR. Once your app records usage-based billing, setup fees, or add-ons in the selected window, they will appear here.',
             )
-          else ...[
-            _HeroRow(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s600),
-            _TrendCard(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s600),
-            _StoresTable(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s400),
-            Text(
-              'USAGE never mixed into MRR — Usage Revenue = USAGE charges only.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _TrendCard(report: report, currency: currency),
+                const SizedBox(height: LgSpacing.s600),
+                _StoresTable(report: report, currency: currency),
+                const SizedBox(height: LgSpacing.s400),
+                Text(
+                  'USAGE never mixed into MRR — Usage Revenue = USAGE charges only.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: LgColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ],
-      ),
     );
   }
 }
@@ -231,6 +234,7 @@ class _HeroRow extends StatelessWidget {
 
     if (LgBreakpoints.isMobile(context)) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: LgSpacing.s300),

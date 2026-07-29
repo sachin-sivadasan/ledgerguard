@@ -147,7 +147,8 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -170,31 +171,33 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasData)
-            const LgEmptyState(
+          if (hasData) _HeroRow(report: report),
+        ],
+      ),
+      child: !hasData
+          ? const LgEmptyState(
               icon: Icons.download_outlined,
               heading: 'No install activity yet',
               description:
                   'Once Shopify records install and uninstall events for your app, the trend and recent events will appear here.',
             )
-          else ...[
-            _HeroRow(report: report),
-            const SizedBox(height: LgSpacing.s600),
-            _TrendCard(report: report),
-            const SizedBox(height: LgSpacing.s600),
-            _EventsTable(report: report),
-            const SizedBox(height: LgSpacing.s400),
-            Text(
-              'From RELATIONSHIP_INSTALLED / RELATIONSHIP_UNINSTALLED events. Net = installs − uninstalls.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _TrendCard(report: report),
+                const SizedBox(height: LgSpacing.s600),
+                _EventsTable(report: report),
+                const SizedBox(height: LgSpacing.s400),
+                Text(
+                  'From RELATIONSHIP_INSTALLED / RELATIONSHIP_UNINSTALLED events. Net = installs − uninstalls.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: LgColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ],
-      ),
     );
   }
 }
@@ -230,6 +233,7 @@ class _HeroRow extends StatelessWidget {
 
     if (LgBreakpoints.isMobile(context)) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: LgSpacing.s300),

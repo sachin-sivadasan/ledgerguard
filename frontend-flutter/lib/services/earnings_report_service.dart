@@ -45,6 +45,10 @@ class EarningsReport {
   final int paidOutCents;
   final List<EarningsCharge> charges;
 
+  /// Full charge-row count before ?limit/?offset paging — drives the report
+  /// preview's "View all N" affordance and the detail page's pagination.
+  final int chargesTotal;
+
   EarningsReport({
     required this.currency,
     required this.netEarningsCents,
@@ -52,19 +56,23 @@ class EarningsReport {
     required this.availableCents,
     required this.paidOutCents,
     required this.charges,
+    required this.chargesTotal,
   });
 
   factory EarningsReport.fromJson(Map<String, dynamic> json) {
+    final charges = (json['charges'] as List<dynamic>?)
+            ?.map((e) => EarningsCharge.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
     return EarningsReport(
       currency: json['currency'] as String? ?? 'USD',
       netEarningsCents: (json['netEarningsCents'] as num?)?.toInt() ?? 0,
       pendingCents: (json['pendingCents'] as num?)?.toInt() ?? 0,
       availableCents: (json['availableCents'] as num?)?.toInt() ?? 0,
       paidOutCents: (json['paidOutCents'] as num?)?.toInt() ?? 0,
-      charges: (json['charges'] as List<dynamic>?)
-              ?.map((e) => EarningsCharge.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      charges: charges,
+      // Fall back to the visible count for older responses without the field.
+      chargesTotal: (json['chargesTotal'] as num?)?.toInt() ?? charges.length,
     );
   }
 
@@ -75,6 +83,7 @@ class EarningsReport {
         availableCents: 0,
         paidOutCents: 0,
         charges: const [],
+        chargesTotal: 0,
       );
 }
 
@@ -87,11 +96,15 @@ class EarningsReportService {
     String appId, {
     String? from,
     String? to,
+    int? limit,
+    int? offset,
     CancelToken? cancelToken,
   }) async {
     final queryParameters = <String, dynamic>{};
     if (from != null) queryParameters['from'] = from;
     if (to != null) queryParameters['to'] = to;
+    if (limit != null) queryParameters['limit'] = limit;
+    if (offset != null) queryParameters['offset'] = offset;
     final response = await _client.get(
       '/api/v1/apps/$appId/reports/earnings',
       queryParameters: queryParameters,
@@ -124,6 +137,12 @@ class EarningsReportService {
     return Uint8List.fromList(response.data ?? const <int>[]);
   }
 }
+
+/// Rows shown in the Earnings report's charge PREVIEW before "View all".
+const int kEarningsChargesPreview = 8;
+
+/// Rows per page on the dedicated Earnings charges detail screen.
+const int kEarningsChargesPageSize = 50;
 
 DateTime? _parseDate(String? value) {
   if (value == null || value.isEmpty) return null;

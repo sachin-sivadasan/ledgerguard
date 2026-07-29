@@ -67,9 +67,11 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
       final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isUnavailable
-              ? 'Service temporarily unavailable. Please try again shortly.'
-              : 'Could not export CSV. Please try again.'),
+          content: Text(
+            isUnavailable
+                ? 'Service temporarily unavailable. Please try again shortly.'
+                : 'Could not export CSV. Please try again.',
+          ),
         ),
       );
     }
@@ -127,7 +129,8 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
     final report = provider.report ?? InstallsReport.empty();
     final appsList = appsProvider.apps;
     final showAppFilter = appsList.isNotEmpty;
-    final hasData = report.events.isNotEmpty ||
+    final hasData =
+        report.events.isNotEmpty ||
         report.trend.isNotEmpty ||
         report.installs > 0 ||
         report.uninstalls > 0;
@@ -135,7 +138,8 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
     return LgPage(
       title: 'Installs',
       breadcrumb: 'Reports › Growth',
-      subtitle: 'Install and uninstall activity — net app adoption over the period',
+      subtitle:
+          'Install and uninstall activity — net app adoption over the period',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
       dateRange: provider.dateRange,
@@ -150,14 +154,20 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -178,10 +188,9 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
             const SizedBox(height: LgSpacing.s400),
             Text(
               'From RELATIONSHIP_INSTALLED / RELATIONSHIP_UNINSTALLED events. Net = installs − uninstalls.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: LgColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
             ),
           ],
         ],
@@ -229,14 +238,16 @@ class _HeroRow extends StatelessWidget {
         ],
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: LgSpacing.s300),
-          Expanded(child: cards[i]),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(width: LgSpacing.s300),
+            Expanded(child: cards[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -260,18 +271,28 @@ class _KpiCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: LgSpacing.s200),
-          Text(value,
-              style: theme.textTheme.headlineMedium
-                  ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           if (footnote != null) ...[
             const SizedBox(height: LgSpacing.s100),
-            Text(footnote!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            Text(
+              footnote!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
+            ),
           ],
         ],
       ),
@@ -294,9 +315,12 @@ class _TrendCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: LgSpacing.s600),
           child: Center(
-            child: Text('Trend data not yet available for this range.',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            child: Text(
+              'Trend data not yet available for this range.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
+            ),
           ),
         ),
       );
@@ -338,9 +362,11 @@ class _TrendCard extends StatelessWidget {
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
                   topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
@@ -349,16 +375,19 @@ class _TrendCard extends StatelessWidget {
                         if (value == meta.min || value == meta.max) {
                           return const SizedBox.shrink();
                         }
-                        return Text(value.toInt().toString(),
-                            style: const TextStyle(fontSize: 10));
+                        return Text(
+                          value.toInt().toString(),
+                          style: const TextStyle(fontSize: 10),
+                        );
                       },
                     ),
                   ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval:
-                          (trend.length / 4).clamp(1, trend.length).toDouble(),
+                      interval: (trend.length / 4)
+                          .clamp(1, trend.length)
+                          .toDouble(),
                       getTitlesWidget: (value, meta) {
                         final i = value.toInt();
                         if (i < 0 || i >= trend.length) {
@@ -366,8 +395,10 @@ class _TrendCard extends StatelessWidget {
                         }
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
-                          child: Text(DateFormat('MMM d').format(trend[i].date),
-                              style: const TextStyle(fontSize: 10)),
+                          child: Text(
+                            DateFormat('MMM d').format(trend[i].date),
+                            style: const TextStyle(fontSize: 10),
+                          ),
                         );
                       },
                     ),
@@ -386,12 +417,12 @@ class _TrendCard extends StatelessWidget {
   }
 
   LineChartBarData _line(List<FlSpot> spots, Color color) => LineChartBarData(
-        spots: spots,
-        isCurved: true,
-        color: color,
-        barWidth: 2,
-        dotData: const FlDotData(show: false),
-      );
+    spots: spots,
+    isCurved: true,
+    color: color,
+    barWidth: 2,
+    dotData: const FlDotData(show: false),
+  );
 }
 
 class _LegendDot extends StatelessWidget {
@@ -406,11 +437,12 @@ class _LegendDot extends StatelessWidget {
       children: [
         Container(width: 10, height: 10, color: color),
         const SizedBox(width: LgSpacing.s100),
-        Text(label,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: LgColors.textSecondary)),
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+        ),
       ],
     );
   }
@@ -431,13 +463,18 @@ class _EventsTable extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Recent install / uninstall events',
-            style: theme.textTheme.titleMedium),
+        Text(
+          'Recent install / uninstall events',
+          style: theme.textTheme.titleMedium,
+        ),
         if (total > shown) ...[
           const SizedBox(height: LgSpacing.s100),
-          Text('Showing the latest $shown of $total events',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          Text(
+            'Showing the latest $shown of $total events',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
         ],
         const SizedBox(height: LgSpacing.s300),
         LgTable(
@@ -449,15 +486,18 @@ class _EventsTable extends StatelessWidget {
           rows: [
             for (final e in report.events)
               [
-                Text(e.domain.isNotEmpty ? e.domain : '—',
-                    style: theme.textTheme.titleSmall),
+                Text(
+                  e.domain.isNotEmpty ? e.domain : '—',
+                  style: theme.textTheme.titleSmall,
+                ),
                 _EventChip(event: e.event),
                 Text(
                   e.dateTime != null
                       ? DateFormat('MMM d, yyyy').format(e.dateTime!)
                       : (e.date.isNotEmpty ? e.date : '—'),
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: LgColors.textSecondary),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: LgColors.textSecondary,
+                  ),
                 ),
               ],
           ],
@@ -476,16 +516,23 @@ class _EventChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg) = switch (event.toLowerCase()) {
       'install' => (LgColors.success.withValues(alpha: 0.14), LgColors.success),
-      'uninstall' => (LgColors.warning.withValues(alpha: 0.14), LgColors.warning),
+      'uninstall' => (
+        LgColors.warning.withValues(alpha: 0.14),
+        LgColors.warning,
+      ),
       _ => (LgColors.surfaceSecondary, LgColors.textSecondary),
     };
     final label = event.isNotEmpty ? event : '—';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
-      child: Text(label,
-          style: TextStyle(fontSize: 11, color: fg, fontWeight: FontWeight.w600)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 11, color: fg, fontWeight: FontWeight.w600),
+      ),
     );
   }
 }

@@ -67,9 +67,11 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
       final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isUnavailable
-              ? 'Service temporarily unavailable. Please try again shortly.'
-              : 'Could not export CSV. Please try again.'),
+          content: Text(
+            isUnavailable
+                ? 'Service temporarily unavailable. Please try again shortly.'
+                : 'Could not export CSV. Please try again.',
+          ),
         ),
       );
     }
@@ -148,14 +150,20 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -174,10 +182,9 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
             const SizedBox(height: LgSpacing.s400),
             Text(
               'Each row is one calendar month of paid earnings; amounts are net of Shopify\'s revenue share. Upcoming earnings live in Payout Schedule.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: LgColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
             ),
           ],
         ],
@@ -225,14 +232,16 @@ class _HeroRow extends StatelessWidget {
         ],
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: LgSpacing.s300),
-          Expanded(child: cards[i]),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(width: LgSpacing.s300),
+            Expanded(child: cards[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -256,18 +265,28 @@ class _KpiCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: LgSpacing.s200),
-          Text(value,
-              style: theme.textTheme.headlineMedium
-                  ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           if (footnote != null) ...[
             const SizedBox(height: LgSpacing.s100),
-            Text(footnote!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            Text(
+              footnote!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
+            ),
           ],
         ],
       ),
@@ -284,8 +303,9 @@ class _PayoutLogTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final secondary =
-        theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary);
+    final secondary = theme.textTheme.bodySmall?.copyWith(
+      color: LgColors.textSecondary,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -308,9 +328,12 @@ class _PayoutLogTable extends StatelessWidget {
                   style: theme.textTheme.titleSmall,
                 ),
                 Text('${row.chargeCount}', style: secondary),
-                Text(_money(row.amountCents, currency),
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(color: LgColors.success)),
+                Text(
+                  _money(row.amountCents, currency),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: LgColors.success,
+                  ),
+                ),
                 Text(
                   row.availableDateTime != null
                       ? DateFormat('MMM d, yyyy').format(row.availableDateTime!)

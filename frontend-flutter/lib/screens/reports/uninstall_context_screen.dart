@@ -67,9 +67,11 @@ class _UninstallContextScreenState extends State<UninstallContextScreen>
       final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isUnavailable
-              ? 'Service temporarily unavailable. Please try again shortly.'
-              : 'Could not export CSV. Please try again.'),
+          content: Text(
+            isUnavailable
+                ? 'Service temporarily unavailable. Please try again shortly.'
+                : 'Could not export CSV. Please try again.',
+          ),
         ),
       );
     }
@@ -148,14 +150,20 @@ class _UninstallContextScreenState extends State<UninstallContextScreen>
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -190,7 +198,9 @@ class _CaveatLine extends StatelessWidget {
     // Amber info banner (matches the wireframe callout) rather than a plain inline line.
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: LgSpacing.s300, vertical: LgSpacing.s200),
+        horizontal: LgSpacing.s300,
+        vertical: LgSpacing.s200,
+      ),
       decoration: BoxDecoration(
         color: LgColors.warning.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(8),
@@ -255,14 +265,16 @@ class _HeroRow extends StatelessWidget {
         ],
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: LgSpacing.s300),
-          Expanded(child: cards[i]),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(width: LgSpacing.s300),
+            Expanded(child: cards[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -286,18 +298,28 @@ class _KpiCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: LgSpacing.s200),
-          Text(value,
-              style: theme.textTheme.headlineMedium
-                  ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           if (footnote != null) ...[
             const SizedBox(height: LgSpacing.s100),
-            Text(footnote!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            Text(
+              footnote!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
+            ),
           ],
         ],
       ),
@@ -314,14 +336,19 @@ class _StoresTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final stores = [...report.stores]
-      ..sort((a, b) => (b.uninstalledDate ?? DateTime(0))
-          .compareTo(a.uninstalledDate ?? DateTime(0)));
+      ..sort(
+        (a, b) => (b.uninstalledDate ?? DateTime(0)).compareTo(
+          a.uninstalledDate ?? DateTime(0),
+        ),
+      );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Uninstalled Stores (pre-churn state)',
-            style: theme.textTheme.titleMedium),
+        Text(
+          'Uninstalled Stores (pre-churn state)',
+          style: theme.textTheme.titleMedium,
+        ),
         const SizedBox(height: LgSpacing.s300),
         LgTable(
           columns: const [
@@ -334,12 +361,19 @@ class _StoresTable extends StatelessWidget {
           rows: [
             for (final s in stores)
               [
-                Text(s.domain.isNotEmpty ? s.domain : '—',
-                    style: theme.textTheme.titleSmall),
+                Text(
+                  s.domain.isNotEmpty ? s.domain : '—',
+                  style: theme.textTheme.titleSmall,
+                ),
                 _StateBadge(state: s.stateBeforeUninstall),
-                Text(s.planName.isNotEmpty ? s.planName : '—',
-                    style: theme.textTheme.titleSmall),
-                Text(_months(s.tenureMonths), style: theme.textTheme.titleSmall),
+                Text(
+                  s.planName.isNotEmpty ? s.planName : '—',
+                  style: theme.textTheme.titleSmall,
+                ),
+                Text(
+                  _months(s.tenureMonths),
+                  style: theme.textTheme.titleSmall,
+                ),
                 Text(
                   s.uninstalledDate != null
                       ? DateFormat('MMM dd').format(s.uninstalledDate!)

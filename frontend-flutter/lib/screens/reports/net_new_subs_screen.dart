@@ -68,9 +68,11 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
       final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isUnavailable
-              ? 'Service temporarily unavailable. Please try again shortly.'
-              : 'Could not export CSV. Please try again.'),
+          content: Text(
+            isUnavailable
+                ? 'Service temporarily unavailable. Please try again shortly.'
+                : 'Could not export CSV. Please try again.',
+          ),
         ),
       );
     }
@@ -128,7 +130,8 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
     final report = provider.report ?? NetNewSubsReport.empty();
     final appsList = appsProvider.apps;
     final showAppFilter = appsList.isNotEmpty;
-    final hasData = report.newStores.isNotEmpty ||
+    final hasData =
+        report.newStores.isNotEmpty ||
         report.trend.isNotEmpty ||
         report.newSubs > 0 ||
         report.churned > 0;
@@ -152,14 +155,20 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -180,10 +189,9 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
             const SizedBox(height: LgSpacing.s400),
             Text(
               'New = subscriptions started; churned = cancelled/churned. Net = new − churned.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: LgColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
             ),
           ],
         ],
@@ -231,14 +239,16 @@ class _HeroRow extends StatelessWidget {
         ],
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: LgSpacing.s300),
-          Expanded(child: cards[i]),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(width: LgSpacing.s300),
+            Expanded(child: cards[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -262,18 +272,28 @@ class _KpiCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: LgSpacing.s200),
-          Text(value,
-              style: theme.textTheme.headlineMedium
-                  ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           if (footnote != null) ...[
             const SizedBox(height: LgSpacing.s100),
-            Text(footnote!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            Text(
+              footnote!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
+            ),
           ],
         ],
       ),
@@ -296,9 +316,12 @@ class _TrendCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: LgSpacing.s600),
           child: Center(
-            child: Text('Trend data not yet available for this range.',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            child: Text(
+              'Trend data not yet available for this range.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
+            ),
           ),
         ),
       );
@@ -314,7 +337,9 @@ class _TrendCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [_LegendDot(color: LgColors.success, label: 'Net-new')]),
+          Row(
+            children: [_LegendDot(color: LgColors.success, label: 'Net-new')],
+          ),
           const SizedBox(height: LgSpacing.s200),
           SizedBox(
             height: 200,
@@ -326,9 +351,11 @@ class _TrendCard extends StatelessWidget {
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
                   topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
@@ -337,16 +364,19 @@ class _TrendCard extends StatelessWidget {
                         if (value == meta.min || value == meta.max) {
                           return const SizedBox.shrink();
                         }
-                        return Text(value.toInt().toString(),
-                            style: const TextStyle(fontSize: 10));
+                        return Text(
+                          value.toInt().toString(),
+                          style: const TextStyle(fontSize: 10),
+                        );
                       },
                     ),
                   ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval:
-                          (trend.length / 4).clamp(1, trend.length).toDouble(),
+                      interval: (trend.length / 4)
+                          .clamp(1, trend.length)
+                          .toDouble(),
                       getTitlesWidget: (value, meta) {
                         final i = value.toInt();
                         if (i < 0 || i >= trend.length) {
@@ -354,8 +384,10 @@ class _TrendCard extends StatelessWidget {
                         }
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
-                          child: Text(DateFormat('MMM d').format(trend[i].date),
-                              style: const TextStyle(fontSize: 10)),
+                          child: Text(
+                            DateFormat('MMM d').format(trend[i].date),
+                            style: const TextStyle(fontSize: 10),
+                          ),
                         );
                       },
                     ),
@@ -398,11 +430,12 @@ class _LegendDot extends StatelessWidget {
       children: [
         Container(width: 10, height: 10, color: color),
         const SizedBox(width: LgSpacing.s100),
-        Text(label,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: LgColors.textSecondary)),
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+        ),
       ],
     );
   }
@@ -425,9 +458,12 @@ class _NewSubsTable extends StatelessWidget {
         Text('Recent new subscriptions', style: theme.textTheme.titleMedium),
         if (total > shown) ...[
           const SizedBox(height: LgSpacing.s100),
-          Text('Showing the latest $shown of $total new subscriptions',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          Text(
+            'Showing the latest $shown of $total new subscriptions',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
         ],
         const SizedBox(height: LgSpacing.s300),
         LgTable(
@@ -446,17 +482,23 @@ class _NewSubsTable extends StatelessWidget {
                       : (s.shopName.isNotEmpty ? s.shopName : '—'),
                   style: theme.textTheme.titleSmall,
                 ),
-                Text(s.planName.isNotEmpty ? s.planName : '—',
-                    style: theme.textTheme.bodyMedium),
-                Text(_money(s.mrrCents, report.currency),
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(color: LgColors.success)),
+                Text(
+                  s.planName.isNotEmpty ? s.planName : '—',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                Text(
+                  _money(s.mrrCents, report.currency),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: LgColors.success,
+                  ),
+                ),
                 Text(
                   s.startedDate != null
                       ? DateFormat('MMM d, yyyy').format(s.startedDate!)
                       : (s.started.isNotEmpty ? s.started : '—'),
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: LgColors.textSecondary),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: LgColors.textSecondary,
+                  ),
                 ),
               ],
           ],

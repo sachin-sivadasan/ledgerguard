@@ -68,9 +68,11 @@ class _RetentionScreenState extends State<RetentionScreen>
       final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isUnavailable
-              ? 'Service temporarily unavailable. Please try again shortly.'
-              : 'Could not export CSV. Please try again.'),
+          content: Text(
+            isUnavailable
+                ? 'Service temporarily unavailable. Please try again shortly.'
+                : 'Could not export CSV. Please try again.',
+          ),
         ),
       );
     }
@@ -129,7 +131,8 @@ class _RetentionScreenState extends State<RetentionScreen>
     final appsList = appsProvider.apps;
     final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
-    final hasData = report.plans.isNotEmpty ||
+    final hasData =
+        report.plans.isNotEmpty ||
         report.renewalRate > 0 ||
         report.retainedMrrCents > 0 ||
         report.reactivations > 0;
@@ -153,14 +156,20 @@ class _RetentionScreenState extends State<RetentionScreen>
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -204,7 +213,8 @@ class _HeroRow extends StatelessWidget {
         label: 'Retained MRR',
         value: _money(report.retainedMrrCents, currency),
         color: LgColors.textPrimary,
-        footnote: 'MRR of currently-active (SAFE) subs — current-state, not date-filtered',
+        footnote:
+            'MRR of currently-active (SAFE) subs — current-state, not date-filtered',
       ),
       _KpiCard(
         label: 'Reactivations',
@@ -224,14 +234,16 @@ class _HeroRow extends StatelessWidget {
         ],
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: LgSpacing.s300),
-          Expanded(child: cards[i]),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(width: LgSpacing.s300),
+            Expanded(child: cards[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -255,18 +267,28 @@ class _KpiCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: LgSpacing.s200),
-          Text(value,
-              style: theme.textTheme.headlineMedium
-                  ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           if (footnote != null) ...[
             const SizedBox(height: LgSpacing.s100),
-            Text(footnote!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            Text(
+              footnote!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
+            ),
           ],
         ],
       ),
@@ -290,10 +312,9 @@ class _TrendCard extends StatelessWidget {
           child: Center(
             child: Text(
               'Trend data not yet available for this range.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: LgColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
             ),
           ),
         ),
@@ -319,66 +340,72 @@ class _TrendCard extends StatelessWidget {
           ),
           const SizedBox(height: LgSpacing.s200),
           SizedBox(
-        height: 200,
-        child: LineChart(
-          LineChartData(
-            minY: 0,
-            maxY: maxY == 0 ? 1 : maxY * 1.2,
-            gridData: const FlGridData(show: false),
-            borderData: FlBorderData(show: false),
-            titlesData: FlTitlesData(
-              topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false)),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 44,
-                  getTitlesWidget: (value, meta) {
-                    if (value == meta.min || value == meta.max) {
-                      return const SizedBox.shrink();
-                    }
-                    return Text('${value.toStringAsFixed(1)}%',
-                        style: const TextStyle(fontSize: 10));
-                  },
+            height: 200,
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: maxY == 0 ? 1 : maxY * 1.2,
+                gridData: const FlGridData(show: false),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 44,
+                      getTitlesWidget: (value, meta) {
+                        if (value == meta.min || value == meta.max) {
+                          return const SizedBox.shrink();
+                        }
+                        return Text(
+                          '${value.toStringAsFixed(1)}%',
+                          style: const TextStyle(fontSize: 10),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: (trend.length / 4)
+                          .clamp(1, trend.length)
+                          .toDouble(),
+                      getTitlesWidget: (value, meta) {
+                        final i = value.toInt();
+                        if (i < 0 || i >= trend.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            DateFormat('MMM d').format(trend[i].date),
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
-              ),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  interval: (trend.length / 4).clamp(1, trend.length).toDouble(),
-                  getTitlesWidget: (value, meta) {
-                    final i = value.toInt();
-                    if (i < 0 || i >= trend.length) {
-                      return const SizedBox.shrink();
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        DateFormat('MMM d').format(trend[i].date),
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                    );
-                  },
-                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    color: LgColors.success,
+                    barWidth: 2,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: LgColors.success.withValues(alpha: 0.10),
+                    ),
+                  ),
+                ],
               ),
             ),
-            lineBarsData: [
-              LineChartBarData(
-                spots: spots,
-                isCurved: true,
-                color: LgColors.success,
-                barWidth: 2,
-                dotData: const FlDotData(show: false),
-                belowBarData: BarAreaData(
-                  show: true,
-                  color: LgColors.success.withValues(alpha: 0.10),
-                ),
-              ),
-            ],
-          ),
-        ),
           ),
         ],
       ),
@@ -398,11 +425,12 @@ class _LegendDot extends StatelessWidget {
       children: [
         Container(width: 10, height: 10, color: color),
         const SizedBox(width: LgSpacing.s100),
-        Text(label,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: LgColors.textSecondary)),
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+        ),
       ],
     );
   }
@@ -423,8 +451,10 @@ class _PlansTable extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Retention by Plan (ranked by retained MRR)',
-            style: theme.textTheme.titleMedium),
+        Text(
+          'Retention by Plan (ranked by retained MRR)',
+          style: theme.textTheme.titleMedium,
+        ),
         const SizedBox(height: LgSpacing.s300),
         LgTable(
           columns: const [
@@ -436,14 +466,21 @@ class _PlansTable extends StatelessWidget {
           rows: [
             for (final p in plans)
               [
-                Text(p.planName.isNotEmpty ? p.planName : '—',
-                    style: theme.textTheme.titleSmall),
+                Text(
+                  p.planName.isNotEmpty ? p.planName : '—',
+                  style: theme.textTheme.titleSmall,
+                ),
                 Text('${p.activeSubs}', style: theme.textTheme.titleSmall),
-                Text(_percent(p.renewalRate),
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(color: LgColors.success)),
-                Text(_money(p.retainedMrrCents, currency),
-                    style: theme.textTheme.titleSmall),
+                Text(
+                  _percent(p.renewalRate),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: LgColors.success,
+                  ),
+                ),
+                Text(
+                  _money(p.retainedMrrCents, currency),
+                  style: theme.textTheme.titleSmall,
+                ),
               ],
           ],
         ),

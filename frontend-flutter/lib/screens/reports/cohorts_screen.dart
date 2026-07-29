@@ -64,9 +64,11 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
       final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isUnavailable
-              ? 'Service temporarily unavailable. Please try again shortly.'
-              : 'Could not export CSV. Please try again.'),
+          content: Text(
+            isUnavailable
+                ? 'Service temporarily unavailable. Please try again shortly.'
+                : 'Could not export CSV. Please try again.',
+          ),
         ),
       );
     }
@@ -128,8 +130,7 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
     return LgPage(
       title: 'Retention Cohorts',
       breadcrumb: 'Reports › Retention & Risk',
-      subtitle:
-          '% of each signup-month cohort still retained N months later',
+      subtitle: '% of each signup-month cohort still retained N months later',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
       secondaryActions: [
@@ -142,14 +143,20 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -169,10 +176,9 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
                 children: [
                   Text(
                     'rows = signup month · columns = months since signup · cell = % retained',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: LgColors.textSecondary),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: LgColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: LgSpacing.s300),
                   CohortHeatmap(cohorts: cohorts),

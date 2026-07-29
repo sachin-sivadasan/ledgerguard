@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -43,7 +44,18 @@ class _EarningsChargesScreenState extends State<EarningsChargesScreen> {
       final apps = context.read<AppsProvider>();
       final appId = apps.selectedAppId ??
           (apps.apps.isNotEmpty ? apps.apps.first.id : null);
-      if (appId != null) earnings.setSelectedApp(appId);
+      if (appId != null) {
+        earnings.setSelectedApp(appId);
+      } else {
+        // No app resolvable (apps not loaded yet / none connected). Surface that
+        // distinctly — otherwise fetchChargesPage returns empty and the page
+        // would lie with "No charges in the selected range."
+        setState(() {
+          _error = 'No app selected. Open Charges from the Earnings report.';
+          _loading = false;
+        });
+        return;
+      }
     }
     setState(() {
       _loading = true;
@@ -58,9 +70,15 @@ class _EarningsChargesScreenState extends State<EarningsChargesScreen> {
         _loading = false;
       });
     } catch (e) {
+      // Don't swallow the cause; distinguish a transient 503 from a real failure
+      // (mirrors the CSV-export handler on the Earnings report screen).
+      debugPrint('earnings: charges page load failed (offset=$_offset): $e');
       if (!mounted) return;
+      final isUnavailable = e is DioException && e.response?.statusCode == 503;
       setState(() {
-        _error = 'Could not load charges. Please try again.';
+        _error = isUnavailable
+            ? 'Service temporarily unavailable. Please try again shortly.'
+            : 'Could not load charges. Please try again.';
         _loading = false;
       });
     }

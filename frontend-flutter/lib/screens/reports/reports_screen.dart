@@ -13,45 +13,91 @@ class ReportsScreen extends StatelessWidget {
 
   static const _categories = <_ReportCategory>[
     _ReportCategory('Retention & Risk', Icons.shield_outlined, [
-      _ReportEntry('Revenue at Risk', 'At-risk MRR, recoverable revenue, ranked stores',
-          route: '/reports/revenue-at-risk'),
-      _ReportEntry('Churn', 'Cancellations and lost MRR over time',
-          route: '/reports/churn'),
-      _ReportEntry('Retention', 'How many merchants stay active',
-          route: '/reports/retention'),
-      _ReportEntry('Retention Cohorts', 'Retention by signup cohort',
-          route: '/reports/cohorts'),
-      _ReportEntry('Reviews', 'App Store review sentiment',
-          route: '/reports/reviews'),
-      _ReportEntry('Uninstall Context',
-          'Inferred pre-uninstall state, tenure, and plan',
-          route: '/reports/uninstall-context'),
+      _ReportEntry(
+        'Revenue at Risk',
+        'At-risk MRR, recoverable revenue, ranked stores',
+        route: '/reports/revenue-at-risk',
+      ),
+      _ReportEntry(
+        'Churn',
+        'Cancellations and lost MRR over time',
+        route: '/reports/churn',
+      ),
+      _ReportEntry(
+        'Retention',
+        'How many merchants stay active',
+        route: '/reports/retention',
+      ),
+      _ReportEntry(
+        'Retention Cohorts',
+        'Retention by signup cohort',
+        route: '/reports/cohorts',
+      ),
+      _ReportEntry(
+        'Reviews',
+        'App Store review sentiment',
+        route: '/reports/reviews',
+      ),
+      _ReportEntry(
+        'Uninstall Context',
+        'Inferred pre-uninstall state, tenure, and plan',
+        route: '/reports/uninstall-context',
+      ),
     ]),
     _ReportCategory('Revenue & Billing', Icons.attach_money_outlined, [
-      _ReportEntry('Earnings', 'Net payouts after Shopify fees',
-          route: '/reports/earnings'),
-      _ReportEntry('Monthly Recurring Revenue', 'MRR trend and movements',
-          route: '/reports/mrr'),
-      _ReportEntry('Revenue Mix', 'Recurring vs usage vs one-time',
-          route: '/reports/revenue-mix'),
-      _ReportEntry('Usage & One-Time Charges', 'Usage and add-on revenue',
-          route: '/reports/usage'),
-      _ReportEntry('Usage Trends',
-          'Week-over-week usage momentum and top usage customers',
-          route: '/reports/usage-trends'),
-      _ReportEntry('Subscriptions', 'Active base, ARPU and lifetime value',
-          route: '/reports/subscriptions'),
-      _ReportEntry('Payout Schedule', 'Upcoming payout timing',
-          route: '/reports/payout-schedule'),
-      _ReportEntry('Payout History', 'Completed payouts by month',
-          route: '/reports/payout-history'),
+      _ReportEntry(
+        'Earnings',
+        'Net payouts after Shopify fees',
+        route: '/reports/earnings',
+      ),
+      _ReportEntry(
+        'Monthly Recurring Revenue',
+        'MRR trend and movements',
+        route: '/reports/mrr',
+      ),
+      _ReportEntry(
+        'Revenue Mix',
+        'Recurring vs usage vs one-time',
+        route: '/reports/revenue-mix',
+      ),
+      _ReportEntry(
+        'Usage & One-Time Charges',
+        'Usage and add-on revenue',
+        route: '/reports/usage',
+      ),
+      _ReportEntry(
+        'Usage Trends',
+        'Week-over-week usage momentum and top usage customers',
+        route: '/reports/usage-trends',
+      ),
+      _ReportEntry(
+        'Subscriptions',
+        'Active base, ARPU and lifetime value',
+        route: '/reports/subscriptions',
+      ),
+      _ReportEntry(
+        'Payout Schedule',
+        'Upcoming payout timing',
+        route: '/reports/payout-schedule',
+      ),
+      _ReportEntry(
+        'Payout History',
+        'Completed payouts by month',
+        route: '/reports/payout-history',
+      ),
     ]),
     _ReportCategory('Growth', Icons.trending_up_outlined, [
-      _ReportEntry('Installs', 'New installs over time',
-          route: '/reports/installs'),
+      _ReportEntry(
+        'Installs',
+        'New installs over time',
+        route: '/reports/installs',
+      ),
       _ReportEntry('Activation', 'Install-to-paid funnel'),
-      _ReportEntry('Net-New Subscriptions', 'New paying subscriptions',
-          route: '/reports/net-new-subscriptions'),
+      _ReportEntry(
+        'Net-New Subscriptions',
+        'New paying subscriptions',
+        route: '/reports/net-new-subscriptions',
+      ),
     ]),
     _ReportCategory('Customers', Icons.people_outline, [
       _ReportEntry('Active Customers', 'Active paying merchants'),
@@ -121,10 +167,12 @@ class _ReportGrid extends StatelessWidget {
           spacing: spacing,
           runSpacing: spacing,
           children: entries
-              .map((e) => SizedBox(
-                    width: cardWidth,
-                    child: _ReportCard(entry: e),
-                  ))
+              .map(
+                (e) => SizedBox(
+                  width: cardWidth,
+                  child: _ReportCard(entry: e),
+                ),
+              )
               .toList(),
         );
       },
@@ -159,8 +207,10 @@ class _ReportCard extends StatelessWidget {
                 const Icon(Icons.chevron_right, color: LgColors.textSecondary)
               else
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: LgColors.surfaceSecondary,
                     borderRadius: BorderRadius.circular(10),
@@ -168,7 +218,9 @@ class _ReportCard extends StatelessWidget {
                   child: const Text(
                     'Coming soon',
                     style: TextStyle(
-                        fontSize: 11, color: LgColors.textSecondary),
+                      fontSize: 11,
+                      color: LgColors.textSecondary,
+                    ),
                   ),
                 ),
             ],

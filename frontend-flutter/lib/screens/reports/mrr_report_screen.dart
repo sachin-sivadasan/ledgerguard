@@ -68,9 +68,11 @@ class _MrrReportScreenState extends State<MrrReportScreen>
       final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isUnavailable
-              ? 'Service temporarily unavailable. Please try again shortly.'
-              : 'Could not export CSV. Please try again.'),
+          content: Text(
+            isUnavailable
+                ? 'Service temporarily unavailable. Please try again shortly.'
+                : 'Could not export CSV. Please try again.',
+          ),
         ),
       );
     }
@@ -129,7 +131,8 @@ class _MrrReportScreenState extends State<MrrReportScreen>
     final appsList = appsProvider.apps;
     final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
-    final hasData = report.plans.isNotEmpty ||
+    final hasData =
+        report.plans.isNotEmpty ||
         report.mrrCents > 0 ||
         report.newMrrCents > 0 ||
         report.churnedMrrCents > 0;
@@ -153,14 +156,20 @@ class _MrrReportScreenState extends State<MrrReportScreen>
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -229,14 +238,16 @@ class _HeroRow extends StatelessWidget {
         ],
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: LgSpacing.s300),
-          Expanded(child: cards[i]),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(width: LgSpacing.s300),
+            Expanded(child: cards[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -262,22 +273,32 @@ class _KpiCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: LgSpacing.s200),
-          Text(value,
-              style: theme.textTheme.headlineMedium
-                  ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           if (delta != null) ...[
             const SizedBox(height: LgSpacing.s100),
             delta!,
           ],
           if (footnote != null) ...[
             const SizedBox(height: LgSpacing.s100),
-            Text(footnote!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            Text(
+              footnote!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
+            ),
           ],
         ],
       ),
@@ -300,8 +321,10 @@ class _MomDelta extends StatelessWidget {
     final pct = '$sign${(momChangePct * 100).toStringAsFixed(1)}%';
     return Text(
       '$arrow $pct vs range start',
-      style: theme.textTheme.bodySmall
-          ?.copyWith(color: color, fontWeight: FontWeight.w600),
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: color,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 }
@@ -323,10 +346,9 @@ class _TrendCard extends StatelessWidget {
           child: Center(
             child: Text(
               'Trend data not yet available for this range.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: LgColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
             ),
           ),
         ),
@@ -352,9 +374,11 @@ class _TrendCard extends StatelessWidget {
             borderData: FlBorderData(show: false),
             titlesData: FlTitlesData(
               topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false)),
+                sideTitles: SideTitles(showTitles: false),
+              ),
               rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false)),
+                sideTitles: SideTitles(showTitles: false),
+              ),
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
@@ -363,15 +387,19 @@ class _TrendCard extends StatelessWidget {
                     if (value == meta.min || value == meta.max) {
                       return const SizedBox.shrink();
                     }
-                    return Text(_compactMoney(value, currency),
-                        style: const TextStyle(fontSize: 10));
+                    return Text(
+                      _compactMoney(value, currency),
+                      style: const TextStyle(fontSize: 10),
+                    );
                   },
                 ),
               ),
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  interval: (trend.length / 4).clamp(1, trend.length).toDouble(),
+                  interval: (trend.length / 4)
+                      .clamp(1, trend.length)
+                      .toDouble(),
                   getTitlesWidget: (value, meta) {
                     final i = value.toInt();
                     if (i < 0 || i >= trend.length) {
@@ -420,8 +448,9 @@ class _PlansTable extends StatelessWidget {
     final plans = [...report.plans]
       ..sort((a, b) => b.mrrCents.compareTo(a.mrrCents));
 
-    final secondary =
-        theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary);
+    final secondary = theme.textTheme.bodySmall?.copyWith(
+      color: LgColors.textSecondary,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -437,13 +466,16 @@ class _PlansTable extends StatelessWidget {
           rows: [
             for (final p in plans)
               [
-                Text(p.planName.isNotEmpty ? p.planName : '—',
-                    style: theme.textTheme.titleSmall),
+                Text(
+                  p.planName.isNotEmpty ? p.planName : '—',
+                  style: theme.textTheme.titleSmall,
+                ),
                 Text('${p.activeSubs}', style: secondary),
-                Text(_money(p.mrrCents, currency),
-                    style: theme.textTheme.titleSmall),
-                Text(_percent(p.pctOfTotal),
-                    style: theme.textTheme.titleSmall),
+                Text(
+                  _money(p.mrrCents, currency),
+                  style: theme.textTheme.titleSmall,
+                ),
+                Text(_percent(p.pctOfTotal), style: theme.textTheme.titleSmall),
               ],
           ],
         ),

@@ -67,9 +67,11 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
       final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isUnavailable
-              ? 'Service temporarily unavailable. Please try again shortly.'
-              : 'Could not export CSV. Please try again.'),
+          content: Text(
+            isUnavailable
+                ? 'Service temporarily unavailable. Please try again shortly.'
+                : 'Could not export CSV. Please try again.',
+          ),
         ),
       );
     }
@@ -128,7 +130,8 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
     final appsList = appsProvider.apps;
     final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
-    final hasData = report.rows.isNotEmpty ||
+    final hasData =
+        report.rows.isNotEmpty ||
         report.upcomingPayoutCents > 0 ||
         report.pendingCents > 0;
 
@@ -151,14 +154,20 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -177,10 +186,9 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
             const SizedBox(height: LgSpacing.s400),
             Text(
               'Available Date is estimated as charge date + ~7 days (Shopify clears earnings in 7–37 days). Paid-out earnings live in Payout History.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: LgColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
             ),
           ],
         ],
@@ -229,14 +237,16 @@ class _HeroRow extends StatelessWidget {
         ],
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: LgSpacing.s300),
-          Expanded(child: cards[i]),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(width: LgSpacing.s300),
+            Expanded(child: cards[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -260,18 +270,28 @@ class _KpiCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: LgSpacing.s200),
-          Text(value,
-              style: theme.textTheme.headlineMedium
-                  ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           if (footnote != null) ...[
             const SizedBox(height: LgSpacing.s100),
-            Text(footnote!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            Text(
+              footnote!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
+            ),
           ],
         ],
       ),
@@ -288,8 +308,9 @@ class _ScheduleTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final secondary =
-        theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary);
+    final secondary = theme.textTheme.bodySmall?.copyWith(
+      color: LgColors.textSecondary,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -311,8 +332,10 @@ class _ScheduleTable extends StatelessWidget {
                       : '—',
                   style: theme.textTheme.titleSmall,
                 ),
-                Text(_money(row.amountCents, currency),
-                    style: theme.textTheme.titleSmall),
+                Text(
+                  _money(row.amountCents, currency),
+                  style: theme.textTheme.titleSmall,
+                ),
                 Text('${row.chargeCount}', style: secondary),
                 _StatusChip(status: row.status),
               ],
@@ -331,7 +354,10 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg) = switch (status.toLowerCase()) {
-      'available' => (LgColors.success.withValues(alpha: 0.14), LgColors.success),
+      'available' => (
+        LgColors.success.withValues(alpha: 0.14),
+        LgColors.success,
+      ),
       'pending' => (LgColors.warning.withValues(alpha: 0.14), LgColors.warning),
       _ => (LgColors.surfaceSecondary, LgColors.textSecondary),
     };

@@ -69,9 +69,11 @@ class _ReviewsReportScreenState extends State<ReviewsReportScreen>
       final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isUnavailable
-              ? 'Service temporarily unavailable. Please try again shortly.'
-              : 'Could not export CSV. Please try again.'),
+          content: Text(
+            isUnavailable
+                ? 'Service temporarily unavailable. Please try again shortly.'
+                : 'Could not export CSV. Please try again.',
+          ),
         ),
       );
     }
@@ -148,14 +150,20 @@ class _ReviewsReportScreenState extends State<ReviewsReportScreen>
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -230,8 +238,9 @@ class _Hero extends StatelessWidget {
             const SizedBox(height: LgSpacing.s100),
             Text(
               '${report.totalReviews} review${report.totalReviews == 1 ? '' : 's'}',
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: LgColors.textSecondary),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: LgColors.textSecondary,
+              ),
             ),
           ],
         ),
@@ -254,8 +263,7 @@ class _DistributionCard extends StatelessWidget {
     for (final b in report.distribution) {
       if (b.rating >= 1 && b.rating <= 5) counts[b.rating] = b.count;
     }
-    final maxCount =
-        counts.values.fold<int>(0, (a, b) => a > b ? a : b);
+    final maxCount = counts.values.fold<int>(0, (a, b) => a > b ? a : b);
 
     return LgCard(
       title: 'Rating distribution',
@@ -263,11 +271,7 @@ class _DistributionCard extends StatelessWidget {
         children: [
           for (var star = 5; star >= 1; star--) ...[
             if (star < 5) const SizedBox(height: LgSpacing.s200),
-            _DistRow(
-              star: star,
-              count: counts[star] ?? 0,
-              maxCount: maxCount,
-            ),
+            _DistRow(star: star, count: counts[star] ?? 0, maxCount: maxCount),
           ],
         ],
       ),
@@ -324,8 +328,9 @@ class _DistRow extends StatelessWidget {
           child: Text(
             '$count',
             textAlign: TextAlign.right,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: LgColors.textSecondary),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
           ),
         ),
       ],
@@ -351,14 +356,17 @@ class _RecentReviews extends StatelessWidget {
         if (reviews.isEmpty)
           Text(
             'No recent reviews to show.',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: LgColors.textSecondary),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
           )
         else
-          ...reviews.map((r) => Padding(
-                padding: const EdgeInsets.only(bottom: LgSpacing.s300),
-                child: _ReviewRow(review: r),
-              )),
+          ...reviews.map(
+            (r) => Padding(
+              padding: const EdgeInsets.only(bottom: LgSpacing.s300),
+              child: _ReviewRow(review: r),
+            ),
+          ),
       ],
     );
   }
@@ -393,8 +401,9 @@ class _ReviewRow extends StatelessWidget {
               const Spacer(),
               Text(
                 dateFmt.format(review.date),
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: LgColors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -417,14 +426,18 @@ class _ReviewRow extends StatelessWidget {
               ),
               if (review.location.isNotEmpty) ...[
                 const SizedBox(width: LgSpacing.s200),
-                const Icon(Icons.location_on_outlined,
-                    size: 13, color: LgColors.textDisabled),
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 13,
+                  color: LgColors.textDisabled,
+                ),
                 const SizedBox(width: 2),
                 Flexible(
                   child: Text(
                     review.location,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: LgColors.textSecondary),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: LgColors.textSecondary,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

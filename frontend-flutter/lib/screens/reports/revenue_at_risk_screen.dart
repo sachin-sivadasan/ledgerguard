@@ -62,7 +62,9 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
     } catch (_) {
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('Could not export CSV. Please try again.')),
+        const SnackBar(
+          content: Text('Could not export CSV. Please try again.'),
+        ),
       );
     }
   }
@@ -140,14 +142,20 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -222,14 +230,16 @@ class _HeroRow extends StatelessWidget {
         ],
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: LgSpacing.s300),
-          Expanded(child: cards[i]),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(width: LgSpacing.s300),
+            Expanded(child: cards[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -253,13 +263,20 @@ class _KpiCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: LgSpacing.s200),
-          Text(value,
-              style: theme.textTheme.headlineMedium
-                  ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           if (footnoteWidget != null) ...[
             const SizedBox(height: LgSpacing.s100),
             footnoteWidget!,
@@ -284,9 +301,14 @@ class _CyclePill extends StatelessWidget {
         color: color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }
@@ -303,11 +325,12 @@ class _LegendDot extends StatelessWidget {
       children: [
         Container(width: 10, height: 10, color: color),
         const SizedBox(width: LgSpacing.s100),
-        Text(label,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: LgColors.textSecondary)),
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+        ),
       ],
     );
   }
@@ -330,10 +353,9 @@ class _TrendCard extends StatelessWidget {
           child: Center(
             child: Text(
               'Trend data not yet available for this range.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: LgColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
             ),
           ),
         ),
@@ -352,72 +374,76 @@ class _TrendCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: [
-              _LegendDot(color: LgColors.critical, label: 'At risk'),
-            ],
+            children: [_LegendDot(color: LgColors.critical, label: 'At risk')],
           ),
           const SizedBox(height: LgSpacing.s200),
           SizedBox(
-        height: 200,
-        child: LineChart(
-          LineChartData(
-            minY: 0,
-            maxY: maxY == 0 ? 1 : maxY * 1.2,
-            gridData: const FlGridData(show: false),
-            borderData: FlBorderData(show: false),
-            titlesData: FlTitlesData(
-              topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false)),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 44,
-                  getTitlesWidget: (value, meta) {
-                    if (value == meta.min || value == meta.max) {
-                      return const SizedBox.shrink();
-                    }
-                    return Text('\$${value.toInt()}',
-                        style: const TextStyle(fontSize: 10));
-                  },
+            height: 200,
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: maxY == 0 ? 1 : maxY * 1.2,
+                gridData: const FlGridData(show: false),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 44,
+                      getTitlesWidget: (value, meta) {
+                        if (value == meta.min || value == meta.max) {
+                          return const SizedBox.shrink();
+                        }
+                        return Text(
+                          '\$${value.toInt()}',
+                          style: const TextStyle(fontSize: 10),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: (trend.length / 4)
+                          .clamp(1, trend.length)
+                          .toDouble(),
+                      getTitlesWidget: (value, meta) {
+                        final i = value.toInt();
+                        if (i < 0 || i >= trend.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            DateFormat('MMM d').format(trend[i].date),
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
-              ),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  interval: (trend.length / 4).clamp(1, trend.length).toDouble(),
-                  getTitlesWidget: (value, meta) {
-                    final i = value.toInt();
-                    if (i < 0 || i >= trend.length) {
-                      return const SizedBox.shrink();
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        DateFormat('MMM d').format(trend[i].date),
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                    );
-                  },
-                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    color: LgColors.critical,
+                    barWidth: 2,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: LgColors.critical.withValues(alpha: 0.10),
+                    ),
+                  ),
+                ],
               ),
             ),
-            lineBarsData: [
-              LineChartBarData(
-                spots: spots,
-                isCurved: true,
-                color: LgColors.critical,
-                barWidth: 2,
-                dotData: const FlDotData(show: false),
-                belowBarData: BarAreaData(
-                  show: true,
-                  color: LgColors.critical.withValues(alpha: 0.10),
-                ),
-              ),
-            ],
-          ),
-        ),
           ),
         ],
       ),
@@ -440,8 +466,10 @@ class _StoresTable extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Ranked Stores (${stores.length})',
-            style: theme.textTheme.titleMedium),
+        Text(
+          'Ranked Stores (${stores.length})',
+          style: theme.textTheme.titleMedium,
+        ),
         const SizedBox(height: LgSpacing.s300),
         LgTable(
           columns: const [
@@ -456,8 +484,10 @@ class _StoresTable extends StatelessWidget {
             for (final s in stores)
               [
                 _StoreCell(store: s),
-                Text('${_money(s.mrrCents, currency)}/mo',
-                    style: theme.textTheme.titleSmall),
+                Text(
+                  '${_money(s.mrrCents, currency)}/mo',
+                  style: theme.textTheme.titleSmall,
+                ),
                 LgRiskBadge(riskState: s.riskState),
                 Text('${s.daysLate}d', style: theme.textTheme.bodySmall),
                 Text(
@@ -466,9 +496,12 @@ class _StoresTable extends StatelessWidget {
                       : '—',
                   style: theme.textTheme.bodySmall,
                 ),
-                Text(_money(s.recoverableCents, currency),
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(color: LgColors.success)),
+                Text(
+                  _money(s.recoverableCents, currency),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: LgColors.success,
+                  ),
+                ),
               ],
           ],
         ),
@@ -501,8 +534,9 @@ class _StoreCell extends StatelessWidget {
               const SizedBox(height: LgSpacing.s100),
               Text(
                 store.planName,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: LgColors.textSecondary,
+                ),
               ),
             ],
           ],

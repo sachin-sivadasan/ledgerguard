@@ -67,9 +67,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
       final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isUnavailable
-              ? 'Service temporarily unavailable. Please try again shortly.'
-              : 'Could not export CSV. Please try again.'),
+          content: Text(
+            isUnavailable
+                ? 'Service temporarily unavailable. Please try again shortly.'
+                : 'Could not export CSV. Please try again.',
+          ),
         ),
       );
     }
@@ -147,14 +149,20 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -175,10 +183,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
             const SizedBox(height: LgSpacing.s400),
             Text(
               'RECURRING subscriptions only — USAGE charges are excluded from ARPU / LTV.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: LgColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
             ),
           ],
         ],
@@ -229,14 +236,16 @@ class _HeroRow extends StatelessWidget {
         ],
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: LgSpacing.s300),
-          Expanded(child: cards[i]),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(width: LgSpacing.s300),
+            Expanded(child: cards[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -260,18 +269,28 @@ class _KpiCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: LgSpacing.s200),
-          Text(value,
-              style: theme.textTheme.headlineMedium
-                  ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           if (footnote != null) ...[
             const SizedBox(height: LgSpacing.s100),
-            Text(footnote!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            Text(
+              footnote!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
+            ),
           ],
         ],
       ),
@@ -302,8 +321,9 @@ class _CompositionCard extends StatelessWidget {
           ],
           Text(
             'Bar length = share of active subscriptions.',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: LgColors.textSecondary),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -326,8 +346,11 @@ class _PlanBar extends StatelessWidget {
       children: [
         SizedBox(
           width: 96,
-          child: Text(name,
-              style: theme.textTheme.bodyMedium, overflow: TextOverflow.ellipsis),
+          child: Text(
+            name,
+            style: theme.textTheme.bodyMedium,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         const SizedBox(width: LgSpacing.s300),
         Expanded(
@@ -347,10 +370,13 @@ class _PlanBar extends StatelessWidget {
         const SizedBox(width: LgSpacing.s300),
         SizedBox(
           width: 44,
-          child: Text('${plan.activeSubs}',
-              textAlign: TextAlign.end,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          child: Text(
+            '${plan.activeSubs}',
+            textAlign: TextAlign.end,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
         ),
       ],
     );
@@ -384,11 +410,15 @@ class _PlanTable extends StatelessWidget {
           rows: [
             for (final p in plans)
               [
-                Text(p.planName.isNotEmpty ? p.planName : '(no plan)',
-                    style: theme.textTheme.titleSmall),
+                Text(
+                  p.planName.isNotEmpty ? p.planName : '(no plan)',
+                  style: theme.textTheme.titleSmall,
+                ),
                 Text('${p.activeSubs}', style: theme.textTheme.titleSmall),
-                Text(_money(p.arpuCents, currency),
-                    style: theme.textTheme.titleSmall),
+                Text(
+                  _money(p.arpuCents, currency),
+                  style: theme.textTheme.titleSmall,
+                ),
                 Text(
                   // "—" when LTV is undefined (churn rate 0), matching the hero card.
                   p.ltvCents > 0 ? _money(p.ltvCents, currency) : '—',
@@ -400,8 +430,9 @@ class _PlanTable extends StatelessWidget {
         const SizedBox(height: LgSpacing.s200),
         Text(
           'Per-plan LTV uses the blended (app-level) churn rate.',
-          style: theme.textTheme.bodySmall
-              ?.copyWith(color: LgColors.textSecondary),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: LgColors.textSecondary,
+          ),
         ),
       ],
     );

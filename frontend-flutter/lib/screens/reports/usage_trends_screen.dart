@@ -68,9 +68,11 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
       final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isUnavailable
-              ? 'Service temporarily unavailable. Please try again shortly.'
-              : 'Could not export CSV. Please try again.'),
+          content: Text(
+            isUnavailable
+                ? 'Service temporarily unavailable. Please try again shortly.'
+                : 'Could not export CSV. Please try again.',
+          ),
         ),
       );
     }
@@ -129,7 +131,8 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
     final appsList = appsProvider.apps;
     final showAppFilter = appsList.isNotEmpty;
     final currency = report.currency;
-    final hasData = report.stores.isNotEmpty ||
+    final hasData =
+        report.stores.isNotEmpty ||
         report.usageMrrEquivCents > 0 ||
         report.activeStores > 0 ||
         report.weeklyTrend.isNotEmpty;
@@ -153,14 +156,20 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -181,10 +190,9 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
             const SizedBox(height: LgSpacing.s400),
             Text(
               'USAGE strictly separated from RECURRING — never counted in MRR.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: LgColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
             ),
           ],
         ],
@@ -206,7 +214,8 @@ class _HeroRow extends StatelessWidget {
         label: 'Usage MRR-equiv',
         value: _money(report.usageMrrEquivCents, currency),
         color: LgColors.warning,
-        footnote: 'total usage in the selected window (≈ monthly at a 30-day range)',
+        footnote:
+            'total usage in the selected window (≈ monthly at a 30-day range)',
       ),
       _KpiCard(
         label: 'WoW Change',
@@ -231,14 +240,16 @@ class _HeroRow extends StatelessWidget {
         ],
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: LgSpacing.s300),
-          Expanded(child: cards[i]),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(width: LgSpacing.s300),
+            Expanded(child: cards[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -264,21 +275,31 @@ class _KpiCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: LgColors.textSecondary)),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: LgSpacing.s200),
           if (valueWidget != null)
             valueWidget!
           else
-            Text(value ?? '',
-                style: theme.textTheme.headlineMedium
-                    ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+            Text(
+              value ?? '',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           if (footnote != null) ...[
             const SizedBox(height: LgSpacing.s100),
-            Text(footnote!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: LgColors.textSecondary)),
+            Text(
+              footnote!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
+            ),
           ],
         ],
       ),
@@ -302,8 +323,10 @@ class _WowDelta extends StatelessWidget {
     final text = '$arrow $sign${(pct * 100).toStringAsFixed(1)}%';
     return Text(
       text,
-      style: theme.textTheme.headlineMedium
-          ?.copyWith(color: color, fontWeight: FontWeight.w700),
+      style: theme.textTheme.headlineMedium?.copyWith(
+        color: color,
+        fontWeight: FontWeight.w700,
+      ),
     );
   }
 }
@@ -325,10 +348,9 @@ class _TrendCard extends StatelessWidget {
           child: Center(
             child: Text(
               'Trend data not yet available for this range.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: LgColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
             ),
           ),
         ),
@@ -358,9 +380,11 @@ class _TrendCard extends StatelessWidget {
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
                   topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
@@ -369,16 +393,19 @@ class _TrendCard extends StatelessWidget {
                         if (value == meta.min || value == meta.max) {
                           return const SizedBox.shrink();
                         }
-                        return Text(format.format(value),
-                            style: const TextStyle(fontSize: 10));
+                        return Text(
+                          format.format(value),
+                          style: const TextStyle(fontSize: 10),
+                        );
                       },
                     ),
                   ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval:
-                          (trend.length / 4).clamp(1, trend.length).toDouble(),
+                      interval: (trend.length / 4)
+                          .clamp(1, trend.length)
+                          .toDouble(),
                       getTitlesWidget: (value, meta) {
                         final i = value.toInt();
                         if (i < 0 || i >= trend.length) {
@@ -414,10 +441,9 @@ class _TrendCard extends StatelessWidget {
           const SizedBox(height: LgSpacing.s200),
           Text(
             'Weekly USAGE revenue — the WoW figure above compares the last two weekly buckets.',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: LgColors.textSecondary),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
           ),
         ],
       ),
@@ -441,8 +467,10 @@ class _StoresTable extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Top Usage Customers (ranked by usage revenue)',
-            style: theme.textTheme.titleMedium),
+        Text(
+          'Top Usage Customers (ranked by usage revenue)',
+          style: theme.textTheme.titleMedium,
+        ),
         const SizedBox(height: LgSpacing.s300),
         LgTable(
           columns: const [
@@ -454,8 +482,10 @@ class _StoresTable extends StatelessWidget {
             for (final s in stores)
               [
                 _StoreCell(store: s),
-                Text(_money(s.usageCents, currency),
-                    style: theme.textTheme.titleSmall),
+                Text(
+                  _money(s.usageCents, currency),
+                  style: theme.textTheme.titleSmall,
+                ),
                 _TrendDelta(pct: s.wowPct),
               ],
           ],
@@ -485,8 +515,9 @@ class _StoreCell extends StatelessWidget {
           const SizedBox(height: LgSpacing.s100),
           Text(
             store.domain,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: LgColors.textSecondary),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: LgColors.textSecondary,
+            ),
           ),
         ],
       ],
@@ -509,8 +540,10 @@ class _TrendDelta extends StatelessWidget {
     final sign = isUp ? '+' : '';
     return Text(
       '$arrow $sign${(pct * 100).toStringAsFixed(1)}%',
-      style: theme.textTheme.titleSmall
-          ?.copyWith(color: color, fontWeight: FontWeight.w600),
+      style: theme.textTheme.titleSmall?.copyWith(
+        color: color,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 }

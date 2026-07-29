@@ -66,9 +66,11 @@ class _RevenueMixScreenState extends State<RevenueMixScreen>
       final isUnavailable = e is DioException && e.response?.statusCode == 503;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(isUnavailable
-              ? 'Service temporarily unavailable. Please try again shortly.'
-              : 'Could not export CSV. Please try again.'),
+          content: Text(
+            isUnavailable
+                ? 'Service temporarily unavailable. Please try again shortly.'
+                : 'Could not export CSV. Please try again.',
+          ),
         ),
       );
     }
@@ -148,14 +150,20 @@ class _RevenueMixScreenState extends State<RevenueMixScreen>
             PopupMenuButton<String>(
               onSelected: provider.setSelectedApp,
               itemBuilder: (_) => appsList
-                  .map((app) =>
-                      PopupMenuItem(value: app.id, child: Text(app.name)))
+                  .map(
+                    (app) =>
+                        PopupMenuItem(value: app.id, child: Text(app.name)),
+                  )
                   .toList(),
               child: Chip(
-                label: Text(appsList
-                    .firstWhere((a) => a.id == provider.selectedAppId,
-                        orElse: () => appsList.first)
-                    .name),
+                label: Text(
+                  appsList
+                      .firstWhere(
+                        (a) => a.id == provider.selectedAppId,
+                        orElse: () => appsList.first,
+                      )
+                      .name,
+                ),
               ),
             ),
             const SizedBox(height: LgSpacing.s300),
@@ -175,9 +183,9 @@ class _RevenueMixScreenState extends State<RevenueMixScreen>
             Text(
               'RECURRING vs USAGE strictly separated — MRR uses RECURRING only, Usage Revenue uses USAGE only.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: LgColors.textSecondary,
-                    fontStyle: FontStyle.italic,
-                  ),
+                color: LgColors.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ],
         ],
@@ -211,8 +219,9 @@ class _CompositionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final segments =
-        report.segments.where((s) => s.amountCents > 0 || s.pct > 0).toList();
+    final segments = report.segments
+        .where((s) => s.amountCents > 0 || s.pct > 0)
+        .toList();
 
     return LgCard(
       child: Column(
@@ -288,10 +297,7 @@ class _LegendItem extends StatelessWidget {
           ),
         ),
         const SizedBox(width: LgSpacing.s200),
-        Text(
-          '$label ${_pct(pct)}',
-          style: theme.textTheme.bodySmall,
-        ),
+        Text('$label ${_pct(pct)}', style: theme.textTheme.bodySmall),
       ],
     );
   }
@@ -312,27 +318,29 @@ class _BreakdownTable extends StatelessWidget {
     // bodyMedium with a color swatch, Total/Net rows use titleSmall (bold),
     // "Less refunds" is muted.
     Widget typeCell(String label, {Color? swatch, TextStyle? style}) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (swatch != null) ...[
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: swatch,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: LgSpacing.s200),
-            ],
-            Flexible(child: Text(label, style: style)),
-          ],
-        );
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (swatch != null) ...[
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: swatch,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: LgSpacing.s200),
+        ],
+        Flexible(child: Text(label, style: style)),
+      ],
+    );
 
-    final segmentStyle = theme.textTheme.bodyMedium
-        ?.copyWith(color: LgColors.textPrimary);
-    final mutedStyle = theme.textTheme.bodyMedium
-        ?.copyWith(color: LgColors.textSecondary);
+    final segmentStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: LgColors.textPrimary,
+    );
+    final mutedStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: LgColors.textSecondary,
+    );
     final totalStyle = theme.textTheme.titleSmall;
 
     return Column(
@@ -349,7 +357,11 @@ class _BreakdownTable extends StatelessWidget {
           rows: [
             for (final s in report.segments)
               [
-                typeCell(s.type, swatch: _segmentColor(s.type), style: segmentStyle),
+                typeCell(
+                  s.type,
+                  swatch: _segmentColor(s.type),
+                  style: segmentStyle,
+                ),
                 Text(_money(s.amountCents, currency), style: segmentStyle),
                 Text(_pct(s.pct), style: segmentStyle),
               ],
@@ -361,8 +373,10 @@ class _BreakdownTable extends StatelessWidget {
             if (hasRefunds) ...[
               [
                 typeCell('Less refunds', style: mutedStyle),
-                Text('-${_money(report.refundCents, currency)}',
-                    style: mutedStyle),
+                Text(
+                  '-${_money(report.refundCents, currency)}',
+                  style: mutedStyle,
+                ),
                 const Text(''),
               ],
               [

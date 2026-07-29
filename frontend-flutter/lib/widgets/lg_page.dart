@@ -32,6 +32,12 @@ class LgPage extends StatelessWidget {
   final Widget child;
   final bool scrollable;
 
+  /// Optional content pinned between the header and the scrollable [child] —
+  /// e.g. the app-selector + KPI hero cards. On desktop/tablet it stays FIXED
+  /// while [child] (tables/charts) scrolls beneath it. On mobile it scrolls
+  /// together with [child] (pinning stacked KPIs there would eat the viewport).
+  final Widget? pinned;
+
   const LgPage({
     super.key,
     required this.title,
@@ -45,6 +51,7 @@ class LgPage extends StatelessWidget {
     this.onRefresh,
     required this.child,
     this.scrollable = true,
+    this.pinned,
   });
 
   @override
@@ -150,11 +157,53 @@ class LgPage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: LgSpacing.s600),
-              Expanded(child: scrollable ? SingleChildScrollView(child: child) : child),
+              ..._buildBody(context),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Lays out the optional [pinned] region and the [child]:
+  /// - desktop/tablet: [pinned] stays fixed, [child] scrolls under it.
+  /// - mobile (or no pinned): everything scrolls together.
+  List<Widget> _buildBody(BuildContext context) {
+    final pinContent = pinned;
+    if (!scrollable) {
+      return [
+        if (pinContent != null) ...[
+          pinContent,
+          const SizedBox(height: LgSpacing.s600),
+        ],
+        Expanded(child: child),
+      ];
+    }
+    final pinOnDesktop =
+        pinContent != null && !LgBreakpoints.isMobile(context);
+    if (pinOnDesktop) {
+      return [
+        pinContent,
+        const SizedBox(height: LgSpacing.s600),
+        Expanded(child: SingleChildScrollView(child: child)),
+      ];
+    }
+    // Mobile, or no pinned content: scroll pinned + child together.
+    return [
+      Expanded(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (pinContent != null) ...[
+                pinContent,
+                const SizedBox(height: LgSpacing.s600),
+              ],
+              child,
+            ],
+          ),
+        ),
+      ),
+    ];
   }
 }

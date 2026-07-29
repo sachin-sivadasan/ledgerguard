@@ -71,6 +71,7 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 	})
 
 	updated := 0
+	failed := 0 // shops whose status could not be refreshed (fetch or upsert error)
 	for i, sub := range subscriptions {
 		if sub.ShopifyShopGID == "" {
 			log.Printf("[queue] StatusProcessor: skipping subscription %s — no ShopifyShopGID (job %s)", sub.ID, payload.JobID)
@@ -84,6 +85,7 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 		events, err := p.eventFetcher.FetchAppEvents(fetchCtx, pCtx.OrganizationID, pCtx.AccessToken, pCtx.App.PartnerAppID, sub.ShopifyShopGID)
 		if err != nil {
 			log.Printf("[queue] StatusProcessor: error fetching events for shop %s: %v (job %s)", sub.ShopifyShopGID, err, payload.JobID)
+			failed++
 			continue
 		}
 
@@ -97,6 +99,8 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 			}
 
 			if err := p.subRepo.Upsert(ctx, sub); err != nil {
+				log.Printf("[queue] StatusProcessor: error persisting status for shop %s: %v (job %s)", sub.ShopifyShopGID, err, payload.JobID)
+				failed++
 				continue
 			}
 			updated++
@@ -109,12 +113,20 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 		})
 	}
 
+	// Surface partial failures: without the old 10-sub cap the per-shop loop now spans the
+	// whole account, so a swallowed fetch/upsert error must not masquerade as a clean sync
+	// (e.g. a token expiring mid-run would otherwise silently leave stale statuses).
+	doneMsg := fmt.Sprintf("Updated %d subscription statuses", updated)
+	if failed > 0 {
+		doneMsg = fmt.Sprintf("Updated %d statuses, %d shops failed (see logs)", updated, failed)
+		log.Printf("[queue] StatusProcessor: WARNING %d/%d shops failed to refresh for app %s (job %s)", failed, len(subscriptions), payload.AppID, payload.JobID)
+	}
 	p.progress.ForceUpdate(ctx, payload.JobID, queue.Progress{
 		Total:     len(subscriptions),
 		Completed: len(subscriptions),
-		Message:   fmt.Sprintf("Updated %d subscription statuses", updated),
+		Message:   doneMsg,
 	})
 
-	log.Printf("[queue] StatusProcessor: updated %d subscriptions for app %s (job %s)", updated, payload.AppID, payload.JobID)
+	log.Printf("[queue] StatusProcessor: updated %d subscriptions (%d failed) for app %s (job %s)", updated, failed, payload.AppID, payload.JobID)
 	return nil
 }

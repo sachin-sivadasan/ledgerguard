@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
@@ -75,6 +74,7 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 	fetchCtx := external.WithOrganizationID(ctx, pCtx.OrganizationID)
 	var allEvents []*entity.AppEvent
 	completed := 0
+	failed := 0 // shops whose events could not be fetched
 
 	for _, sub := range subscriptions {
 		if sub.ShopifyShopGID == "" {
@@ -95,6 +95,7 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 		if err != nil {
 			log.Printf("[queue] EventProcessor: error fetching events for shop %s: %v (job %s)", sub.ShopifyShopGID, err, payload.JobID)
 			completed++
+			failed++
 			continue
 		}
 
@@ -123,13 +124,20 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 		}
 	}
 
+	// Surface partial failures: without the old 10-sub cap the per-shop loop now spans the
+	// whole account, so swallowed per-shop fetch errors must not masquerade as a clean sync
+	// (e.g. a token expiring mid-run would otherwise silently drop many shops' events).
+	doneMsg := fmt.Sprintf("Stored %d events", len(allEvents))
+	if failed > 0 {
+		doneMsg = fmt.Sprintf("Stored %d events, %d shops failed (see logs)", len(allEvents), failed)
+		log.Printf("[queue] EventProcessor: WARNING %d/%d shops failed to fetch for app %s (job %s)", failed, len(subscriptions), payload.AppID, payload.JobID)
+	}
 	p.progress.ForceUpdate(ctx, payload.JobID, queue.Progress{
 		Total:     len(subscriptions),
 		Completed: len(subscriptions),
-		Message:   fmt.Sprintf("Stored %d events", len(allEvents)),
+		Message:   doneMsg,
 	})
 
-	log.Printf("[queue] EventProcessor: stored %d events for app %s (job %s)", len(allEvents), payload.AppID, payload.JobID)
-	_ = uuid.New() // suppress unused import if needed
+	log.Printf("[queue] EventProcessor: stored %d events (%d shops failed) for app %s (job %s)", len(allEvents), failed, payload.AppID, payload.JobID)
 	return nil
 }

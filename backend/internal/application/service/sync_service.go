@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -207,11 +208,15 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 		revenueAtRisk = 0 // Will be calculated by caller if needed
 
 		// Backfill historical snapshots from the app's ENTIRE stored history — see
-		// SyncHistoryStart.
-		allTransactions, err := s.txRepo.FindByAppID(ctx, appID, domainservice.SyncHistoryStart, now)
-		if err == nil && len(allTransactions) > 0 {
-			_, _ = s.ledger.BackfillHistoricalSnapshots(ctx, appID, allTransactions)
-			// Ignore backfill errors - not critical for sync success
+		// SyncHistoryStart. Backfill is best-effort (not fatal to the sync), but errors are
+		// logged rather than swallowed: over full history a silent failure would corrupt a
+		// large span of the permanent snapshot audit trail (CLAUDE.md §9).
+		if allTransactions, findErr := s.txRepo.FindByAppID(ctx, appID, domainservice.SyncHistoryStart, now); findErr != nil {
+			log.Printf("SyncService: snapshot backfill skipped — failed to load transactions for app %s: %v", appID, findErr)
+		} else if len(allTransactions) > 0 {
+			if _, bfErr := s.ledger.BackfillHistoricalSnapshots(ctx, appID, allTransactions); bfErr != nil {
+				log.Printf("SyncService: snapshot backfill failed for app %s: %v", appID, bfErr)
+			}
 		}
 
 		// Enrich subscription status from app events (if configured)

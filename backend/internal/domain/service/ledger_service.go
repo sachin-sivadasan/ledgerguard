@@ -12,12 +12,14 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
-// SyncHistoryStart is the floor date for a FULL sync/rebuild. It predates Shopify's app
-// billing API, so fetching from (or rebuilding since) this date pulls an app's ENTIRE
-// transaction history — "from the beginning" — rather than a trailing window. Cursor
-// pagination plus the Partner API date filter mean this simply resolves to "all
-// transactions" (none exist before an app's first sale), so an early floor is safe and
-// never truncates. Incremental catch-up syncs still fetch a small LookbackDays delta.
+// SyncHistoryStart is the floor date for a FULL sync/rebuild — an arbitrary early date
+// comfortably before any real app transaction (no monetized data exists before an app's
+// first sale, which is well after this floor). Using it as the `from` pulls an app's
+// ENTIRE history — "from the beginning" — rather than a trailing window: for the Partner
+// API fetch, cursor pagination + the createdAtMin filter return every transaction from
+// this date; for the DB reads (rebuild / snapshot backfill) it selects all stored rows.
+// So no real transaction is truncated. Incremental catch-up syncs still fetch a small
+// LookbackDays delta.
 var SyncHistoryStart = time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)
 
 // LedgerRebuildResult contains the result of a ledger rebuild

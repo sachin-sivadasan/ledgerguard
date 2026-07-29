@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	domainEntity "github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/domain/entity"
 	revrepo "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/domain/repository"
@@ -123,10 +124,10 @@ func (b *ReadModelBuilder) rebuildUsageStatuses(ctx context.Context, appID uuid.
 		return err
 	}
 
-	// Get all transactions for the app (last 12 months)
+	// Rebuild usage statuses from the app's ENTIRE stored history (matches the ledger /
+	// snapshot full-history rebuild — see SyncHistoryStart), not a trailing window.
 	now := time.Now()
-	from := now.AddDate(-1, 0, 0)
-	allTransactions, err := b.transactionRepo.FindByAppID(ctx, appID, from, now)
+	allTransactions, err := b.transactionRepo.FindByAppID(ctx, appID, domainservice.SyncHistoryStart, now)
 	if err != nil {
 		return err
 	}

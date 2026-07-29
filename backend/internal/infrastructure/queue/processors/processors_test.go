@@ -177,9 +177,11 @@ func (d *mockDecryptor) Decrypt(_ []byte) ([]byte, error) {
 type mockTransactionFetcher struct {
 	transactions []*entity.Transaction
 	err          error
+	capturedFrom time.Time // records the `from` passed to FetchTransactions
 }
 
-func (m *mockTransactionFetcher) FetchTransactions(_ context.Context, _ string, _ uuid.UUID, _, _ time.Time) ([]*entity.Transaction, error) {
+func (m *mockTransactionFetcher) FetchTransactions(_ context.Context, _ string, _ uuid.UUID, from, _ time.Time) ([]*entity.Transaction, error) {
+	m.capturedFrom = from
 	return m.transactions, m.err
 }
 
@@ -484,6 +486,54 @@ func TestTransactionProcessor_Success(t *testing.T) {
 	}
 }
 
+// TestTransactionProcessor_FullSyncFetchesFromHistoryStart: a full sync (LookbackDays==0)
+// fetches from SyncHistoryStart — the entire history, not a trailing window.
+func TestTransactionProcessor_FullSyncFetchesFromHistoryStart(t *testing.T) {
+	_, lm, pt := setupRedis(t)
+	appID, userID, partnerID, appRepo, partnerRepo, decryptor := setupProcessorContext(t)
+
+	syncJobRepo := newMockSyncJobRepo()
+	fetcher := &mockTransactionFetcher{}
+	payload := makePayload(appID, userID, partnerID, entity.SyncJobTypeTransactionSync) // LookbackDays == 0
+	syncJobRepo.jobs[payload.JobID] = entity.NewSyncJob(appID, userID, partnerID, entity.SyncJobTypeTransactionSync, 0)
+	syncJobRepo.jobs[payload.JobID].ID = payload.JobID
+
+	p := NewTransactionProcessor(fetcher, &mockTransactionRepo{}, appRepo, partnerRepo, decryptor, &mockLedgerRebuilder{}, syncJobRepo, lm, pt)
+	if err := p.Process(context.Background(), payload); err != nil {
+		t.Fatalf("Process failed: %v", err)
+	}
+	if !fetcher.capturedFrom.Equal(domainservice.SyncHistoryStart) {
+		t.Errorf("full sync should fetch from SyncHistoryStart (%s), got %s", domainservice.SyncHistoryStart, fetcher.capturedFrom)
+	}
+}
+
+// TestTransactionProcessor_IncrementalSyncUsesLookbackDelta: a catch-up sync
+// (LookbackDays>0) fetches only the small delta — after SyncHistoryStart, guarding that
+// the two branches aren't swapped.
+func TestTransactionProcessor_IncrementalSyncUsesLookbackDelta(t *testing.T) {
+	_, lm, pt := setupRedis(t)
+	appID, userID, partnerID, appRepo, partnerRepo, decryptor := setupProcessorContext(t)
+
+	syncJobRepo := newMockSyncJobRepo()
+	fetcher := &mockTransactionFetcher{}
+	payload := makePayload(appID, userID, partnerID, entity.SyncJobTypeTransactionSync)
+	payload.LookbackDays = 7
+	syncJobRepo.jobs[payload.JobID] = entity.NewSyncJob(appID, userID, partnerID, entity.SyncJobTypeTransactionSync, 0)
+	syncJobRepo.jobs[payload.JobID].ID = payload.JobID
+
+	p := NewTransactionProcessor(fetcher, &mockTransactionRepo{}, appRepo, partnerRepo, decryptor, &mockLedgerRebuilder{}, syncJobRepo, lm, pt)
+	if err := p.Process(context.Background(), payload); err != nil {
+		t.Fatalf("Process failed: %v", err)
+	}
+	if !fetcher.capturedFrom.After(domainservice.SyncHistoryStart) {
+		t.Errorf("incremental sync should fetch a recent delta (after SyncHistoryStart), got %s", fetcher.capturedFrom)
+	}
+	// ~7 days back, not the full history.
+	if time.Since(fetcher.capturedFrom) > 30*24*time.Hour {
+		t.Errorf("incremental sync fetched too far back (%s) — expected ~7 days", fetcher.capturedFrom)
+	}
+}
+
 func TestTransactionProcessor_FetchError(t *testing.T) {
 	_, lm, pt := setupRedis(t)
 	appID, userID, partnerID, appRepo, partnerRepo, decryptor := setupProcessorContext(t)
@@ -615,6 +665,36 @@ func TestEventProcessor_Success(t *testing.T) {
 	// 2 subs * 1 event each = 2 events
 	if len(appEventRepo.upserted) != 2 {
 		t.Errorf("Expected 2 events, got %d", len(appEventRepo.upserted))
+	}
+}
+
+// TestEventProcessor_ProcessesAllSubscriptions guards the removal of the old
+// "cap to first 10 subscriptions" DEV LIMIT: with 15 subs, all 15 are fetched/stored.
+func TestEventProcessor_ProcessesAllSubscriptions(t *testing.T) {
+	_, lm, pt := setupRedis(t)
+	appID, userID, partnerID, appRepo, partnerRepo, decryptor := setupProcessorContext(t)
+
+	syncJobRepo := newMockSyncJobRepo()
+	appEventRepo := &mockAppEventRepo{}
+	subs := make([]*entity.Subscription, 15)
+	for i := range subs {
+		subs[i] = &entity.Subscription{ID: uuid.New(), AppID: appID, ShopifyShopGID: fmt.Sprintf("gid://shopify/Shop/%d", i+1)}
+	}
+	subRepo := &mockSubRepo{subs: subs}
+
+	now := time.Now().UTC()
+	eventFetcher := &mockEventFetcher{events: []external.AppEvent{{Type: "RELATIONSHIP_INSTALLED", OccurredAt: now}}}
+
+	payload := makePayload(appID, userID, partnerID, entity.SyncJobTypeEventSync)
+	syncJobRepo.jobs[payload.JobID] = entity.NewSyncJob(appID, userID, partnerID, entity.SyncJobTypeEventSync, 0)
+	syncJobRepo.jobs[payload.JobID].ID = payload.JobID
+
+	p := NewEventProcessor(eventFetcher, appEventRepo, subRepo, appRepo, partnerRepo, decryptor, syncJobRepo, lm, pt)
+	if err := p.Process(context.Background(), payload); err != nil {
+		t.Fatalf("Process failed: %v", err)
+	}
+	if len(appEventRepo.upserted) != 15 {
+		t.Errorf("expected all 15 subscriptions processed (cap removed), got %d events", len(appEventRepo.upserted))
 	}
 }
 

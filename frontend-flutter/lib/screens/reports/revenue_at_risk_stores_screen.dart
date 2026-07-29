@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../core/mixins/report_detail_app_gate.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/revenue_at_risk_provider.dart';
 import '../../services/revenue_at_risk_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_risk_badge.dart';
@@ -26,11 +27,8 @@ class RevenueAtRiskStoresScreen extends StatefulWidget {
 }
 
 class _RevenueAtRiskStoresScreenState extends State<RevenueAtRiskStoresScreen>
-    with ReportDetailAppGate {
+    with DataLoadingMixin {
   static const _pageSize = kRevenueAtRiskStoresPageSize;
-
-  @override
-  void reloadAfterApps() => _load();
 
   int _offset = 0;
   bool _loading = true;
@@ -38,38 +36,14 @@ class _RevenueAtRiskStoresScreenState extends State<RevenueAtRiskStoresScreen>
   RevenueAtRiskReport? _page;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  void loadData(String appId) {
+    final provider = context.read<RevenueAtRiskProvider>();
+    if (provider.selectedAppId != appId) provider.setSelectedApp(appId);
+    _loadPage();
   }
 
-  Future<void> _load() async {
+  Future<void> _loadPage() async {
     final risk = context.read<RevenueAtRiskProvider>();
-    // Cold deep-link / hard reload: the report page hasn't run, so no app is
-    // selected yet. Seed it from AppsProvider so the page has data on its own.
-    if (risk.selectedAppId == null) {
-      final apps = context.read<AppsProvider>();
-      final appId = apps.selectedAppId ??
-          (apps.apps.isNotEmpty ? apps.apps.first.id : null);
-      if (appId != null) {
-        risk.setSelectedApp(appId);
-      } else {
-        // Cold deep-link / hard reload: apps haven't arrived yet (they load after
-        // org selection). Wait for them, then retry; error only if none arrive.
-        setState(() {
-          _loading = true;
-          _error = null;
-        });
-        waitForAppsThenReload(onUnavailable: () {
-          if (!mounted) return;
-          setState(() {
-            _error = 'No app selected. Open Stores from the Revenue at Risk report.';
-            _loading = false;
-          });
-        });
-        return;
-      }
-    }
     setState(() {
       _loading = true;
       _error = null;
@@ -99,11 +73,12 @@ class _RevenueAtRiskStoresScreenState extends State<RevenueAtRiskStoresScreen>
 
   void _goTo(int offset) {
     setState(() => _offset = offset);
-    _load();
+    _loadPage();
   }
 
   @override
   Widget build(BuildContext context) {
+    final apps = context.watch<AppsProvider>();
     return LgPage(
       title: 'Ranked Stores',
       breadcrumb: 'Reports › Retention & Risk › Revenue at Risk',
@@ -113,13 +88,22 @@ class _RevenueAtRiskStoresScreenState extends State<RevenueAtRiskStoresScreen>
       // scrollable:false — the table owns its own layout: sticky header, scrolling
       // rows, and a fixed footer pager (LgPaginatedTable).
       scrollable: false,
-      child: _buildBody(),
+      child: _buildBody(apps),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppsProvider apps) {
+    if (apps.apps.isEmpty) {
+      return apps.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : const LgEmptyState(
+              icon: Icons.apps_outlined,
+              heading: 'No app selected',
+              description: 'Open Stores from the Revenue at Risk report.',
+            );
+    }
     if (_error != null) {
-      return LgErrorState(message: _error!, onRetry: _load);
+      return LgErrorState(message: _error!, onRetry: _loadPage);
     }
     if (_loading && _page == null) {
       return const Center(child: CircularProgressIndicator());

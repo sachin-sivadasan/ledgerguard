@@ -36,18 +36,20 @@ class LgTable extends StatelessWidget {
           ),
           child: Row(
             children: [
-              for (final c in columns)
+              for (var i = 0; i < columns.length; i++) ...[
+                if (i > 0) const SizedBox(width: LgSpacing.s400),
                 Expanded(
-                  flex: c.flex,
+                  flex: columns[i].flex,
                   child: Text(
-                    c.label,
-                    textAlign: c.numeric ? TextAlign.end : TextAlign.start,
+                    columns[i].label,
+                    textAlign: columns[i].numeric ? TextAlign.end : TextAlign.start,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: LgColors.textSecondary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
+              ],
             ],
           ),
         ),
@@ -62,7 +64,8 @@ class LgTable extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                for (var i = 0; i < columns.length; i++)
+                for (var i = 0; i < columns.length; i++) ...[
+                  if (i > 0) const SizedBox(width: LgSpacing.s400),
                   Expanded(
                     flex: columns[i].flex,
                     child: Align(
@@ -72,6 +75,7 @@ class LgTable extends StatelessWidget {
                       child: row[i],
                     ),
                   ),
+                ],
               ],
             ),
           ),

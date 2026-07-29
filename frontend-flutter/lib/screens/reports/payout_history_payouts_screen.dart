@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/report_detail_app_gate.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/payout_history_provider.dart';
 import '../../services/payout_history_service.dart';
@@ -23,8 +24,11 @@ class PayoutHistoryPayoutsScreen extends StatefulWidget {
 }
 
 class _PayoutHistoryPayoutsScreenState
-    extends State<PayoutHistoryPayoutsScreen> {
+    extends State<PayoutHistoryPayoutsScreen> with ReportDetailAppGate {
   static const _pageSize = kPayoutHistoryPageSize;
+
+  @override
+  void reloadAfterApps() => _load();
 
   int _offset = 0;
   bool _loading = true;
@@ -48,13 +52,19 @@ class _PayoutHistoryPayoutsScreenState
       if (appId != null) {
         payouts.setSelectedApp(appId);
       } else {
-        // No app resolvable (apps not loaded yet / none connected). Surface that
-        // distinctly — otherwise fetchPayoutsPage returns empty and the page
-        // would lie with "No payouts in the selected range."
+        // Cold deep-link / hard reload: apps haven't arrived yet (they load after
+        // org selection). Wait for them, then retry; error only if none arrive.
         setState(() {
-          _error =
-              'No app selected. Open Payouts from the Payout History report.';
-          _loading = false;
+          _loading = true;
+          _error = null;
+        });
+        waitForAppsThenReload(onUnavailable: () {
+          if (!mounted) return;
+          setState(() {
+            _error =
+                'No app selected. Open Payouts from the Payout History report.';
+            _loading = false;
+          });
         });
         return;
       }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/report_detail_app_gate.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/churn_provider.dart';
 import '../../services/churn_service.dart';
@@ -22,8 +23,12 @@ class ChurnStoresScreen extends StatefulWidget {
   State<ChurnStoresScreen> createState() => _ChurnStoresScreenState();
 }
 
-class _ChurnStoresScreenState extends State<ChurnStoresScreen> {
+class _ChurnStoresScreenState extends State<ChurnStoresScreen>
+    with ReportDetailAppGate {
   static const _pageSize = kChurnStoresPageSize;
+
+  @override
+  void reloadAfterApps() => _load();
 
   int _offset = 0;
   bool _loading = true;
@@ -47,12 +52,18 @@ class _ChurnStoresScreenState extends State<ChurnStoresScreen> {
       if (appId != null) {
         churn.setSelectedApp(appId);
       } else {
-        // No app resolvable (apps not loaded yet / none connected). Surface that
-        // distinctly — otherwise fetchStoresPage returns empty and the page
-        // would lie with "No churned stores in the selected range."
+        // Cold deep-link / hard reload: apps haven't arrived yet (they load after
+        // org selection). Wait for them, then retry; error only if none arrive.
         setState(() {
-          _error = 'No app selected. Open Stores from the Churn report.';
-          _loading = false;
+          _loading = true;
+          _error = null;
+        });
+        waitForAppsThenReload(onUnavailable: () {
+          if (!mounted) return;
+          setState(() {
+            _error = 'No app selected. Open Stores from the Churn report.';
+            _loading = false;
+          });
         });
         return;
       }

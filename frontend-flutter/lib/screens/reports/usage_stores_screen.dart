@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/report_detail_app_gate.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/usage_provider.dart';
 import '../../services/usage_service.dart';
@@ -23,8 +24,12 @@ class UsageStoresScreen extends StatefulWidget {
   State<UsageStoresScreen> createState() => _UsageStoresScreenState();
 }
 
-class _UsageStoresScreenState extends State<UsageStoresScreen> {
+class _UsageStoresScreenState extends State<UsageStoresScreen>
+    with ReportDetailAppGate {
   static const _pageSize = kUsageStoresPageSize;
+
+  @override
+  void reloadAfterApps() => _load();
 
   int _offset = 0;
   bool _loading = true;
@@ -48,12 +53,18 @@ class _UsageStoresScreenState extends State<UsageStoresScreen> {
       if (appId != null) {
         usage.setSelectedApp(appId);
       } else {
-        // No app resolvable (apps not loaded yet / none connected). Surface that
-        // distinctly — otherwise fetchStoresPage returns empty and the page
-        // would lie with "No usage or one-time charges in the selected range."
+        // Cold deep-link / hard reload: apps haven't arrived yet (they load after
+        // org selection). Wait for them, then retry; error only if none arrive.
         setState(() {
-          _error = 'No app selected. Open Stores from the Usage report.';
-          _loading = false;
+          _loading = true;
+          _error = null;
+        });
+        waitForAppsThenReload(onUnavailable: () {
+          if (!mounted) return;
+          setState(() {
+            _error = 'No app selected. Open Stores from the Usage report.';
+            _loading = false;
+          });
         });
         return;
       }

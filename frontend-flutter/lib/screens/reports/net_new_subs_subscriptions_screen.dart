@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/report_detail_app_gate.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/net_new_subs_provider.dart';
 import '../../services/net_new_subs_service.dart';
@@ -24,8 +25,11 @@ class NetNewSubsSubscriptionsScreen extends StatefulWidget {
 }
 
 class _NetNewSubsSubscriptionsScreenState
-    extends State<NetNewSubsSubscriptionsScreen> {
+    extends State<NetNewSubsSubscriptionsScreen> with ReportDetailAppGate {
   static const _pageSize = kNetNewSubsPageSize;
+
+  @override
+  void reloadAfterApps() => _load();
 
   int _offset = 0;
   bool _loading = true;
@@ -49,13 +53,19 @@ class _NetNewSubsSubscriptionsScreenState
       if (appId != null) {
         subs.setSelectedApp(appId);
       } else {
-        // No app resolvable (apps not loaded yet / none connected). Surface that
-        // distinctly — otherwise fetchSubscriptionsPage returns empty and the
-        // page would lie with "No new subscriptions in the selected range."
+        // Cold deep-link / hard reload: apps haven't arrived yet (they load after
+        // org selection). Wait for them, then retry; error only if none arrive.
         setState(() {
-          _error =
-              'No app selected. Open Subscriptions from the Net-New Subscriptions report.';
-          _loading = false;
+          _loading = true;
+          _error = null;
+        });
+        waitForAppsThenReload(onUnavailable: () {
+          if (!mounted) return;
+          setState(() {
+            _error =
+                'No app selected. Open Subscriptions from the Net-New Subscriptions report.';
+            _loading = false;
+          });
         });
         return;
       }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/report_detail_app_gate.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/earnings_report_provider.dart';
 import '../../services/earnings_report_service.dart';
@@ -21,8 +22,12 @@ class EarningsChargesScreen extends StatefulWidget {
   State<EarningsChargesScreen> createState() => _EarningsChargesScreenState();
 }
 
-class _EarningsChargesScreenState extends State<EarningsChargesScreen> {
+class _EarningsChargesScreenState extends State<EarningsChargesScreen>
+    with ReportDetailAppGate {
   static const _pageSize = kEarningsChargesPageSize;
+
+  @override
+  void reloadAfterApps() => _load();
 
   int _offset = 0;
   bool _loading = true;
@@ -46,12 +51,18 @@ class _EarningsChargesScreenState extends State<EarningsChargesScreen> {
       if (appId != null) {
         earnings.setSelectedApp(appId);
       } else {
-        // No app resolvable (apps not loaded yet / none connected). Surface that
-        // distinctly — otherwise fetchChargesPage returns empty and the page
-        // would lie with "No charges in the selected range."
+        // Cold deep-link / hard reload: apps haven't arrived yet (they load after
+        // org selection). Wait for them, then retry; error only if none arrive.
         setState(() {
-          _error = 'No app selected. Open Charges from the Earnings report.';
-          _loading = false;
+          _loading = true;
+          _error = null;
+        });
+        waitForAppsThenReload(onUnavailable: () {
+          if (!mounted) return;
+          setState(() {
+            _error = 'No app selected. Open Charges from the Earnings report.';
+            _loading = false;
+          });
         });
         return;
       }

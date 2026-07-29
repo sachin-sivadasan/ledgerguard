@@ -777,15 +777,16 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 	appGID string,
 	shopGID string, // Optional: filter by shop
 ) ([]AppEvent, error) {
-	// Build query with optional shop filter.
-	// App.events has no sortKey/reverse (verified against Partner API 2026-04);
-	// the connection defaults to oldest-first, so `last: 100` returns the most
-	// recent events — the ones that decide current subscription status. Pair
-	// this with GetLatestSubscriptionStatus's OccurredAt-desc sort.
-	query := `
-		query($appId: ID!, $shopId: ID) {
+	// App.events has no sortKey/reverse (verified against Partner API 2026-04), and the
+	// Partner API rejects `last` without a `before` cursor ("Using last without before is
+	// not supported"). So forward-paginate with first/after and collect EVERY event for the
+	// shop — completeness matters (installs, subscription-charge accepts, and the most
+	// recent status-deciding events for busy shops). GetLatestSubscriptionStatus sorts by
+	// OccurredAt desc, so page order doesn't matter.
+	const query = `
+		query($appId: ID!, $shopId: ID, $cursor: String) {
 			app(id: $appId) {
-				events(shopId: $shopId, last: 100) {
+				events(shopId: $shopId, first: 100, after: $cursor) {
 					edges {
 						node {
 							type
@@ -796,93 +797,106 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 							}
 						}
 					}
+					pageInfo {
+						hasNextPage
+						endCursor
+					}
 				}
 			}
 		}
 	`
 
-	variables := map[string]interface{}{
-		"appId": appGID,
-	}
-	if shopGID != "" {
-		variables["shopId"] = shopGID
-	}
-
 	url := fmt.Sprintf("%s/%s/api/%s/graphql.json", c.baseURL, organizationID, partnerAPIVersion)
 
-	reqBody, err := json.Marshal(map[string]interface{}{
-		"query":     query,
-		"variables": variables,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal query: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(reqBody))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Shopify-Access-Token", accessToken)
-
-	resp, body, err := c.executeWithRetry(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute request: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))
-	}
-
-	var result struct {
-		Data struct {
-			App struct {
-				Events struct {
-					Edges []struct {
-						Node struct {
-							Type       string `json:"type"`
-							OccurredAt string `json:"occurredAt"`
-							Shop       *struct {
-								ID   string `json:"id"`
-								Name string `json:"name"`
-							} `json:"shop"`
-						} `json:"node"`
-					} `json:"edges"`
-				} `json:"events"`
-			} `json:"app"`
-		} `json:"data"`
-		Errors []struct {
-			Message string `json:"message"`
-		} `json:"errors"`
-	}
-
-	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	if len(result.Errors) > 0 {
-		return nil, fmt.Errorf("graphql error: %s", result.Errors[0].Message)
-	}
-
 	var events []AppEvent
-	for _, edge := range result.Data.App.Events.Edges {
-		event := AppEvent{
-			Type: edge.Node.Type,
+	cursor := ""
+	// Safety bound: 1000 pages × 100 = 100k events; per-shop app-events are far fewer.
+	for page := 0; page < 1000; page++ {
+		variables := map[string]interface{}{
+			"appId": appGID,
+		}
+		if shopGID != "" {
+			variables["shopId"] = shopGID
+		}
+		if cursor != "" {
+			variables["cursor"] = cursor
 		}
 
-		if edge.Node.OccurredAt != "" {
-			if t, err := time.Parse(time.RFC3339, edge.Node.OccurredAt); err == nil {
-				event.OccurredAt = t
+		reqBody, err := json.Marshal(map[string]interface{}{
+			"query":     query,
+			"variables": variables,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal query: %w", err)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(reqBody))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Shopify-Access-Token", accessToken)
+
+		resp, body, err := c.executeWithRetry(ctx, req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute request: %w", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))
+		}
+
+		var result struct {
+			Data struct {
+				App struct {
+					Events struct {
+						Edges []struct {
+							Node struct {
+								Type       string `json:"type"`
+								OccurredAt string `json:"occurredAt"`
+								Shop       *struct {
+									ID   string `json:"id"`
+									Name string `json:"name"`
+								} `json:"shop"`
+							} `json:"node"`
+						} `json:"edges"`
+						PageInfo struct {
+							HasNextPage bool   `json:"hasNextPage"`
+							EndCursor   string `json:"endCursor"`
+						} `json:"pageInfo"`
+					} `json:"events"`
+				} `json:"app"`
+			} `json:"data"`
+			Errors []struct {
+				Message string `json:"message"`
+			} `json:"errors"`
+		}
+
+		if err := json.Unmarshal(body, &result); err != nil {
+			return nil, fmt.Errorf("failed to decode response: %w", err)
+		}
+		if len(result.Errors) > 0 {
+			return nil, fmt.Errorf("graphql error: %s", result.Errors[0].Message)
+		}
+
+		for _, edge := range result.Data.App.Events.Edges {
+			event := AppEvent{Type: edge.Node.Type}
+			if edge.Node.OccurredAt != "" {
+				if t, err := time.Parse(time.RFC3339, edge.Node.OccurredAt); err == nil {
+					event.OccurredAt = t
+				}
 			}
+			if edge.Node.Shop != nil {
+				event.ShopID = edge.Node.Shop.ID
+				event.ShopName = edge.Node.Shop.Name
+			}
+			events = append(events, event)
 		}
 
-		if edge.Node.Shop != nil {
-			event.ShopID = edge.Node.Shop.ID
-			event.ShopName = edge.Node.Shop.Name
+		pi := result.Data.App.Events.PageInfo
+		if !pi.HasNextPage || pi.EndCursor == "" {
+			break
 		}
-
-		events = append(events, event)
+		cursor = pi.EndCursor
 	}
 
 	return events, nil

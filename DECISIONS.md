@@ -1019,3 +1019,19 @@ Fetch and rebuild an app's **entire history from the beginning**. Introduce a si
 - Removed dead `filterTransactionsUpTo` (unused after the backfill's pointer-advance rewrite). Test: `TestLedgerService_RebuildFromTransactions_UsesFullHistory` pins the rebuild querying from `SyncHistoryStart`.
 - Removing the cap means the per-shop event/status loops now span the whole account, so their pre-existing swallowed-error `continue` became a silent partial-sync risk (a token expiring mid-run would drop many shops yet still report success). Hardened: both processors now count per-shop failures, log a WARNING summary, and surface the failed count in the final progress message; the status processor's previously silent upsert-error path now logs. (Full hard-fail-on-threshold left as a future decision.)
 - Related follow-up still open: event ingestion is still sourced **per-subscription** (misses installs by never-subscribed stores) — see future.md; the dev-cap half is now resolved.
+
+### ADR-047: Partner API app.events — forward-paginate (fix `last`-without-`before`)
+
+**Date:** 2026-07-30
+**Status:** Implemented
+
+**Context:**
+`FetchAppEvents` queried `app.events(shopId: $shopId, last: 100)` to grab the most-recent events. The Shopify Partner API rejects `last` without a `before` cursor: `graphql error: Using last without before is not supported`. This failed **every** per-shop event fetch in both `EventProcessor` and `StatusProcessor`, so `app_events` was never populated and status was never enriched — starving the Installs, Uninstall Context, and Activation reports of data. It stayed invisible until ADR-046's cap-removal + failure-surfacing made the per-shop errors loud in the logs.
+
+**Decision:**
+Forward-paginate: `events(shopId: $shopId, first: 100, after: $cursor)` with `pageInfo { hasNextPage endCursor }`, looping until `hasNextPage` is false (safety-bounded at 1000 pages). This collects EVERY event for a shop — installs, subscription-charge accepts, and the recent status-deciding events — which is more correct than the old `last: 100` intent anyway (a busy shop's recent events are no longer missed). `GetLatestSubscriptionStatus` already sorts by `OccurredAt` desc, so page order is irrelevant.
+
+**Consequences:**
+- Event fetch works; app-events populate; Installs/Uninstall/Activation reports get real data after a resync.
+- Slightly more API calls for shops with >100 events (rare); rate-limited by the per-partner token bucket.
+- Tests: `TestFetchAppEvents_PaginatesForwardWithFirstAfter` (asserts no `last:`, uses `first: 100`, follows the cursor across pages) + `TestFetchAppEvents_SinglePageStops`.

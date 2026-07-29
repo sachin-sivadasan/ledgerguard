@@ -3,8 +3,10 @@ package external
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -523,3 +525,120 @@ func TestFetchTransactions_EmptyTransactions(t *testing.T) {
 	}
 }
 
+
+// TestFetchAppEvents_PaginatesForwardWithFirstAfter verifies the app-events fetch uses
+// forward pagination (first/after, NOT `last` — which the Partner API rejects with
+// "Using last without before is not supported") and collects events across all pages.
+func TestFetchAppEvents_PaginatesForwardWithFirstAfter(t *testing.T) {
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+
+		body, _ := io.ReadAll(r.Body)
+		q := string(body)
+		if strings.Contains(q, "last:") {
+			t.Errorf("query must not use `last:` (Partner API rejects it without before); got: %s", q)
+		}
+		if !strings.Contains(q, "first: 100") {
+			t.Errorf("query must forward-paginate with `first: 100`; got: %s", q)
+		}
+
+		var response map[string]interface{}
+		if callCount == 1 {
+			if strings.Contains(q, `"cursor"`) {
+				t.Errorf("first page must not send a cursor; got: %s", q)
+			}
+			response = map[string]interface{}{
+				"data": map[string]interface{}{
+					"app": map[string]interface{}{
+						"events": map[string]interface{}{
+							"edges": []map[string]interface{}{
+								{"node": map[string]interface{}{
+									"type":       "RELATIONSHIP_INSTALLED",
+									"occurredAt": "2024-02-15T10:00:00Z",
+									"shop":       map[string]interface{}{"id": "gid://partners/Shop/1", "name": "Shop One"},
+								}},
+							},
+							"pageInfo": map[string]interface{}{"hasNextPage": true, "endCursor": "c1"},
+						},
+					},
+				},
+			}
+		} else {
+			if !strings.Contains(q, "c1") {
+				t.Errorf("second page must send the endCursor `c1`; got: %s", q)
+			}
+			response = map[string]interface{}{
+				"data": map[string]interface{}{
+					"app": map[string]interface{}{
+						"events": map[string]interface{}{
+							"edges": []map[string]interface{}{
+								{"node": map[string]interface{}{
+									"type":       "SUBSCRIPTION_CHARGE_ACCEPTED",
+									"occurredAt": "2024-02-16T10:00:00Z",
+									"shop":       map[string]interface{}{"id": "gid://partners/Shop/1", "name": "Shop One"},
+								}},
+							},
+							"pageInfo": map[string]interface{}{"hasNextPage": false, "endCursor": "c2"},
+						},
+					},
+				},
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client := &ShopifyPartnerClient{httpClient: server.Client(), baseURL: server.URL}
+	ctx := WithOrganizationID(context.Background(), "org123")
+
+	events, err := client.FetchAppEvents(ctx, "org123", "test-token", "gid://partners/App/99", "gid://partners/Shop/1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if callCount != 2 {
+		t.Errorf("expected 2 paginated calls, got %d", callCount)
+	}
+	if len(events) != 2 {
+		t.Fatalf("expected 2 events across pages, got %d", len(events))
+	}
+	if events[0].Type != "RELATIONSHIP_INSTALLED" || events[1].Type != "SUBSCRIPTION_CHARGE_ACCEPTED" {
+		t.Errorf("unexpected event types: %+v", events)
+	}
+}
+
+// TestFetchAppEvents_SinglePageStops verifies a single page (hasNextPage=false) makes
+// exactly one call.
+func TestFetchAppEvents_SinglePageStops(t *testing.T) {
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		response := map[string]interface{}{
+			"data": map[string]interface{}{
+				"app": map[string]interface{}{
+					"events": map[string]interface{}{
+						"edges":    []map[string]interface{}{},
+						"pageInfo": map[string]interface{}{"hasNextPage": false, "endCursor": ""},
+					},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client := &ShopifyPartnerClient{httpClient: server.Client(), baseURL: server.URL}
+	ctx := WithOrganizationID(context.Background(), "org123")
+	events, err := client.FetchAppEvents(ctx, "org123", "test-token", "gid://partners/App/99", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if callCount != 1 {
+		t.Errorf("expected 1 call for a single page, got %d", callCount)
+	}
+	if len(events) != 0 {
+		t.Errorf("expected 0 events, got %d", len(events))
+	}
+}

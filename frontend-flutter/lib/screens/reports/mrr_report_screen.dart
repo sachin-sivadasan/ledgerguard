@@ -149,8 +149,8 @@ class _MrrReportScreenState extends State<MrrReportScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
-      pinned: Column(
+      // Normal page scroll: app-selector + KPI hero at top, then tables/charts.
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -176,23 +176,21 @@ class _MrrReportScreenState extends State<MrrReportScreen>
             if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
           if (hasData) _HeroRow(report: report, currency: currency),
-        ],
-      ),
-      child: !hasData
-          ? const LgEmptyState(
+          const SizedBox(height: LgSpacing.s600),
+          if (!hasData)
+            const LgEmptyState(
               icon: Icons.show_chart_outlined,
               heading: 'No MRR data yet',
               description:
                   'MRR is your RECURRING revenue normalized to a monthly figure. Once your app has active recurring subscriptions and a completed sync, your MRR, its trend, and the per-plan breakdown will appear here.',
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _TrendCard(report: report, currency: currency),
-                const SizedBox(height: LgSpacing.s600),
-                _PlansTable(report: report, currency: currency),
-              ],
-            ),
+          else ...[
+            _TrendCard(report: report, currency: currency),
+            const SizedBox(height: LgSpacing.s600),
+            _PlansTable(report: report, currency: currency),
+          ],
+        ],
+      ),
     );
   }
 }

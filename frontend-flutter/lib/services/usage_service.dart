@@ -54,6 +54,10 @@ class UsageReport {
   final List<UsageTrendPoint> trend;
   final List<UsageStore> stores;
 
+  /// Full store-row count before ?limit/?offset paging — drives the report
+  /// preview's "View all N" affordance and the detail page's pagination.
+  final int storesTotal;
+
   UsageReport({
     required this.currency,
     required this.usageCents,
@@ -61,9 +65,14 @@ class UsageReport {
     required this.chargesCount,
     required this.trend,
     required this.stores,
+    required this.storesTotal,
   });
 
   factory UsageReport.fromJson(Map<String, dynamic> json) {
+    final stores = (json['stores'] as List<dynamic>?)
+            ?.map((e) => UsageStore.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
     return UsageReport(
       currency: json['currency'] as String? ?? 'USD',
       usageCents: (json['usageCents'] as num?)?.toInt() ?? 0,
@@ -73,10 +82,9 @@ class UsageReport {
               ?.map((e) => UsageTrendPoint.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      stores: (json['stores'] as List<dynamic>?)
-              ?.map((e) => UsageStore.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      stores: stores,
+      // Fall back to the visible count for older responses without the field.
+      storesTotal: (json['storesTotal'] as num?)?.toInt() ?? stores.length,
     );
   }
 
@@ -87,6 +95,7 @@ class UsageReport {
         chargesCount: 0,
         trend: const [],
         stores: const [],
+        storesTotal: 0,
       );
 }
 
@@ -99,11 +108,15 @@ class UsageService {
     String appId, {
     String? from,
     String? to,
+    int? limit,
+    int? offset,
     CancelToken? cancelToken,
   }) async {
     final queryParameters = <String, dynamic>{};
     if (from != null) queryParameters['from'] = from;
     if (to != null) queryParameters['to'] = to;
+    if (limit != null) queryParameters['limit'] = limit;
+    if (offset != null) queryParameters['offset'] = offset;
     final response = await _client.get(
       '/api/v1/apps/$appId/reports/usage',
       queryParameters: queryParameters,
@@ -136,6 +149,12 @@ class UsageService {
     return Uint8List.fromList(response.data ?? const <int>[]);
   }
 }
+
+/// Rows shown in the Usage report's stores PREVIEW before "View all".
+const int kUsageStoresPreview = 8;
+
+/// Rows per page on the dedicated Usage stores detail screen.
+const int kUsageStoresPageSize = 50;
 
 DateTime? _parseDate(String? value) {
   if (value == null || value.isEmpty) return null;

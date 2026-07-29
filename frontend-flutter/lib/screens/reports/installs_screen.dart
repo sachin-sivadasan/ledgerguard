@@ -147,8 +147,9 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
-      pinned: Column(
+      // Normal page scroll: the report is a summary (app-selector + KPIs + trend
+      // + an 8-row events preview + "View all" → the dedicated, paged events page).
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -171,33 +172,31 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
                 ),
               ),
             ),
-            if (hasData) const SizedBox(height: LgSpacing.s300),
+            const SizedBox(height: LgSpacing.s300),
           ],
-          if (hasData) _HeroRow(report: report),
-        ],
-      ),
-      child: !hasData
-          ? const LgEmptyState(
+          if (!hasData)
+            const LgEmptyState(
               icon: Icons.download_outlined,
               heading: 'No install activity yet',
               description:
                   'Once Shopify records install and uninstall events for your app, the trend and recent events will appear here.',
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _TrendCard(report: report),
-                const SizedBox(height: LgSpacing.s600),
-                _EventsTable(report: report),
-                const SizedBox(height: LgSpacing.s400),
-                Text(
-                  'From RELATIONSHIP_INSTALLED / RELATIONSHIP_UNINSTALLED events. Net = installs − uninstalls.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: LgColors.textSecondary,
-                  ),
-                ),
-              ],
+          else ...[
+            _HeroRow(report: report),
+            const SizedBox(height: LgSpacing.s600),
+            _TrendCard(report: report),
+            const SizedBox(height: LgSpacing.s600),
+            _EventsTable(report: report),
+            const SizedBox(height: LgSpacing.s400),
+            Text(
+              'From RELATIONSHIP_INSTALLED / RELATIONSHIP_UNINSTALLED events. Net = installs − uninstalls.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
             ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -506,6 +505,16 @@ class _EventsTable extends StatelessWidget {
               ],
           ],
         ),
+        if (report.eventsTotal > report.events.length) ...[
+          const SizedBox(height: LgSpacing.s300),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => context.go('/reports/installs/events'),
+              child: Text('View all ${report.eventsTotal} events  →'),
+            ),
+          ),
+        ],
       ],
     );
   }

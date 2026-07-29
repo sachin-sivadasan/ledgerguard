@@ -143,9 +143,9 @@ class _RevenueMixScreenState extends State<RevenueMixScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      // Fixed: app-selector only (no KPI hero on this report). Scrollable: the
-      // composition card + breakdown table.
-      pinned: Column(
+      // Normal page scroll: app-selector at top, then composition card +
+      // breakdown table.
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter)
@@ -168,31 +168,29 @@ class _RevenueMixScreenState extends State<RevenueMixScreen>
                 ),
               ),
             ),
-        ],
-      ),
-      child: !hasData
-          ? const LgEmptyState(
+          const SizedBox(height: LgSpacing.s600),
+          if (!hasData)
+            const LgEmptyState(
               icon: Icons.pie_chart_outline,
               heading: 'No revenue in range',
               description:
                   'Revenue mix breaks down gross revenue by charge type — recurring subscriptions, usage-based billing, and one-time charges. Once your app records charges in this range after a sync, the composition and breakdown will appear here.',
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _CompositionCard(report: report),
-                const SizedBox(height: LgSpacing.s600),
-                _BreakdownTable(report: report, currency: currency),
-                const SizedBox(height: LgSpacing.s400),
-                Text(
-                  'RECURRING vs USAGE strictly separated — MRR uses RECURRING only, Usage Revenue uses USAGE only.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: LgColors.textSecondary,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
+          else ...[
+            _CompositionCard(report: report),
+            const SizedBox(height: LgSpacing.s600),
+            _BreakdownTable(report: report, currency: currency),
+            const SizedBox(height: LgSpacing.s400),
+            Text(
+              'RECURRING vs USAGE strictly separated — MRR uses RECURRING only, Usage Revenue uses USAGE only.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
             ),
+          ],
+        ],
+      ),
     );
   }
 }

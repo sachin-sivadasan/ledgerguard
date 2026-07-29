@@ -67,8 +67,13 @@ class PayoutScheduleProvider extends ChangeNotifier {
     final token = _cancelToken;
     final range = resolveDateRange(_dateRange, DateTime.now());
     try {
+      // Report page shows a preview; the full table lives on the dedicated
+      // payouts detail screen (server-paged). KPIs stay full regardless of limit.
       _report = await _service.fetchReport(appId,
-          from: range.from, to: range.to, cancelToken: token);
+          from: range.from,
+          to: range.to,
+          limit: kPayoutSchedulePreview,
+          cancelToken: token);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) {
         // A newer load superseded this one and will manage loading state.
@@ -102,6 +107,19 @@ class PayoutScheduleProvider extends ChangeNotifier {
     return _service.fetchCsvBytes(appId, from: range.from, to: range.to);
   }
 
+  /// Fetches a single server-paged window of the payouts table for the dedicated
+  /// detail screen, using the currently selected app + date range.
+  Future<PayoutScheduleReport> fetchPayoutsPage({
+    required int limit,
+    required int offset,
+  }) {
+    final appId = _selectedAppId;
+    if (appId == null) return Future.value(PayoutScheduleReport.empty());
+    final range = resolveDateRange(_dateRange, DateTime.now());
+    return _service.fetchReport(appId,
+        from: range.from, to: range.to, limit: limit, offset: offset);
+  }
+
   PayoutScheduleReport _mockReport() {
     return PayoutScheduleReport(
       currency: 'USD',
@@ -110,6 +128,7 @@ class PayoutScheduleProvider extends ChangeNotifier {
       upcomingPayoutCents: 298000,
       pendingCents: 283000,
       nextPayoutDate: '2026-07-30',
+      rowsTotal: 4,
       rows: [
         PayoutScheduleRow(
           availableDate: '2026-07-30',

@@ -148,8 +148,10 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
-      pinned: Column(
+      // Normal page scroll: the report is a short summary (KPIs + trend + an
+      // 8-row new-subs preview + "View all" → the dedicated, paged subscriptions
+      // page). No pinned porthole.
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -172,33 +174,31 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
                 ),
               ),
             ),
-            if (hasData) const SizedBox(height: LgSpacing.s300),
+            const SizedBox(height: LgSpacing.s300),
           ],
-          if (hasData) _HeroRow(report: report),
-        ],
-      ),
-      child: !hasData
-          ? const LgEmptyState(
+          if (!hasData)
+            const LgEmptyState(
               icon: Icons.group_add_outlined,
               heading: 'No new subscriptions yet',
               description:
                   'Once merchants start subscribing to your app, net-new growth and the recent new subscriptions will appear here.',
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _TrendCard(report: report),
-                const SizedBox(height: LgSpacing.s600),
-                _NewSubsTable(report: report),
-                const SizedBox(height: LgSpacing.s400),
-                Text(
-                  'New = subscriptions started; churned = cancelled/churned. Net = new − churned.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: LgColors.textSecondary,
-                  ),
-                ),
-              ],
+          else ...[
+            _HeroRow(report: report),
+            const SizedBox(height: LgSpacing.s600),
+            _TrendCard(report: report),
+            const SizedBox(height: LgSpacing.s600),
+            _NewSubsTable(report: report),
+            const SizedBox(height: LgSpacing.s400),
+            Text(
+              'New = subscriptions started; churned = cancelled/churned. Net = new − churned.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
             ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -453,8 +453,9 @@ class _NewSubsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // The table is capped server-side; newSubs is the true in-window total.
-    final total = report.newSubs;
+    // The table is capped server-side; newStoresTotal is the true in-window
+    // new-store count (drives the preview label + "View all" drill-down).
+    final total = report.newStoresTotal;
     final shown = report.newStores.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -507,6 +508,19 @@ class _NewSubsTable extends StatelessWidget {
               ],
           ],
         ),
+        if (report.newStoresTotal > report.newStores.length) ...[
+          const SizedBox(height: LgSpacing.s300),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () =>
+                  context.go('/reports/net-new-subscriptions/subscriptions'),
+              child: Text(
+                'View all ${report.newStoresTotal} new subscriptions  →',
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

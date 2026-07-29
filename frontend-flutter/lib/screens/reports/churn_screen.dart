@@ -147,8 +147,10 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      // Fixed: app-selector + KPI hero. Scrollable: the trend + stores table.
-      pinned: Column(
+      // Normal page scroll: the report is a short summary (KPIs + trend + an
+      // 8-row churned-stores preview + "View all" → the dedicated, paged stores
+      // page). No pinned porthole.
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -171,26 +173,24 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
                 ),
               ),
             ),
-            if (hasChurn) const SizedBox(height: LgSpacing.s300),
+            const SizedBox(height: LgSpacing.s300),
           ],
-          if (hasChurn) _HeroRow(report: report, currency: currency),
-        ],
-      ),
-      child: !hasChurn
-          ? const LgEmptyState(
+          if (!hasChurn)
+            const LgEmptyState(
               icon: Icons.check_circle_outline,
               heading: 'No churned stores 🎉',
               description:
                   'No subscriptions are currently in the CHURNED state. Retention is holding steady.',
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _TrendCard(report: report),
-                const SizedBox(height: LgSpacing.s600),
-                _StoresTable(report: report, currency: currency),
-              ],
-            ),
+          else ...[
+            _HeroRow(report: report, currency: currency),
+            const SizedBox(height: LgSpacing.s600),
+            _TrendCard(report: report),
+            const SizedBox(height: LgSpacing.s600),
+            _StoresTable(report: report, currency: currency),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -489,6 +489,18 @@ class _StoresTable extends StatelessWidget {
               ],
           ],
         ),
+        if (report.storesTotal > report.stores.length) ...[
+          const SizedBox(height: LgSpacing.s300),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => context.go('/reports/churn/stores'),
+              child: Text(
+                'View all ${report.storesTotal} churned stores  →',
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

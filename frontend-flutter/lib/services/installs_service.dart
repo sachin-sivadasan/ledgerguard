@@ -57,15 +57,24 @@ class InstallsReport {
   final List<InstallTrendPoint> trend;
   final List<InstallEvent> events;
 
+  /// Full event-row count before ?limit/?offset paging — drives the report
+  /// preview's "View all N" affordance and the detail page's pagination.
+  final int eventsTotal;
+
   InstallsReport({
     required this.installs,
     required this.uninstalls,
     required this.net,
     required this.trend,
     required this.events,
+    required this.eventsTotal,
   });
 
   factory InstallsReport.fromJson(Map<String, dynamic> json) {
+    final events = (json['events'] as List<dynamic>?)
+            ?.map((e) => InstallEvent.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
     return InstallsReport(
       installs: (json['installs'] as num?)?.toInt() ?? 0,
       uninstalls: (json['uninstalls'] as num?)?.toInt() ?? 0,
@@ -75,10 +84,9 @@ class InstallsReport {
               .whereType<InstallTrendPoint>()
               .toList() ??
           [],
-      events: (json['events'] as List<dynamic>?)
-              ?.map((e) => InstallEvent.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      events: events,
+      // Fall back to the visible count for older responses without the field.
+      eventsTotal: (json['eventsTotal'] as num?)?.toInt() ?? events.length,
     );
   }
 
@@ -88,6 +96,7 @@ class InstallsReport {
         net: 0,
         trend: const [],
         events: const [],
+        eventsTotal: 0,
       );
 }
 
@@ -100,11 +109,15 @@ class InstallsService {
     String appId, {
     String? from,
     String? to,
+    int? limit,
+    int? offset,
     CancelToken? cancelToken,
   }) async {
     final queryParameters = <String, dynamic>{};
     if (from != null) queryParameters['from'] = from;
     if (to != null) queryParameters['to'] = to;
+    if (limit != null) queryParameters['limit'] = limit;
+    if (offset != null) queryParameters['offset'] = offset;
     final response = await _client.get(
       '/api/v1/apps/$appId/reports/installs',
       queryParameters: queryParameters,
@@ -133,6 +146,12 @@ class InstallsService {
     return Uint8List.fromList(response.data ?? const <int>[]);
   }
 }
+
+/// Rows shown in the Installs report's events PREVIEW before "View all".
+const int kInstallsEventsPreview = 8;
+
+/// Rows per page on the dedicated Installs events detail screen.
+const int kInstallsEventsPageSize = 50;
 
 DateTime? _parseDate(String? value) {
   if (value == null || value.isEmpty) return null;

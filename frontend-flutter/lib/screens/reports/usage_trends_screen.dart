@@ -149,8 +149,9 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      // Fixed: app-selector + KPI hero. Scrollable: the trend + stores table.
-      pinned: Column(
+      // Normal page scroll: app-selector + KPI hero at top, then trend + stores
+      // table.
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -176,30 +177,28 @@ class _UsageTrendsScreenState extends State<UsageTrendsScreen>
             if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
           if (hasData) _HeroRow(report: report, currency: currency),
-        ],
-      ),
-      child: !hasData
-          ? const LgEmptyState(
+          const SizedBox(height: LgSpacing.s600),
+          if (!hasData)
+            const LgEmptyState(
               icon: Icons.show_chart_outlined,
               heading: 'No usage activity in range',
               description:
                   'USAGE charges are tracked separately from recurring MRR. Once your app records usage-based billing in the selected window, week-over-week momentum and your top usage customers will appear here.',
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _TrendCard(report: report, currency: currency),
-                const SizedBox(height: LgSpacing.s600),
-                _StoresTable(report: report, currency: currency),
-                const SizedBox(height: LgSpacing.s400),
-                Text(
-                  'USAGE strictly separated from RECURRING — never counted in MRR.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: LgColors.textSecondary,
-                  ),
-                ),
-              ],
+          else ...[
+            _TrendCard(report: report, currency: currency),
+            const SizedBox(height: LgSpacing.s600),
+            _StoresTable(report: report, currency: currency),
+            const SizedBox(height: LgSpacing.s400),
+            Text(
+              'USAGE strictly separated from RECURRING — never counted in MRR.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
             ),
+          ],
+        ],
+      ),
     );
   }
 }

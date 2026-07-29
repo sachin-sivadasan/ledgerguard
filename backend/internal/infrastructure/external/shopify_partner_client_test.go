@@ -645,3 +645,61 @@ func TestFetchAppEvents_SinglePageStops(t *testing.T) {
 		t.Errorf("expected 0 events, got %d", len(events))
 	}
 }
+
+// TestExecuteWithRetry_RewindsBodyOnRetry guards the empty-body-on-retry bug: after a
+// 429, the retry must re-send the FULL request body (a consumed bytes.Reader would send an
+// empty POST → Cloudflare 400). Verified via FetchAppEvents (429 → 200).
+func TestExecuteWithRetry_RewindsBodyOnRetry(t *testing.T) {
+	callCount := 0
+	bodyLens := []int{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		body, _ := io.ReadAll(r.Body)
+		bodyLens = append(bodyLens, len(body))
+
+		if callCount == 1 {
+			w.WriteHeader(http.StatusTooManyRequests) // force a retry
+			return
+		}
+		// Retry must carry the query, not an empty body.
+		if !strings.Contains(string(body), "events(") {
+			t.Errorf("retry sent a body without the query (empty-body bug); got %q", string(body))
+		}
+		response := map[string]interface{}{
+			"data": map[string]interface{}{
+				"app": map[string]interface{}{
+					"events": map[string]interface{}{
+						"edges": []map[string]interface{}{
+							{"cursor": "c1", "node": map[string]interface{}{"type": "RELATIONSHIP_INSTALLED", "occurredAt": "2024-02-15T10:00:00Z"}},
+						},
+						"pageInfo": map[string]interface{}{"hasNextPage": false},
+					},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client := &ShopifyPartnerClient{
+		httpClient: server.Client(),
+		baseURL:    server.URL,
+		config:     RateLimiterConfig{MaxRetries: 2, BaseBackoff: time.Millisecond, MaxBackoff: time.Millisecond},
+	}
+	ctx := WithOrganizationID(context.Background(), "org123")
+
+	events, err := client.FetchAppEvents(ctx, "org123", "test-token", "gid://partners/App/99", "gid://partners/Shop/1")
+	if err != nil {
+		t.Fatalf("unexpected error after retry: %v", err)
+	}
+	if callCount != 2 {
+		t.Fatalf("expected a retry (2 calls), got %d", callCount)
+	}
+	if bodyLens[0] == 0 || bodyLens[1] == 0 {
+		t.Errorf("both attempts must send a non-empty body; got lengths %v", bodyLens)
+	}
+	if len(events) != 1 {
+		t.Errorf("expected 1 event after successful retry, got %d", len(events))
+	}
+}

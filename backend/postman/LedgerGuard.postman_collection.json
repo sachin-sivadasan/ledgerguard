@@ -1473,9 +1473,43 @@
               {
                 "key": "Authorization",
                 "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "X-Org-Id",
+                "value": "{{orgId}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/sync/jobs"
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sync/jobs?app_id={{appUUID}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sync",
+                "jobs"
+              ],
+              "query": [
+                {
+                  "key": "app_id",
+                  "value": "{{appUUID}}",
+                  "description": "Required — internal app UUID."
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Optional filter: pending | processing | completed | failed | partial_failure | cancelled",
+                  "disabled": true
+                },
+                {
+                  "key": "job_type",
+                  "value": "",
+                  "description": "Optional filter: full_sync | transaction_sync | event_sync | status_sync | snapshot_sync | store_sync | review_sync",
+                  "disabled": true
+                }
+              ]
+            }
           }
         },
         {

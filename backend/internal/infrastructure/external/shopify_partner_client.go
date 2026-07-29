@@ -783,11 +783,15 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 	// shop — completeness matters (installs, subscription-charge accepts, and the most
 	// recent status-deciding events for busy shops). GetLatestSubscriptionStatus sorts by
 	// OccurredAt desc, so page order doesn't matter.
+	// The Partner API's PageInfo has NO endCursor (unlike Admin/Storefront) — the next
+	// cursor is the LAST edge's `cursor`, and pageInfo only exposes hasNextPage. (Same
+	// pattern as FetchTransactions.)
 	const query = `
 		query($appId: ID!, $shopId: ID, $cursor: String) {
 			app(id: $appId) {
 				events(shopId: $shopId, first: 100, after: $cursor) {
 					edges {
+						cursor
 						node {
 							type
 							occurredAt
@@ -799,7 +803,6 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 					}
 					pageInfo {
 						hasNextPage
-						endCursor
 					}
 				}
 			}
@@ -850,7 +853,8 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 				App struct {
 					Events struct {
 						Edges []struct {
-							Node struct {
+							Cursor string `json:"cursor"`
+							Node   struct {
 								Type       string `json:"type"`
 								OccurredAt string `json:"occurredAt"`
 								Shop       *struct {
@@ -860,8 +864,7 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 							} `json:"node"`
 						} `json:"edges"`
 						PageInfo struct {
-							HasNextPage bool   `json:"hasNextPage"`
-							EndCursor   string `json:"endCursor"`
+							HasNextPage bool `json:"hasNextPage"`
 						} `json:"pageInfo"`
 					} `json:"events"`
 				} `json:"app"`
@@ -878,7 +881,10 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 			return nil, fmt.Errorf("graphql error: %s", result.Errors[0].Message)
 		}
 
-		for _, edge := range result.Data.App.Events.Edges {
+		edges := result.Data.App.Events.Edges
+		lastCursor := ""
+		for _, edge := range edges {
+			lastCursor = edge.Cursor
 			event := AppEvent{Type: edge.Node.Type}
 			if edge.Node.OccurredAt != "" {
 				if t, err := time.Parse(time.RFC3339, edge.Node.OccurredAt); err == nil {
@@ -892,11 +898,11 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 			events = append(events, event)
 		}
 
-		pi := result.Data.App.Events.PageInfo
-		if !pi.HasNextPage || pi.EndCursor == "" {
+		// Next cursor is the last edge's cursor (Partner API has no pageInfo.endCursor).
+		if !result.Data.App.Events.PageInfo.HasNextPage || lastCursor == "" {
 			break
 		}
-		cursor = pi.EndCursor
+		cursor = lastCursor
 	}
 
 	return events, nil

@@ -92,7 +92,11 @@ class ReportsScreen extends StatelessWidget {
         'New installs over time',
         route: '/reports/installs',
       ),
-      _ReportEntry('Activation', 'Install-to-paid funnel'),
+      _ReportEntry(
+        'Activation',
+        'Install-to-paid funnel',
+        route: '/reports/activation',
+      ),
       _ReportEntry(
         'Net-New Subscriptions',
         'New paying subscriptions',

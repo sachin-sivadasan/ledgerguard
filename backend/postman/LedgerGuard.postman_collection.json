@@ -7,7 +7,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080"
+      "value": "https://api.ledgerspear.com"
     },
     {
       "key": "firebaseApiKey",
@@ -19,12 +19,13 @@
     },
     {
       "key": "appID",
-      "value": "4599915"
+      "value": "4599915",
+      "description": "Shopify Partner App ID (numeric), for reference only. All request paths use {{appUUID}} (the internal apps.id UUID)."
     },
     {
       "key": "appUUID",
-      "value": "",
-      "description": "Internal UUID from sync_jobs/apps table \u2014 set after Select App"
+      "value": "a4d7dfd1-d27f-4cd1-ab08-6e96cbc8ff3c",
+      "description": "Internal app UUID (apps.id) \u2014 used by all /apps/{id}/... and /sync/.../{id} data paths."
     },
     {
       "key": "subscriptionID",
@@ -49,8 +50,13 @@
     },
     {
       "key": "orgId",
-      "value": "",
+      "value": "92025e07-90b1-4fb0-99ab-0250930990a4",
       "description": "Organization UUID \u2014 set after Create Organization"
+    },
+    {
+      "key": "internalKey",
+      "value": "",
+      "description": "Service-to-service key for /internal/* routes (X-Internal-Key header). Must equal the server's INTERNAL_KEY env var."
     },
     {
       "key": "userId",
@@ -205,7 +211,7 @@
               "mode": "raw",
               "raw": "{\n    \"tier\": \"DEFAULT_20\"\n}"
             },
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/tier"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/tier"
           }
         },
         {
@@ -226,7 +232,7 @@
               "mode": "raw",
               "raw": "{\n    \"slug\": \"my-app-slug\"\n}"
             },
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/store-slug"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/store-slug"
           }
         },
         {
@@ -239,7 +245,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/install-count"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/install-count"
           }
         },
         {
@@ -252,7 +258,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/refresh-install-count"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/refresh-install-count"
           }
         }
       ]
@@ -270,7 +276,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/metrics/latest"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/metrics/latest"
           }
         },
         {
@@ -284,7 +290,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/metrics?start=2026-01-01&end=2026-05-31",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/metrics?start=2026-01-01&end=2026-05-31",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -292,7 +298,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "metrics"
               ],
               "query": [
@@ -319,7 +325,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/metrics/trend?months=6&granularity=weekly",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/metrics/trend?months=6&granularity=weekly",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -327,7 +333,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "metrics",
                 "trend"
               ],
@@ -375,7 +381,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/subscriptions?limit=20&offset=0",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/subscriptions?limit=20&offset=0",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -383,7 +389,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "subscriptions"
               ],
               "query": [
@@ -409,7 +415,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/subscriptions/{{subscriptionID}}"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/subscriptions/{{subscriptionID}}"
           }
         },
         {
@@ -422,7 +428,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/subscriptions/summary"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/subscriptions/summary"
           }
         },
         {
@@ -435,7 +441,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/subscriptions/price-stats"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/subscriptions/price-stats"
           }
         }
       ]
@@ -454,7 +460,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/earnings?start=2026-01-01&end=2026-05-31&mode=combined",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/earnings?start=2026-01-01&end=2026-05-31&mode=combined",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -462,7 +468,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "earnings"
               ],
               "query": [
@@ -492,7 +498,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/earnings/status"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/earnings/status"
           }
         }
       ]
@@ -510,7 +516,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/fees/summary"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/fees/summary"
           }
         },
         {
@@ -523,7 +529,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/fees/breakdown"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/fees/breakdown"
           }
         },
         {
@@ -537,7 +543,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/fees/monthly?months=6",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/fees/monthly?months=6",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -545,7 +551,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "fees",
                 "monthly"
               ],
@@ -581,7 +587,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/stores/{{domain}}/health"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/stores/{{domain}}/health"
           }
         }
       ]
@@ -599,7 +605,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/reviews"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reviews"
           }
         },
         {
@@ -612,7 +618,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/reviews/scrape"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reviews/scrape"
           }
         }
       ]
@@ -632,7 +638,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/revenue-at-risk",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/revenue-at-risk",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -640,7 +646,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "revenue-at-risk"
               ],
@@ -690,7 +696,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/churn",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/churn",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -698,7 +704,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "churn"
               ],
@@ -743,7 +749,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/retention",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/retention",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -751,7 +757,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "retention"
               ],
@@ -786,7 +792,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/mrr",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/mrr",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -794,7 +800,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "mrr"
               ],
@@ -829,7 +835,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/earnings",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/earnings",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -837,7 +843,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "earnings"
               ],
@@ -882,7 +888,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/revenue-mix",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/revenue-mix",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -890,7 +896,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "revenue-mix"
               ],
@@ -925,7 +931,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/usage",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/usage",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -933,7 +939,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "usage"
               ],
@@ -978,7 +984,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/usage-trends",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/usage-trends",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -986,7 +992,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "usage-trends"
               ],
@@ -1021,7 +1027,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/subscriptions",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/subscriptions",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1029,7 +1035,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "subscriptions"
               ],
@@ -1054,7 +1060,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/payout-schedule",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/payout-schedule",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1062,7 +1068,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "payout-schedule"
               ],
@@ -1107,7 +1113,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/payout-history",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/payout-history",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1115,7 +1121,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "payout-history"
               ],
@@ -1160,7 +1166,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/uninstall-context",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/uninstall-context",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1168,7 +1174,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "uninstall-context"
               ],
@@ -1203,7 +1209,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/installs",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/installs",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1211,7 +1217,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "installs"
               ],
@@ -1256,7 +1262,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/net-new-subscriptions",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/net-new-subscriptions",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1264,7 +1270,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "net-new-subscriptions"
               ],
@@ -1309,7 +1315,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/cohorts",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/cohorts",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1317,7 +1323,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "cohorts"
               ],
@@ -1348,7 +1354,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/reports/reviews",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/reviews",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1356,7 +1362,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "reports",
                 "reviews"
               ],
@@ -1385,7 +1391,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/insights/daily"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/insights/daily"
           }
         }
       ]
@@ -1414,9 +1420,13 @@
               {
                 "key": "Authorization",
                 "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "X-Org-Id",
+                "value": "{{orgId}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/sync/{{appID}}"
+            "url": "{{baseUrl}}/api/v1/sync/{{appUUID}}"
           }
         },
         {
@@ -1427,9 +1437,32 @@
               {
                 "key": "Authorization",
                 "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "X-Org-Id",
+                "value": "{{orgId}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/sync/enqueue/{{appID}}"
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sync/enqueue/{{appUUID}}?type=full",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sync",
+                "enqueue",
+                "{{appUUID}}"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "full",
+                  "description": "full | transactions | events | status | snapshot | stores | reviews. 'full' fetches entire history (LookbackDays=0 → SyncHistoryStart)."
+                }
+              ]
+            }
           }
         },
         {
@@ -1552,7 +1585,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"default_app_id\": \"{{appID}}\"\n}"
+              "raw": "{\n    \"default_app_id\": \"{{appUUID}}\"\n}"
             },
             "url": "{{baseUrl}}/api/v1/user/preferences/default-app"
           }
@@ -1784,7 +1817,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"message\": \"What is my MRR?\",\n    \"app_id\": \"{{appID}}\"\n}"
+              "raw": "{\n    \"message\": \"What is my MRR?\",\n    \"app_id\": \"{{appUUID}}\"\n}"
             },
             "url": "{{baseUrl}}/api/v1/chat"
           }
@@ -1818,7 +1851,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"query\": \"{ metrics(appId: \\\"{{appID}}\\\") { mrr atRiskCount renewalRate } }\"\n}"
+              "raw": "{\n    \"query\": \"{ metrics(appId: \\\"{{appUUID}}\\\") { mrr atRiskCount renewalRate } }\"\n}"
             },
             "url": "{{baseUrl}}/graphql"
           }
@@ -1955,7 +1988,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/admin/apps/{{appID}}/data"
+            "url": "{{baseUrl}}/api/v1/admin/apps/{{appUUID}}/data"
           }
         },
         {
@@ -1981,7 +2014,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/admin/apps/{{appID}}/rebuild-read-model"
+            "url": "{{baseUrl}}/api/v1/admin/apps/{{appUUID}}/rebuild-read-model"
           }
         },
         {
@@ -2509,7 +2542,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/transactions?limit=20&offset=0",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/transactions?limit=20&offset=0",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -2517,7 +2550,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "transactions"
               ],
               "query": [
@@ -2554,7 +2587,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/stores?limit=20&offset=0",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/stores?limit=20&offset=0",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -2562,7 +2595,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "stores"
               ],
               "query": [
@@ -2589,7 +2622,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/events?page=1&pageSize=20",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/events?page=1&pageSize=20",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -2597,7 +2630,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "events"
               ],
               "query": [
@@ -2629,7 +2662,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/forecast?months=12&model=linear",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/forecast?months=12&model=linear",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -2637,7 +2670,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "forecast"
               ],
               "query": [
@@ -2666,7 +2699,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/cohorts?months=6",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/cohorts?months=6",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -2674,7 +2707,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "cohorts"
               ],
               "query": [
@@ -2696,7 +2729,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appID}}/risk/summary"
+            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/risk/summary"
           }
         },
         {
@@ -2710,7 +2743,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/apps/{{appID}}/revenue/concentration?top=10",
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/revenue/concentration?top=10",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -2718,7 +2751,7 @@
                 "api",
                 "v1",
                 "apps",
-                "{{appID}}",
+                "{{appUUID}}",
                 "revenue",
                 "concentration"
               ],
@@ -2930,8 +2963,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Authorization",
-                "value": "Bearer {{firebaseToken}}"
+                "key": "X-Internal-Key",
+                "value": "{{internalKey}}"
               }
             ],
             "url": "{{baseUrl}}/api/v1/internal/sync/transactions"
@@ -2943,11 +2976,11 @@
             "method": "POST",
             "header": [
               {
-                "key": "Authorization",
-                "value": "Bearer {{firebaseToken}}"
+                "key": "X-Internal-Key",
+                "value": "{{internalKey}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/internal/sync/transactions/{{appID}}"
+            "url": "{{baseUrl}}/api/v1/internal/sync/transactions/{{appUUID}}"
           }
         },
         {
@@ -2956,8 +2989,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Authorization",
-                "value": "Bearer {{firebaseToken}}"
+                "key": "X-Internal-Key",
+                "value": "{{internalKey}}"
               }
             ],
             "url": "{{baseUrl}}/api/v1/internal/sync/daily-catchup"

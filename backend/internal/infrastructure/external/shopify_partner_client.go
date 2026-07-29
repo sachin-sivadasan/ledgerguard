@@ -227,8 +227,19 @@ func (c *ShopifyPartnerClient) executeWithRetry(ctx context.Context, req *http.R
 			}
 		}
 
-		// Execute request
-		resp, err := c.httpClient.Do(req.Clone(ctx))
+		// Execute request. Clone per attempt AND rewind the body: the body is a
+		// bytes.Reader that's consumed on the first Do, so a retry (after a 429/5xx backoff)
+		// would otherwise POST an EMPTY body — which Cloudflare rejects with 400 Bad Request.
+		// GetBody (set by http.NewRequest for a bytes.Reader body) returns a fresh reader.
+		attemptReq := req.Clone(ctx)
+		if req.GetBody != nil {
+			freshBody, gerr := req.GetBody()
+			if gerr != nil {
+				return nil, nil, fmt.Errorf("failed to rewind request body: %w", gerr)
+			}
+			attemptReq.Body = freshBody
+		}
+		resp, err := c.httpClient.Do(attemptReq)
 		if err != nil {
 			lastErr = err
 			log.Printf("Shopify API request failed (attempt %d/%d): %v", attempt+1, c.config.MaxRetries+1, err)

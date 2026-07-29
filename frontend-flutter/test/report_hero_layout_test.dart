@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledgerguard_flutter/widgets/lg_table.dart';
 
-// Reproduces the EXACT earnings/MRR screen structure: a hero Row with
-// crossAxisAlignment.stretch + Expanded cards, followed by content, all inside
-// LgPage's layout (Center > ConstrainedBox > Padding > Column > Expanded >
-// SingleChildScrollView > Column). The question: does the hero's stretch in an
-// unbounded-height scroll view suppress/break the siblings after it?
+// Regression guard: a hero Row with crossAxisAlignment.stretch + Expanded cards,
+// followed by more content, inside an unbounded-height scroll view MUST NOT throw
+// or blank the siblings below it. stretch needs a bounded cross-axis, so the hero
+// must be wrapped in IntrinsicHeight (see _HeroRow in the report screens).
+//
+// This mirrors LgPage's layout chain (Center > ConstrainedBox > Padding > Column >
+// Expanded > SingleChildScrollView > Column) by hand — it does NOT pump LgPage/the
+// real screens, so it guards the *pattern*, not any specific screen. Removing
+// IntrinsicHeight from a real _HeroRow would still regress prod without failing here.
 void main() {
   Widget heroRow() => IntrinsicHeight(
         child: Row(

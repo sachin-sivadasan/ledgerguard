@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
-/// A framed content card matching the wireframes: white fill, rx=8, a #E5E7EB-style
-/// border. Renders the border EXPLICITLY (a Material `Card` at elevation 0 with a
-/// BorderSide renders inconsistently on Flutter web), so KPI/section cards always show
-/// their framing.
+/// A framed content card matching the wireframes: white fill (`LgColors.surface`),
+/// rx=8, a subtle `LgColors.border` outline. Renders the border EXPLICITLY via a
+/// `Container` rather than a Material `Card`: observed on Flutter web (canvaskit,
+/// Flutter 3.x), a `Card` at elevation 0 with a `BorderSide` intermittently drops the
+/// outline on repaint, so KPI/section cards would render frameless. Re-verify against
+/// a `Card`+`side:` if a future SDK fixes that, and delete this workaround if so.
 class LgCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;

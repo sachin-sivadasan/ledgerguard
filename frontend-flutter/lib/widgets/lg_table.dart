@@ -37,6 +37,9 @@ class LgTable extends StatelessWidget {
           child: Row(
             children: [
               for (var i = 0; i < columns.length; i++) ...[
+                // Gap between columns; skipped before the first so the table edges
+                // stay flush. Without it a right-aligned numeric header abuts the
+                // next left-aligned header (e.g. "NET"+"STATUS" -> "NETSTATUS").
                 if (i > 0) const SizedBox(width: LgSpacing.s400),
                 Expanded(
                   flex: columns[i].flex,

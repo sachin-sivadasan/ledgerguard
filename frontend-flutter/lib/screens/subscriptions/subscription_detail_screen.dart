@@ -63,10 +63,8 @@ class SubscriptionDetailScreen extends StatelessWidget {
                         style: theme.textTheme.headlineSmall,
                       ),
                       const SizedBox(height: LgSpacing.s100),
-                      Text(
-                        'Subscription detail',
-                        style: theme.textTheme.bodySmall,
-                      ),
+                      Text('Subscription detail',
+                          style: theme.textTheme.bodySmall),
                     ],
                   ),
                 ],
@@ -94,21 +92,13 @@ class SubscriptionDetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _InfoRow(
-                          'Status',
-                          '',
-                          badge: LgStatusBadge(status: sub.status),
-                        ),
-                        _InfoRow(
-                          'Risk',
-                          '',
-                          badge: LgRiskBadge(riskState: sub.riskState),
-                        ),
+                        _InfoRow('Status', '',
+                            badge: LgStatusBadge(status: sub.status)),
+                        _InfoRow('Risk', '',
+                            badge: LgRiskBadge(riskState: sub.riskState)),
                         _InfoRow('Period End', dateFmt.format(sub.periodEnd)),
-                        _InfoRow(
-                          'Next Charge',
-                          dateFmt.format(sub.expectedNextCharge),
-                        ),
+                        _InfoRow('Next Charge',
+                            dateFmt.format(sub.expectedNextCharge)),
                       ],
                     ),
                   );
@@ -118,10 +108,8 @@ class SubscriptionDetailScreen extends StatelessWidget {
                       onTap: () => context.go('/stores'),
                       child: Row(
                         children: [
-                          const Icon(
-                            Icons.store,
-                            color: LgColors.textSecondary,
-                          ),
+                          const Icon(Icons.store,
+                              color: LgColors.textSecondary),
                           const SizedBox(width: LgSpacing.s200),
                           Expanded(
                             child: Text(
@@ -130,10 +118,8 @@ class SubscriptionDetailScreen extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const Icon(
-                            Icons.chevron_right,
-                            color: LgColors.textSecondary,
-                          ),
+                          const Icon(Icons.chevron_right,
+                              color: LgColors.textSecondary),
                         ],
                       ),
                     ),
@@ -141,17 +127,15 @@ class SubscriptionDetailScreen extends StatelessWidget {
 
                   if (constraints.maxWidth > 900) {
                     return IntrinsicHeight(
-                      child: IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(child: billingCard),
-                            const SizedBox(width: LgSpacing.s400),
-                            Expanded(child: statusCard),
-                            const SizedBox(width: LgSpacing.s400),
-                            Expanded(child: storeCard),
-                          ],
-                        ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: billingCard),
+                          const SizedBox(width: LgSpacing.s400),
+                          Expanded(child: statusCard),
+                          const SizedBox(width: LgSpacing.s400),
+                          Expanded(child: storeCard),
+                        ],
                       ),
                     );
                   }
@@ -188,8 +172,10 @@ class SubscriptionDetailScreen extends StatelessWidget {
                       Expanded(
                         child: TabBarView(
                           children: [
-                            _PaymentHistoryTab(subscriptionId: subscriptionId),
-                            _RiskTimelineTab(subscriptionId: subscriptionId),
+                            _PaymentHistoryTab(
+                                subscriptionId: subscriptionId),
+                            _RiskTimelineTab(
+                                subscriptionId: subscriptionId),
                           ],
                         ),
                       ),
@@ -228,9 +214,8 @@ class _PaymentHistoryTab extends StatelessWidget {
     final totalNet = history
         .where((e) => e.netAmountCents > 0)
         .fold<int>(0, (sum, e) => sum + e.netAmountCents);
-    final paymentCount = history
-        .where((e) => e.chargeType == ChargeType.recurring)
-        .length;
+    final paymentCount =
+        history.where((e) => e.chargeType == ChargeType.recurring).length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,21 +223,9 @@ class _PaymentHistoryTab extends StatelessWidget {
         // Metric cards
         LgMetricGrid(
           children: [
-            LgMetricCard(
-              label: 'Payments',
-              value: '$paymentCount',
-              icon: Icons.autorenew,
-            ),
-            LgMetricCard(
-              label: 'Total Gross',
-              value: '\$${(totalGross / 100).toStringAsFixed(2)}',
-              icon: Icons.payments,
-            ),
-            LgMetricCard(
-              label: 'Total Net',
-              value: '\$${(totalNet / 100).toStringAsFixed(2)}',
-              icon: Icons.account_balance,
-            ),
+            LgMetricCard(label: 'Payments', value: '$paymentCount', icon: Icons.autorenew),
+            LgMetricCard(label: 'Total Gross', value: '\$${(totalGross / 100).toStringAsFixed(2)}', icon: Icons.payments),
+            LgMetricCard(label: 'Total Net', value: '\$${(totalNet / 100).toStringAsFixed(2)}', icon: Icons.account_balance),
           ],
         ),
         const SizedBox(height: LgSpacing.s400),
@@ -269,129 +242,44 @@ class _PaymentHistoryTab extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: LgSpacing.s200),
                 child: LgCard(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: LgSpacing.s400,
-                    vertical: LgSpacing.s300,
-                  ),
+                      horizontal: LgSpacing.s400,
+                      vertical: LgSpacing.s300),
                   child: isMobile
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Icon(
-                                  Icons.circle,
-                                  size: 8,
-                                  color: isRefund
-                                      ? LgColors.critical
-                                      : LgColors.success,
-                                ),
+                                Icon(Icons.circle, size: 8, color: isRefund ? LgColors.critical : LgColors.success),
                                 const SizedBox(width: LgSpacing.s200),
-                                Text(
-                                  dateFmt.format(entry.transactionDate),
-                                  style: theme.textTheme.bodyMedium,
-                                ),
+                                Text(dateFmt.format(entry.transactionDate), style: theme.textTheme.bodyMedium),
                                 const Spacer(),
-                                LgBadge(
-                                  label: entry.chargeTypeLabel,
-                                  tone: isRefund
-                                      ? BadgeTone.critical
-                                      : BadgeTone.defaultTone,
-                                ),
+                                LgBadge(label: entry.chargeTypeLabel, tone: isRefund ? BadgeTone.critical : BadgeTone.defaultTone),
                               ],
                             ),
                             const SizedBox(height: LgSpacing.s200),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  entry.grossFormatted,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: isRefund
-                                        ? LgColors.critical
-                                        : LgColors.textPrimary,
-                                  ),
-                                ),
-                                Text(
-                                  'Net: ${entry.netFormatted}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: LgColors.textSecondary,
-                                  ),
-                                ),
-                                LgBadge(
-                                  label: entry.earningsStatusLabel
-                                      .toUpperCase(),
-                                  tone: _earningsTone(entry.earningsStatus),
-                                ),
+                                Text(entry.grossFormatted, style: TextStyle(fontWeight: FontWeight.w600, color: isRefund ? LgColors.critical : LgColors.textPrimary)),
+                                Text('Net: ${entry.netFormatted}', style: TextStyle(fontSize: 12, color: LgColors.textSecondary)),
+                                LgBadge(label: entry.earningsStatusLabel.toUpperCase(), tone: _earningsTone(entry.earningsStatus)),
                               ],
                             ),
                           ],
                         )
                       : Row(
                           children: [
-                            Icon(
-                              Icons.circle,
-                              size: 8,
-                              color: isRefund
-                                  ? LgColors.critical
-                                  : LgColors.success,
-                            ),
+                            Icon(Icons.circle, size: 8, color: isRefund ? LgColors.critical : LgColors.success),
                             const SizedBox(width: LgSpacing.s300),
-                            SizedBox(
-                              width: 120,
-                              child: Text(
-                                dateFmt.format(entry.transactionDate),
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ),
-                            SizedBox(
-                              width: 100,
-                              child: LgBadge(
-                                label: entry.chargeTypeLabel,
-                                tone: isRefund
-                                    ? BadgeTone.critical
-                                    : BadgeTone.defaultTone,
-                              ),
-                            ),
+                            SizedBox(width: 120, child: Text(dateFmt.format(entry.transactionDate), style: theme.textTheme.bodyMedium)),
+                            SizedBox(width: 100, child: LgBadge(label: entry.chargeTypeLabel, tone: isRefund ? BadgeTone.critical : BadgeTone.defaultTone)),
                             const Spacer(),
-                            SizedBox(
-                              width: 90,
-                              child: Text(
-                                entry.grossFormatted,
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: isRefund
-                                      ? LgColors.critical
-                                      : LgColors.textPrimary,
-                                ),
-                              ),
-                            ),
+                            SizedBox(width: 90, child: Text(entry.grossFormatted, textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, color: isRefund ? LgColors.critical : LgColors.textPrimary))),
                             const SizedBox(width: LgSpacing.s300),
-                            SizedBox(
-                              width: 80,
-                              child: Text(
-                                entry.netFormatted,
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: LgColors.textSecondary,
-                                ),
-                              ),
-                            ),
+                            SizedBox(width: 80, child: Text(entry.netFormatted, textAlign: TextAlign.right, style: TextStyle(fontSize: 12, color: LgColors.textSecondary))),
                             const SizedBox(width: LgSpacing.s400),
-                            SizedBox(
-                              width: 80,
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: LgBadge(
-                                  label: entry.earningsStatusLabel
-                                      .toUpperCase(),
-                                  tone: _earningsTone(entry.earningsStatus),
-                                ),
-                              ),
-                            ),
+                            SizedBox(width: 80, child: Align(alignment: Alignment.centerRight, child: LgBadge(label: entry.earningsStatusLabel.toUpperCase(), tone: _earningsTone(entry.earningsStatus)))),
                           ],
                         ),
                 ),
@@ -404,10 +292,10 @@ class _PaymentHistoryTab extends StatelessWidget {
   }
 
   BadgeTone _earningsTone(EarningsStatus status) => switch (status) {
-    EarningsStatus.pending => BadgeTone.warning,
-    EarningsStatus.available => BadgeTone.info,
-    EarningsStatus.paidOut => BadgeTone.success,
-  };
+        EarningsStatus.pending => BadgeTone.warning,
+        EarningsStatus.available => BadgeTone.info,
+        EarningsStatus.paidOut => BadgeTone.success,
+      };
 }
 
 // ─── Risk Timeline Tab ──────────────────────────────────────────────
@@ -428,14 +316,14 @@ class _RiskTimelineTab extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check_circle_outline, size: 48, color: LgColors.success),
+            Icon(Icons.check_circle_outline,
+                size: 48, color: LgColors.success),
             const SizedBox(height: LgSpacing.s300),
-            Text('No risk state changes', style: theme.textTheme.titleSmall),
+            Text('No risk state changes',
+                style: theme.textTheme.titleSmall),
             const SizedBox(height: LgSpacing.s100),
-            Text(
-              'This subscription has remained safe',
-              style: TextStyle(color: LgColors.textSecondary),
-            ),
+            Text('This subscription has remained safe',
+                style: TextStyle(color: LgColors.textSecondary)),
           ],
         ),
       );
@@ -451,21 +339,9 @@ class _RiskTimelineTab extends StatelessWidget {
         // Metric cards
         LgMetricGrid(
           children: [
-            LgMetricCard(
-              label: 'State Changes',
-              value: '${timeline.length}',
-              icon: Icons.timeline,
-            ),
-            LgMetricCard(
-              label: 'Escalations',
-              value: '$escalations',
-              icon: Icons.trending_up,
-            ),
-            LgMetricCard(
-              label: 'Recoveries',
-              value: '$recoveries',
-              icon: Icons.trending_down,
-            ),
+            LgMetricCard(label: 'State Changes', value: '${timeline.length}', icon: Icons.timeline),
+            LgMetricCard(label: 'Escalations', value: '$escalations', icon: Icons.trending_up),
+            LgMetricCard(label: 'Recoveries', value: '$recoveries', icon: Icons.trending_down),
           ],
         ),
         const SizedBox(height: LgSpacing.s400),
@@ -480,9 +356,8 @@ class _RiskTimelineTab extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: LgSpacing.s200),
                 child: LgCard(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: LgSpacing.s400,
-                    vertical: LgSpacing.s300,
-                  ),
+                      horizontal: LgSpacing.s400,
+                      vertical: LgSpacing.s300),
                   child: Row(
                     children: [
                       Icon(
@@ -499,13 +374,9 @@ class _RiskTimelineTab extends StatelessWidget {
                       LgRiskBadge(riskState: entry.fromRiskState),
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: LgSpacing.s200,
-                        ),
-                        child: Icon(
-                          Icons.arrow_forward,
-                          size: 14,
-                          color: LgColors.textSecondary,
-                        ),
+                            horizontal: LgSpacing.s200),
+                        child: Icon(Icons.arrow_forward,
+                            size: 14, color: LgColors.textSecondary),
                       ),
                       LgRiskBadge(riskState: entry.toRiskState),
                       const SizedBox(width: LgSpacing.s400),
@@ -514,10 +385,8 @@ class _RiskTimelineTab extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              entry.reason,
-                              style: theme.textTheme.bodyMedium,
-                            ),
+                            Text(entry.reason,
+                                style: theme.textTheme.bodyMedium),
                             const SizedBox(height: 2),
                             Row(
                               children: [
@@ -529,9 +398,8 @@ class _RiskTimelineTab extends StatelessWidget {
                                 Text(
                                   dateFmt.format(entry.occurredAt),
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    color: LgColors.textSecondary,
-                                  ),
+                                      fontSize: 11,
+                                      color: LgColors.textSecondary),
                                 ),
                               ],
                             ),

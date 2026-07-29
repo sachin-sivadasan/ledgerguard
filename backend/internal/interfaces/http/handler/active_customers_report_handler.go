@@ -104,7 +104,7 @@ func (h *ActiveCustomersReportHandler) GetActiveCustomersReport(w http.ResponseW
 
 	interval := resolveTrendInterval(from, to)
 	plans := buildActiveCustomersPlans(subs)
-	report := buildActiveCustomersReport(subs, plans, snapshots, from, to)
+	report := buildActiveCustomersReport(subs, plans, from, to)
 	report.Interval = string(interval)
 	report.Trend = buildActiveCustomersTrend(downsampleSnapshots(snapshots, interval))
 
@@ -135,13 +135,16 @@ func snapshotActiveCount(s *entity.DailyMetricsSnapshot) int {
 // buildActiveCustomersReport aggregates the headline active count, in-window New /
 // Churned / Net-Change movement, and currency.
 //
-// The headline activeCustomers is the latest in-range snapshot's active count (so it
-// equals the last trend point); when there's no in-range snapshot it falls back to
-// counting the current non-churned subscriptions. New counts subs whose StartDate()
-// (the real business start = activated_at, NOT the record-created CreatedAt that
-// resets on rebuild) falls in [from, to]; Churned counts subs that churned in-range.
-// A sub that started AND churned in-window counts toward both (net nets to zero).
-func buildActiveCustomersReport(subs []*entity.Subscription, plans []activeCustomersPlan, snapshots []*entity.DailyMetricsSnapshot, from, to time.Time) activeCustomersReport {
+// The headline activeCustomers is the current live non-churned subscription count,
+// taken as the sum of the per-plan breakdown so the big number ALWAYS reconciles with
+// the "Active by plan" table (and with New/Churned/Net, which are also live). The
+// snapshot series feeds the trend line only — mixing snapshot (headline) with live
+// (table) sources previously let the two disagree whenever the latest snapshot's active
+// tally drifted from the current subscription state. New counts subs whose StartDate()
+// (the real business start = activated_at, NOT the record-created CreatedAt that resets
+// on rebuild) falls in [from, to]; Churned counts subs that churned in-range. A sub that
+// started AND churned in-window counts toward both (net nets to zero).
+func buildActiveCustomersReport(subs []*entity.Subscription, plans []activeCustomersPlan, from, to time.Time) activeCustomersReport {
 	currency := "USD"
 	for _, s := range subs {
 		if s.Currency != "" {
@@ -151,13 +154,8 @@ func buildActiveCustomersReport(subs []*entity.Subscription, plans []activeCusto
 	}
 
 	active := 0
-	for _, s := range subs {
-		if s.RiskState != valueobject.RiskStateChurned {
-			active++
-		}
-	}
-	if latest := latestSnapshot(snapshots); latest != nil {
-		active = snapshotActiveCount(latest)
+	for _, p := range plans {
+		active += p.ActiveSubs
 	}
 
 	toExclusive := to.AddDate(0, 0, 1)

@@ -70,43 +70,51 @@ func acSnap(appID uuid.UUID, date time.Time, safe, oneCycle, twoCycle, churned i
 
 // TestActiveCustomers_HeadlineFromLatestSnapshot: headline = latest in-range snapshot's
 // active count (Total − churned) and equals the last trend point.
-func TestActiveCustomers_HeadlineFromLatestSnapshot(t *testing.T) {
+// TestActiveCustomers_HeadlineReconcilesWithPlansNotSnapshot proves the headline is the
+// live non-churned count (== sum of the "Active by plan" table) and does NOT follow the
+// latest snapshot, even when the snapshot's active tally diverges. This guards the fix
+// for the snapshot-vs-live headline gap seen in prod (headline 1016 vs table sum 926):
+// the trend stays snapshot-sourced, but the big number must reconcile with the table.
+func TestActiveCustomers_HeadlineReconcilesWithPlansNotSnapshot(t *testing.T) {
 	appID := uuid.New()
-	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
-	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	// 3 live non-churned subs (+1 churned) → headline must be 3.
+	subs := []*entity.Subscription{
+		safeSub(appID, "a.myshopify.com", "Pro", 5000),
+		safeSub(appID, "b.myshopify.com", "Pro", 5000),
+		atRiskSub(appID, "c.myshopify.com", "Starter", 2000, valueobject.RiskStateOneCycleMissed),
+		churnedSub(appID, "d.myshopify.com", "Pro", 5000),
+	}
+	// Snapshots claim a much higher active count (14) — the headline must ignore it.
 	d := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 	snaps := []*entity.DailyMetricsSnapshot{
-		acSnap(appID, d, 10, 1, 1, 2),           // active 12
-		acSnap(appID, d.AddDate(0, 0, 1), 12, 2, 0, 2), // active 14
+		acSnap(appID, d, 10, 1, 1, 2),                  // active 12
+		acSnap(appID, d.AddDate(0, 0, 1), 12, 2, 0, 2), // active 14 (latest)
 	}
-	h := NewActiveCustomersReportHandler(
-		&mockSubscriptionRepo{},
-		&mockSnapshotRepoForForecast{snapshots: snaps},
-		&mockAppRepoForSub{app: app},
-		&mockPartnerRepoForSub{account: pa},
-	)
-	rec := doActiveCustomers(t, h, appID, pa, "from=2026-07-01&to=2026-07-15") // ≤31d → daily
+	aid, pa, h := activeCustomersFixture(subs, snaps, nil)
+	rec := doActiveCustomers(t, h, aid, pa, "from=2026-07-01&to=2026-07-15") // ≤31d → daily
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 	resp := decodeActiveCustomers(t, rec)
-	if resp.ActiveCustomers != 14 {
-		t.Errorf("activeCustomers: expected 14 (latest snapshot Total−churned), got %d", resp.ActiveCustomers)
+	if resp.ActiveCustomers != 3 {
+		t.Errorf("activeCustomers: expected 3 (live non-churned), got %d — headline must not follow the snapshot's 14", resp.ActiveCustomers)
 	}
-	if len(resp.Trend) != 2 {
-		t.Fatalf("expected 2 trend points, got %d", len(resp.Trend))
+	planSum := 0
+	for _, p := range resp.Plans {
+		planSum += p.ActiveSubs
 	}
-	if resp.Trend[0].Date != "2026-07-01" || resp.Trend[0].ActiveCustomers != 12 {
-		t.Errorf("trend[0]: expected {2026-07-01,12}, got {%s,%d}", resp.Trend[0].Date, resp.Trend[0].ActiveCustomers)
+	if resp.ActiveCustomers != planSum {
+		t.Errorf("headline %d must reconcile with plan-table sum %d", resp.ActiveCustomers, planSum)
 	}
-	if resp.ActiveCustomers != resp.Trend[len(resp.Trend)-1].ActiveCustomers {
-		t.Errorf("headline %d != last trend point %d", resp.ActiveCustomers, resp.Trend[len(resp.Trend)-1].ActiveCustomers)
+	// Trend is still the (independent) snapshot series: 2 points, last = 14.
+	if len(resp.Trend) != 2 || resp.Trend[len(resp.Trend)-1].ActiveCustomers != 14 {
+		t.Errorf("trend should stay snapshot-sourced (2 pts, last=14), got %+v", resp.Trend)
 	}
 }
 
-// TestActiveCustomers_FallbackToCurrentSubs: with no in-range snapshot, headline =
-// current non-churned subscription count.
-func TestActiveCustomers_FallbackToCurrentSubs(t *testing.T) {
+// TestActiveCustomers_HeadlineIsLiveNonChurned: headline = current non-churned
+// subscription count, independent of any snapshots.
+func TestActiveCustomers_HeadlineIsLiveNonChurned(t *testing.T) {
 	appID := uuid.New()
 	subs := []*entity.Subscription{
 		safeSub(appID, "a.myshopify.com", "Pro", 5000),

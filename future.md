@@ -363,3 +363,8 @@ Add a real backend API for webhooks instead of relying on mock data. This includ
 - [DONE 2026-07-26] Tore down GCP `ledgerspear` (Cloud SQL, VPC connector, Cloud Run, Artifact Registry deleted; Secret Manager secrets kept as backup). Billing ~₹0.
 - **Backup cron** for self-hosted Postgres (pg_dump â gzip â optional Storage Box).
 - **CI/CD**: replace `scripts/gcp-deploy.sh` with SSH-based deploy to Hetzner.
+
+## Snapshot-vs-live reconciliation (data-pipeline bug, cross-report)
+- **Daily snapshots over-count active subs vs the live table.** On app `a4d7dfd1…` the Jul-29 snapshot recorded **1016** active (`total_subscriptions − churned_count`) while the live `subscriptions` table holds only **926** non-churned — a 90-sub gap. Surfaced by the Active Customers report (ADR-045 moved that report's headline to the live count as a workaround). Affects every snapshot-sourced number (MRR trend, Risk counts, Active-Customers trend line).
+- **Two candidate causes** (needs DB to disambiguate — diagnostic queries in the PR/thread): (a) today's snapshot written by an earlier sync and never overwritten by the sync that produced the current live subs (stale `updated_at`); or (b) the rebuild's per-day risk classification (`MetricsEngine.ComputeAllMetrics` counting `sub.RiskState` at each day's `now`) under-counts churn relative to the stored live `RiskState`.
+- **Fix direction:** ensure the daily snapshot is (re)written from the same rebuilt subscription set within one sync, and/or reconcile the snapshot's churn bucketing with the live `RiskState`. Add a reconciliation validator (snapshot active == live non-churned on the sync day) to catch drift.

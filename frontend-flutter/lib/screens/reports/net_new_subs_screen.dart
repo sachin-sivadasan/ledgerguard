@@ -453,8 +453,8 @@ class _NewSubsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // The table is capped server-side; newStoresTotal is the true in-window
-    // new-store count (drives the preview label + "View all" drill-down).
+    // The table is a server-side preview (limit); newStoresTotal is the true
+    // in-window new-store count (drives the preview label + "View all" drill-down).
     final total = report.newStoresTotal;
     final shown = report.newStores.length;
     return Column(

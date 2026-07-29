@@ -9,6 +9,7 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue"
 )
 
@@ -52,9 +53,8 @@ func (p *SnapshotProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 	p.progress.Update(ctx, payload.JobID, queue.Progress{Message: "Loading transactions for snapshots..."})
 
 	now := time.Now().UTC()
-	from := now.AddDate(-1, 0, 0) // 12-month window
-
-	transactions, err := p.txRepo.FindByAppID(ctx, payload.AppID, from, now)
+	// Backfill snapshots across the app's ENTIRE stored history — see SyncHistoryStart.
+	transactions, err := p.txRepo.FindByAppID(ctx, payload.AppID, domainservice.SyncHistoryStart, now)
 	if err != nil {
 		return fmt.Errorf("failed to load transactions: %w", err)
 	}

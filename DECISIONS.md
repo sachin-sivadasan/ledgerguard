@@ -992,3 +992,30 @@ Source the Active Customers headline from the **live non-churned count**, taken 
 **Consequences:**
 - Headline == plan-table sum == New/Churned/Net basis; the report is internally consistent and matches the wireframe intent ("paying subscriptions (Safe + at-risk)").
 - Trade-off: the trend line's last point may sit slightly above/below the headline until the deeper issue is fixed — the snapshot pipeline records more active subs (1016) than the live table holds non-churned (926). That **snapshot-vs-live divergence is a separate data-pipeline bug** affecting every snapshot-based report (MRR, Risk) and is tracked for follow-up, not resolved here.
+
+### ADR-046: Full-history sync — remove testing caps, fetch from the beginning
+
+**Date:** 2026-07-29
+**Status:** Implemented
+
+**Context:**
+Three "testing" shortcuts were throttling how much data the pipeline ingested and rebuilt, making reports render sparse/short with live data:
+- **Transaction fetch defaulted to a 1-month trailing window** (`transaction_processor.go`, `now.AddDate(0,-1,0)` marked `(testing)`) on a full sync — not from the app's start. (The Active Customers trend starting exactly ~30 days back was a direct symptom.)
+- **Ledger rebuild + snapshot backfill read only a 12-month window** (`ledger_service.go`, `snapshot_processor.go`, `sync_service.go`), so even stored older data wasn't rebuilt.
+- **Event + status processors were dev-capped to the first 10 subscriptions** (`event_processor.go`, `status_processor.go`, "revert for production"), starving the Installs/Activation/Uninstall reports and status enrichment.
+
+CLAUDE.md §8 documented a "12-month window" that the code didn't even honor (fetch was 1 month).
+
+**Decision:**
+Fetch and rebuild an app's **entire history from the beginning**. Introduce a single domain-layer floor `service.SyncHistoryStart` (= 2010-01-01 UTC — an arbitrary early date comfortably before any app's first sale, so no real transaction is truncated; cursor pagination + the Partner API `createdAtMin` filter make it resolve to "all transactions" for the fetch, and it selects all stored rows for the DB rebuild/backfill reads). Use it as the `from` for: the full-sync transaction fetch (`LookbackDays==0` branch), `RebuildFromTransactions`, `BackfillHistoricalSnapshots` (snapshot_processor + legacy sync_service), and the Revenue-API usage read-model rebuild (`read_model_builder.go`, which also runs inside every sync). Remove both 10-subscription dev caps. The incremental **daily catch-up** keeps its small `LookbackDays` delta (2 days) — a legitimate top-up, not a cap; transactions are upserted immutably so history accumulates.
+
+**Alternatives considered:**
+- Derive the floor from the app's first install/transaction — rejected: circular (need to fetch to know), and a fixed early floor is simpler and equivalent (no data exists before an app's first sale).
+- Keep a 12-month window — rejected: the user is at the testing/data-completeness stage and wants full history for reports and reconciliation.
+
+**Consequences:**
+- Full syncs are heavier (more Partner API pages, more daily snapshots for long-lived apps) — intended; rate limiting is handled by the per-partner token bucket.
+- Trends/cohorts/funnels now span the app's real lifetime instead of ~30 days.
+- Removed dead `filterTransactionsUpTo` (unused after the backfill's pointer-advance rewrite). Test: `TestLedgerService_RebuildFromTransactions_UsesFullHistory` pins the rebuild querying from `SyncHistoryStart`.
+- Removing the cap means the per-shop event/status loops now span the whole account, so their pre-existing swallowed-error `continue` became a silent partial-sync risk (a token expiring mid-run would drop many shops yet still report success). Hardened: both processors now count per-shop failures, log a WARNING summary, and surface the failed count in the final progress message; the status processor's previously silent upsert-error path now logs. (Full hard-fail-on-threshold left as a future decision.)
+- Related follow-up still open: event ingestion is still sourced **per-subscription** (misses installs by never-subscribed stores) — see future.md; the dev-cap half is now resolved.

@@ -12,6 +12,16 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
+// SyncHistoryStart is the floor date for a FULL sync/rebuild — an arbitrary early date
+// comfortably before any real app transaction (no monetized data exists before an app's
+// first sale, which is well after this floor). Using it as the `from` pulls an app's
+// ENTIRE history — "from the beginning" — rather than a trailing window: for the Partner
+// API fetch, cursor pagination + the createdAtMin filter return every transaction from
+// this date; for the DB reads (rebuild / snapshot backfill) it selects all stored rows.
+// So no real transaction is truncated. Incremental catch-up syncs still fetch a small
+// LookbackDays delta.
+var SyncHistoryStart = time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)
+
 // LedgerRebuildResult contains the result of a ledger rebuild
 type LedgerRebuildResult struct {
 	AppID                uuid.UUID
@@ -60,14 +70,14 @@ func (s *LedgerService) WithSnapshotRepository(repo repository.DailyMetricsSnaps
 // RebuildFromTransactions rebuilds subscription state from transactions
 // This is deterministic: same transactions → same subscription state
 func (s *LedgerService) RebuildFromTransactions(ctx context.Context, appID uuid.UUID, now time.Time) (*LedgerRebuildResult, error) {
-	// Fetch all transactions for the app (12-month window)
-	from := now.AddDate(-1, 0, 0)
-	transactions, err := s.txRepo.FindByAppID(ctx, appID, from, now)
+	// Rebuild from the app's ENTIRE stored transaction history (deterministic full rebuild,
+	// not a trailing window) — see SyncHistoryStart.
+	transactions, err := s.txRepo.FindByAppID(ctx, appID, SyncHistoryStart, now)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("LedgerService: found %d transactions for app %s (from %s to %s)", len(transactions), appID, from.Format("2006-01-02"), now.Format("2006-01-02"))
+	log.Printf("LedgerService: found %d transactions for app %s (from %s to %s)", len(transactions), appID, SyncHistoryStart.Format("2006-01-02"), now.Format("2006-01-02"))
 
 	// Count by charge type for debugging
 	typeCounts := map[string]int{}
@@ -390,17 +400,6 @@ func (s *LedgerService) BackfillHistoricalSnapshots(ctx context.Context, appID u
 	}
 
 	return len(batch), nil
-}
-
-// filterTransactionsUpTo returns transactions on or before the given date
-func (s *LedgerService) filterTransactionsUpTo(transactions []*entity.Transaction, date time.Time) []*entity.Transaction {
-	var filtered []*entity.Transaction
-	for _, tx := range transactions {
-		if !tx.TransactionDate.After(date) {
-			filtered = append(filtered, tx)
-		}
-	}
-	return filtered
 }
 
 // filterTransactionsInRange returns transactions within the given date range

@@ -359,6 +359,18 @@ class _ChargesTable extends StatelessWidget {
                 ],
             ],
           ),
+        if (report.chargesTotal > charges.length) ...[
+          const SizedBox(height: LgSpacing.s300),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => context.go('/reports/earnings/charges'),
+              child: Text(
+                'View all ${report.chargesTotal} charges  →',
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

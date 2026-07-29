@@ -7,7 +7,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080"
+      "value": "https://api.ledgerspear.com"
     },
     {
       "key": "firebaseApiKey",
@@ -19,12 +19,13 @@
     },
     {
       "key": "appID",
-      "value": "4599915"
+      "value": "4599915",
+      "description": "Shopify Partner App ID (numeric). NOT used in {appID} data paths \u2014 those need the internal UUID; use {{appUUID}} there."
     },
     {
       "key": "appUUID",
-      "value": "",
-      "description": "Internal UUID from sync_jobs/apps table \u2014 set after Select App"
+      "value": "a4d7dfd1-d27f-4cd1-ab08-6e96cbc8ff3c",
+      "description": "Internal app UUID (apps.id) \u2014 used by all /apps/{id}/... and /sync/.../{id} data paths."
     },
     {
       "key": "subscriptionID",
@@ -49,8 +50,13 @@
     },
     {
       "key": "orgId",
-      "value": "",
+      "value": "92025e07-90b1-4fb0-99ab-0250930990a4",
       "description": "Organization UUID \u2014 set after Create Organization"
+    },
+    {
+      "key": "internalKey",
+      "value": "",
+      "description": "Service-to-service key for /internal/* routes (X-Internal-Key header). Must equal the server's INTERNAL_KEY env var."
     },
     {
       "key": "userId",
@@ -1414,9 +1420,13 @@
               {
                 "key": "Authorization",
                 "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "X-Org-Id",
+                "value": "{{orgId}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/sync/{{appID}}"
+            "url": "{{baseUrl}}/api/v1/sync/{{appUUID}}"
           }
         },
         {
@@ -1427,9 +1437,32 @@
               {
                 "key": "Authorization",
                 "value": "Bearer {{firebaseToken}}"
+              },
+              {
+                "key": "X-Org-Id",
+                "value": "{{orgId}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/sync/enqueue/{{appID}}"
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sync/enqueue/{{appUUID}}?type=full",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sync",
+                "enqueue",
+                "{{appUUID}}"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "full",
+                  "description": "full | transactions | events | status | snapshot | stores | reviews. 'full' fetches entire history (LookbackDays=0 → SyncHistoryStart)."
+                }
+              ]
+            }
           }
         },
         {
@@ -1955,7 +1988,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/admin/apps/{{appID}}/data"
+            "url": "{{baseUrl}}/api/v1/admin/apps/{{appUUID}}/data"
           }
         },
         {
@@ -1981,7 +2014,7 @@
                 "value": "Bearer {{firebaseToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/admin/apps/{{appID}}/rebuild-read-model"
+            "url": "{{baseUrl}}/api/v1/admin/apps/{{appUUID}}/rebuild-read-model"
           }
         },
         {
@@ -2930,8 +2963,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Authorization",
-                "value": "Bearer {{firebaseToken}}"
+                "key": "X-Internal-Key",
+                "value": "{{internalKey}}"
               }
             ],
             "url": "{{baseUrl}}/api/v1/internal/sync/transactions"
@@ -2943,11 +2976,11 @@
             "method": "POST",
             "header": [
               {
-                "key": "Authorization",
-                "value": "Bearer {{firebaseToken}}"
+                "key": "X-Internal-Key",
+                "value": "{{internalKey}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/internal/sync/transactions/{{appID}}"
+            "url": "{{baseUrl}}/api/v1/internal/sync/transactions/{{appUUID}}"
           }
         },
         {
@@ -2956,8 +2989,8 @@
             "method": "POST",
             "header": [
               {
-                "key": "Authorization",
-                "value": "Bearer {{firebaseToken}}"
+                "key": "X-Internal-Key",
+                "value": "{{internalKey}}"
               }
             ],
             "url": "{{baseUrl}}/api/v1/internal/sync/daily-catchup"

@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/installs_provider.dart';
 import '../../services/installs_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_table.dart';
@@ -21,7 +23,8 @@ class InstallsEventsScreen extends StatefulWidget {
   State<InstallsEventsScreen> createState() => _InstallsEventsScreenState();
 }
 
-class _InstallsEventsScreenState extends State<InstallsEventsScreen> {
+class _InstallsEventsScreenState extends State<InstallsEventsScreen>
+    with DataLoadingMixin {
   static const _pageSize = kInstallsEventsPageSize;
 
   int _offset = 0;
@@ -30,32 +33,14 @@ class _InstallsEventsScreenState extends State<InstallsEventsScreen> {
   InstallsReport? _page;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  void loadData(String appId) {
+    final provider = context.read<InstallsProvider>();
+    if (provider.selectedAppId != appId) provider.setSelectedApp(appId);
+    _loadPage();
   }
 
-  Future<void> _load() async {
+  Future<void> _loadPage() async {
     final installs = context.read<InstallsProvider>();
-    // Cold deep-link / hard reload: the report page hasn't run, so no app is
-    // selected yet. Seed it from AppsProvider so the page has data on its own.
-    if (installs.selectedAppId == null) {
-      final apps = context.read<AppsProvider>();
-      final appId = apps.selectedAppId ??
-          (apps.apps.isNotEmpty ? apps.apps.first.id : null);
-      if (appId != null) {
-        installs.setSelectedApp(appId);
-      } else {
-        // No app resolvable (apps not loaded yet / none connected). Surface that
-        // distinctly — otherwise fetchEventsPage returns empty and the page
-        // would lie with "No install events in the selected range."
-        setState(() {
-          _error = 'No app selected. Open Events from the Installs report.';
-          _loading = false;
-        });
-        return;
-      }
-    }
     setState(() {
       _loading = true;
       _error = null;
@@ -85,11 +70,12 @@ class _InstallsEventsScreenState extends State<InstallsEventsScreen> {
 
   void _goTo(int offset) {
     setState(() => _offset = offset);
-    _load();
+    _loadPage();
   }
 
   @override
   Widget build(BuildContext context) {
+    final apps = context.watch<AppsProvider>();
     return LgPage(
       title: 'Recent install / uninstall events',
       breadcrumb: 'Reports › Growth › Installs',
@@ -98,13 +84,22 @@ class _InstallsEventsScreenState extends State<InstallsEventsScreen> {
       // scrollable:false — the table owns its own layout: sticky header, scrolling
       // rows, and a fixed footer pager (LgPaginatedTable).
       scrollable: false,
-      child: _buildBody(),
+      child: _buildBody(apps),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppsProvider apps) {
+    if (apps.apps.isEmpty) {
+      return apps.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : const LgEmptyState(
+              icon: Icons.apps_outlined,
+              heading: 'No app selected',
+              description: 'Open Events from the Installs report.',
+            );
+    }
     if (_error != null) {
-      return LgErrorState(message: _error!, onRetry: _load);
+      return LgErrorState(message: _error!, onRetry: _loadPage);
     }
     if (_loading && _page == null) {
       return const Center(child: CircularProgressIndicator());

@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/earnings_report_provider.dart';
 import '../../services/earnings_report_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_table.dart';
@@ -21,7 +23,8 @@ class EarningsChargesScreen extends StatefulWidget {
   State<EarningsChargesScreen> createState() => _EarningsChargesScreenState();
 }
 
-class _EarningsChargesScreenState extends State<EarningsChargesScreen> {
+class _EarningsChargesScreenState extends State<EarningsChargesScreen>
+    with DataLoadingMixin {
   static const _pageSize = kEarningsChargesPageSize;
 
   int _offset = 0;
@@ -30,39 +33,24 @@ class _EarningsChargesScreenState extends State<EarningsChargesScreen> {
   EarningsReport? _page;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  void loadData(String appId) {
+    // DataLoadingMixin calls this once an app is available (incl. after a cold
+    // deep-link's apps finish loading). Ensure the shared provider knows the app,
+    // then fetch the current page.
+    final provider = context.read<EarningsReportProvider>();
+    if (provider.selectedAppId != appId) provider.setSelectedApp(appId);
+    _loadPage();
   }
 
-  Future<void> _load() async {
-    final earnings = context.read<EarningsReportProvider>();
-    // Cold deep-link / hard reload: the report page hasn't run, so no app is
-    // selected yet. Seed it from AppsProvider so the page has data on its own.
-    if (earnings.selectedAppId == null) {
-      final apps = context.read<AppsProvider>();
-      final appId = apps.selectedAppId ??
-          (apps.apps.isNotEmpty ? apps.apps.first.id : null);
-      if (appId != null) {
-        earnings.setSelectedApp(appId);
-      } else {
-        // No app resolvable (apps not loaded yet / none connected). Surface that
-        // distinctly — otherwise fetchChargesPage returns empty and the page
-        // would lie with "No charges in the selected range."
-        setState(() {
-          _error = 'No app selected. Open Charges from the Earnings report.';
-          _loading = false;
-        });
-        return;
-      }
-    }
+  Future<void> _loadPage() async {
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final page =
-          await earnings.fetchChargesPage(limit: _pageSize, offset: _offset);
+      final page = await context
+          .read<EarningsReportProvider>()
+          .fetchChargesPage(limit: _pageSize, offset: _offset);
       if (!mounted) return;
       setState(() {
         _page = page;
@@ -85,11 +73,12 @@ class _EarningsChargesScreenState extends State<EarningsChargesScreen> {
 
   void _goTo(int offset) {
     setState(() => _offset = offset);
-    _load();
+    _loadPage();
   }
 
   @override
   Widget build(BuildContext context) {
+    final apps = context.watch<AppsProvider>();
     return LgPage(
       title: 'Charges',
       breadcrumb: 'Reports › Revenue & Billing › Earnings',
@@ -98,13 +87,25 @@ class _EarningsChargesScreenState extends State<EarningsChargesScreen> {
       // scrollable:false — the table owns its own layout: sticky header, scrolling
       // rows, and a fixed footer pager (LgPaginatedTable).
       scrollable: false,
-      child: _buildBody(),
+      child: _buildBody(apps),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppsProvider apps) {
+    // Cold deep-link: apps may still be loading (DataLoadingMixin fires loadData
+    // once one is available). Show a spinner until then; a genuine no-apps account
+    // gets a clear pointer back to the report.
+    if (apps.apps.isEmpty) {
+      return apps.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : const LgEmptyState(
+              icon: Icons.apps_outlined,
+              heading: 'No app selected',
+              description: 'Open Charges from the Earnings report.',
+            );
+    }
     if (_error != null) {
-      return LgErrorState(message: _error!, onRetry: _load);
+      return LgErrorState(message: _error!, onRetry: _loadPage);
     }
     if (_loading && _page == null) {
       return const Center(child: CircularProgressIndicator());

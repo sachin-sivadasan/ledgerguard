@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/usage_provider.dart';
 import '../../services/usage_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_table.dart';
@@ -23,7 +25,8 @@ class UsageStoresScreen extends StatefulWidget {
   State<UsageStoresScreen> createState() => _UsageStoresScreenState();
 }
 
-class _UsageStoresScreenState extends State<UsageStoresScreen> {
+class _UsageStoresScreenState extends State<UsageStoresScreen>
+    with DataLoadingMixin {
   static const _pageSize = kUsageStoresPageSize;
 
   int _offset = 0;
@@ -32,32 +35,14 @@ class _UsageStoresScreenState extends State<UsageStoresScreen> {
   UsageReport? _page;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  void loadData(String appId) {
+    final provider = context.read<UsageProvider>();
+    if (provider.selectedAppId != appId) provider.setSelectedApp(appId);
+    _loadPage();
   }
 
-  Future<void> _load() async {
+  Future<void> _loadPage() async {
     final usage = context.read<UsageProvider>();
-    // Cold deep-link / hard reload: the report page hasn't run, so no app is
-    // selected yet. Seed it from AppsProvider so the page has data on its own.
-    if (usage.selectedAppId == null) {
-      final apps = context.read<AppsProvider>();
-      final appId = apps.selectedAppId ??
-          (apps.apps.isNotEmpty ? apps.apps.first.id : null);
-      if (appId != null) {
-        usage.setSelectedApp(appId);
-      } else {
-        // No app resolvable (apps not loaded yet / none connected). Surface that
-        // distinctly — otherwise fetchStoresPage returns empty and the page
-        // would lie with "No usage or one-time charges in the selected range."
-        setState(() {
-          _error = 'No app selected. Open Stores from the Usage report.';
-          _loading = false;
-        });
-        return;
-      }
-    }
     setState(() {
       _loading = true;
       _error = null;
@@ -87,11 +72,12 @@ class _UsageStoresScreenState extends State<UsageStoresScreen> {
 
   void _goTo(int offset) {
     setState(() => _offset = offset);
-    _load();
+    _loadPage();
   }
 
   @override
   Widget build(BuildContext context) {
+    final apps = context.watch<AppsProvider>();
     return LgPage(
       title: 'Top Usage Stores (ranked by usage revenue)',
       breadcrumb: 'Reports › Revenue & Billing › Usage & One-Time',
@@ -101,13 +87,22 @@ class _UsageStoresScreenState extends State<UsageStoresScreen> {
       // scrollable:false — the table owns its own layout: sticky header, scrolling
       // rows, and a fixed footer pager (LgPaginatedTable).
       scrollable: false,
-      child: _buildBody(),
+      child: _buildBody(apps),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppsProvider apps) {
+    if (apps.apps.isEmpty) {
+      return apps.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : const LgEmptyState(
+              icon: Icons.apps_outlined,
+              heading: 'No app selected',
+              description: 'Open Stores from the Usage report.',
+            );
+    }
     if (_error != null) {
-      return LgErrorState(message: _error!, onRetry: _load);
+      return LgErrorState(message: _error!, onRetry: _loadPage);
     }
     if (_loading && _page == null) {
       return const Center(child: CircularProgressIndicator());

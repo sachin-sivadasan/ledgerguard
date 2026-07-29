@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/net_new_subs_provider.dart';
 import '../../services/net_new_subs_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/lg_empty_state.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_table.dart';
@@ -24,7 +26,7 @@ class NetNewSubsSubscriptionsScreen extends StatefulWidget {
 }
 
 class _NetNewSubsSubscriptionsScreenState
-    extends State<NetNewSubsSubscriptionsScreen> {
+    extends State<NetNewSubsSubscriptionsScreen> with DataLoadingMixin {
   static const _pageSize = kNetNewSubsPageSize;
 
   int _offset = 0;
@@ -33,33 +35,14 @@ class _NetNewSubsSubscriptionsScreenState
   NetNewSubsReport? _page;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  void loadData(String appId) {
+    final provider = context.read<NetNewSubsProvider>();
+    if (provider.selectedAppId != appId) provider.setSelectedApp(appId);
+    _loadPage();
   }
 
-  Future<void> _load() async {
+  Future<void> _loadPage() async {
     final subs = context.read<NetNewSubsProvider>();
-    // Cold deep-link / hard reload: the report page hasn't run, so no app is
-    // selected yet. Seed it from AppsProvider so the page has data on its own.
-    if (subs.selectedAppId == null) {
-      final apps = context.read<AppsProvider>();
-      final appId = apps.selectedAppId ??
-          (apps.apps.isNotEmpty ? apps.apps.first.id : null);
-      if (appId != null) {
-        subs.setSelectedApp(appId);
-      } else {
-        // No app resolvable (apps not loaded yet / none connected). Surface that
-        // distinctly — otherwise fetchSubscriptionsPage returns empty and the
-        // page would lie with "No new subscriptions in the selected range."
-        setState(() {
-          _error =
-              'No app selected. Open Subscriptions from the Net-New Subscriptions report.';
-          _loading = false;
-        });
-        return;
-      }
-    }
     setState(() {
       _loading = true;
       _error = null;
@@ -90,11 +73,12 @@ class _NetNewSubsSubscriptionsScreenState
 
   void _goTo(int offset) {
     setState(() => _offset = offset);
-    _load();
+    _loadPage();
   }
 
   @override
   Widget build(BuildContext context) {
+    final apps = context.watch<AppsProvider>();
     return LgPage(
       title: 'Recent new subscriptions',
       breadcrumb: 'Reports › Growth › Net-New Subscriptions',
@@ -104,13 +88,23 @@ class _NetNewSubsSubscriptionsScreenState
       // scrollable:false — the table owns its own layout: sticky header, scrolling
       // rows, and a fixed footer pager (LgPaginatedTable).
       scrollable: false,
-      child: _buildBody(),
+      child: _buildBody(apps),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppsProvider apps) {
+    if (apps.apps.isEmpty) {
+      return apps.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : const LgEmptyState(
+              icon: Icons.apps_outlined,
+              heading: 'No app selected',
+              description:
+                  'Open Subscriptions from the Net-New Subscriptions report.',
+            );
+    }
     if (_error != null) {
-      return LgErrorState(message: _error!, onRetry: _load);
+      return LgErrorState(message: _error!, onRetry: _loadPage);
     }
     if (_loading && _page == null) {
       return const Center(child: CircularProgressIndicator());

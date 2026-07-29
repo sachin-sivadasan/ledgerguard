@@ -61,12 +61,6 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 		return fmt.Errorf("failed to find subscriptions: %w", err)
 	}
 
-	// DEV LIMIT: cap to first 10 subscriptions for faster testing (revert for production)
-	if len(subscriptions) > 10 {
-		log.Printf("[queue] StatusProcessor: limiting from %d to 10 subscriptions (dev mode) (job %s)", len(subscriptions), payload.JobID)
-		subscriptions = subscriptions[:10]
-	}
-
 	log.Printf("[queue] StatusProcessor: processing %d subscriptions for app %s (job %s)", len(subscriptions), payload.AppID, payload.JobID)
 
 	fetchCtx := external.WithOrganizationID(ctx, pCtx.OrganizationID)

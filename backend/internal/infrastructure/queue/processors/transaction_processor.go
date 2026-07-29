@@ -84,9 +84,9 @@ func (p *TransactionProcessor) Process(ctx context.Context, payload *queue.SyncJ
 	now := time.Now().UTC()
 	var from time.Time
 	if payload.LookbackDays > 0 {
-		from = now.AddDate(0, 0, -payload.LookbackDays)
+		from = now.AddDate(0, 0, -payload.LookbackDays) // incremental catch-up: small delta
 	} else {
-		from = now.AddDate(0, -1, 0) // default: 1 month (testing)
+		from = domainservice.SyncHistoryStart // full sync: entire history from the beginning
 	}
 
 	fetchCtx := external.WithOrganizationID(ctx, pCtx.OrganizationID)

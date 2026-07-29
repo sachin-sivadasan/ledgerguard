@@ -65,12 +65,6 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 		return fmt.Errorf("failed to find subscriptions: %w", err)
 	}
 
-	// DEV LIMIT: cap to first 10 subscriptions for faster testing (revert for production)
-	if len(subscriptions) > 10 {
-		log.Printf("[queue] EventProcessor: limiting from %d to 10 subscriptions (dev mode) (job %s)", len(subscriptions), payload.JobID)
-		subscriptions = subscriptions[:10]
-	}
-
 	log.Printf("[queue] EventProcessor: processing %d subscriptions for app %s (job %s)", len(subscriptions), payload.AppID, payload.JobID)
 
 	p.progress.Update(ctx, payload.JobID, queue.Progress{

@@ -163,9 +163,9 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 		return nil, fmt.Errorf("failed to decrypt token: %w", err)
 	}
 
-	// Calculate 12-month window for full history
+	// Fetch the app's entire transaction history from the beginning — see SyncHistoryStart.
 	now := time.Now().UTC()
-	from := now.AddDate(-1, 0, 0) // 12 months ago
+	from := domainservice.SyncHistoryStart
 	to := now
 
 	// Add organization ID and app GID to context for the Partner API client
@@ -206,10 +206,9 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 		// This would require access to subscriptions, simplified here
 		revenueAtRisk = 0 // Will be calculated by caller if needed
 
-		// Backfill historical snapshots from all stored transactions
-		// Fetch all transactions for the app (not just this sync's window)
-		allFrom := now.AddDate(-1, 0, 0) // 12 months of history
-		allTransactions, err := s.txRepo.FindByAppID(ctx, appID, allFrom, now)
+		// Backfill historical snapshots from the app's ENTIRE stored history — see
+		// SyncHistoryStart.
+		allTransactions, err := s.txRepo.FindByAppID(ctx, appID, domainservice.SyncHistoryStart, now)
 		if err == nil && len(allTransactions) > 0 {
 			_, _ = s.ledger.BackfillHistoricalSnapshots(ctx, appID, allTransactions)
 			// Ignore backfill errors - not critical for sync success

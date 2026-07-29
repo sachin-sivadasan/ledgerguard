@@ -15,6 +15,7 @@ import (
 type mockTxRepoForLedger struct {
 	transactions []*entity.Transaction
 	err          error
+	capturedFrom time.Time // records the `from` passed to FindByAppID
 }
 
 func (m *mockTxRepoForLedger) Upsert(ctx context.Context, tx *entity.Transaction) error {
@@ -26,6 +27,7 @@ func (m *mockTxRepoForLedger) UpsertBatch(ctx context.Context, txs []*entity.Tra
 }
 
 func (m *mockTxRepoForLedger) FindByAppID(ctx context.Context, appID uuid.UUID, from, to time.Time) ([]*entity.Transaction, error) {
+	m.capturedFrom = from
 	return m.transactions, m.err
 }
 
@@ -196,6 +198,28 @@ func TestLedgerService_RebuildFromTransactions_Success(t *testing.T) {
 
 	if subRepo.upsertCalls != 2 {
 		t.Errorf("expected 2 upsert calls, got %d", subRepo.upsertCalls)
+	}
+}
+
+// TestLedgerService_RebuildFromTransactions_UsesFullHistory verifies the rebuild reads
+// the app's ENTIRE stored history (from SyncHistoryStart), not a trailing window — so a
+// transaction older than a year is included.
+func TestLedgerService_RebuildFromTransactions_UsesFullHistory(t *testing.T) {
+	appID := uuid.New()
+	now := time.Date(2026, 2, 26, 12, 0, 0, 0, time.UTC)
+
+	txRepo := &mockTxRepoForLedger{transactions: nil}
+	service := NewLedgerService(txRepo, &mockSubRepoForLedger{})
+
+	if _, err := service.RebuildFromTransactions(context.Background(), appID, now); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !txRepo.capturedFrom.Equal(SyncHistoryStart) {
+		t.Errorf("rebuild should query from SyncHistoryStart (%s), got %s", SyncHistoryStart, txRepo.capturedFrom)
+	}
+	// SyncHistoryStart must predate a year ago so nothing is truncated to a trailing window.
+	if !txRepo.capturedFrom.Before(now.AddDate(-1, 0, 0)) {
+		t.Errorf("SyncHistoryStart %s should be well before a 12-month trailing window", txRepo.capturedFrom)
 	}
 }
 

@@ -94,7 +94,7 @@ const (
 ### 8. Ledger Rebuild Strategy
 ```
 Every sync:
-1. Fetch transactions from Partner API (12-month window)
+1. Fetch transactions from Partner API (full history from `SyncHistoryStart`; catch-up syncs fetch a small `LookbackDays` delta)
 2. Store raw transactions (immutable)
 3. Rebuild entire ledger from scratch
 4. Recalculate all risk states

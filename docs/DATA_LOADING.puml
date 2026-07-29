@@ -76,7 +76,7 @@ note over Dash, Ins #FFFACD
   **Report detail ("View all" paged) screens ALSO use the mixin:**
   earnings_charges, *_stores (revenue_at_risk / churn / usage),
   installs_events, net_new_subs_subscriptions, payout_schedule_payouts,
-  payout_history_payouts, subscriptions. Their loadData() seeds the app
+  payout_history_payouts. Their loadData() seeds the app
   then calls the provider's fetch<Rows>Page() for the first page.
 
   **CancelToken pattern (in every provider):**
@@ -190,7 +190,7 @@ end note
 '            provider.fetch<Rows>Page(page 1)):
 '            earnings_charges, revenue_at_risk_stores, churn_stores,
 '            usage_stores, installs_events, net_new_subs_subscriptions,
-'            payout_schedule_payouts, payout_history_payouts, subscriptions
+'            payout_schedule_payouts, payout_history_payouts
 '
 ' PATTERN B — "initState only" (AppsScreen):
 '   Calls loadApps() directly in initState postFrameCallback.

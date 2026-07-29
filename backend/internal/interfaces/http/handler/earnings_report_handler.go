@@ -58,6 +58,9 @@ type earningsReport struct {
 	AvailableCents   int64            `json:"availableCents"`
 	PaidOutCents     int64            `json:"paidOutCents"`
 	Charges          []earningsCharge `json:"charges"`
+	// ChargesTotal is the full row count before ?limit/?offset paging, so the
+	// report preview and the dedicated charges page can show "N of M" / page.
+	ChargesTotal int64 `json:"chargesTotal"`
 }
 
 // GetEarningsReport returns the Earnings report for an app.
@@ -96,19 +99,26 @@ func (h *EarningsReportHandler) GetEarningsReport(w http.ResponseWriter, r *http
 	calc := service.NewEarningsCalculator()
 	summary := calc.SummarizeEarnings(txs)
 
+	allCharges := buildEarningsCharges(txs)
 	report := earningsReport{
 		Currency:         earningsCurrency(txs),
 		NetEarningsCents: summary.TotalCents(),
 		PendingCents:     summary.PendingCents,
 		AvailableCents:   summary.AvailableCents,
 		PaidOutCents:     summary.PaidOutCents,
-		Charges:          buildEarningsCharges(txs),
+		Charges:          allCharges,
+		ChargesTotal:     int64(len(allCharges)),
 	}
 
+	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeEarningsChargesCSV(w, report.Charges)
+		writeEarningsChargesCSV(w, allCharges)
 		return
 	}
+
+	// Page only the JSON charge rows; KPIs above already reflect the full set.
+	limit, offset := parsePaging(r)
+	report.Charges = pageSlice(allCharges, offset, limit)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {

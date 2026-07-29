@@ -182,6 +182,41 @@ func TestEarningsReport_ChargesSortedDateDesc(t *testing.T) {
 	}
 }
 
+func TestEarningsReport_Paging(t *testing.T) {
+	// Sorted desc by date: Gamma(07-24), Acme(07-22), Beta(07-20).
+	// No paging → all rows, chargesTotal = full count.
+	_, all := serveEarnings(t, mixedEarningsTxs(), "")
+	if len(all.Charges) != 3 || all.ChargesTotal != 3 {
+		t.Fatalf("no-paging: got %d rows / total %d, want 3 / 3", len(all.Charges), all.ChargesTotal)
+	}
+
+	// limit=2&offset=1 → the middle window [Acme, Beta], total still 3.
+	_, page := serveEarnings(t, mixedEarningsTxs(), "limit=2&offset=1")
+	if page.ChargesTotal != 3 {
+		t.Errorf("paged chargesTotal = %d, want 3 (full count)", page.ChargesTotal)
+	}
+	wantDates := []string{"2026-07-22", "2026-07-20"}
+	if len(page.Charges) != len(wantDates) {
+		t.Fatalf("paged rows = %d, want %d", len(page.Charges), len(wantDates))
+	}
+	for i, want := range wantDates {
+		if page.Charges[i].Date != want {
+			t.Errorf("paged charge[%d].date = %s, want %s", i, page.Charges[i].Date, want)
+		}
+	}
+
+	// KPIs must reflect the FULL set regardless of paging (they reconcile with total).
+	if page.NetEarningsCents != all.NetEarningsCents {
+		t.Errorf("paged net = %d, want %d (KPIs must ignore paging)", page.NetEarningsCents, all.NetEarningsCents)
+	}
+
+	// offset past the end → empty (non-nil) window, total unchanged.
+	_, beyond := serveEarnings(t, mixedEarningsTxs(), "limit=2&offset=9")
+	if len(beyond.Charges) != 0 || beyond.ChargesTotal != 3 {
+		t.Errorf("beyond-end: got %d rows / total %d, want 0 / 3", len(beyond.Charges), beyond.ChargesTotal)
+	}
+}
+
 func TestEarningsReport_ChargeFields(t *testing.T) {
 	_, report := serveEarnings(t, mixedEarningsTxs(), "")
 

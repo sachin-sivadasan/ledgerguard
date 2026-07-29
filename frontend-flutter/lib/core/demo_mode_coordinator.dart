@@ -8,6 +8,7 @@ import '../providers/earnings_report_provider.dart';
 import '../providers/events_provider.dart';
 import '../providers/insights_provider.dart';
 import '../providers/mrr_report_provider.dart';
+import '../providers/active_customers_provider.dart';
 import '../providers/retention_provider.dart';
 import '../providers/usage_provider.dart';
 import '../providers/usage_trends_provider.dart';
@@ -49,6 +50,7 @@ class DemoModeCoordinator {
   final InstallsProvider _installsProvider;
   final NetNewSubsProvider _netNewSubsProvider;
   final MrrReportProvider _mrrReportProvider;
+  final ActiveCustomersProvider _activeCustomersProvider;
   final UninstallContextProvider _uninstallContextProvider;
   final ReviewsProvider _reviewsProvider;
   final AnalyticsProvider _analyticsProvider;
@@ -78,6 +80,7 @@ class DemoModeCoordinator {
     required InstallsProvider installsProvider,
     required NetNewSubsProvider netNewSubsProvider,
     required MrrReportProvider mrrReportProvider,
+    required ActiveCustomersProvider activeCustomersProvider,
     required UninstallContextProvider uninstallContextProvider,
     required ReviewsProvider reviewsProvider,
     required AnalyticsProvider analyticsProvider,
@@ -105,6 +108,7 @@ class DemoModeCoordinator {
         _installsProvider = installsProvider,
         _netNewSubsProvider = netNewSubsProvider,
         _mrrReportProvider = mrrReportProvider,
+        _activeCustomersProvider = activeCustomersProvider,
         _uninstallContextProvider = uninstallContextProvider,
         _reviewsProvider = reviewsProvider,
         _analyticsProvider = analyticsProvider,
@@ -135,6 +139,7 @@ class DemoModeCoordinator {
     _installsProvider.setDemoMode(value);
     _netNewSubsProvider.setDemoMode(value);
     _mrrReportProvider.setDemoMode(value);
+    _activeCustomersProvider.setDemoMode(value);
     _uninstallContextProvider.setDemoMode(value);
     _reviewsProvider.setDemoMode(value);
     _analyticsProvider.setDemoMode(value);
@@ -170,6 +175,7 @@ class DemoModeCoordinator {
       _installsProvider.setSelectedApp(appId);
       _netNewSubsProvider.setSelectedApp(appId);
       _mrrReportProvider.setSelectedApp(appId);
+      _activeCustomersProvider.setSelectedApp(appId);
       _uninstallContextProvider.setSelectedApp(appId);
       _reviewsProvider.setSelectedApp(appId);
       _analyticsProvider.setSelectedApp(appId);

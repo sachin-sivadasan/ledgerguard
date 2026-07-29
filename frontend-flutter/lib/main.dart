@@ -20,6 +20,7 @@ import 'providers/earnings_report_provider.dart';
 import 'providers/events_provider.dart';
 import 'providers/insights_provider.dart';
 import 'providers/mrr_report_provider.dart';
+import 'providers/active_customers_provider.dart';
 import 'providers/retention_provider.dart';
 import 'providers/usage_provider.dart';
 import 'providers/usage_trends_provider.dart';
@@ -49,6 +50,7 @@ import 'services/events_service.dart';
 import 'services/insights_service.dart';
 import 'services/metrics_service.dart';
 import 'services/mrr_report_service.dart';
+import 'services/active_customers_service.dart';
 import 'services/retention_service.dart';
 import 'services/usage_service.dart';
 import 'services/usage_trends_service.dart';
@@ -100,6 +102,7 @@ void main() async {
   final installsService = InstallsService(apiClient);
   final netNewSubsService = NetNewSubsService(apiClient);
   final mrrReportService = MrrReportService(apiClient);
+  final activeCustomersService = ActiveCustomersService(apiClient);
   final uninstallContextService = UninstallContextService(apiClient);
   final reviewsService = ReviewsService(apiClient);
   final eventsService = EventsService(apiClient);
@@ -130,6 +133,8 @@ void main() async {
   final installsProvider = InstallsProvider(installsService);
   final netNewSubsProvider = NetNewSubsProvider(netNewSubsService);
   final mrrReportProvider = MrrReportProvider(mrrReportService);
+  final activeCustomersProvider =
+      ActiveCustomersProvider(activeCustomersService);
   final uninstallContextProvider =
       UninstallContextProvider(uninstallContextService);
   final reviewsProvider = ReviewsProvider(reviewsService);
@@ -160,6 +165,7 @@ void main() async {
     installsProvider: installsProvider,
     netNewSubsProvider: netNewSubsProvider,
     mrrReportProvider: mrrReportProvider,
+    activeCustomersProvider: activeCustomersProvider,
     uninstallContextProvider: uninstallContextProvider,
     reviewsProvider: reviewsProvider,
     analyticsProvider: analyticsProvider,
@@ -197,6 +203,7 @@ void main() async {
         ChangeNotifierProvider.value(value: installsProvider),
         ChangeNotifierProvider.value(value: netNewSubsProvider),
         ChangeNotifierProvider.value(value: mrrReportProvider),
+        ChangeNotifierProvider.value(value: activeCustomersProvider),
         ChangeNotifierProvider.value(value: uninstallContextProvider),
         ChangeNotifierProvider.value(value: reviewsProvider),
         ChangeNotifierProvider.value(value: analyticsProvider),

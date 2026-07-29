@@ -20,6 +20,7 @@ import 'screens/reports/cohorts_screen.dart';
 import 'screens/reports/earnings_charges_screen.dart';
 import 'screens/reports/earnings_report_screen.dart';
 import 'screens/reports/mrr_report_screen.dart';
+import 'screens/reports/active_customers_screen.dart';
 import 'screens/reports/reports_screen.dart';
 import 'screens/reports/retention_screen.dart';
 import 'screens/reports/reviews_screen.dart';
@@ -305,6 +306,10 @@ class _AppState extends State<App> {
                   GoRoute(
                     path: 'mrr',
                     builder: (c, s) => const MrrReportScreen(),
+                  ),
+                  GoRoute(
+                    path: 'active-customers',
+                    builder: (c, s) => const ActiveCustomersScreen(),
                   ),
                   GoRoute(
                     path: 'revenue-mix',

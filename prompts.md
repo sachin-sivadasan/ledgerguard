@@ -2072,3 +2072,23 @@
 - Logged to `IMPLEMENTATION_LOG.md` (2026-07-25 entry) and `TEST_PLAN.md` (section 16, EVT-001..005)
 - Added `backend/server` + `frontend/app/.firebase/` to `.gitignore`; `git rm --cached backend/server` (untracked 62MB binary)
 - Appended verification checklist to `verification.md`
+
+---
+
+### [2026-07-29] Diagram Audit — Reports Paging Feature
+**Original:**
+> run diagram audit
+
+**Improved:**
+> Execute `docs/prompts/diagram-audit-prompt.md`: audit all PlantUML/Excalidraw/sequence diagrams (backend + frontend-flutter) against the current codebase, focusing on the newly-shipped reports work (16 report endpoints + `limit`/`offset` paging + `<rows>Total`; frontend report screens + dedicated `/reports/<name>/<entity>` paginated detail routes reusing `DataLoadingMixin`). Update outdated diagrams, create missing ones, verify the Postman collection, don't delete diagrams or touch app code, then log here.
+
+**Result:**
+- **`41-backend-api-endpoint-map.puml`** — added the entire **Reports** domain (16 endpoints under `/api/v1/apps/{id}/reports/`) with real query params: `from`/`to`, `format=csv`, `segment` (revenue-at-risk), and `limit`/`offset` paging on the 8 list-table reports annotated with their pre-paged total fields (`chargesTotal`/`storesTotal`/`rowsTotal`/`eventsTotal`/`newStoresTotal`).
+- **`backend/postman/LedgerGuard.postman_collection.json`** — added folder `07a - Reports` (16 requests) with disabled-by-default `from`/`to`/`limit`/`offset`/`segment`/`format=csv` params; JSON re-validated.
+- **`40-flutter-provider-service-graph.puml`** — added 16 report providers + 16 services (1:1 constructor injection) + edges to ApiClient + DemoModeCoordinator wrapping; note on the `fetch<Rows>Page()` paged methods.
+- **`DATA_LOADING.puml`** — corrected the mixin's 3 listeners (Apps/NavigationRefresh/SyncStatus) + full trigger set; enumerated the report **detail** screens now also using `DataLoadingMixin`.
+- **`frontend-flutter/docs/SCREENS.puml` + `MOBILE_NAVIGATION.puml`** — added Reports index → 16 report screens → 8 "View all" paginated detail screens (preview→detail drill-down).
+- **NEW `docs/diagrams/puml/53-report-paging-preview-detail-sequence.puml`** — sequence for the preview (limit=8) → "View all" → paged detail (limit=50&offset, `parsePaging`/`pageSlice`, KPIs/CSV stay full-set) → `LgPaginatedTable` Prev/Next flow.
+- Verified current (no change): `39-settings-preferences`, `05-sync-pipeline`, `31-queue-sync-system`.
+- All changed/new `.puml` pass `plantuml -checkonly`; Postman JSON valid.
+- **Flagged (not deleted, per directive):** `integrations/shopify/oauth` + `/callback` appear in the API map + Postman but no longer exist in `router.go` (only manual-token routes remain) — remove in a follow-up once confirmed. `docs/diagrams/frontend-screen-flow.excalidraw` (hand-laid, no Reports content) flagged for regeneration rather than risky hand-editing of its JSON.

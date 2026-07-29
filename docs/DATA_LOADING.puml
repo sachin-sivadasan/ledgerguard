@@ -64,12 +64,20 @@ Apps --> App : notifyListeners()
 note over Dash, Ins #FFFACD
   **DataLoadingMixin pattern (replaces _wasDemoMode and hasAttemptedLoad):**
   Each screen mixes in DataLoadingMixin, which:
-  1. In initState(), registers AppsProvider.addListener(_onAppsChanged)
-  2. Listener fires _evaluateAndLoad() on every AppsProvider change
-  3. Detects: initial load, demo→live transition, app switch
+  1. In initState(), registers THREE listeners:
+     AppsProvider, NavigationRefreshNotifier, SyncStatusProvider
+  2. Any of them fires _evaluateAndLoad()
+  3. Detects: initial load, demo→live transition, app switch,
+     staleness (>2 min), nav refresh, sync syncing→done
   4. Calls screen's loadData(appId) via postFrameCallback
   5. Resets on demo mode entry → next live transition re-fires
-  6. retryLoad() clears tracking state for error recovery
+  6. retryLoad()/refreshData() clear tracking state for recovery/manual refresh
+
+  **Report detail ("View all" paged) screens ALSO use the mixin:**
+  earnings_charges, *_stores (revenue_at_risk / churn / usage),
+  installs_events, net_new_subs_subscriptions, payout_schedule_payouts,
+  payout_history_payouts. Their loadData() seeds the app
+  then calls the provider's fetch<Rows>Page() for the first page.
 
   **CancelToken pattern (in every provider):**
   Each load*() cancels previous in-flight request before starting new one.
@@ -163,12 +171,26 @@ end note
 ' ─────────────────────────────────────────────────────────
 '
 ' PATTERN A — "DataLoadingMixin" (all data screens):
-'   Uses AppsProvider.addListener() in initState.
-'   Listener evaluates: demo→live, app switch, initial load.
+'   Registers THREE listeners in initState: AppsProvider,
+'   NavigationRefreshNotifier, SyncStatusProvider.
+'   Evaluates: demo→live, app switch, initial load, staleness
+'   (>2 min), nav refresh, sync syncing→done.
 '   Fires loadData(appId) once per state change.
-'   retryLoad() available for error recovery.
-'   Screens: Dashboard, Subscriptions, Stores, Transactions,
-'            Events, Risk, Analytics, Earnings, Insights
+'   retryLoad() / refreshData() available for recovery / manual refresh.
+'
+'   Core screens: Dashboard, Subscriptions (list), Stores,
+'            Transactions, Events, Risk, Analytics, Earnings, Insights
+'
+'   Report summary screens: earnings_report, mrr_report, revenue_mix,
+'            usage, usage_trends, subscriptions, payout_schedule,
+'            payout_history, installs, net_new_subs, revenue_at_risk,
+'            churn, retention, cohorts, reviews, uninstall_context
+'
+'   Report detail / "View all" paged screens (loadData → seed app →
+'            provider.fetch<Rows>Page(page 1)):
+'            earnings_charges, revenue_at_risk_stores, churn_stores,
+'            usage_stores, installs_events, net_new_subs_subscriptions,
+'            payout_schedule_payouts, payout_history_payouts
 '
 ' PATTERN B — "initState only" (AppsScreen):
 '   Calls loadApps() directly in initState postFrameCallback.

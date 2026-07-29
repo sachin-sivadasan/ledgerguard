@@ -30,6 +30,30 @@ package "Providers" #LightBlue {
 }
 
 ' ──────────────────────────────────────────────
+'  Report Providers (Reports section)
+'  Each has a fetch<Rows>Page() method for the
+'  paged "View all" detail screens.
+' ──────────────────────────────────────────────
+package "Report Providers" #LightSkyBlue {
+  [EarningsReportProvider] as EarnRepP
+  [MrrReportProvider] as MrrP
+  [RevenueMixProvider] as RevMixP
+  [UsageProvider] as UsageP
+  [UsageTrendsProvider] as UsageTrP
+  [SubscriptionsProvider] as SubsP
+  [PayoutScheduleProvider] as PaySchP
+  [PayoutHistoryProvider] as PayHistP
+  [InstallsProvider] as InstallsP
+  [NetNewSubsProvider] as NnsP
+  [RevenueAtRiskProvider] as RarP
+  [ChurnProvider] as ChurnP
+  [RetentionProvider] as RetP
+  [CohortsProvider] as CohortsP
+  [ReviewsProvider] as ReviewsP
+  [UninstallContextProvider] as UninstallP
+}
+
+' ──────────────────────────────────────────────
 '  Services
 ' ──────────────────────────────────────────────
 package "Services" #LightGreen {
@@ -46,6 +70,28 @@ package "Services" #LightGreen {
   [SyncStatusService] as SyncSvc
   [TransactionService] as TxSvc
   [UserPreferencesService] as PrefsSvc
+}
+
+' ──────────────────────────────────────────────
+'  Report Services (one per report provider)
+' ──────────────────────────────────────────────
+package "Report Services" #PaleGreen {
+  [EarningsReportService] as EarnRepSvc
+  [MrrReportService] as MrrSvc
+  [RevenueMixService] as RevMixSvc
+  [UsageService] as UsageSvc
+  [UsageTrendsService] as UsageTrSvc
+  [SubscriptionsService] as SubsSvc
+  [PayoutScheduleService] as PaySchSvc
+  [PayoutHistoryService] as PayHistSvc
+  [InstallsService] as InstallsSvc
+  [NetNewSubsService] as NnsSvc
+  [RevenueAtRiskService] as RarSvc
+  [ChurnService] as ChurnSvc
+  [RetentionService] as RetSvc
+  [CohortsService] as CohortsSvc
+  [ReviewsService] as ReviewsSvc
+  [UninstallContextService] as UninstallSvc
 }
 
 ' ──────────────────────────────────────────────
@@ -124,6 +170,28 @@ ApiKeyP --> API
 WebhookP --> API
 
 ' ══════════════════════════════════════════════
+'  Report Provider → Report Service
+'  (each report provider injects exactly one service;
+'   provider.fetch<Rows>Page() → service → ApiClient)
+' ══════════════════════════════════════════════
+EarnRepP  --> EarnRepSvc
+MrrP      --> MrrSvc
+RevMixP   --> RevMixSvc
+UsageP    --> UsageSvc
+UsageTrP  --> UsageTrSvc
+SubsP     --> SubsSvc
+PaySchP   --> PaySchSvc
+PayHistP  --> PayHistSvc
+InstallsP --> InstallsSvc
+NnsP      --> NnsSvc
+RarP      --> RarSvc
+ChurnP    --> ChurnSvc
+RetP      --> RetSvc
+CohortsP  --> CohortsSvc
+ReviewsP  --> ReviewsSvc
+UninstallP --> UninstallSvc
+
+' ══════════════════════════════════════════════
 '  Service → ApiClient
 ' ══════════════════════════════════════════════
 AppSvc --> API
@@ -138,6 +206,34 @@ SubSvc --> API
 SyncSvc --> API
 TxSvc --> API
 PrefsSvc --> API
+
+' Report services → ApiClient
+EarnRepSvc  --> API
+MrrSvc      --> API
+RevMixSvc   --> API
+UsageSvc    --> API
+UsageTrSvc  --> API
+SubsSvc     --> API
+PaySchSvc   --> API
+PayHistSvc  --> API
+InstallsSvc --> API
+NnsSvc      --> API
+RarSvc      --> API
+ChurnSvc    --> API
+RetSvc      --> API
+CohortsSvc  --> API
+ReviewsSvc  --> API
+UninstallSvc --> API
+
+note top of EarnRepSvc
+  **Report services (16)**
+  Each wraps ApiClient and exposes the report
+  summary fetch plus a paged rows fetch backing
+  the provider's fetch<Rows>Page() (e.g.
+  fetchChargesPage, fetchStoresPage,
+  fetchPayoutsPage, fetchEventsPage,
+  fetchSubscriptionsPage) for "View all" pages.
+end note
 
 ' MixpanelService does NOT use ApiClient
 note right of MixSvc
@@ -165,6 +261,24 @@ Demo ..> AnalyticsP
 Demo ..> EarningsP
 Demo ..> InsightsP
 Demo ..> WebhookP
+
+' DemoModeCoordinator also wraps all 16 report providers
+Demo ..> EarnRepP
+Demo ..> MrrP
+Demo ..> RevMixP
+Demo ..> UsageP
+Demo ..> UsageTrP
+Demo ..> SubsP
+Demo ..> PaySchP
+Demo ..> PayHistP
+Demo ..> InstallsP
+Demo ..> NnsP
+Demo ..> RarP
+Demo ..> ChurnP
+Demo ..> RetP
+Demo ..> CohortsP
+Demo ..> ReviewsP
+Demo ..> UninstallP
 
 note bottom of Demo
   Injects mock data into

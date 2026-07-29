@@ -96,8 +96,78 @@ state "AppShell\n(bottom bar / nav rail)" as AppShell {
     AuditLog --> Settings : Back
   }
 
+  ' ── Reports Navigation ──────────────────────────────────────
+  ' /reports index -> each report screen -> its "View all" paginated detail.
+  state "Reports Navigation" as ReportsNav {
+    state "/reports\nReportsScreen (index)" as ReportsIndex
+
+    ' Reports WITH a dedicated paginated "View all" detail screen
+    state "/reports/revenue-at-risk\nRevenueAtRiskScreen" as RarReport
+    state "/reports/revenue-at-risk/stores\nRevenueAtRiskStoresScreen" as RarDetail
+    state "/reports/churn\nChurnScreen" as ChurnReport
+    state "/reports/churn/stores\nChurnStoresScreen" as ChurnDetail
+    state "/reports/usage\nUsageScreen" as UsageReport
+    state "/reports/usage/stores\nUsageStoresScreen" as UsageDetail
+    state "/reports/payout-schedule\nPayoutScheduleScreen" as PayoutSchedReport
+    state "/reports/payout-schedule/payouts\nPayoutSchedulePayoutsScreen" as PayoutSchedDetail
+    state "/reports/payout-history\nPayoutHistoryScreen" as PayoutHistReport
+    state "/reports/payout-history/payouts\nPayoutHistoryPayoutsScreen" as PayoutHistDetail
+    state "/reports/installs\nInstallsScreen" as InstallsReport
+    state "/reports/installs/events\nInstallsEventsScreen" as InstallsDetail
+    state "/reports/net-new-subscriptions\nNetNewSubsScreen" as NnsReport
+    state "/reports/net-new-subscriptions/subscriptions\nNetNewSubsSubscriptionsScreen" as NnsDetail
+    state "/reports/earnings\nEarningsReportScreen" as EarningsReport
+    state "/reports/earnings/charges\nEarningsChargesScreen" as EarningsDetail
+
+    ' Reports WITHOUT a dedicated detail screen
+    state "/reports/retention\nRetentionScreen" as RetentionReport
+    state "/reports/usage-trends\nUsageTrendsScreen" as UsageTrendsReport
+    state "/reports/subscriptions\nSubscriptionsScreen" as SubsReport
+    state "/reports/cohorts\nCohortsReportScreen" as CohortsReport
+    state "/reports/reviews\nReviewsReportScreen" as ReviewsReport
+    state "/reports/uninstall-context\nUninstallContextScreen" as UninstallReport
+    state "/reports/mrr\nMrrReportScreen" as MrrReport
+    state "/reports/revenue-mix\nRevenueMixScreen" as RevMixReport
+
+    ' Index -> reports (open a report card)
+    ReportsIndex --> RarReport : Open report
+    ReportsIndex --> ChurnReport : Open report
+    ReportsIndex --> UsageReport : Open report
+    ReportsIndex --> PayoutSchedReport : Open report
+    ReportsIndex --> PayoutHistReport : Open report
+    ReportsIndex --> InstallsReport : Open report
+    ReportsIndex --> NnsReport : Open report
+    ReportsIndex --> EarningsReport : Open report
+    ReportsIndex --> RetentionReport : Open report
+    ReportsIndex --> UsageTrendsReport : Open report
+    ReportsIndex --> SubsReport : Open report
+    ReportsIndex --> CohortsReport : Open report
+    ReportsIndex --> ReviewsReport : Open report
+    ReportsIndex --> UninstallReport : Open report
+    ReportsIndex --> MrrReport : Open report
+    ReportsIndex --> RevMixReport : Open report
+
+    ' Report preview -> paginated detail (drill-down "View all")
+    RarReport --> RarDetail : View all
+    ChurnReport --> ChurnDetail : View all
+    UsageReport --> UsageDetail : View all
+    PayoutSchedReport --> PayoutSchedDetail : View all
+    PayoutHistReport --> PayoutHistDetail : View all
+    InstallsReport --> InstallsDetail : View all
+    NnsReport --> NnsDetail : View all
+    EarningsReport --> EarningsDetail : View all
+
+    note bottom of ReportsIndex
+      /reports appended LAST as its own
+      StatefulShellBranch so existing
+      branch indices don't shift.
+      "View all" drills preview -> paginated detail.
+    end note
+  }
+
   ' ── Navigation between sections ─────────────────────────────
   PrimaryNav -[hidden]-> SecondaryNav
+  SecondaryNav -[hidden]-> ReportsNav
 }
 
 ' ─── Logout ───────────────────────────────────────────────────

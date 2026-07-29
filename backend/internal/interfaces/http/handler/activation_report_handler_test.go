@@ -141,6 +141,10 @@ func TestActivation_StartedNeedsAcceptedEvent(t *testing.T) {
 	if resp.Installs != 1 || resp.Started != 0 || resp.Paid != 0 {
 		t.Fatalf("expected installs=1 started=0 paid=0 (no accepted event), got %d/%d/%d", resp.Installs, resp.Started, resp.Paid)
 	}
+	// started=0 with installs>0: SubToPaidPct divides by zero → guarded to 0.
+	if resp.SubToPaidPct != 0 || resp.Stages[2].PctOfPrior != 0 {
+		t.Errorf("subToPaidPct must be 0 when started=0, got %v (stage pctOfPrior %v)", resp.SubToPaidPct, resp.Stages[2].PctOfPrior)
+	}
 }
 
 // TestActivation_AcceptedButNotCharged: a shop that installed + accepted but whose
@@ -188,6 +192,38 @@ func TestActivation_CanonicalisesShopIdentity(t *testing.T) {
 	resp := decodeActivation(t, doActivation(t, h, aid, pa, "from=2026-07-01&to=2026-07-31"))
 	if resp.Installs != 1 || resp.Started != 1 || resp.Paid != 1 {
 		t.Fatalf("expected 1/1/1 after canonicalisation, got %d/%d/%d", resp.Installs, resp.Started, resp.Paid)
+	}
+}
+
+// TestActivation_CanonCollisionDedupsInstalls: two install events for the SAME shop, one
+// keyed by GID and one by domain, must dedup to a single install (not double-count). This
+// guards the canonicalisation that underpins every count the report produces.
+func TestActivation_CanonCollisionDedupsInstalls(t *testing.T) {
+	appID := uuid.New()
+	subs := []*entity.Subscription{actSub(appID, "gid://shop/1", "shop1.myshopify.com", true)}
+	events := []*entity.AppEvent{
+		installEvt("gid://shop/1", "RELATIONSHIP_INSTALLED", actDay),        // GID-keyed
+		installEvt("shop1.myshopify.com", "RELATIONSHIP_INSTALLED", actDay), // domain-keyed, same shop
+		acctEvt("gid://shop/1", actDay),
+	}
+	aid, pa, h := activationFixture(subs, events)
+	resp := decodeActivation(t, doActivation(t, h, aid, pa, "from=2026-07-01&to=2026-07-31"))
+	if resp.Installs != 1 || resp.Started != 1 || resp.Paid != 1 {
+		t.Fatalf("two raw keys for one shop must dedup to 1 install, got installs=%d started=%d paid=%d", resp.Installs, resp.Started, resp.Paid)
+	}
+}
+
+// TestActivation_AcceptedNoSubIsNotPaid: an install + accepted event for a shop with NO
+// subscription row at all counts as started but never paid (paidShopKeys stays empty).
+func TestActivation_AcceptedNoSubIsNotPaid(t *testing.T) {
+	events := []*entity.AppEvent{
+		installEvt("s9", "RELATIONSHIP_INSTALLED", actDay),
+		acctEvt("s9", actDay),
+	}
+	aid, pa, h := activationFixture(nil, events) // no subscriptions
+	resp := decodeActivation(t, doActivation(t, h, aid, pa, "from=2026-07-01&to=2026-07-31"))
+	if resp.Installs != 1 || resp.Started != 1 || resp.Paid != 0 {
+		t.Fatalf("orphan accept: expected installs=1 started=1 paid=0, got %d/%d/%d", resp.Installs, resp.Started, resp.Paid)
 	}
 }
 
@@ -269,6 +305,13 @@ func TestActivation_CSV(t *testing.T) {
 	}
 	if rows[1][1] != "2" || rows[2][1] != "2" || rows[3][1] != "1" {
 		t.Errorf("CSV counts wrong (want installs=2 started=2 paid=1): %v", rows)
+	}
+	// pctOfPrior (col 2) + pctOfInstalls (col 3): installs=1.0/1.0; paid=0.5 of started, 0.5 of installs.
+	if rows[1][2] != "1.0000" || rows[1][3] != "1.0000" {
+		t.Errorf("installs row pct wrong: %v", rows[1])
+	}
+	if rows[3][2] != "0.5000" || rows[3][3] != "0.5000" {
+		t.Errorf("paid row pct wrong (want pctOfPrior=0.5 pctOfInstalls=0.5): %v", rows[3])
 	}
 }
 

@@ -160,8 +160,11 @@ func buildActivationReport(events []*entity.AppEvent, subs []*entity.Subscriptio
 		}
 	}
 
-	// paidShopKeys: shops whose subscription reached a first recurring charge. Indexed by
-	// BOTH domain and (canonicalised) shop GID so a funnel shop matches on either identity.
+	// paidShopKeys: shops whose subscription reached a first recurring charge. Keyed by the
+	// domain (the canonical identity, matching canon's output) and — only when the sub has
+	// no domain — by its raw shop GID, so a funnel shop matches whichever identity its
+	// events carry. (canon(sub.ShopifyShopGID) resolves back to this sub's domain when it
+	// has one, so the second insert is a no-op then and only adds the raw GID otherwise.)
 	paidShopKeys := map[string]bool{}
 	for _, sub := range subs {
 		if !subReachedRecurringCharge(sub) {

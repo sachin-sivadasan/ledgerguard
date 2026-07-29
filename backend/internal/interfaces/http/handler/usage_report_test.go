@@ -398,3 +398,68 @@ func TestUsage_CSVFormatAndEscaping(t *testing.T) {
 		t.Errorf("big row values: got usage=%s oneTime=%s count=%s", records[1][2], records[1][3], records[1][4])
 	}
 }
+
+// TestUsage_Paging verifies the per-store ranked table is paged server-side: no paging
+// returns every store with storesTotal = full count; a limit/offset window returns just
+// that slice (usage-desc order preserved); the KPIs ignore paging; and an offset past the
+// end yields an empty window with total unchanged.
+func TestUsage_Paging(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+
+	// 6 distinct domains, usage increasing with index → sorted desc, shop 'f' leads.
+	const n = 6
+	txs := make([]*entity.Transaction, 0, n)
+	for i := 0; i < n; i++ {
+		domain := string(rune('a'+i)) + ".myshopify.com"
+		txs = append(txs, usageTx(appID, domain, "Shop", valueobject.ChargeTypeUsage, int64(1000*(i+1))))
+	}
+	h := NewUsageReportHandler(
+		&mockTxRepo{transactions: txs},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+
+	decode := func(rec *httptest.ResponseRecorder) usageReport {
+		t.Helper()
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+		}
+		var resp usageReport
+		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		return resp
+	}
+
+	// No paging → all rows, storesTotal = full count.
+	all := decode(doUsage(t, h, appID, pa, ""))
+	if len(all.Stores) != n || all.StoresTotal != n {
+		t.Fatalf("no-paging: got %d rows / total %d, want %d / %d", len(all.Stores), all.StoresTotal, n, n)
+	}
+	wantUsage := all.UsageCents
+
+	// limit=2&offset=1 → the [1,3) window (usage desc: f,e,d,c,b,a → offset 1 = e).
+	page := decode(doUsage(t, h, appID, pa, "limit=2&offset=1"))
+	if page.StoresTotal != n {
+		t.Errorf("paged storesTotal = %d, want %d (full count)", page.StoresTotal, n)
+	}
+	if len(page.Stores) != 2 {
+		t.Fatalf("paged rows = %d, want 2", len(page.Stores))
+	}
+	if page.Stores[0].Domain != "e.myshopify.com" {
+		t.Errorf("paged stores[0].domain = %q, want e.myshopify.com", page.Stores[0].Domain)
+	}
+	// KPIs must reflect the FULL set regardless of paging.
+	if page.UsageCents != wantUsage {
+		t.Errorf("paged usageCents = %d, want %d (KPIs must ignore paging)", page.UsageCents, wantUsage)
+	}
+
+	// offset past the end → empty (non-nil) window, total unchanged.
+	beyond := decode(doUsage(t, h, appID, pa, "limit=2&offset=99"))
+	if len(beyond.Stores) != 0 || beyond.StoresTotal != n {
+		t.Errorf("beyond-end: got %d rows / total %d, want 0 / %d", len(beyond.Stores), beyond.StoresTotal, n)
+	}
+}

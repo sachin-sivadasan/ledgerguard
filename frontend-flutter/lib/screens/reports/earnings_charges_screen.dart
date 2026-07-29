@@ -7,7 +7,6 @@ import '../../providers/apps_provider.dart';
 import '../../providers/earnings_report_provider.dart';
 import '../../services/earnings_report_service.dart';
 import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
 import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_table.dart';
@@ -96,6 +95,9 @@ class _EarningsChargesScreenState extends State<EarningsChargesScreen> {
       breadcrumb: 'Reports › Revenue & Billing › Earnings',
       subtitle: 'Every charge — net earnings by store, payout status, available date.',
       backAction: () => context.go('/reports/earnings'),
+      // scrollable:false — the table owns its own layout: sticky header, scrolling
+      // rows, and a fixed footer pager (LgPaginatedTable).
+      scrollable: false,
       child: _buildBody(),
     );
   }
@@ -105,10 +107,7 @@ class _EarningsChargesScreenState extends State<EarningsChargesScreen> {
       return LgErrorState(message: _error!, onRetry: _load);
     }
     if (_loading && _page == null) {
-      return const Center(child: Padding(
-        padding: EdgeInsets.all(LgSpacing.s600),
-        child: CircularProgressIndicator(),
-      ));
+      return const Center(child: CircularProgressIndicator());
     }
     final report = _page ?? EarningsReport.empty();
     final currency = report.currency;
@@ -117,103 +116,42 @@ class _EarningsChargesScreenState extends State<EarningsChargesScreen> {
     final theme = Theme.of(context);
     final secondary =
         theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary);
-
-    if (total == 0) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: LgSpacing.s400),
-        child: Text('No charges in the selected range.', style: secondary),
-      );
-    }
-
-    final from = _offset + 1;
     final to = _offset + rows.length;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Opacity(
-          opacity: _loading ? 0.5 : 1,
-          child: LgTable(
-            columns: const [
-              LgTableColumn('DATE', flex: 2),
-              LgTableColumn('STORE', flex: 4),
-              LgTableColumn('GROSS', flex: 2, numeric: true),
-              LgTableColumn('NET', flex: 2, numeric: true),
-              LgTableColumn('STATUS', flex: 2),
-              LgTableColumn('AVAILABLE DATE', flex: 3, numeric: true),
-            ],
-            rows: [
-              for (final c in rows)
-                [
-                  Text(_date(c.date), style: secondary),
-                  Text(
-                    c.shopName.isNotEmpty
-                        ? c.shopName
-                        : (c.domain.isNotEmpty ? c.domain : '—'),
-                    style: theme.textTheme.titleSmall,
-                  ),
-                  Text(_money(c.grossCents, currency), style: secondary),
-                  Text(_money(c.netCents, currency),
-                      style: theme.textTheme.titleSmall),
-                  _StatusChip(status: c.status),
-                  Text(_date(c.availableDate), style: secondary),
-                ],
-            ],
-          ),
-        ),
-        const SizedBox(height: LgSpacing.s400),
-        _Pager(
-          from: from,
-          to: to,
-          total: total,
-          canPrev: _offset > 0 && !_loading,
-          canNext: to < total && !_loading,
-          onPrev: () => _goTo((_offset - _pageSize).clamp(0, _offset)),
-          onNext: () => _goTo(_offset + _pageSize),
-        ),
+    return LgPaginatedTable(
+      columns: const [
+        LgTableColumn('DATE', flex: 2),
+        LgTableColumn('STORE', flex: 4),
+        LgTableColumn('GROSS', flex: 2, numeric: true),
+        LgTableColumn('NET', flex: 2, numeric: true),
+        LgTableColumn('STATUS', flex: 2),
+        LgTableColumn('AVAILABLE DATE', flex: 3, numeric: true),
       ],
-    );
-  }
-}
-
-class _Pager extends StatelessWidget {
-  final int from;
-  final int to;
-  final int total;
-  final bool canPrev;
-  final bool canNext;
-  final VoidCallback onPrev;
-  final VoidCallback onNext;
-  const _Pager({
-    required this.from,
-    required this.to,
-    required this.total,
-    required this.canPrev,
-    required this.canNext,
-    required this.onPrev,
-    required this.onNext,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final secondary = Theme.of(context)
-        .textTheme
-        .bodySmall
-        ?.copyWith(color: LgColors.textSecondary);
-    return Row(
-      children: [
-        Text('Showing $from–$to of $total', style: secondary),
-        const Spacer(),
-        OutlinedButton(
-          onPressed: canPrev ? onPrev : null,
-          child: const Text('← Prev'),
-        ),
-        const SizedBox(width: LgSpacing.s200),
-        OutlinedButton(
-          onPressed: canNext ? onNext : null,
-          child: const Text('Next →'),
-        ),
+      rows: [
+        for (final c in rows)
+          [
+            Text(_date(c.date), style: secondary),
+            Text(
+              c.shopName.isNotEmpty
+                  ? c.shopName
+                  : (c.domain.isNotEmpty ? c.domain : '—'),
+              style: theme.textTheme.titleSmall,
+            ),
+            Text(_money(c.grossCents, currency), style: secondary),
+            Text(_money(c.netCents, currency), style: theme.textTheme.titleSmall),
+            _StatusChip(status: c.status),
+            Text(_date(c.availableDate), style: secondary),
+          ],
       ],
+      from: rows.isEmpty ? 0 : _offset + 1,
+      to: to,
+      total: total,
+      canPrev: _offset > 0 && !_loading,
+      canNext: to < total && !_loading,
+      loading: _loading,
+      onPrev: () => _goTo((_offset - _pageSize).clamp(0, _offset)),
+      onNext: () => _goTo(_offset + _pageSize),
+      emptyMessage: 'No charges in the selected range.',
     );
   }
 }

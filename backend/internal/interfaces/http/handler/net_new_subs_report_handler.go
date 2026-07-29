@@ -16,11 +16,6 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
-// recentNewSubsLimit caps the recent-new-subscriptions table. KPIs and the trend count
-// ALL in-range subscriptions; only this table is truncated (newest first), and the true
-// totals remain visible in the New Subs / Net KPIs.
-const recentNewSubsLimit = 50
-
 // NetNewSubsReportHandler serves the "Net-New Subscriptions" report (REPORTS.md — Growth,
 // Archetype A): new vs churned subscriptions over a period with a daily net-new trend and
 // a recent-new-subscriptions table. Derived entirely from subscriptions — "new" = subs
@@ -73,6 +68,9 @@ type netNewSubsReport struct {
 	Interval  string             `json:"interval"` // trend granularity: day / week / month
 	Trend     []netNewTrendPoint `json:"trend"`
 	NewStores []newSubRow        `json:"newStores"`
+	// NewStoresTotal is the full new-stores count before ?limit/?offset paging, so
+	// the report preview and the dedicated page can show "N of M" / page correctly.
+	NewStoresTotal int64 `json:"newStoresTotal"`
 }
 
 // GetNetNewSubs returns the Net-New Subscriptions report for an app.
@@ -100,11 +98,18 @@ func (h *NetNewSubsReportHandler) GetNetNewSubs(w http.ResponseWriter, r *http.R
 	}
 
 	report := buildNetNewSubsReport(subs, from, to)
+	allStores := report.NewStores
+	report.NewStoresTotal = int64(len(allStores))
 
+	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeNewSubsCSV(w, report.NewStores)
+		writeNewSubsCSV(w, allStores)
 		return
 	}
+
+	// Page only the JSON store rows; KPIs and the trend already count all subs.
+	limit, offset := parsePaging(r)
+	report.NewStores = pageSlice(allStores, offset, limit)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
@@ -121,9 +126,10 @@ func writeNetNewSubsRepoError(w http.ResponseWriter, op string, err error) {
 
 // buildNetNewSubsReport counts new subscriptions (StartDate() in [from,to]) and churned
 // subscriptions (churnedDateOf in [from,to], whole `to` day inclusive), builds a daily
-// net-new trend (only days with activity, ascending), and a recent-new-subs table
-// (newest first, capped). Net = new − churned. A sub that both started and churned in the
-// window counts in both (net 0 for it), which is the correct net-growth semantics.
+// net-new trend (only days with activity, ascending), and the full recent-new-subs table
+// (newest first); the caller pages that table via parsePaging/pageSlice. Net = new −
+// churned. A sub that both started and churned in the window counts in both (net 0 for
+// it), which is the correct net-growth semantics.
 func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netNewSubsReport {
 	toExclusive := to.AddDate(0, 0, 1)
 	inRange := func(t time.Time) bool { return !t.Before(from) && t.Before(toExclusive) }
@@ -203,15 +209,13 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netN
 		})
 	}
 
-	// Recent new subscriptions: newest first (by StartDate — the business start), capped.
+	// Recent new subscriptions: newest first (by StartDate — the business start). The
+	// full list is returned; the handler pages it (KPIs and the trend count all subs).
 	sort.SliceStable(newList, func(i, j int) bool {
 		return newList[i].StartDate().After(newList[j].StartDate())
 	})
 	newStores := make([]newSubRow, 0, len(newList))
-	for i, s := range newList {
-		if i >= recentNewSubsLimit {
-			break
-		}
+	for _, s := range newList {
 		newStores = append(newStores, newSubRow{
 			Domain:   s.MyshopifyDomain,
 			ShopName: s.ShopName,

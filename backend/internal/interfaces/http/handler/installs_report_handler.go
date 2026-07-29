@@ -14,11 +14,6 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
-// recentInstallEventsLimit caps the recent-events table. KPIs and the trend use ALL
-// in-range events; only this table is truncated (newest first), and the true totals
-// remain visible in the Installs/Uninstalls KPIs.
-const recentInstallEventsLimit = 50
-
 // InstallsReportHandler serves the "Installs" report (REPORTS.md — Growth, Archetype A):
 // install vs uninstall activity over a period with a daily trend and a recent-events
 // table. Derived from RELATIONSHIP_INSTALLED / RELATIONSHIP_UNINSTALLED app-events,
@@ -69,6 +64,9 @@ type installsReport struct {
 	Interval   string              `json:"interval"` // trend granularity: day / week / month
 	Trend      []installTrendPoint `json:"trend"`
 	Events     []installEvent      `json:"events"`
+	// EventsTotal is the full recent-events count before ?limit/?offset paging, so
+	// the report preview and the dedicated page can show "N of M" / page correctly.
+	EventsTotal int64 `json:"eventsTotal"`
 }
 
 // GetInstalls returns the Installs report for an app.
@@ -102,11 +100,18 @@ func (h *InstallsReportHandler) GetInstalls(w http.ResponseWriter, r *http.Reque
 	}
 
 	report := buildInstallsReport(events, indexSubsByShop(subs), from, to)
+	allEvents := report.Events
+	report.EventsTotal = int64(len(allEvents))
 
+	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeInstallEventsCSV(w, report.Events)
+		writeInstallEventsCSV(w, allEvents)
 		return
 	}
+
+	// Page only the JSON event rows; KPIs and the trend already reflect all events.
+	limit, offset := parsePaging(r)
+	report.Events = pageSlice(allEvents, offset, limit)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
@@ -142,10 +147,11 @@ func installEventKind(eventType string) string {
 
 // buildInstallsReport counts install/uninstall events in the [from,to] window (whole
 // `to` day inclusive, matching the other event reports' boundary), builds a daily trend
-// (only days with activity, ascending), and a recent-events table (newest first, capped
-// at recentInstallEventsLimit). Net = installs − uninstalls. A store domain is resolved
-// from the correlated subscription when the join hits, falling back to the event's stored
-// shop identifier (which may be a myshopify domain or a GID depending on the sync source).
+// (only days with activity, ascending), and the full recent-events table (newest first);
+// the caller pages that table via parsePaging/pageSlice. Net = installs − uninstalls. A
+// store domain is resolved from the correlated subscription when the join hits, falling
+// back to the event's stored shop identifier (which may be a myshopify domain or a GID
+// depending on the sync source).
 func buildInstallsReport(events []*entity.AppEvent, subsByShop map[string]*entity.Subscription, from, to time.Time) installsReport {
 	toExclusive := to.AddDate(0, 0, 1)
 	interval := resolveTrendInterval(from, to)
@@ -197,15 +203,13 @@ func buildInstallsReport(events []*entity.AppEvent, subsByShop map[string]*entit
 		trend = append(trend, installTrendPoint{Date: day, Installs: d.installs, Uninstalls: d.uninstalls})
 	}
 
-	// Recent events: newest first (by exact OccurredAt), capped.
+	// Recent events: newest first (by exact OccurredAt). The full list is returned;
+	// the handler pages it (KPIs and the trend already count every event).
 	sort.SliceStable(matched, func(i, j int) bool {
 		return matched[i].OccurredAt.After(matched[j].OccurredAt)
 	})
 	recent := make([]installEvent, 0, len(matched))
-	for i, e := range matched {
-		if i >= recentInstallEventsLimit {
-			break
-		}
+	for _, e := range matched {
 		domain := e.ShopifyShopGID
 		if sub := subsByShop[e.ShopifyShopGID]; sub != nil && sub.MyshopifyDomain != "" {
 			domain = sub.MyshopifyDomain

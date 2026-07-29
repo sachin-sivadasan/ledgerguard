@@ -149,8 +149,9 @@ class _EarningsReportScreenState extends State<EarningsReportScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      // Fixed: app-selector + KPI hero. Scrollable: the charges table.
-      pinned: Column(
+      // Normal page scroll: the report is a short summary (KPIs + an 8-row charge
+      // preview + "View all" → the dedicated, paged charges page). No pinned porthole.
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -173,19 +174,22 @@ class _EarningsReportScreenState extends State<EarningsReportScreen>
                 ),
               ),
             ),
-            if (hasData) const SizedBox(height: LgSpacing.s300),
+            const SizedBox(height: LgSpacing.s300),
           ],
-          if (hasData) _HeroRow(report: report, currency: currency),
-        ],
-      ),
-      child: !hasData
-          ? const LgEmptyState(
+          if (!hasData)
+            const LgEmptyState(
               icon: Icons.account_balance_wallet_outlined,
               heading: 'No earnings in range',
               description:
                   'Earnings are developer payouts after Shopify takes its revenue share. Once your app records charges in this range, net earnings, pending/available/paid-out balances, and the charge breakdown will appear here.',
             )
-          : _ChargesTable(report: report, currency: currency),
+          else ...[
+            _HeroRow(report: report, currency: currency),
+            const SizedBox(height: LgSpacing.s600),
+            _ChargesTable(report: report, currency: currency),
+          ],
+        ],
+      ),
     );
   }
 }

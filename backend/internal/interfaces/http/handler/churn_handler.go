@@ -66,6 +66,9 @@ type churnReport struct {
 	// Interval is the trend granularity: day / week / month.
 	Interval string       `json:"interval"`
 	Stores   []churnStore `json:"stores"`
+	// StoresTotal is the full store count before ?limit/?offset paging, so the
+	// report preview and the dedicated page can show "N of M" / page correctly.
+	StoresTotal int64 `json:"storesTotal"`
 }
 
 // GetChurn returns the Churn report for an app.
@@ -103,11 +106,17 @@ func (h *ChurnHandler) GetChurn(w http.ResponseWriter, r *http.Request) {
 	report := buildChurnReport(churned, stores, latestSnapshot(snapshots))
 	report.Interval = string(interval)
 	report.Trend = buildChurnTrend(downsampleSnapshots(snapshots, interval))
+	report.StoresTotal = int64(len(stores))
 
+	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
 		writeChurnStoresCSV(w, stores)
 		return
 	}
+
+	// Page only the JSON store rows; KPIs above already reflect the full set.
+	limit, offset := parsePaging(r)
+	report.Stores = pageSlice(stores, offset, limit)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {

@@ -231,36 +231,51 @@ func TestNetNewSubs_RecentNewestFirstAndFields(t *testing.T) {
 	}
 }
 
-// TestNetNewSubs_RecentCapped verifies the table caps at recentNewSubsLimit (keeping the
-// newest) while NewSubs counts every in-range sub.
-func TestNetNewSubs_RecentCapped(t *testing.T) {
+// TestNetNewSubs_Paging verifies the new-stores table is paged server-side (replacing the
+// old fixed cap): no paging returns every in-range sub with newStoresTotal = full count; a
+// limit/offset window returns just that slice (newest-first order preserved); NewSubs
+// ignores paging; and an offset past the end yields an empty window with total unchanged.
+func TestNetNewSubs_Paging(t *testing.T) {
 	appID := uuid.New()
-	n := recentNewSubsLimit + 5
+	const n = 55
 	base := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)
 	subs := make([]*entity.Subscription, 0, n)
 	for i := range n {
-		// i increases with CreatedAt → shop/(n-1) is the newest.
+		// i increases with CreatedAt (→ StartDate) → shop/(n-1) is the newest.
 		subs = append(subs, nnNewSub(appID, fmt.Sprintf("shop%d.myshopify.com", i), "Pro", 1000, base.Add(time.Duration(i)*time.Hour)))
 	}
 	_, pa, h := nnFixture(subs)
-	resp := decodeNetNew(t, doNetNew(t, h, appID, pa, nnRange))
-	if resp.NewSubs != n {
-		t.Errorf("newSubs: expected %d (all counted), got %d", n, resp.NewSubs)
+
+	// No paging → all rows, newStoresTotal = full count.
+	all := decodeNetNew(t, doNetNew(t, h, appID, pa, nnRange))
+	if len(all.NewStores) != n || all.NewStoresTotal != n {
+		t.Fatalf("no-paging: got %d rows / total %d, want %d / %d", len(all.NewStores), all.NewStoresTotal, n, n)
 	}
-	if len(resp.NewStores) != recentNewSubsLimit {
-		t.Fatalf("newStores: expected capped at %d, got %d", recentNewSubsLimit, len(resp.NewStores))
+	if all.NewSubs != n {
+		t.Errorf("newSubs: expected %d (all counted), got %d", n, all.NewSubs)
 	}
-	if resp.NewStores[0].Domain != fmt.Sprintf("shop%d.myshopify.com", n-1) {
-		t.Errorf("newStores[0]: expected newest shop%d, got %q", n-1, resp.NewStores[0].Domain)
+
+	// limit=10&offset=5 → the [5,15) window of the newest-first list, total still n.
+	page := decodeNetNew(t, doNetNew(t, h, appID, pa, nnRange+"&limit=10&offset=5"))
+	if page.NewStoresTotal != n {
+		t.Errorf("paged newStoresTotal = %d, want %d (full count)", page.NewStoresTotal, n)
 	}
-	shown := make(map[string]bool, len(resp.NewStores))
-	for _, r := range resp.NewStores {
-		shown[r.Domain] = true
+	if len(page.NewStores) != 10 {
+		t.Fatalf("paged rows = %d, want 10", len(page.NewStores))
 	}
-	for i := range 5 { // oldest 5 dropped
-		if shown[fmt.Sprintf("shop%d.myshopify.com", i)] {
-			t.Errorf("expected oldest shop%d to be dropped by the cap", i)
-		}
+	// Newest-first: index 0 is shop/(n-1); offset 5 → shop/(n-1-5).
+	if page.NewStores[0].Domain != fmt.Sprintf("shop%d.myshopify.com", n-1-5) {
+		t.Errorf("paged newStores[0].domain = %q, want shop%d.myshopify.com", page.NewStores[0].Domain, n-1-5)
+	}
+	// KPIs must reflect the FULL set regardless of paging.
+	if page.NewSubs != all.NewSubs {
+		t.Errorf("paged newSubs = %d, want %d (KPIs must ignore paging)", page.NewSubs, all.NewSubs)
+	}
+
+	// offset past the end → empty (non-nil) window, total unchanged.
+	beyond := decodeNetNew(t, doNetNew(t, h, appID, pa, nnRange+"&limit=10&offset=999"))
+	if len(beyond.NewStores) != 0 || beyond.NewStoresTotal != n {
+		t.Errorf("beyond-end: got %d rows / total %d, want 0 / %d", len(beyond.NewStores), beyond.NewStoresTotal, n)
 	}
 }
 

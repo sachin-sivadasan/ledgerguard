@@ -306,3 +306,48 @@ func TestPayoutHistory_CSVFormat(t *testing.T) {
 		t.Errorf("rows = %q, %q; want 2026-06 then 2026-05 (desc)", records[1][0], records[2][0])
 	}
 }
+
+// TestPayoutHistory_Paging verifies the per-period rows are paged server-side: no paging
+// returns every period with rowsTotal = full count; a limit/offset window returns just
+// that slice (descending-period order preserved); KPIs ignore paging; and an offset past
+// the end yields an empty window with total unchanged.
+func TestPayoutHistory_Paging(t *testing.T) {
+	// 6 distinct charge months → 6 distinct rows, sorted period descending.
+	const n = 6
+	avail := phPaidJul5
+	txs := make([]*entity.Transaction, 0, n)
+	for i := 0; i < n; i++ {
+		charge := time.Date(2026, time.Month(1+i), 10, 0, 0, 0, 0, time.UTC)
+		txs = append(txs, phTx(int64(1000+i), entity.EarningsStatusPaidOut, charge, avail))
+	}
+
+	// No paging → all rows, rowsTotal = full count.
+	_, all := servePayoutHistory(t, txs, "")
+	if len(all.Rows) != n || all.RowsTotal != n {
+		t.Fatalf("no-paging: got %d rows / total %d, want %d / %d", len(all.Rows), all.RowsTotal, n, n)
+	}
+	wantTotalPaid := all.TotalPaidCents
+
+	// limit=2&offset=1 → the [1,3) window (descending period), total still n.
+	_, page := servePayoutHistory(t, txs, "limit=2&offset=1")
+	if page.RowsTotal != n {
+		t.Errorf("paged rowsTotal = %d, want %d (full count)", page.RowsTotal, n)
+	}
+	if len(page.Rows) != 2 {
+		t.Fatalf("paged rows = %d, want 2", len(page.Rows))
+	}
+	// Descending: rows[0] is the latest month (2026-06); offset 1 → 2026-05.
+	if page.Rows[0].Period != "2026-05" {
+		t.Errorf("paged rows[0].period = %q, want 2026-05", page.Rows[0].Period)
+	}
+	// KPIs must reflect the FULL set regardless of paging.
+	if page.TotalPaidCents != wantTotalPaid {
+		t.Errorf("paged totalPaidCents = %d, want %d (KPIs must ignore paging)", page.TotalPaidCents, wantTotalPaid)
+	}
+
+	// offset past the end → empty (non-nil) window, total unchanged.
+	_, beyond := servePayoutHistory(t, txs, "limit=2&offset=99")
+	if len(beyond.Rows) != 0 || beyond.RowsTotal != n {
+		t.Errorf("beyond-end: got %d rows / total %d, want 0 / %d", len(beyond.Rows), beyond.RowsTotal, n)
+	}
+}

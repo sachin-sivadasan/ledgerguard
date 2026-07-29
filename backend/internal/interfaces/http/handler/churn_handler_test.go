@@ -578,3 +578,72 @@ func TestChurn_CSVFormat(t *testing.T) {
 		t.Errorf("expected first row to be high MRR store, got %s", records[1][0])
 	}
 }
+
+// TestChurn_Paging verifies the churned-stores table is paged server-side: no paging
+// returns every store with storesTotal = full count; a limit/offset window returns just
+// that slice (MRR-lost-desc order preserved); KPIs (count, MRR lost) ignore paging; and an
+// offset past the end yields an empty window with total unchanged.
+func TestChurn_Paging(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+
+	// 6 churned stores, MRR increasing with index → sorted desc, shop 'f' leads.
+	const n = 6
+	subs := make([]*entity.Subscription, 0, n)
+	for i := 0; i < n; i++ {
+		domain := string(rune('a'+i)) + ".myshopify.com"
+		subs = append(subs, churnedSub(appID, domain, "Pro", int64(1000*(i+1))))
+	}
+	h := NewChurnHandler(
+		&mockSubscriptionRepo{subscriptions: subs},
+		&mockSnapshotRepoForForecast{},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+
+	decode := func(query string) churnReport {
+		t.Helper()
+		req := newChurnRequest(t, appID, pa, query)
+		rec := httptest.NewRecorder()
+		h.GetChurn(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+		}
+		var resp churnReport
+		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		return resp
+	}
+
+	// No paging → all rows, storesTotal = full count.
+	all := decode("")
+	if len(all.Stores) != n || all.StoresTotal != n {
+		t.Fatalf("no-paging: got %d rows / total %d, want %d / %d", len(all.Stores), all.StoresTotal, n, n)
+	}
+	wantCount, wantLost := all.ChurnedCount, all.ChurnedMrrLostCents
+
+	// limit=2&offset=1 → the [1,3) window (MRR lost desc: f,e,d,c,b,a → offset 1 = e).
+	page := decode("limit=2&offset=1")
+	if page.StoresTotal != n {
+		t.Errorf("paged storesTotal = %d, want %d (full count)", page.StoresTotal, n)
+	}
+	if len(page.Stores) != 2 {
+		t.Fatalf("paged rows = %d, want 2", len(page.Stores))
+	}
+	if page.Stores[0].Domain != "e.myshopify.com" {
+		t.Errorf("paged stores[0].domain = %q, want e.myshopify.com", page.Stores[0].Domain)
+	}
+	// KPIs must reflect the FULL set regardless of paging.
+	if page.ChurnedCount != wantCount || page.ChurnedMrrLostCents != wantLost {
+		t.Errorf("paged KPIs = {count %d, lost %d}, want {%d, %d} (KPIs must ignore paging)",
+			page.ChurnedCount, page.ChurnedMrrLostCents, wantCount, wantLost)
+	}
+
+	// offset past the end → empty (non-nil) window, total unchanged.
+	beyond := decode("limit=2&offset=99")
+	if len(beyond.Stores) != 0 || beyond.StoresTotal != n {
+		t.Errorf("beyond-end: got %d rows / total %d, want 0 / %d", len(beyond.Stores), beyond.StoresTotal, n)
+	}
+}

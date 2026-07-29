@@ -127,6 +127,46 @@ func TestActivation_FullFunnel(t *testing.T) {
 	}
 }
 
+// TestActivation_StagesAgreeWithScalars: the Stages array and the scalar
+// installs/started/paid + pcts are two representations of one funnel; pin that they never
+// disagree, and that nesting holds (paid ⊆ started ⊆ installs). Guards the two-sources-of-
+// truth risk the frontend depends on (it reads both).
+func TestActivation_StagesAgreeWithScalars(t *testing.T) {
+	appID := uuid.New()
+	subs := []*entity.Subscription{
+		actSub(appID, "s1", "s1.myshopify.com", true),
+		actSub(appID, "s2", "s2.myshopify.com", true),
+		actSub(appID, "s3", "s3.myshopify.com", false),
+	}
+	events := []*entity.AppEvent{
+		installEvt("s1", "RELATIONSHIP_INSTALLED", actDay),
+		installEvt("s2", "RELATIONSHIP_INSTALLED", actDay),
+		installEvt("s3", "RELATIONSHIP_INSTALLED", actDay),
+		installEvt("s4", "RELATIONSHIP_INSTALLED", actDay),
+		acctEvt("s1", actDay),
+		acctEvt("s2", actDay),
+		acctEvt("s3", actDay),
+	}
+	aid, pa, h := activationFixture(subs, events)
+	resp := decodeActivation(t, doActivation(t, h, aid, pa, "from=2026-07-01&to=2026-07-31"))
+
+	if resp.Paid > resp.Started || resp.Started > resp.Installs {
+		t.Fatalf("nesting violated: paid=%d started=%d installs=%d", resp.Paid, resp.Started, resp.Installs)
+	}
+	if len(resp.Stages) != 3 {
+		t.Fatalf("expected 3 stages, got %d", len(resp.Stages))
+	}
+	if resp.Stages[0].Count != resp.Installs || resp.Stages[1].Count != resp.Started || resp.Stages[2].Count != resp.Paid {
+		t.Errorf("stage counts disagree with scalars: stages=%+v scalars=%d/%d/%d", resp.Stages, resp.Installs, resp.Started, resp.Paid)
+	}
+	if !approxEq(resp.Stages[0].PctOfPrior, 1.0) ||
+		!approxEq(resp.Stages[1].PctOfPrior, resp.InstallToSubPct) ||
+		!approxEq(resp.Stages[2].PctOfPrior, resp.SubToPaidPct) {
+		t.Errorf("stage pctOfPrior disagrees with scalar pcts: stages=%+v install→sub=%v sub→paid=%v",
+			resp.Stages, resp.InstallToSubPct, resp.SubToPaidPct)
+	}
+}
+
 // TestActivation_StartedNeedsAcceptedEvent: a charged subscription whose shop has NO
 // SUBSCRIPTION_CHARGE_ACCEPTED event does NOT count as started (started is event-sourced,
 // not derived from the subscriptions table — that's what keeps started ≠ paid).

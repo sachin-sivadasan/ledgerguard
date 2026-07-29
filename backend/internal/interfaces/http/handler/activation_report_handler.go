@@ -24,10 +24,11 @@ import (
 //	Paid / Recurring     = those whose subscription ALSO reached a first recurring charge
 //
 // Sourcing the middle stage from the SUBSCRIPTION_CHARGE_ACCEPTED event (rather than the
-// subscriptions table) is what keeps "Started" distinct from "Paid": a subscription
-// record only exists once ≥1 RECURRING charge lands (ledger rebuild), so a merchant who
-// accepted a charge whose first recurring charge is pending/failed sits in Started but
-// not Paid. Mirrors InstallsReportHandler (events + subscriptions, no snapshots).
+// subscriptions table) is what keeps "Started" distinct from "Paid": a subscription row is
+// only persisted once ≥1 RECURRING charge lands (ledger rebuild), so a merchant who
+// accepted a charge whose first recurring charge is pending/failed has NO subscription row
+// — they appear in Started (they have the event) but not Paid (nothing puts them in
+// paidShopKeys). Mirrors InstallsReportHandler (events + subscriptions, no snapshots).
 //
 // Data caveat: app-events are ingested per-subscription and dev-capped (see future.md),
 // so the funnel renders sparse/empty with current live data until event coverage widens.
@@ -160,11 +161,10 @@ func buildActivationReport(events []*entity.AppEvent, subs []*entity.Subscriptio
 		}
 	}
 
-	// paidShopKeys: shops whose subscription reached a first recurring charge. Keyed by the
-	// domain (the canonical identity, matching canon's output) and — only when the sub has
-	// no domain — by its raw shop GID, so a funnel shop matches whichever identity its
-	// events carry. (canon(sub.ShopifyShopGID) resolves back to this sub's domain when it
-	// has one, so the second insert is a no-op then and only adds the raw GID otherwise.)
+	// paidShopKeys: shops whose subscription reached a first recurring charge, keyed by BOTH
+	// the sub's domain and its raw shop GID so a funnel shop matches whichever identity its
+	// events carry (canon maps a GID-keyed event to the sub's domain, and a domain-keyed
+	// event stays a domain — both are covered).
 	paidShopKeys := map[string]bool{}
 	for _, sub := range subs {
 		if !subReachedRecurringCharge(sub) {
@@ -174,7 +174,7 @@ func buildActivationReport(events []*entity.AppEvent, subs []*entity.Subscriptio
 			paidShopKeys[sub.MyshopifyDomain] = true
 		}
 		if sub.ShopifyShopGID != "" {
-			paidShopKeys[canon(sub.ShopifyShopGID)] = true
+			paidShopKeys[sub.ShopifyShopGID] = true
 		}
 	}
 
@@ -207,8 +207,15 @@ func buildActivationReport(events []*entity.AppEvent, subs []*entity.Subscriptio
 }
 
 // subReachedRecurringCharge reports whether a subscription reached a first recurring
-// charge — the "Paid / Recurring" signal. LastRecurringChargeDate is set whenever the
-// ledger rebuild sees a RECURRING transaction for the store.
+// charge — the "Paid / Recurring" signal.
+//
+// With the current ledger this is true for every persisted subscription: the rebuild only
+// creates a subscription once the store has ≥1 RECURRING transaction, and it always sets
+// LastRecurringChargeDate from the latest recurring charge. So the operative gate that
+// keeps a shop OUT of Paid is the ABSENCE of a subscription row (the shop never lands in
+// paidShopKeys) — an accepted-but-uncharged merchant has no row at all. This explicit
+// nil-check is defensive: it stays correct if the ledger ever persists subscriptions
+// before their first recurring charge (e.g. from the ACCEPTED event).
 func subReachedRecurringCharge(sub *entity.Subscription) bool {
 	return sub != nil && sub.LastRecurringChargeDate != nil
 }

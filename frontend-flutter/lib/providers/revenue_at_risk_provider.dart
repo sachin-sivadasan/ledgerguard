@@ -67,8 +67,13 @@ class RevenueAtRiskProvider extends ChangeNotifier {
     final token = _cancelToken;
     final range = resolveDateRange(_dateRange, DateTime.now());
     try {
+      // Report page shows a preview; the full table lives on the dedicated
+      // stores detail screen (server-paged). KPIs stay full regardless of limit.
       _report = await _service.fetchReport(appId,
-          from: range.from, to: range.to, cancelToken: token);
+          from: range.from,
+          to: range.to,
+          limit: kRevenueAtRiskStoresPreview,
+          cancelToken: token);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) {
         // A newer load superseded this one and will manage loading state.
@@ -102,6 +107,20 @@ class RevenueAtRiskProvider extends ChangeNotifier {
     return _service.fetchCsvBytes(appId, from: range.from, to: range.to);
   }
 
+  /// Fetches a single server-paged window of the stores table for the dedicated
+  /// detail screen, using the currently selected app + date range. KPIs come back
+  /// too (full-set) but the detail screen only uses the paged rows + storesTotal.
+  Future<RevenueAtRiskReport> fetchStoresPage({
+    required int limit,
+    required int offset,
+  }) {
+    final appId = _selectedAppId;
+    if (appId == null) return Future.value(RevenueAtRiskReport.empty());
+    final range = resolveDateRange(_dateRange, DateTime.now());
+    return _service.fetchReport(appId,
+        from: range.from, to: range.to, limit: limit, offset: offset);
+  }
+
   RevenueAtRiskReport _mockReport() {
     final now = DateTime.now();
     return RevenueAtRiskReport(
@@ -112,6 +131,7 @@ class RevenueAtRiskProvider extends ChangeNotifier {
       twoCycleCents: 6420,
       oneCycleCount: 8,
       twoCycleCount: 4,
+      storesTotal: 3,
       trend: List.generate(
         8,
         (i) => RevenueAtRiskTrendPoint(

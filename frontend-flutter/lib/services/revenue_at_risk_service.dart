@@ -67,6 +67,10 @@ class RevenueAtRiskReport {
   final List<RevenueAtRiskTrendPoint> trend;
   final List<RevenueAtRiskStore> stores;
 
+  /// Full at-risk-store count before ?limit/?offset paging — drives the report
+  /// preview's "View all N" affordance and the detail page's pagination.
+  final int storesTotal;
+
   RevenueAtRiskReport({
     required this.currency,
     required this.totalAtRiskCents,
@@ -77,6 +81,7 @@ class RevenueAtRiskReport {
     required this.twoCycleCount,
     required this.trend,
     required this.stores,
+    required this.storesTotal,
   });
 
   int get atRiskStoreCount => oneCycleCount + twoCycleCount;
@@ -84,6 +89,11 @@ class RevenueAtRiskReport {
   factory RevenueAtRiskReport.fromJson(Map<String, dynamic> json) {
     final byState = json['byState'] as Map<String, dynamic>? ?? const {};
     final counts = json['counts'] as Map<String, dynamic>? ?? const {};
+    final stores = (json['stores'] as List<dynamic>?)
+            ?.map((e) =>
+                RevenueAtRiskStore.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
     return RevenueAtRiskReport(
       currency: json['currency'] as String? ?? 'USD',
       totalAtRiskCents: (json['totalAtRiskCents'] as num?)?.toInt() ?? 0,
@@ -97,11 +107,9 @@ class RevenueAtRiskReport {
                   e as Map<String, dynamic>))
               .toList() ??
           [],
-      stores: (json['stores'] as List<dynamic>?)
-              ?.map((e) =>
-                  RevenueAtRiskStore.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      stores: stores,
+      // Fall back to the visible count for older responses without the field.
+      storesTotal: (json['storesTotal'] as num?)?.toInt() ?? stores.length,
     );
   }
 
@@ -115,6 +123,7 @@ class RevenueAtRiskReport {
         twoCycleCount: 0,
         trend: const [],
         stores: const [],
+        storesTotal: 0,
       );
 }
 
@@ -127,11 +136,15 @@ class RevenueAtRiskService {
     String appId, {
     String? from,
     String? to,
+    int? limit,
+    int? offset,
     CancelToken? cancelToken,
   }) async {
     final queryParameters = <String, dynamic>{};
     if (from != null) queryParameters['from'] = from;
     if (to != null) queryParameters['to'] = to;
+    if (limit != null) queryParameters['limit'] = limit;
+    if (offset != null) queryParameters['offset'] = offset;
     final response = await _client.get(
       '/api/v1/apps/$appId/reports/revenue-at-risk',
       queryParameters: queryParameters,
@@ -164,6 +177,12 @@ class RevenueAtRiskService {
     return Uint8List.fromList(response.data ?? const <int>[]);
   }
 }
+
+/// Rows shown in the Revenue at Risk report's store PREVIEW before "View all".
+const int kRevenueAtRiskStoresPreview = 8;
+
+/// Rows per page on the dedicated Revenue at Risk stores detail screen.
+const int kRevenueAtRiskStoresPageSize = 50;
 
 RiskState _parseRiskState(String? value) {
   switch (value) {

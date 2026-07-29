@@ -69,6 +69,9 @@ type usageReport struct {
 	// Interval is the trend granularity: day / week / month.
 	Interval string       `json:"interval"`
 	Stores   []usageStore `json:"stores"`
+	// StoresTotal is the full store count before ?limit/?offset paging, so the
+	// report preview and the dedicated page can show "N of M" / page correctly.
+	StoresTotal int64 `json:"storesTotal"`
 }
 
 // GetUsageReport returns the Usage & One-Time Charges report for an app.
@@ -108,10 +111,18 @@ func (h *UsageReportHandler) GetUsageReport(w http.ResponseWriter, r *http.Reque
 	// is correct — a monthly point is the rolling value as of end of month, not a sum.
 	report.Trend = buildUsageTrend(downsampleSnapshots(snapshots, interval))
 
+	allStores := report.Stores
+	report.StoresTotal = int64(len(allStores))
+
+	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeUsageStoresCSV(w, report.Stores)
+		writeUsageStoresCSV(w, allStores)
 		return
 	}
+
+	// Page only the JSON store rows; KPIs above already reflect the full set.
+	limit, offset := parsePaging(r)
+	report.Stores = pageSlice(allStores, offset, limit)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {

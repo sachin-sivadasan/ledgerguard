@@ -60,6 +60,10 @@ class ChurnReport {
   final List<ChurnTrendPoint> trend;
   final List<ChurnStore> stores;
 
+  /// Full churned-store count before ?limit/?offset paging — drives the report
+  /// preview's "View all N" affordance and the detail page's pagination.
+  final int storesTotal;
+
   ChurnReport({
     required this.currency,
     required this.churnRate,
@@ -67,9 +71,14 @@ class ChurnReport {
     required this.churnedCount,
     required this.trend,
     required this.stores,
+    required this.storesTotal,
   });
 
   factory ChurnReport.fromJson(Map<String, dynamic> json) {
+    final stores = (json['stores'] as List<dynamic>?)
+            ?.map((e) => ChurnStore.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
     return ChurnReport(
       currency: json['currency'] as String? ?? 'USD',
       churnRate: ((json['churnRate'] as num?)?.toDouble() ?? 0).clamp(0.0, 1.0),
@@ -81,10 +90,9 @@ class ChurnReport {
                   ChurnTrendPoint.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      stores: (json['stores'] as List<dynamic>?)
-              ?.map((e) => ChurnStore.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      stores: stores,
+      // Fall back to the visible count for older responses without the field.
+      storesTotal: (json['storesTotal'] as num?)?.toInt() ?? stores.length,
     );
   }
 
@@ -95,6 +103,7 @@ class ChurnReport {
         churnedCount: 0,
         trend: const [],
         stores: const [],
+        storesTotal: 0,
       );
 }
 
@@ -107,11 +116,15 @@ class ChurnService {
     String appId, {
     String? from,
     String? to,
+    int? limit,
+    int? offset,
     CancelToken? cancelToken,
   }) async {
     final queryParameters = <String, dynamic>{};
     if (from != null) queryParameters['from'] = from;
     if (to != null) queryParameters['to'] = to;
+    if (limit != null) queryParameters['limit'] = limit;
+    if (offset != null) queryParameters['offset'] = offset;
     final response = await _client.get(
       '/api/v1/apps/$appId/reports/churn',
       queryParameters: queryParameters,
@@ -144,6 +157,12 @@ class ChurnService {
     return Uint8List.fromList(response.data ?? const <int>[]);
   }
 }
+
+/// Rows shown in the Churn report's churned-stores PREVIEW before "View all".
+const int kChurnStoresPreview = 8;
+
+/// Rows per page on the dedicated Churn stores detail screen.
+const int kChurnStoresPageSize = 50;
 
 DateTime? _parseDate(String? value) {
   if (value == null || value.isEmpty) return null;

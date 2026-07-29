@@ -135,8 +135,9 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
-      pinned: Column(
+      // Normal page scroll: the report is a short summary (KPIs + trend + an
+      // 8-row store preview + "View all" → the dedicated, paged stores page).
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -159,26 +160,24 @@ class _RevenueAtRiskScreenState extends State<RevenueAtRiskScreen>
                 ),
               ),
             ),
-            if (hasRisk) const SizedBox(height: LgSpacing.s300),
+            const SizedBox(height: LgSpacing.s300),
           ],
-          if (hasRisk) _HeroRow(report: report, currency: currency),
-        ],
-      ),
-      child: !hasRisk
-          ? const LgEmptyState(
+          if (!hasRisk)
+            const LgEmptyState(
               icon: Icons.check_circle_outline,
               heading: 'No revenue at risk 🎉',
               description:
                   'All subscriptions are on track. Nothing needs recovery right now.',
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _TrendCard(report: report, currency: currency),
-                const SizedBox(height: LgSpacing.s600),
-                _StoresTable(report: report, currency: currency),
-              ],
-            ),
+          else ...[
+            _HeroRow(report: report, currency: currency),
+            const SizedBox(height: LgSpacing.s600),
+            _TrendCard(report: report, currency: currency),
+            const SizedBox(height: LgSpacing.s600),
+            _StoresTable(report: report, currency: currency),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -471,7 +470,7 @@ class _StoresTable extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Ranked Stores (${stores.length})',
+          'Ranked Stores (${report.storesTotal})',
           style: theme.textTheme.titleMedium,
         ),
         const SizedBox(height: LgSpacing.s300),
@@ -509,6 +508,18 @@ class _StoresTable extends StatelessWidget {
               ],
           ],
         ),
+        if (report.storesTotal > stores.length) ...[
+          const SizedBox(height: LgSpacing.s300),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => context.go('/reports/revenue-at-risk/stores'),
+              child: Text(
+                'View all ${report.storesTotal} at-risk stores  →',
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

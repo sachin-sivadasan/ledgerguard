@@ -136,9 +136,8 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      // Fixed: app-selector only (no KPI hero on this report). Scrollable: the
-      // cohort heatmap card.
-      pinned: Column(
+      // Normal page scroll: app-selector at top, then the cohort heatmap card.
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter)
@@ -161,16 +160,16 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
                 ),
               ),
             ),
-        ],
-      ),
-      child: cohorts.isEmpty
-          ? const LgEmptyState(
+          const SizedBox(height: LgSpacing.s600),
+          if (cohorts.isEmpty)
+            const LgEmptyState(
               icon: Icons.group_work,
               heading: 'Cohort data not yet available',
               description:
                   'Cohort retention analysis requires at least two months of subscription data.',
             )
-          : LgCard(
+          else
+            LgCard(
               title: 'Cohort Retention Heatmap',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,6 +185,8 @@ class _CohortsReportScreenState extends State<CohortsReportScreen>
                 ],
               ),
             ),
+        ],
+      ),
     );
   }
 }

@@ -143,8 +143,9 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
-      pinned: Column(
+      // Normal page scroll: the report is a short summary (KPIs + an 8-row payout
+      // preview + "View all" → the dedicated, paged payouts page). No pinned porthole.
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -167,31 +168,42 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
                 ),
               ),
             ),
-            if (hasData) const SizedBox(height: LgSpacing.s300),
+            const SizedBox(height: LgSpacing.s300),
           ],
-          if (hasData) _HeroRow(report: report, currency: currency),
-        ],
-      ),
-      child: !hasData
-          ? const LgEmptyState(
+          if (!hasData)
+            const LgEmptyState(
               icon: Icons.history_outlined,
               heading: 'No completed payouts yet',
               description:
                   'Once earnings are marked paid out, a monthly summary appears here. Upcoming (not-yet-paid) earnings live in Payout Schedule.',
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _PayoutLogTable(report: report, currency: currency),
-                const SizedBox(height: LgSpacing.s400),
-                Text(
-                  'Each row is one calendar month of paid earnings; amounts are net of Shopify\'s revenue share. Upcoming earnings live in Payout Schedule.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: LgColors.textSecondary,
+          else ...[
+            _HeroRow(report: report, currency: currency),
+            const SizedBox(height: LgSpacing.s600),
+            _PayoutLogTable(report: report, currency: currency),
+            if (report.rowsTotal > report.rows.length) ...[
+              const SizedBox(height: LgSpacing.s300),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () =>
+                      context.go('/reports/payout-history/payouts'),
+                  child: Text(
+                    'View all ${report.rowsTotal} payouts  →',
                   ),
                 ),
-              ],
+              ),
+            ],
+            const SizedBox(height: LgSpacing.s400),
+            Text(
+              'Each row is one calendar month of paid earnings; amounts are net of Shopify\'s revenue share. Upcoming earnings live in Payout Schedule.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: LgColors.textSecondary,
+              ),
             ),
+          ],
+        ],
+      ),
     );
   }
 }

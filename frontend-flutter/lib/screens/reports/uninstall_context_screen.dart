@@ -143,8 +143,8 @@ class _UninstallContextScreenState extends State<UninstallContextScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
-      pinned: Column(
+      // Normal page scroll: app-selector + KPI hero at top, then tables/charts.
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -170,23 +170,21 @@ class _UninstallContextScreenState extends State<UninstallContextScreen>
             if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
           if (hasData) _HeroRow(report: report),
-        ],
-      ),
-      child: !hasData
-          ? const LgEmptyState(
+          const SizedBox(height: LgSpacing.s600),
+          if (!hasData)
+            const LgEmptyState(
               icon: Icons.link_off_outlined,
               heading: 'No uninstalls in range',
               description:
                   'When a store uninstalls your app, LedgerGuard infers the state it was in beforehand from risk signals. LedgerGuard is read-only, so there is no self-reported reason — once uninstalls occur in this range, they will appear here.',
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _CaveatLine(),
-                const SizedBox(height: LgSpacing.s600),
-                _StoresTable(report: report),
-              ],
-            ),
+          else ...[
+            const _CaveatLine(),
+            const SizedBox(height: LgSpacing.s600),
+            _StoresTable(report: report),
+          ],
+        ],
+      ),
     );
   }
 }

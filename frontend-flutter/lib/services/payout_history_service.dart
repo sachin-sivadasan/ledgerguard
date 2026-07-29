@@ -45,24 +45,32 @@ class PayoutHistoryReport {
   final int avgPayoutCents;
   final List<PayoutHistoryRow> rows;
 
+  /// Full payout-period count before ?limit/?offset paging — drives the report
+  /// preview's "View all N" affordance and the detail page's pagination.
+  final int rowsTotal;
+
   PayoutHistoryReport({
     required this.currency,
     required this.totalPaidCents,
     required this.payoutCount,
     required this.avgPayoutCents,
     required this.rows,
+    required this.rowsTotal,
   });
 
   factory PayoutHistoryReport.fromJson(Map<String, dynamic> json) {
+    final rows = (json['rows'] as List<dynamic>?)
+            ?.map((e) => PayoutHistoryRow.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
     return PayoutHistoryReport(
       currency: json['currency'] as String? ?? 'USD',
       totalPaidCents: (json['totalPaidCents'] as num?)?.toInt() ?? 0,
       payoutCount: (json['payoutCount'] as num?)?.toInt() ?? 0,
       avgPayoutCents: (json['avgPayoutCents'] as num?)?.toInt() ?? 0,
-      rows: (json['rows'] as List<dynamic>?)
-              ?.map((e) => PayoutHistoryRow.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      rows: rows,
+      // Fall back to the visible count for older responses without the field.
+      rowsTotal: (json['rowsTotal'] as num?)?.toInt() ?? rows.length,
     );
   }
 
@@ -72,6 +80,7 @@ class PayoutHistoryReport {
         payoutCount: 0,
         avgPayoutCents: 0,
         rows: const [],
+        rowsTotal: 0,
       );
 }
 
@@ -84,11 +93,15 @@ class PayoutHistoryService {
     String appId, {
     String? from,
     String? to,
+    int? limit,
+    int? offset,
     CancelToken? cancelToken,
   }) async {
     final queryParameters = <String, dynamic>{};
     if (from != null) queryParameters['from'] = from;
     if (to != null) queryParameters['to'] = to;
+    if (limit != null) queryParameters['limit'] = limit;
+    if (offset != null) queryParameters['offset'] = offset;
     final response = await _client.get(
       '/api/v1/apps/$appId/reports/payout-history',
       queryParameters: queryParameters,
@@ -117,6 +130,12 @@ class PayoutHistoryService {
     return Uint8List.fromList(response.data ?? const <int>[]);
   }
 }
+
+/// Rows shown in the Payout History report's PREVIEW before "View all".
+const int kPayoutHistoryPreview = 8;
+
+/// Rows per page on the dedicated Payout History payouts detail screen.
+const int kPayoutHistoryPageSize = 50;
 
 DateTime? _parseDate(String? value) {
   if (value == null || value.isEmpty) return null;

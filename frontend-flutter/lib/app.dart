@@ -26,12 +26,19 @@ import 'screens/reports/reviews_screen.dart';
 import 'screens/reports/revenue_at_risk_screen.dart';
 import 'screens/reports/revenue_mix_screen.dart';
 import 'screens/reports/usage_screen.dart';
+import 'screens/reports/usage_stores_screen.dart';
 import 'screens/reports/usage_trends_screen.dart';
 import 'screens/reports/subscriptions_screen.dart';
 import 'screens/reports/payout_schedule_screen.dart';
+import 'screens/reports/payout_schedule_payouts_screen.dart';
 import 'screens/reports/payout_history_screen.dart';
+import 'screens/reports/payout_history_payouts_screen.dart';
 import 'screens/reports/installs_screen.dart';
+import 'screens/reports/installs_events_screen.dart';
 import 'screens/reports/net_new_subs_screen.dart';
+import 'screens/reports/net_new_subs_subscriptions_screen.dart';
+import 'screens/reports/revenue_at_risk_stores_screen.dart';
+import 'screens/reports/churn_stores_screen.dart';
 import 'screens/reports/uninstall_context_screen.dart';
 import 'screens/risk/risk_screen.dart';
 import 'screens/settings/connect_shopify_screen.dart';
@@ -212,8 +219,16 @@ class _AppState extends State<App> {
                     builder: (c, s) => const RevenueAtRiskScreen(),
                   ),
                   GoRoute(
+                    path: 'revenue-at-risk/stores',
+                    builder: (c, s) => const RevenueAtRiskStoresScreen(),
+                  ),
+                  GoRoute(
                     path: 'churn',
                     builder: (c, s) => const ChurnScreen(),
+                  ),
+                  GoRoute(
+                    path: 'churn/stores',
+                    builder: (c, s) => const ChurnStoresScreen(),
                   ),
                   GoRoute(
                     path: 'retention',
@@ -222,6 +237,10 @@ class _AppState extends State<App> {
                   GoRoute(
                     path: 'usage',
                     builder: (c, s) => const UsageScreen(),
+                  ),
+                  GoRoute(
+                    path: 'usage/stores',
+                    builder: (c, s) => const UsageStoresScreen(),
                   ),
                   GoRoute(
                     path: 'usage-trends',
@@ -236,16 +255,32 @@ class _AppState extends State<App> {
                     builder: (c, s) => const PayoutScheduleScreen(),
                   ),
                   GoRoute(
+                    path: 'payout-schedule/payouts',
+                    builder: (c, s) => const PayoutSchedulePayoutsScreen(),
+                  ),
+                  GoRoute(
                     path: 'payout-history',
                     builder: (c, s) => const PayoutHistoryScreen(),
+                  ),
+                  GoRoute(
+                    path: 'payout-history/payouts',
+                    builder: (c, s) => const PayoutHistoryPayoutsScreen(),
                   ),
                   GoRoute(
                     path: 'installs',
                     builder: (c, s) => const InstallsScreen(),
                   ),
                   GoRoute(
+                    path: 'installs/events',
+                    builder: (c, s) => const InstallsEventsScreen(),
+                  ),
+                  GoRoute(
                     path: 'net-new-subscriptions',
                     builder: (c, s) => const NetNewSubsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'net-new-subscriptions/subscriptions',
+                    builder: (c, s) => const NetNewSubsSubscriptionsScreen(),
                   ),
                   GoRoute(
                     path: 'cohorts',

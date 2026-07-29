@@ -58,6 +58,9 @@ type payoutScheduleReport struct {
 	PendingCents        int64               `json:"pendingCents"`        // Σ PENDING net (still clearing)
 	NextPayoutDate      string              `json:"nextPayoutDate"`      // earliest scheduled date, or ""
 	Rows                []payoutScheduleRow `json:"rows"`
+	// RowsTotal is the full row count before ?limit/?offset paging, so the report
+	// preview and the dedicated page can show "N of M" / page correctly.
+	RowsTotal int64 `json:"rowsTotal"`
 }
 
 // GetPayoutSchedule returns the Payout Schedule report for an app.
@@ -85,11 +88,18 @@ func (h *PayoutScheduleReportHandler) GetPayoutSchedule(w http.ResponseWriter, r
 	}
 
 	report := buildPayoutScheduleReport(txs)
+	allRows := report.Rows
+	report.RowsTotal = int64(len(allRows))
 
+	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writePayoutScheduleCSV(w, report.Rows)
+		writePayoutScheduleCSV(w, allRows)
 		return
 	}
+
+	// Page only the JSON rows; KPIs above already reflect the full set.
+	limit, offset := parsePaging(r)
+	report.Rows = pageSlice(allRows, offset, limit)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {

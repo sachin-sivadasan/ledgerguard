@@ -70,6 +70,10 @@ class NetNewSubsReport {
   final List<NetNewTrendPoint> trend;
   final List<NewSubRow> newStores;
 
+  /// Full new-store-row count before ?limit/?offset paging — drives the report
+  /// preview's "View all N" affordance and the detail page's pagination.
+  final int newStoresTotal;
+
   NetNewSubsReport({
     required this.currency,
     required this.newSubs,
@@ -77,9 +81,14 @@ class NetNewSubsReport {
     required this.net,
     required this.trend,
     required this.newStores,
+    required this.newStoresTotal,
   });
 
   factory NetNewSubsReport.fromJson(Map<String, dynamic> json) {
+    final newStores = (json['newStores'] as List<dynamic>?)
+            ?.map((e) => NewSubRow.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
     return NetNewSubsReport(
       currency: json['currency'] as String? ?? 'USD',
       newSubs: (json['newSubs'] as num?)?.toInt() ?? 0,
@@ -90,10 +99,9 @@ class NetNewSubsReport {
               .whereType<NetNewTrendPoint>()
               .toList() ??
           [],
-      newStores: (json['newStores'] as List<dynamic>?)
-              ?.map((e) => NewSubRow.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      newStores: newStores,
+      // Fall back to the visible count for older responses without the field.
+      newStoresTotal: (json['newStoresTotal'] as num?)?.toInt() ?? newStores.length,
     );
   }
 
@@ -104,6 +112,7 @@ class NetNewSubsReport {
         net: 0,
         trend: const [],
         newStores: const [],
+        newStoresTotal: 0,
       );
 }
 
@@ -116,11 +125,15 @@ class NetNewSubsService {
     String appId, {
     String? from,
     String? to,
+    int? limit,
+    int? offset,
     CancelToken? cancelToken,
   }) async {
     final queryParameters = <String, dynamic>{};
     if (from != null) queryParameters['from'] = from;
     if (to != null) queryParameters['to'] = to;
+    if (limit != null) queryParameters['limit'] = limit;
+    if (offset != null) queryParameters['offset'] = offset;
     final response = await _client.get(
       '/api/v1/apps/$appId/reports/net-new-subscriptions',
       queryParameters: queryParameters,
@@ -149,6 +162,12 @@ class NetNewSubsService {
     return Uint8List.fromList(response.data ?? const <int>[]);
   }
 }
+
+/// Rows shown in the Net-New Subscriptions report's new-stores PREVIEW before "View all".
+const int kNetNewSubsPreview = 8;
+
+/// Rows per page on the dedicated Net-New Subscriptions detail screen.
+const int kNetNewSubsPageSize = 50;
 
 DateTime? _parseDate(String? value) {
   if (value == null || value.isEmpty) return null;

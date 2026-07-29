@@ -149,8 +149,8 @@ class _RetentionScreenState extends State<RetentionScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
-      pinned: Column(
+      // Normal page scroll: app-selector + KPI hero at top, then tables/charts.
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -176,23 +176,21 @@ class _RetentionScreenState extends State<RetentionScreen>
             if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
           if (hasData) _HeroRow(report: report, currency: currency),
-        ],
-      ),
-      child: !hasData
-          ? const LgEmptyState(
+          const SizedBox(height: LgSpacing.s600),
+          if (!hasData)
+            const LgEmptyState(
               icon: Icons.favorite_outline,
               heading: 'No active subscriptions yet',
               description:
                   'Retention measures how well recurring revenue carries into the next cycle. Once you have active subscriptions, renewal rate, retained MRR, and reactivations will appear here.',
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _TrendCard(report: report),
-                const SizedBox(height: LgSpacing.s600),
-                _PlansTable(report: report, currency: currency),
-              ],
-            ),
+          else ...[
+            _TrendCard(report: report),
+            const SizedBox(height: LgSpacing.s600),
+            _PlansTable(report: report, currency: currency),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -205,12 +205,12 @@ func TestInstalls_RecentEventsNewestFirstAndDomain(t *testing.T) {
 	}
 }
 
-// TestInstalls_RecentEventsCapped verifies the recent-events table caps at
-// recentInstallEventsLimit while the KPIs still count every event, AND that the cap keeps
-// the NEWEST rows (dropping the oldest) — a distinct domain/time per event pins which 50
-// survive, so a "keep oldest 50" regression is caught.
-func TestInstalls_RecentEventsCapped(t *testing.T) {
-	n := recentInstallEventsLimit + 5
+// TestInstalls_Paging verifies the recent-events table is paged server-side (replacing
+// the old fixed cap): no paging returns every event with eventsTotal = full count; a
+// limit/offset window returns just that slice (newest-first order preserved); the KPIs
+// ignore paging; and an offset past the end yields an empty window with total unchanged.
+func TestInstalls_Paging(t *testing.T) {
+	const n = 55
 	events := make([]*entity.AppEvent, 0, n)
 	base := time.Date(2026, 7, 10, 0, 0, 0, 0, time.UTC)
 	for i := range n {
@@ -218,25 +218,37 @@ func TestInstalls_RecentEventsCapped(t *testing.T) {
 		events = append(events, installEvt(fmt.Sprintf("gid://shop/%d", i), "RELATIONSHIP_INSTALLED", base.Add(time.Duration(i)*time.Minute)))
 	}
 	appID, pa, h := installsFixture(nil, events)
-	resp := decodeInstalls(t, doInstalls(t, h, appID, pa, "from=2026-07-01&to=2026-07-31"))
-	if resp.Installs != n {
-		t.Errorf("installs: expected %d (all counted), got %d", n, resp.Installs)
+
+	// No paging → all rows, eventsTotal = full count.
+	all := decodeInstalls(t, doInstalls(t, h, appID, pa, "from=2026-07-01&to=2026-07-31"))
+	if len(all.Events) != n || all.EventsTotal != n {
+		t.Fatalf("no-paging: got %d rows / total %d, want %d / %d", len(all.Events), all.EventsTotal, n, n)
 	}
-	if len(resp.Events) != recentInstallEventsLimit {
-		t.Fatalf("events: expected capped at %d, got %d", recentInstallEventsLimit, len(resp.Events))
+	if all.Installs != n {
+		t.Errorf("installs: expected %d (all counted), got %d", n, all.Installs)
 	}
-	// Newest survives at the top; the 5 oldest are dropped by the cap.
-	if resp.Events[0].Domain != fmt.Sprintf("gid://shop/%d", n-1) {
-		t.Errorf("events[0]: expected newest gid://shop/%d, got %q", n-1, resp.Events[0].Domain)
+
+	// limit=10&offset=5 → the [5,15) window of the newest-first list, total still n.
+	page := decodeInstalls(t, doInstalls(t, h, appID, pa, "from=2026-07-01&to=2026-07-31&limit=10&offset=5"))
+	if page.EventsTotal != n {
+		t.Errorf("paged eventsTotal = %d, want %d (full count)", page.EventsTotal, n)
 	}
-	shown := make(map[string]bool, len(resp.Events))
-	for _, e := range resp.Events {
-		shown[e.Domain] = true
+	if len(page.Events) != 10 {
+		t.Fatalf("paged rows = %d, want 10", len(page.Events))
 	}
-	for i := range 5 {
-		if shown[fmt.Sprintf("gid://shop/%d", i)] {
-			t.Errorf("expected oldest event gid://shop/%d to be dropped by the cap", i)
-		}
+	// Newest-first: index 0 is shop/(n-1); offset 5 → shop/(n-1-5).
+	if page.Events[0].Domain != fmt.Sprintf("gid://shop/%d", n-1-5) {
+		t.Errorf("paged events[0].domain = %q, want gid://shop/%d", page.Events[0].Domain, n-1-5)
+	}
+	// KPIs must reflect the FULL set regardless of paging.
+	if page.Installs != all.Installs {
+		t.Errorf("paged installs = %d, want %d (KPIs must ignore paging)", page.Installs, all.Installs)
+	}
+
+	// offset past the end → empty (non-nil) window, total unchanged.
+	beyond := decodeInstalls(t, doInstalls(t, h, appID, pa, "from=2026-07-01&to=2026-07-31&limit=10&offset=999"))
+	if len(beyond.Events) != 0 || beyond.EventsTotal != n {
+		t.Errorf("beyond-end: got %d rows / total %d, want 0 / %d", len(beyond.Events), beyond.EventsTotal, n)
 	}
 }
 

@@ -62,6 +62,9 @@ type payoutHistoryReport struct {
 	PayoutCount    int                `json:"payoutCount"`
 	AvgPayoutCents int64              `json:"avgPayoutCents"`
 	Rows           []payoutHistoryRow `json:"rows"`
+	// RowsTotal is the full row count before ?limit/?offset paging, so the report
+	// preview and the dedicated page can show "N of M" / page correctly.
+	RowsTotal int64 `json:"rowsTotal"`
 }
 
 // GetPayoutHistory returns the Payout History report for an app.
@@ -89,11 +92,18 @@ func (h *PayoutHistoryReportHandler) GetPayoutHistory(w http.ResponseWriter, r *
 	}
 
 	report := buildPayoutHistoryReport(txs)
+	allRows := report.Rows
+	report.RowsTotal = int64(len(allRows))
 
+	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writePayoutHistoryCSV(w, report.Rows)
+		writePayoutHistoryCSV(w, allRows)
 		return
 	}
+
+	// Page only the JSON rows; KPIs above already reflect the full set.
+	limit, offset := parsePaging(r)
+	report.Rows = pageSlice(allRows, offset, limit)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {

@@ -137,6 +137,32 @@ func TestActiveCustomers_HeadlineIsLiveNonChurned(t *testing.T) {
 	}
 }
 
+// TestActiveCustomers_AllChurnedHeadlineZero: subs exist but every one is churned →
+// empty plan table, headline 0, yet in-range churn still moves Churned/Net negative.
+// Guards that the live headline is a true sum of the (empty) plan breakdown, not a
+// fallback to the raw sub count.
+func TestActiveCustomers_AllChurnedHeadlineZero(t *testing.T) {
+	appID := uuid.New()
+	older := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	inRange := time.Date(2026, 7, 10, 0, 0, 0, 0, time.UTC)
+	subs := []*entity.Subscription{
+		nnChurnedSub(appID, "a.myshopify.com", older, inRange), // churns in-window
+		churnedSub(appID, "b.myshopify.com", "Pro", 5000),      // churned, out-of-window
+	}
+	aid, pa, h := activeCustomersFixture(subs, nil, nil)
+	rec := doActiveCustomers(t, h, aid, pa, "from=2026-07-01&to=2026-07-31")
+	resp := decodeActiveCustomers(t, rec)
+	if resp.ActiveCustomers != 0 {
+		t.Errorf("activeCustomers: expected 0 (all churned), got %d", resp.ActiveCustomers)
+	}
+	if len(resp.Plans) != 0 {
+		t.Errorf("expected empty plan table, got %d rows", len(resp.Plans))
+	}
+	if resp.ChurnedCount != 1 || resp.NetChange != -1 {
+		t.Errorf("expected churned=1 net=-1, got churned=%d net=%d", resp.ChurnedCount, resp.NetChange)
+	}
+}
+
 // TestActiveCustomers_NewChurnedNetInRange: New = StartDate in range; Churned = churn
 // date in range; Net = new − churned. Out-of-range subs are excluded.
 func TestActiveCustomers_NewChurnedNetInRange(t *testing.T) {

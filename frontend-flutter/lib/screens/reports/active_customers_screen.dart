@@ -318,8 +318,8 @@ class _TrendCard extends StatelessWidget {
                 child: Text(
                   'Trend data not yet available for this range.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: LgColors.textSecondary,
-                      ),
+                    color: LgColors.textSecondary,
+                  ),
                 ),
               ),
             ),
@@ -344,69 +344,69 @@ class _TrendCard extends StatelessWidget {
           SizedBox(
             height: 200,
             child: LineChart(
-          LineChartData(
-            minY: 0,
-            maxY: maxY == 0 ? 1 : maxY * 1.2,
-            gridData: const FlGridData(show: false),
-            borderData: FlBorderData(show: false),
-            titlesData: FlTitlesData(
-              topTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              rightTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 52,
-                  getTitlesWidget: (value, meta) {
-                    if (value == meta.min || value == meta.max) {
-                      return const SizedBox.shrink();
-                    }
-                    return Text(
-                      value.toInt().toString(),
-                      style: const TextStyle(fontSize: 10),
-                    );
-                  },
+              LineChartData(
+                minY: 0,
+                maxY: maxY == 0 ? 1 : maxY * 1.2,
+                gridData: const FlGridData(show: false),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 52,
+                      getTitlesWidget: (value, meta) {
+                        if (value == meta.min || value == meta.max) {
+                          return const SizedBox.shrink();
+                        }
+                        return Text(
+                          value.toInt().toString(),
+                          style: const TextStyle(fontSize: 10),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: (trend.length / 4)
+                          .clamp(1, trend.length)
+                          .toDouble(),
+                      getTitlesWidget: (value, meta) {
+                        final i = value.toInt();
+                        if (i < 0 || i >= trend.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            DateFormat('MMM d').format(trend[i].date),
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    color: LgColors.success,
+                    barWidth: 2,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: LgColors.success.withValues(alpha: 0.10),
+                    ),
+                  ),
+                ],
               ),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  interval: (trend.length / 4)
-                      .clamp(1, trend.length)
-                      .toDouble(),
-                  getTitlesWidget: (value, meta) {
-                    final i = value.toInt();
-                    if (i < 0 || i >= trend.length) {
-                      return const SizedBox.shrink();
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        DateFormat('MMM d').format(trend[i].date),
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            lineBarsData: [
-              LineChartBarData(
-                spots: spots,
-                isCurved: true,
-                color: LgColors.success,
-                barWidth: 2,
-                dotData: const FlDotData(show: false),
-                belowBarData: BarAreaData(
-                  show: true,
-                  color: LgColors.success.withValues(alpha: 0.10),
-                ),
-              ),
-            ],
-          ),
             ),
           ),
         ],
@@ -477,7 +477,10 @@ class _PlansTable extends StatelessWidget {
                   _money(p.mrrCents, currency),
                   style: theme.textTheme.titleSmall,
                 ),
-                Text(_percent(p.pctOfActive), style: theme.textTheme.titleSmall),
+                Text(
+                  _percent(p.pctOfActive),
+                  style: theme.textTheme.titleSmall,
+                ),
               ],
           ],
         ),

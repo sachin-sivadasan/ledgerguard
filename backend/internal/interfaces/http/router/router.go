@@ -42,6 +42,7 @@ type Config struct {
 	ChurnHandler                    *handler.ChurnHandler
 	RetentionHandler                *handler.RetentionHandler
 	MRRReportHandler                *handler.MRRReportHandler
+	ActiveCustomersReportHandler    *handler.ActiveCustomersReportHandler
 	EarningsReportHandler           *handler.EarningsReportHandler
 	RevenueMixReportHandler         *handler.RevenueMixReportHandler
 	UsageReportHandler              *handler.UsageReportHandler
@@ -272,6 +273,11 @@ func New(cfg Config) *chi.Mux {
 				// MRR report route
 				if cfg.MRRReportHandler != nil {
 					r.Get("/{appID}/reports/mrr", cfg.MRRReportHandler.GetMRRReport)
+				}
+
+				// Active Customers report route
+				if cfg.ActiveCustomersReportHandler != nil {
+					r.Get("/{appID}/reports/active-customers", cfg.ActiveCustomersReportHandler.GetActiveCustomersReport)
 				}
 
 				// Earnings report route

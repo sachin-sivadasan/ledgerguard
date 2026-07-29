@@ -100,7 +100,11 @@ class ReportsScreen extends StatelessWidget {
       ),
     ]),
     _ReportCategory('Customers', Icons.people_outline, [
-      _ReportEntry('Active Customers', 'Active paying merchants'),
+      _ReportEntry(
+        'Active Customers',
+        'Active paying merchants',
+        route: '/reports/active-customers',
+      ),
       _ReportEntry('Customer Insights', 'Segments and behavior'),
     ]),
     _ReportCategory('Guard', Icons.verified_user_outlined, [

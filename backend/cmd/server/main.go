@@ -385,6 +385,12 @@ func run() error {
 		log.Println("MRR report handler initialized")
 	}
 
+	var activeCustomersReportHandler *handler.ActiveCustomersReportHandler
+	if subscriptionRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
+		activeCustomersReportHandler = handler.NewActiveCustomersReportHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo)
+		log.Println("Active Customers report handler initialized")
+	}
+
 	// Initialize earnings report handler
 	var earningsReportHandler *handler.EarningsReportHandler
 	if txRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -858,6 +864,7 @@ func run() error {
 		ChurnHandler:                    churnHandler,
 		RetentionHandler:                retentionHandler,
 		MRRReportHandler:                mrrReportHandler,
+		ActiveCustomersReportHandler:    activeCustomersReportHandler,
 		EarningsReportHandler:           earningsReportHandler,
 		RevenueMixReportHandler:         revenueMixReportHandler,
 		UsageReportHandler:              usageReportHandler,

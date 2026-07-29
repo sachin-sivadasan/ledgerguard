@@ -147,7 +147,8 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: the trend + stores table.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -170,24 +171,26 @@ class _ChurnScreenState extends State<ChurnScreen> with DataLoadingMixin {
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasChurn) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasChurn)
-            const LgEmptyState(
+          if (hasChurn) _HeroRow(report: report, currency: currency),
+        ],
+      ),
+      child: !hasChurn
+          ? const LgEmptyState(
               icon: Icons.check_circle_outline,
               heading: 'No churned stores 🎉',
               description:
                   'No subscriptions are currently in the CHURNED state. Retention is holding steady.',
             )
-          else ...[
-            _HeroRow(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s600),
-            _TrendCard(report: report),
-            const SizedBox(height: LgSpacing.s600),
-            _StoresTable(report: report, currency: currency),
-          ],
-        ],
-      ),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _TrendCard(report: report),
+                const SizedBox(height: LgSpacing.s600),
+                _StoresTable(report: report, currency: currency),
+              ],
+            ),
     );
   }
 }
@@ -223,6 +226,7 @@ class _HeroRow extends StatelessWidget {
 
     if (LgBreakpoints.isMobile(context)) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: LgSpacing.s300),

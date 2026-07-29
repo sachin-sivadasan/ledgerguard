@@ -148,7 +148,8 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -171,31 +172,33 @@ class _NetNewSubsScreenState extends State<NetNewSubsScreen>
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasData)
-            const LgEmptyState(
+          if (hasData) _HeroRow(report: report),
+        ],
+      ),
+      child: !hasData
+          ? const LgEmptyState(
               icon: Icons.group_add_outlined,
               heading: 'No new subscriptions yet',
               description:
                   'Once merchants start subscribing to your app, net-new growth and the recent new subscriptions will appear here.',
             )
-          else ...[
-            _HeroRow(report: report),
-            const SizedBox(height: LgSpacing.s600),
-            _TrendCard(report: report),
-            const SizedBox(height: LgSpacing.s600),
-            _NewSubsTable(report: report),
-            const SizedBox(height: LgSpacing.s400),
-            Text(
-              'New = subscriptions started; churned = cancelled/churned. Net = new − churned.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _TrendCard(report: report),
+                const SizedBox(height: LgSpacing.s600),
+                _NewSubsTable(report: report),
+                const SizedBox(height: LgSpacing.s400),
+                Text(
+                  'New = subscriptions started; churned = cancelled/churned. Net = new − churned.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: LgColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ],
-      ),
     );
   }
 }
@@ -231,6 +234,7 @@ class _HeroRow extends StatelessWidget {
 
     if (LgBreakpoints.isMobile(context)) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: LgSpacing.s300),

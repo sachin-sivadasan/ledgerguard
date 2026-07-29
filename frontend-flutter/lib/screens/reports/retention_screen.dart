@@ -149,7 +149,8 @@ class _RetentionScreenState extends State<RetentionScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -172,24 +173,26 @@ class _RetentionScreenState extends State<RetentionScreen>
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasData)
-            const LgEmptyState(
+          if (hasData) _HeroRow(report: report, currency: currency),
+        ],
+      ),
+      child: !hasData
+          ? const LgEmptyState(
               icon: Icons.favorite_outline,
               heading: 'No active subscriptions yet',
               description:
                   'Retention measures how well recurring revenue carries into the next cycle. Once you have active subscriptions, renewal rate, retained MRR, and reactivations will appear here.',
             )
-          else ...[
-            _HeroRow(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s600),
-            _TrendCard(report: report),
-            const SizedBox(height: LgSpacing.s600),
-            _PlansTable(report: report, currency: currency),
-          ],
-        ],
-      ),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _TrendCard(report: report),
+                const SizedBox(height: LgSpacing.s600),
+                _PlansTable(report: report, currency: currency),
+              ],
+            ),
     );
   }
 }
@@ -226,6 +229,7 @@ class _HeroRow extends StatelessWidget {
 
     if (LgBreakpoints.isMobile(context)) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: LgSpacing.s300),

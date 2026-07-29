@@ -143,7 +143,8 @@ class _ReviewsReportScreenState extends State<ReviewsReportScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: distribution + reviews.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -166,34 +167,36 @@ class _ReviewsReportScreenState extends State<ReviewsReportScreen>
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasData)
-            const LgEmptyState(
+          if (hasData) _Hero(report: report),
+        ],
+      ),
+      child: !hasData
+          ? const LgEmptyState(
               icon: Icons.star_outline_rounded,
               heading: 'No reviews yet',
               description:
                   'Once merchants leave App Store reviews for this app, the average rating, rating distribution, and most recent feedback will appear here.',
             )
-          else ...[
-            _Hero(report: report),
-            const SizedBox(height: LgSpacing.s600),
-            if (LgBreakpoints.isMobile(context)) ...[
-              _DistributionCard(report: report),
-              const SizedBox(height: LgSpacing.s600),
-              _RecentReviews(report: report),
-            ] else
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: _DistributionCard(report: report)),
-                  const SizedBox(width: LgSpacing.s600),
-                  Expanded(child: _RecentReviews(report: report)),
-                ],
-              ),
-          ],
-        ],
-      ),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (LgBreakpoints.isMobile(context)) ...[
+                  _DistributionCard(report: report),
+                  const SizedBox(height: LgSpacing.s600),
+                  _RecentReviews(report: report),
+                ] else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _DistributionCard(report: report)),
+                      const SizedBox(width: LgSpacing.s600),
+                      Expanded(child: _RecentReviews(report: report)),
+                    ],
+                  ),
+              ],
+            ),
     );
   }
 }

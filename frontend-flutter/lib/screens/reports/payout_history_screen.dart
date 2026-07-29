@@ -143,7 +143,8 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -166,29 +167,31 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen>
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasData)
-            const LgEmptyState(
+          if (hasData) _HeroRow(report: report, currency: currency),
+        ],
+      ),
+      child: !hasData
+          ? const LgEmptyState(
               icon: Icons.history_outlined,
               heading: 'No completed payouts yet',
               description:
                   'Once earnings are marked paid out, a monthly summary appears here. Upcoming (not-yet-paid) earnings live in Payout Schedule.',
             )
-          else ...[
-            _HeroRow(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s600),
-            _PayoutLogTable(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s400),
-            Text(
-              'Each row is one calendar month of paid earnings; amounts are net of Shopify\'s revenue share. Upcoming earnings live in Payout Schedule.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _PayoutLogTable(report: report, currency: currency),
+                const SizedBox(height: LgSpacing.s400),
+                Text(
+                  'Each row is one calendar month of paid earnings; amounts are net of Shopify\'s revenue share. Upcoming earnings live in Payout Schedule.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: LgColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ],
-      ),
     );
   }
 }
@@ -224,6 +227,7 @@ class _HeroRow extends StatelessWidget {
 
     if (LgBreakpoints.isMobile(context)) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: LgSpacing.s300),

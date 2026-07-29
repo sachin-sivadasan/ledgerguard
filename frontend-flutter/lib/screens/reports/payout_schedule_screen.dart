@@ -147,7 +147,8 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
       secondaryActions: [
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
-      child: Column(
+      // Fixed: app-selector + KPI hero. Scrollable: the tables/charts.
+      pinned: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAppFilter) ...[
@@ -170,29 +171,31 @@ class _PayoutScheduleScreenState extends State<PayoutScheduleScreen>
                 ),
               ),
             ),
-            const SizedBox(height: LgSpacing.s300),
+            if (hasData) const SizedBox(height: LgSpacing.s300),
           ],
-          if (!hasData)
-            const LgEmptyState(
+          if (hasData) _HeroRow(report: report, currency: currency),
+        ],
+      ),
+      child: !hasData
+          ? const LgEmptyState(
               icon: Icons.event_outlined,
               heading: 'No upcoming payouts',
               description:
                   'Once your app has pending or available earnings, the schedule of when they clear for payout will appear here. Already-paid earnings live in Payout History.',
             )
-          else ...[
-            _HeroRow(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s600),
-            _ScheduleTable(report: report, currency: currency),
-            const SizedBox(height: LgSpacing.s400),
-            Text(
-              'Available Date is estimated as charge date + ~7 days (Shopify clears earnings in 7–37 days). Paid-out earnings live in Payout History.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ScheduleTable(report: report, currency: currency),
+                const SizedBox(height: LgSpacing.s400),
+                Text(
+                  'Available Date is estimated as charge date + ~7 days (Shopify clears earnings in 7–37 days). Paid-out earnings live in Payout History.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: LgColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ],
-      ),
     );
   }
 }
@@ -229,6 +232,7 @@ class _HeroRow extends StatelessWidget {
 
     if (LgBreakpoints.isMobile(context)) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: LgSpacing.s300),

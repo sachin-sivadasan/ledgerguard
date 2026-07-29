@@ -1,0 +1,106 @@
+@startuml
+title 53. Report Paging — Preview → Paginated Detail
+
+skinparam sequenceArrowThickness 2
+skinparam maxMessageSize 220
+
+actor "User" as User
+participant "Report Screen\n(EarningsReportScreen)" as RS
+participant "Report Provider\n(EarningsReportProvider)" as Prov
+participant "Report Service\n(EarningsReportService)" as Svc
+participant "GoRouter" as Router
+participant "Detail Screen\n(EarningsChargesScreen)\n+ DataLoadingMixin" as DS
+participant "Report Handler\n(EarningsReportHandler)" as EH
+participant "parsePaging /\npageSlice\n(report_paging.go)" as Page
+participant "TransactionRepo" as TR
+database "PostgreSQL" as DB
+
+== 1. Report page: small preview (limit = 8) ==
+
+User -> RS: Open Earnings report
+activate RS
+RS -> Prov: setSelectedApp(appId)\n→ loadReport(appId)
+activate Prov
+note right of Prov: limit = kEarningsChargesPreview (8)\ncancel any superseded load
+Prov -> Svc: fetchReport(appId, from, to,\n  limit=8)
+Svc -> EH: GET /api/v1/apps/{appId}/reports/earnings\n?from&to&limit=8
+activate EH
+
+EH -> TR: FindByAppID(appId, from, to)
+TR -> DB: SELECT transactions\nWHERE app_id AND date range
+DB --> TR: transactions[]
+TR --> EH: transactions[]
+
+EH -> EH: SummarizeEarnings(txs)\n→ net / pending / available / paid (FULL set)
+EH -> EH: buildEarningsCharges(txs)\n→ allCharges (sorted desc)
+note right of EH: ChargesTotal = len(allCharges)\n(full count, before paging)
+
+EH -> Page: parsePaging(r) → limit=8, offset=0
+EH -> Page: pageSlice(allCharges, 0, 8)
+Page --> EH: top-8 preview rows
+
+EH --> Svc: JSON { currency, KPIs,\n  charges: [8 preview],\n  chargesTotal: N }
+deactivate EH
+Svc --> Prov: EarningsReport (preview)
+Prov --> RS: notifyListeners()
+deactivate Prov
+
+RS -> User: KPIs + 8-row preview table\n"View all N charges →"\n(shown when chargesTotal > rows)
+deactivate RS
+
+== 2. Drill-down → paginated detail screen ==
+
+User -> RS: Tap "View all N charges →"
+RS -> Router: context.go('/reports/earnings/charges')
+Router -> DS: build EarningsChargesScreen
+activate DS
+note right of DS: DataLoadingMixin fires loadData(appId)\nonce an app is available
+DS -> Prov: setSelectedApp(appId) if changed
+DS -> DS: _loadPage() (offset = 0)
+
+== 3. Detail page: full window (limit = 50, offset = N) ==
+
+DS -> Prov: fetchChargesPage(limit=50, offset=N)
+activate Prov
+Prov -> Svc: fetchReport(appId, from, to,\n  limit=50, offset=N)
+Svc -> EH: GET /api/v1/apps/{appId}/reports/earnings\n?from&to&limit=50&offset=N
+activate EH
+
+EH -> TR: FindByAppID(appId, from, to)
+TR -> DB: SELECT transactions
+DB --> TR: transactions[]
+TR --> EH: transactions[]
+
+note right of EH: KPIs + chargesTotal still computed\nover the FULL set (paging-independent)
+EH -> Page: parsePaging(r) → limit=50, offset=N\n(clamped to maxReportPageLimit=200)
+EH -> Page: pageSlice(allCharges, N, 50)
+Page --> EH: [offset, offset+50) window
+
+EH --> Svc: JSON { KPIs, charges: [window],\n  chargesTotal: N }
+deactivate EH
+Svc --> Prov: EarningsReport (page)
+Prov --> DS: EarningsReport
+deactivate Prov
+
+DS -> User: LgPaginatedTable\n(sticky header + scrolling rows +\n fixed footer "Showing X–Y of Z")
+
+== 4. Prev / Next re-fetch ==
+
+User -> DS: Tap Next → (offset += 50)
+DS -> DS: _goTo(offset + 50) → _loadPage()
+note right of DS: canPrev = offset > 0\ncanNext = to < total\n(both gated on !loading)
+DS -> Prov: fetchChargesPage(limit=50, offset=N+50)
+Prov -> Svc: fetchReport(... limit=50, offset=N+50)
+Svc -> EH: GET ...&limit=50&offset=N+50
+EH --> Svc: next window + chargesTotal
+Svc --> Prov: EarningsReport
+Prov --> DS: EarningsReport
+DS -> User: table re-renders with new window
+deactivate DS
+
+note over RS, Page
+  CSV export (format=csv) always writes the FULL table —
+  paging (?limit/?offset) applies to the JSON charge rows only.
+end note
+
+@enduml

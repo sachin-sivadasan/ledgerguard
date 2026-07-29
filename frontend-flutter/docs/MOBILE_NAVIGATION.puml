@@ -41,6 +41,23 @@ state "Desktop (>900px)" as desktop {
   rail --> railItems
 }
 
+' Reports section (own StatefulShellBranch, appended last) reachable from
+' the "More" sheet / Drawer / Rail. Two-level drill-down inside Reports:
+state "Reports Drill-down" as reports {
+  state "/reports\nReportsScreen (index)" as rIndex
+  state "Report preview\n(e.g. /reports/earnings)" as rReport
+  state "Paginated detail\n(e.g. /reports/earnings/charges)" as rDetail
+
+  rIndex --> rReport : Open report card
+  rReport --> rDetail : View all (paginated)
+  rDetail --> rReport : Back
+  rReport --> rIndex : Back
+}
+
+sheet --> reports : Reports
+drawerItems --> reports : Reports
+railItems --> reports : Reports
+
 [*] --> check
 check --> mobile : width < 600
 check --> tablet : 600 ≤ width < 900

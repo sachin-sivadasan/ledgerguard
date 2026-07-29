@@ -1,5 +1,5 @@
 @startuml
-title 41. Backend API Endpoint Map (~127 endpoints)
+title 41. Backend API Endpoint Map (~145 endpoints)
 
 skinparam componentStyle rectangle
 skinparam packageStyle frame
@@ -80,9 +80,6 @@ package "Devices  [Auth]" as pkg_devices #LightBlue {
 ' ──────────────────────────────────────
 package "Shopify Integration  [Auth / Admin]" as pkg_shopify #LightBlue {
   component "GET /api/v1/integrations/shopify/status" as ep_sh_status
-  component "GET /api/v1/integrations/shopify/oauth" as ep_sh_oauth
-  component "GET /api/v1/integrations/shopify/callback" as ep_sh_callback
-  note bottom of ep_sh_callback : Public (no auth)
   component "POST /api/v1/integrations/shopify/token" as ep_sh_token_post
   component "GET /api/v1/integrations/shopify/token" as ep_sh_token_get
   component "DELETE /api/v1/integrations/shopify/token" as ep_sh_token_del
@@ -154,6 +151,42 @@ package "Apps  [Auth + Org-scoped]" as pkg_apps #LightGreen {
   package "Reviews" as pkg_app_reviews {
     component "GET  /api/v1/apps/{id}/reviews" as ep_rev_list
     component "POST /api/v1/apps/{id}/reviews/scrape" as ep_rev_scrape
+  }
+
+  ' ──────────────────────────────────────
+  '  REPORTS (org-scoped, live under /apps/{id}/reports)
+  '  Every report supports ?format=csv (streams a CSV attachment).
+  '  Most support ?from=YYYY-MM-DD&to=YYYY-MM-DD (date-range filter).
+  '  List-table reports support ?limit&?offset paging; the JSON carries a
+  '  *Total count of the full (pre-paged) row set (see note below).
+  ' ──────────────────────────────────────
+  package "Reports" as pkg_app_reports {
+    component "GET /api/v1/apps/{id}/reports/revenue-at-risk" as ep_rpt_rar
+    note bottom of ep_rpt_rar : ?from ?to ?segment=all|plan:<name>\n?format=csv  ?limit ?offset  (storesTotal)
+    component "GET /api/v1/apps/{id}/reports/churn" as ep_rpt_churn
+    note bottom of ep_rpt_churn : ?from ?to ?format=csv  ?limit ?offset  (storesTotal)
+    component "GET /api/v1/apps/{id}/reports/retention" as ep_rpt_ret
+    component "GET /api/v1/apps/{id}/reports/mrr" as ep_rpt_mrr
+    component "GET /api/v1/apps/{id}/reports/earnings" as ep_rpt_earn
+    note bottom of ep_rpt_earn : ?from ?to ?format=csv  ?limit ?offset  (chargesTotal)
+    component "GET /api/v1/apps/{id}/reports/revenue-mix" as ep_rpt_mix
+    component "GET /api/v1/apps/{id}/reports/usage" as ep_rpt_usage
+    note bottom of ep_rpt_usage : ?from ?to ?format=csv  ?limit ?offset  (storesTotal)
+    component "GET /api/v1/apps/{id}/reports/usage-trends" as ep_rpt_usaget
+    component "GET /api/v1/apps/{id}/reports/subscriptions" as ep_rpt_subs
+    component "GET /api/v1/apps/{id}/reports/payout-schedule" as ep_rpt_pays
+    note bottom of ep_rpt_pays : ?from ?to ?format=csv  ?limit ?offset  (rowsTotal)
+    component "GET /api/v1/apps/{id}/reports/payout-history" as ep_rpt_payh
+    note bottom of ep_rpt_payh : ?from ?to ?format=csv  ?limit ?offset  (rowsTotal)
+    component "GET /api/v1/apps/{id}/reports/uninstall-context" as ep_rpt_unins
+    component "GET /api/v1/apps/{id}/reports/installs" as ep_rpt_inst
+    note bottom of ep_rpt_inst : ?from ?to ?format=csv  ?limit ?offset  (eventsTotal)
+    component "GET /api/v1/apps/{id}/reports/net-new-subscriptions" as ep_rpt_nns
+    note bottom of ep_rpt_nns : ?from ?to ?format=csv  ?limit ?offset  (newStoresTotal)
+    component "GET /api/v1/apps/{id}/reports/cohorts" as ep_rpt_coh
+    note bottom of ep_rpt_coh : alias of /apps/{id}/cohorts (same handler)
+    component "GET /api/v1/apps/{id}/reports/reviews" as ep_rpt_reviews
+    note bottom of ep_rpt_reviews : ?format=csv
   }
 }
 

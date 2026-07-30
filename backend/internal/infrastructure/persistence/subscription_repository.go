@@ -301,6 +301,24 @@ func (r *PostgresSubscriptionRepository) FindWithFilters(ctx context.Context, ap
 		argNum++
 	}
 
+	// Subscription status filter (multi-select)
+	if len(filters.Statuses) > 0 {
+		placeholders := make([]string, len(filters.Statuses))
+		for i, s := range filters.Statuses {
+			placeholders[i] = fmt.Sprintf("$%d", argNum)
+			args = append(args, s)
+			argNum++
+		}
+		conditions = append(conditions, fmt.Sprintf("status IN (%s)", strings.Join(placeholders, ", ")))
+	}
+
+	// Plan filter (exact match)
+	if filters.PlanName != "" {
+		conditions = append(conditions, fmt.Sprintf("plan_name = $%d", argNum))
+		args = append(args, filters.PlanName)
+		argNum++
+	}
+
 	// Billing interval filter
 	if filters.BillingInterval != nil {
 		conditions = append(conditions, fmt.Sprintf("billing_interval = $%d", argNum))

@@ -11,6 +11,8 @@ import (
 // SubscriptionFilters contains filter criteria for subscription queries
 type SubscriptionFilters struct {
 	RiskStates      []valueobject.RiskState
+	Statuses        []string // subscription statuses (ACTIVE, CANCELLED, FROZEN, PENDING, UNINSTALLED)
+	PlanName        string   // exact plan-name match
 	PriceMinCents   *int64
 	PriceMaxCents   *int64
 	BillingInterval *valueobject.BillingInterval

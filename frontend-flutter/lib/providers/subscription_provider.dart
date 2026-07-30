@@ -59,7 +59,7 @@ class SubscriptionProvider extends ChangeNotifier {
   Future<void> loadSubscriptions(String appId) async {
     if (_demoMode) return;
     _cancelToken?.cancel('Superseded');
-    _cancelToken = CancelToken();
+    final token = _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
     _currentPage = 1;
@@ -72,8 +72,17 @@ class SubscriptionProvider extends ChangeNotifier {
         page: 1,
         pageSize: _pageSize,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
-        cancelToken: _cancelToken,
+        riskState: _riskFilter != null
+            ? Subscription.riskStateToApi(_riskFilter!)
+            : null,
+        status: _statusFilter != null
+            ? Subscription.statusToApi(_statusFilter!)
+            : null,
+        plan: _planFilter,
+        cancelToken: token,
       );
+      // Guard against a superseded load resolving late and clobbering the newer one.
+      if (token != _cancelToken) return;
       _liveSubscriptions = result.items;
       _totalCount = result.total;
       _totalPages = result.totalPages;
@@ -81,14 +90,17 @@ class SubscriptionProvider extends ChangeNotifier {
       // KPI counts come from a server-side aggregate over ALL subscriptions, not the
       // loaded page (returns null on failure → KPIs fall back to 0 rather than a
       // page-scoped undercount).
-      _summary = await _subscriptionService.fetchSummary(
+      final summary = await _subscriptionService.fetchSummary(
         appId,
-        cancelToken: _cancelToken,
+        cancelToken: token,
       );
+      if (token != _cancelToken) return;
+      _summary = summary;
     } on DioException catch (e) {
-      if (e.type == DioExceptionType.cancel) return;
+      if (e.type == DioExceptionType.cancel || token != _cancelToken) return;
       _error = e.message;
     } catch (e) {
+      if (token != _cancelToken) return;
       _error = e.toString();
     }
     _isLoading = false;
@@ -107,6 +119,13 @@ class SubscriptionProvider extends ChangeNotifier {
         page: _currentPage + 1,
         pageSize: _pageSize,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
+        riskState: _riskFilter != null
+            ? Subscription.riskStateToApi(_riskFilter!)
+            : null,
+        status: _statusFilter != null
+            ? Subscription.statusToApi(_statusFilter!)
+            : null,
+        plan: _planFilter,
       );
       _liveSubscriptions.addAll(result.items);
       _currentPage = result.page;
@@ -140,19 +159,33 @@ class SubscriptionProvider extends ChangeNotifier {
           .toList();
     }
 
-    if (_statusFilter != null) {
-      list = list.where((s) => s.status == _statusFilter).toList();
-    }
-
-    if (_riskFilter != null) {
-      list = list.where((s) => s.riskState == _riskFilter).toList();
-    }
-
-    if (_planFilter != null) {
-      list = list.where((s) => s.planName == _planFilter).toList();
+    // Live mode filters server-side (see loadSubscriptions); only demo mode filters
+    // the local mock list here.
+    if (_demoMode) {
+      if (_statusFilter != null) {
+        list = list.where((s) => s.status == _statusFilter).toList();
+      }
+      if (_riskFilter != null) {
+        list = list.where((s) => s.riskState == _riskFilter).toList();
+      }
+      if (_planFilter != null) {
+        list = list.where((s) => s.planName == _planFilter).toList();
+      }
     }
 
     return list;
+  }
+
+  /// Distinct non-empty plan names for the Plan filter dropdown (from loaded rows;
+  /// empty for apps whose subscriptions carry no plan name).
+  List<String> get availablePlans {
+    final names = _allSubscriptions
+        .map((s) => s.planName)
+        .where((p) => p.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return names;
   }
 
   Subscription? getById(String id) {
@@ -231,16 +264,19 @@ class SubscriptionProvider extends ChangeNotifier {
   void setStatusFilter(SubscriptionStatus? status) {
     _statusFilter = status;
     notifyListeners();
+    _reloadForFilterChange();
   }
 
   void setRiskFilter(RiskState? risk) {
     _riskFilter = risk;
     notifyListeners();
+    _reloadForFilterChange();
   }
 
   void setPlanFilter(String? plan) {
     _planFilter = plan;
     notifyListeners();
+    _reloadForFilterChange();
   }
 
   void clearFilters() {
@@ -249,5 +285,14 @@ class SubscriptionProvider extends ChangeNotifier {
     _riskFilter = null;
     _planFilter = null;
     notifyListeners();
+    _reloadForFilterChange();
+  }
+
+  // Live mode re-queries the server with the active filters (server-side filtering over
+  // ALL subscriptions, not just the loaded page). Demo mode filters the local list.
+  void _reloadForFilterChange() {
+    if (!_demoMode && _selectedAppId != null) {
+      loadSubscriptions(_selectedAppId!);
+    }
   }
 }

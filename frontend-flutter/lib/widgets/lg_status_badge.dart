@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'lg_badge.dart';
 
-enum SubscriptionStatus { active, frozen, cancelled, pending }
+enum SubscriptionStatus { active, frozen, cancelled, pending, uninstalled }
 
 class LgStatusBadge extends StatelessWidget {
   final SubscriptionStatus status;
@@ -18,6 +18,7 @@ class LgStatusBadge extends StatelessWidget {
         SubscriptionStatus.frozen => 'Frozen',
         SubscriptionStatus.cancelled => 'Cancelled',
         SubscriptionStatus.pending => 'Pending',
+        SubscriptionStatus.uninstalled => 'Uninstalled',
       };
 
   BadgeTone get _tone => switch (status) {
@@ -25,5 +26,6 @@ class LgStatusBadge extends StatelessWidget {
         SubscriptionStatus.frozen => BadgeTone.warning,
         SubscriptionStatus.cancelled => BadgeTone.critical,
         SubscriptionStatus.pending => BadgeTone.info,
+        SubscriptionStatus.uninstalled => BadgeTone.critical,
       };
 }

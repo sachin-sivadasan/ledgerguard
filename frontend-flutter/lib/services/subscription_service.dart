@@ -61,11 +61,21 @@ class SubscriptionService {
     int page = 1,
     int pageSize = 25,
     String? search,
+    String? riskState, // server risk filter → ?risk_state=
+    String? status, // server subscription-status filter → ?subscription_status=
+    String? plan, // server plan filter → ?plan=
     CancelToken? cancelToken,
   }) async {
     try {
       final params = <String, dynamic>{'page': page, 'pageSize': pageSize};
       if (search != null && search.isNotEmpty) params['search'] = search;
+      if (riskState != null && riskState.isNotEmpty) {
+        params['risk_state'] = riskState;
+      }
+      if (status != null && status.isNotEmpty) {
+        params['subscription_status'] = status;
+      }
+      if (plan != null && plan.isNotEmpty) params['plan'] = plan;
       final response = await _client.get(
         '/api/v1/apps/$appId/subscriptions',
         queryParameters: params,
@@ -83,9 +93,11 @@ class SubscriptionService {
         totalPages: data['totalPages'] as int? ?? 1,
       );
     } on DioException catch (e) {
+      // Propagate so the provider can (a) short-circuit superseded/cancelled requests via
+      // its cancel guard, and (b) surface real failures as an error state instead of
+      // silently rendering an empty list as "0 subscriptions".
       debugPrint('[SubscriptionService] error: ${e.response?.statusCode}');
-      return const PaginatedResult(
-          items: [], total: 0, page: 1, pageSize: 25, totalPages: 0);
+      rethrow;
     }
   }
 

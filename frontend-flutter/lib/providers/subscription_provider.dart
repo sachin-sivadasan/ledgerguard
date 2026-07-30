@@ -72,6 +72,13 @@ class SubscriptionProvider extends ChangeNotifier {
         page: 1,
         pageSize: _pageSize,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
+        riskState: _riskFilter != null
+            ? Subscription.riskStateToApi(_riskFilter!)
+            : null,
+        status: _statusFilter != null
+            ? Subscription.statusToApi(_statusFilter!)
+            : null,
+        plan: _planFilter,
         cancelToken: _cancelToken,
       );
       _liveSubscriptions = result.items;
@@ -107,6 +114,13 @@ class SubscriptionProvider extends ChangeNotifier {
         page: _currentPage + 1,
         pageSize: _pageSize,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
+        riskState: _riskFilter != null
+            ? Subscription.riskStateToApi(_riskFilter!)
+            : null,
+        status: _statusFilter != null
+            ? Subscription.statusToApi(_statusFilter!)
+            : null,
+        plan: _planFilter,
       );
       _liveSubscriptions.addAll(result.items);
       _currentPage = result.page;
@@ -140,19 +154,33 @@ class SubscriptionProvider extends ChangeNotifier {
           .toList();
     }
 
-    if (_statusFilter != null) {
-      list = list.where((s) => s.status == _statusFilter).toList();
-    }
-
-    if (_riskFilter != null) {
-      list = list.where((s) => s.riskState == _riskFilter).toList();
-    }
-
-    if (_planFilter != null) {
-      list = list.where((s) => s.planName == _planFilter).toList();
+    // Live mode filters server-side (see loadSubscriptions); only demo mode filters
+    // the local mock list here.
+    if (_demoMode) {
+      if (_statusFilter != null) {
+        list = list.where((s) => s.status == _statusFilter).toList();
+      }
+      if (_riskFilter != null) {
+        list = list.where((s) => s.riskState == _riskFilter).toList();
+      }
+      if (_planFilter != null) {
+        list = list.where((s) => s.planName == _planFilter).toList();
+      }
     }
 
     return list;
+  }
+
+  /// Distinct non-empty plan names for the Plan filter dropdown (from loaded rows;
+  /// empty for apps whose subscriptions carry no plan name).
+  List<String> get availablePlans {
+    final names = _allSubscriptions
+        .map((s) => s.planName)
+        .where((p) => p.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return names;
   }
 
   Subscription? getById(String id) {
@@ -231,16 +259,19 @@ class SubscriptionProvider extends ChangeNotifier {
   void setStatusFilter(SubscriptionStatus? status) {
     _statusFilter = status;
     notifyListeners();
+    _reloadForFilterChange();
   }
 
   void setRiskFilter(RiskState? risk) {
     _riskFilter = risk;
     notifyListeners();
+    _reloadForFilterChange();
   }
 
   void setPlanFilter(String? plan) {
     _planFilter = plan;
     notifyListeners();
+    _reloadForFilterChange();
   }
 
   void clearFilters() {
@@ -249,5 +280,14 @@ class SubscriptionProvider extends ChangeNotifier {
     _riskFilter = null;
     _planFilter = null;
     notifyListeners();
+    _reloadForFilterChange();
+  }
+
+  // Live mode re-queries the server with the active filters (server-side filtering over
+  // ALL subscriptions, not just the loaded page). Demo mode filters the local list.
+  void _reloadForFilterChange() {
+    if (!_demoMode && _selectedAppId != null) {
+      loadSubscriptions(_selectedAppId!);
+    }
   }
 }

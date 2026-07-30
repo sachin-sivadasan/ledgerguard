@@ -61,11 +61,21 @@ class SubscriptionService {
     int page = 1,
     int pageSize = 25,
     String? search,
+    String? riskState, // server risk filter → ?risk_state=
+    String? status, // server subscription-status filter → ?subscription_status=
+    String? plan, // server plan filter → ?plan=
     CancelToken? cancelToken,
   }) async {
     try {
       final params = <String, dynamic>{'page': page, 'pageSize': pageSize};
       if (search != null && search.isNotEmpty) params['search'] = search;
+      if (riskState != null && riskState.isNotEmpty) {
+        params['risk_state'] = riskState;
+      }
+      if (status != null && status.isNotEmpty) {
+        params['subscription_status'] = status;
+      }
+      if (plan != null && plan.isNotEmpty) params['plan'] = plan;
       final response = await _client.get(
         '/api/v1/apps/$appId/subscriptions',
         queryParameters: params,

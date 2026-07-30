@@ -128,6 +128,31 @@ func (m *mockSubscriptionRepo) FindWithFilters(ctx context.Context, appID uuid.U
 		filtered = result
 	}
 
+	// Filter by subscription status
+	if len(filters.Statuses) > 0 {
+		var result []*entity.Subscription
+		for _, sub := range filtered {
+			for _, st := range filters.Statuses {
+				if sub.Status == st {
+					result = append(result, sub)
+					break
+				}
+			}
+		}
+		filtered = result
+	}
+
+	// Filter by plan name
+	if filters.PlanName != "" {
+		var result []*entity.Subscription
+		for _, sub := range filtered {
+			if sub.PlanName == filters.PlanName {
+				result = append(result, sub)
+			}
+		}
+		filtered = result
+	}
+
 	// Filter by search term
 	if filters.SearchTerm != "" {
 		searchLower := strings.ToLower(filters.SearchTerm)
@@ -486,6 +511,64 @@ func TestSubscriptionHandler_List_FilterByRiskState(t *testing.T) {
 
 	if len(subs) != 1 {
 		t.Errorf("expected 1 subscription (filtered by SAFE), got %d", len(subs))
+	}
+}
+
+func TestSubscriptionHandler_List_FilterByStatusAndPlan(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	appID := uuid.New()
+	app := &entity.App{ID: appID, PartnerAccountID: partnerAccount.ID, PartnerAppID: "gid://partners/App/4599915"}
+
+	now := time.Now()
+	mk := func(domain, status, plan string) *entity.Subscription {
+		return &entity.Subscription{
+			ID: uuid.New(), AppID: appID, ShopifyGID: "gid://shopify/AppSubscription/" + domain,
+			MyshopifyDomain: domain, PlanName: plan, BasePriceCents: 999,
+			BillingInterval: valueobject.BillingIntervalMonthly, RiskState: valueobject.RiskStateSafe,
+			Status: status, CreatedAt: now,
+		}
+	}
+	subs := []*entity.Subscription{
+		mk("a.myshopify.com", "ACTIVE", "Pro"),
+		mk("b.myshopify.com", "UNINSTALLED", "Pro"),
+		mk("c.myshopify.com", "CANCELLED", "Basic"),
+		mk("d.myshopify.com", "ACTIVE", "Basic"),
+	}
+	partnerRepo := &mockPartnerRepoForSub{account: partnerAccount}
+	appRepo := &mockAppRepoForSub{app: app}
+	handler := NewSubscriptionHandler(&mockSubscriptionRepo{subscriptions: subs}, partnerRepo, appRepo)
+
+	do := func(qs string) int {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/subscriptions?"+qs, nil)
+		req = withURLParam(req, "appID", appID.String())
+		req = req.WithContext(contextWithUser(req.Context(), &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}))
+		rec := httptest.NewRecorder()
+		handler.List(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+		}
+		var resp map[string]interface{}
+		json.NewDecoder(rec.Body).Decode(&resp)
+		return len(resp["subscriptions"].([]interface{}))
+	}
+
+	if n := do("subscription_status=ACTIVE"); n != 2 {
+		t.Errorf("status=ACTIVE: expected 2, got %d", n)
+	}
+	if n := do("subscription_status=UNINSTALLED"); n != 1 {
+		t.Errorf("status=UNINSTALLED: expected 1, got %d", n)
+	}
+	if n := do("subscription_status=ACTIVE,CANCELLED"); n != 3 {
+		t.Errorf("status=ACTIVE,CANCELLED: expected 3, got %d", n)
+	}
+	if n := do("plan=Pro"); n != 2 {
+		t.Errorf("plan=Pro: expected 2, got %d", n)
+	}
+	if n := do("subscription_status=ACTIVE&plan=Basic"); n != 1 {
+		t.Errorf("status=ACTIVE&plan=Basic: expected 1 (d), got %d", n)
+	}
+	if n := do("subscription_status=active"); n != 2 {
+		t.Errorf("lowercase status should be uppercased server-side: expected 2, got %d", n)
 	}
 }
 

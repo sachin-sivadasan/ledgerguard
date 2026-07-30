@@ -136,7 +136,7 @@ class _SubscriptionListScreenState extends State<SubscriptionListScreen>
               _FilterChip(
                 label: 'Plan',
                 value: provider.planFilter,
-                items: const ['Basic', 'Pro', 'Enterprise'],
+                items: provider.availablePlans,
                 onSelected: provider.setPlanFilter,
               ),
               if (provider.searchQuery.isNotEmpty ||

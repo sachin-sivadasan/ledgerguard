@@ -83,6 +83,18 @@ func (h *SubscriptionHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Subscription status filter (comma-separated: ACTIVE, CANCELLED, FROZEN, PENDING, UNINSTALLED)
+	if subStatusStr := r.URL.Query().Get("subscription_status"); subStatusStr != "" {
+		for _, s := range strings.Split(subStatusStr, ",") {
+			if s = strings.ToUpper(strings.TrimSpace(s)); s != "" {
+				filters.Statuses = append(filters.Statuses, s)
+			}
+		}
+	}
+
+	// Plan filter (exact match)
+	filters.PlanName = strings.TrimSpace(r.URL.Query().Get("plan"))
+
 	// Price range filter
 	if priceMinStr := r.URL.Query().Get("priceMin"); priceMinStr != "" {
 		if parsed, err := strconv.ParseInt(priceMinStr, 10, 64); err == nil && parsed >= 0 {

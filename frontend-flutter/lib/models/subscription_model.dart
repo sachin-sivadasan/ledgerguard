@@ -75,6 +75,8 @@ class Subscription {
         return SubscriptionStatus.cancelled;
       case 'PENDING':
         return SubscriptionStatus.pending;
+      case 'UNINSTALLED':
+        return SubscriptionStatus.uninstalled;
       default:
         return SubscriptionStatus.active;
     }
@@ -94,6 +96,23 @@ class Subscription {
         return RiskState.safe;
     }
   }
+
+  /// Server API value for a risk state (matches backend parseRiskState).
+  static String riskStateToApi(RiskState r) => switch (r) {
+        RiskState.safe => 'SAFE',
+        RiskState.oneCycleMissed => 'ONE_CYCLE_MISSED',
+        RiskState.twoCycleMissed => 'TWO_CYCLES_MISSED',
+        RiskState.churned => 'CHURNED',
+      };
+
+  /// Server API value for a subscription status.
+  static String statusToApi(SubscriptionStatus s) => switch (s) {
+        SubscriptionStatus.active => 'ACTIVE',
+        SubscriptionStatus.frozen => 'FROZEN',
+        SubscriptionStatus.cancelled => 'CANCELLED',
+        SubscriptionStatus.pending => 'PENDING',
+        SubscriptionStatus.uninstalled => 'UNINSTALLED',
+      };
 
   String get priceFormatted =>
       '\$${(priceCents / 100).toStringAsFixed(2)}';

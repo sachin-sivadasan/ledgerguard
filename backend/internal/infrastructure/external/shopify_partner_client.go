@@ -940,8 +940,17 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 // (by OccurredAt) status-relevant app event.
 // Returns: "ACTIVE", "FROZEN", "CANCELLED", "UNINSTALLED", "PENDING", or "" if unknown.
 func GetLatestSubscriptionStatus(events []AppEvent) string {
+	status, _ := GetLatestSubscriptionStatusWithTime(events)
+	return status
+}
+
+// GetLatestSubscriptionStatusWithTime is GetLatestSubscriptionStatus plus the
+// OccurredAt of the deciding event, so callers can reconcile a terminal status
+// against billing reality (a recurring charge dated AFTER a CANCELLED/UNINSTALLED
+// event means that event was a stale/plan-change cancel, not real churn).
+func GetLatestSubscriptionStatusWithTime(events []AppEvent) (string, time.Time) {
 	if len(events) == 0 {
-		return ""
+		return "", time.Time{}
 	}
 
 	// Decide status from the LATEST event by OccurredAt — never trust the
@@ -963,27 +972,27 @@ func GetLatestSubscriptionStatus(events []AppEvent) string {
 		case "RELATIONSHIP_UNINSTALLED", "RELATIONSHIP_DEACTIVATED":
 			// Uninstalled, or the relationship was deactivated (store closed/frozen
 			// by Shopify) — terminal churn.
-			return "UNINSTALLED"
+			return "UNINSTALLED", event.OccurredAt
 		case "SUBSCRIPTION_CHARGE_CANCELED", "SUBSCRIPTION_CHARGE_EXPIRED":
 			// Cancelled, or the charge expired (approval window lapsed / not renewed).
-			return "CANCELLED"
+			return "CANCELLED", event.OccurredAt
 		case "SUBSCRIPTION_CHARGE_FROZEN", "SUBSCRIPTION_CHARGE_DECLINED":
 			// Frozen, or a payment was declined — a recoverable payment issue, not
 			// terminal churn.
-			return "FROZEN"
+			return "FROZEN", event.OccurredAt
 		case "SUBSCRIPTION_CHARGE_ACTIVATED", "SUBSCRIPTION_CHARGE_UNFROZEN", "SUBSCRIPTION_CHARGE_ACCEPTED":
 			// Activated = a recurring charge went live (the event monthly renewals
 			// emit — NOT ACCEPTED, which only fires at initial approval); unfrozen
 			// restores billing; accepted (re)starts it — all ACTIVE.
-			return "ACTIVE"
+			return "ACTIVE", event.OccurredAt
 		case "RELATIONSHIP_INSTALLED", "RELATIONSHIP_REACTIVATED":
 			// Installed or reinstalled (reactivated) but no subscription-charge event
 			// yet — trial or pending. A later charge event, if any, outranks this.
-			return "PENDING"
+			return "PENDING", event.OccurredAt
 		}
 	}
 
-	return ""
+	return "", time.Time{}
 }
 
 // statusEventPriority ranks status-relevant events for same-timestamp tie-breaks.

@@ -9,7 +9,6 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
-	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue"
 )
@@ -89,15 +88,12 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 			continue
 		}
 
-		newStatus := external.GetLatestSubscriptionStatus(events)
-		if newStatus != "" && newStatus != sub.Status {
-			sub.Status = newStatus
-			sub.UpdatedAt = time.Now().UTC()
-
-			if newStatus == "UNINSTALLED" || newStatus == "CANCELLED" {
-				sub.RiskState = valueobject.RiskStateChurned
-			}
-
+		// Reconcile the event-derived status against billing reality: a terminal
+		// CANCELLED/UNINSTALLED only churns when no recurring charge is dated after
+		// the event (else it's a plan-change/stale cancel), and risk is re-derived
+		// from charge recency so a refresh never leaves a stale ACTIVE/CHURNED mix.
+		newStatus, statusAt := external.GetLatestSubscriptionStatusWithTime(events)
+		if sub.ApplyEventStatus(newStatus, statusAt, time.Now().UTC()) {
 			if err := p.subRepo.Upsert(ctx, sub); err != nil {
 				log.Printf("[queue] StatusProcessor: error persisting status for shop %s: %v (job %s)", sub.ShopifyShopGID, err, payload.JobID)
 				failed++

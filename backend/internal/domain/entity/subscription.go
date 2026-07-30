@@ -118,6 +118,54 @@ func (s *Subscription) ClassifyRisk(now time.Time) {
 	s.UpdatedAt = time.Now().UTC()
 }
 
+// ApplyEventStatus reconciles an event-derived status (from the Partner API app
+// events) against billing reality and re-derives the risk state. Returns true if
+// anything changed.
+//
+// The "cancel trap" defence: a terminal CANCELLED/UNINSTALLED event only churns
+// the subscription when there has been NO recurring charge since that event. If a
+// recurring charge is dated after the terminal event (eventAt), the cancel was a
+// plan-change/stale event and the merchant is still being billed — treat as ACTIVE.
+// For every non-terminal outcome the risk state is recomputed from charge recency
+// (ClassifyRisk), so a status refresh can never leave a stale ACTIVE/CHURNED mix.
+func (s *Subscription) ApplyEventStatus(newStatus string, eventAt, now time.Time) bool {
+	if newStatus == "" {
+		return false
+	}
+
+	terminal := newStatus == "UNINSTALLED" || newStatus == "CANCELLED"
+
+	// Billed after the terminal event → the event is stale (plan change / old-plan
+	// cancel); active billing wins.
+	if terminal && s.LastRecurringChargeDate != nil && !eventAt.IsZero() &&
+		s.LastRecurringChargeDate.After(eventAt) {
+		newStatus = "ACTIVE"
+		terminal = false
+	}
+
+	changed := false
+	if s.Status != newStatus {
+		s.Status = newStatus
+		changed = true
+	}
+
+	oldRisk := s.RiskState
+	if terminal {
+		s.RiskState = valueobject.RiskStateChurned
+	} else {
+		// Re-derive risk from status + charge recency (fixes stale ACTIVE/CHURNED).
+		s.ClassifyRisk(now)
+	}
+	if s.RiskState != oldRisk {
+		changed = true
+	}
+
+	if changed {
+		s.UpdatedAt = now
+	}
+	return changed
+}
+
 // IsActive returns true if the subscription is active
 func (s *Subscription) IsActive() bool {
 	return s.Status == "ACTIVE"

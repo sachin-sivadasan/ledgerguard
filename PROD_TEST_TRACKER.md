@@ -42,7 +42,9 @@ Last updated: 2026-07-30
 
 ### Subscriptions
 
-**SUB-1 🔴 Cancel trap — active subs mis-churned by stale/plan-change CANCELED events** (pending fix)
+**✅ SUB-1 / SUB-2 FIXED (PR pending) — cancel-trap reconciliation.** `Subscription.ApplyEventStatus` now reconciles the event-derived status against billing: a terminal CANCELLED/UNINSTALLED churns only when NO recurring charge post-dates the event (else it's a stale/plan-change cancel → kept ACTIVE), and risk is re-derived from charge recency after every status refresh (fixes the ACTIVE/CHURNED contradiction). Applied in both `status_processor.go` and `sync_service.go` via `GetLatestSubscriptionStatusWithTime`. Needs deploy + full resync. **RISK-1** should then converge (all three pages ultimately derive from `sub.RiskState`; the 718/729/1175 split was live-subs over-churned vs stores vs snapshot) — verify after resync.
+
+**SUB-1 🔴 Cancel trap — active subs mis-churned by stale/plan-change CANCELED events** (original finding)
 - Live data: real active ≈ **1,167** (subs billed within 60d, Shopify's grace), but page shows **718**.
 - Cross-tab: `CANCELLED/CHURNED` = 1,934; of 2,189 churned, **382 were billed within the last 35 days** (e.g. `lokjoylokjoy` charged Jul 22, yet CANCELLED/CHURNED with a future next-charge Aug 22).
 - Root cause: `StatusProcessor` force-churns on any `SUBSCRIPTION_CHARGE_CANCELED`/UNINSTALLED event, ignoring that the sub has a recent recurring charge. Shopify emits CANCELED on **plan changes** too (old plan cancelled + new activated).
@@ -138,6 +140,8 @@ Funnel: safe 729 / 1-cycle 126 / 2-cycle 5 / churned 2066 (= 2926 ✓). At-Risk 
 **✅ EARN-3 FIXED (PR pending) — monthly earnings periods.** New `GET /earnings/periods` endpoint aggregates transactions by month (gross, net, Shopify cut = gross−net, derived status), and the Earnings tab now renders the wireframe's monthly cards (Month + PENDING/AVAILABLE/PAID_OUT badge + Gross / Shopify Fee (rate%) / Net). Replaces the hundreds of daily rows. Needs a backend deploy.
 
 (Known: `total_paid_out_cents: 0` — PAID_OUT never populated, already in future.md.)
+
+**EARN-4 🟡** "Upcoming 30 Days" card lists *every* upcoming-availability entry (hundreds of rows) → very long scroll. Cap/paginate (e.g. top 10 + "view all"). Minor UX.
 
 ### Analytics (route `/#/analytics`) — Revenue tab only
 

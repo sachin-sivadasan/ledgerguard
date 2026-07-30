@@ -93,9 +93,11 @@ class SubscriptionService {
         totalPages: data['totalPages'] as int? ?? 1,
       );
     } on DioException catch (e) {
+      // Propagate so the provider can (a) short-circuit superseded/cancelled requests via
+      // its cancel guard, and (b) surface real failures as an error state instead of
+      // silently rendering an empty list as "0 subscriptions".
       debugPrint('[SubscriptionService] error: ${e.response?.statusCode}');
-      return const PaginatedResult(
-          items: [], total: 0, page: 1, pageSize: 25, totalPages: 0);
+      rethrow;
     }
   }
 

@@ -59,7 +59,7 @@ class SubscriptionProvider extends ChangeNotifier {
   Future<void> loadSubscriptions(String appId) async {
     if (_demoMode) return;
     _cancelToken?.cancel('Superseded');
-    _cancelToken = CancelToken();
+    final token = _cancelToken = CancelToken();
     _isLoading = true;
     _error = null;
     _currentPage = 1;
@@ -79,8 +79,10 @@ class SubscriptionProvider extends ChangeNotifier {
             ? Subscription.statusToApi(_statusFilter!)
             : null,
         plan: _planFilter,
-        cancelToken: _cancelToken,
+        cancelToken: token,
       );
+      // Guard against a superseded load resolving late and clobbering the newer one.
+      if (token != _cancelToken) return;
       _liveSubscriptions = result.items;
       _totalCount = result.total;
       _totalPages = result.totalPages;
@@ -88,14 +90,17 @@ class SubscriptionProvider extends ChangeNotifier {
       // KPI counts come from a server-side aggregate over ALL subscriptions, not the
       // loaded page (returns null on failure → KPIs fall back to 0 rather than a
       // page-scoped undercount).
-      _summary = await _subscriptionService.fetchSummary(
+      final summary = await _subscriptionService.fetchSummary(
         appId,
-        cancelToken: _cancelToken,
+        cancelToken: token,
       );
+      if (token != _cancelToken) return;
+      _summary = summary;
     } on DioException catch (e) {
-      if (e.type == DioExceptionType.cancel) return;
+      if (e.type == DioExceptionType.cancel || token != _cancelToken) return;
       _error = e.message;
     } catch (e) {
+      if (token != _cancelToken) return;
       _error = e.toString();
     }
     _isLoading = false;

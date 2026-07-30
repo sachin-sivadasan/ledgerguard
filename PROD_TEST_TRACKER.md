@@ -1,0 +1,203 @@
+# Prod Testing Tracker
+
+Page-by-page verification of the live app (app.ledgerspear.com → api.ledgerspear.com,
+app `a4d7dfd1` = Zoko — WhatsApp Marketing API). Log every issue here; fix in batches.
+
+**Legend:** 🔴 Critical (wrong data)  🟠 Important  🟡 Minor/polish  ✅ Verified OK  ⏳ To test
+
+Last updated: 2026-07-30
+
+---
+
+## Status by page
+
+| Page | State | Notes |
+|------|-------|-------|
+| Transactions | ✅ Fixed (PR #45) | Server-side Gross/Net/Cut totals + full-history window; live count 49,607 verified |
+| Subscriptions | 🔴 Open findings | See SUB-1..SUB-3 below — partial fix shipped (PR #46), reconciliation fix pending |
+| Dashboard | 🔴 Open findings | route is `/` (not `/dashboard`); see DASH-1..DASH-3 |
+| Stores | 🟠 Open findings | 2926 stores; see STORE-1..STORE-2 |
+| Store Detail | 🔴 Open findings | route `/#/stores/{domain}`; see SD-1..SD-4 |
+| Events | 🟠 Open findings | 139 events; see EVT-1..EVT-3 |
+| Risk | 🔴 Open findings | see RISK-1..RISK-3 |
+| Earnings | 🔴 Open findings | all $0.00 in UI, data exists in API; see EARN-1..EARN-2 |
+| Analytics | 🟢 Mostly OK | Revenue/MRR-movement render; see ANALYTICS-1 (minor) — only Revenue tab checked |
+| Reports | ⏳ Catalog OK | ~16 report cards render; per-report deep-test pending (many inherit risk/earnings root causes) |
+| Webhooks | 🟢 Mostly OK | empty (no webhooks); WEBHOOK-1 minor |
+| AI Insights | 🟢 Mostly OK | route `/insights`; empty daily brief; AII-1 |
+| Apps | 🔴 Open finding | "0 installs" despite 2926 stores; see APPS-1 |
+| API Keys | 🟢 OK | 3 active + 1 revoked; see APIKEYS-1 (verify seed vs real) |
+| Webhooks | ⏳ | |
+| Risk | ⏳ | |
+| Analytics | ⏳ | |
+| Earnings | ⏳ | |
+| AI Insights | ⏳ | |
+| Reports | ⏳ | |
+| Apps | ⏳ | |
+| API Keys | ⏳ | |
+
+---
+
+## Findings
+
+### Subscriptions
+
+**SUB-1 🔴 Cancel trap — active subs mis-churned by stale/plan-change CANCELED events** (pending fix)
+- Live data: real active ≈ **1,167** (subs billed within 60d, Shopify's grace), but page shows **718**.
+- Cross-tab: `CANCELLED/CHURNED` = 1,934; of 2,189 churned, **382 were billed within the last 35 days** (e.g. `lokjoylokjoy` charged Jul 22, yet CANCELLED/CHURNED with a future next-charge Aug 22).
+- Root cause: `StatusProcessor` force-churns on any `SUBSCRIPTION_CHARGE_CANCELED`/UNINSTALLED event, ignoring that the sub has a recent recurring charge. Shopify emits CANCELED on **plan changes** too (old plan cancelled + new activated).
+- **Proposed fix:** reconcile event-status against charge data — a CANCELLED/UNINSTALLED event only churns if there's been **no recurring charge since that event** (terminal event newer than last charge). Billed-after-cancel ⇒ still active.
+
+**SUB-2 🔴 Risk never re-classified after status update** (pending fix)
+- `ACTIVE/CHURNED` = 22 subs (status says active, risk still stale-churned).
+- Root cause: `StatusProcessor` updates `status` but only re-runs risk for the churn branch; non-terminal status updates leave `risk_state` stale.
+- **Proposed fix:** re-run `ClassifyRisk` after any status update so risk always reflects charge recency.
+
+**SUB-3 ✅ Missing app-event types (SHIPPED, PR #46)**
+- `GetLatestSubscriptionStatus` ignored `SUBSCRIPTION_CHARGE_ACTIVATED` (renewal event), `RELATIONSHIP_REACTIVATED`, `DEACTIVATED`, `EXPIRED`, `DECLINED` → active shops fell through to stale UNINSTALLED/CANCELED. Fixed + resynced: active 417 → 718. (Remaining gap is SUB-1/SUB-2.)
+
+### Dashboard (route = `/`)
+
+Live KPIs: MRR $62,917 (+4.2%), Renewal 40.2%, Revenue at Risk $6,241, Usage Rev $27,417.
+`/metrics` response: `safe 1175 / 1-cycle 71 / 2-cycle 65 / churned 1615` (= 2926 ✓).
+
+**DASH-1 🔴 Dashboard risk/active disagrees with Subscriptions page** (root cause = SUB-1/SUB-2)
+- Dashboard `/metrics` → `safe_count = 1175`; Subscriptions `/summary` → `activeCount(SAFE) = 718`. Same metric, **two different numbers** across pages.
+- Cause: `/metrics` (MetricsEngine) recomputes risk from **charge data** (≈ correct, 1175 ≈ true active), while `/summary` reads the **stored `risk_state`** polluted by the StatusProcessor over-churn (SUB-1). They will converge once SUB-1/SUB-2 are fixed and a resync rewrites `risk_state`.
+- ⭐ This is strong corroboration that 1175 (not 718) is the real active count.
+
+**DASH-2 🟠 "MRR Trend (12 months)" chart renders blank**
+- Only `/metrics` is fetched on load (returns current/previous/delta — **no 12-month series**). No trend/snapshot endpoint is called, so the chart has no data. Confirm whether a trend endpoint exists / should be wired, or the chart should read daily snapshots.
+
+**DASH-3 🟡 "This Week Activity" panel appears empty** — verify whether legit (no events this week under the "This Week" filter) or unwired.
+
+### Stores (route `/#/stores`)
+
+2,926 stores (1:1 with subs). Cards show Health %, LTV, Apps, risk badge.
+
+**STORE-1 🔴 Store risk badges over-churned** — inherits the polluted `risk_state` (same root cause as SUB-1). Many "Churned/10% health" stores are actually active. Fixes with SUB-1.
+
+**STORE-2 🟠 `first_install_date` / `last_interaction` = record-created time, not real dates**
+- `/stores` returns `first_install_date: 2026-07-30T07:18:45Z` for every store — that's the resync record-creation timestamp, not the shop's real first-install date. `last_interaction` likewise = today. Violates CreatedAt-is-record-date. Source install date from the earliest `RELATIONSHIP_INSTALLED` event or earliest transaction (cf. `activated_at` backfill already done for subs). Affects tenure/LTV-age if any consumer uses it.
+
+**Not a bug:** hashed store domains (`00430d-6a.myshopify.com`) are Shopify's anonymized handles for churned/uninstalled shops; alphabetically sorted so they lead the list.
+
+### Store Detail (route `/#/stores/{shop_domain}`)
+
+The detail page makes **no store-by-ID request** — it resolves the store (and its subs) **client-side from the already-loaded first list page** (`/stores?page=1&pageSize=20` + `/subscriptions?page=1&pageSize=100`).
+
+**SD-1 🔴 Deep-link / any store beyond list page 1 → "Store not found"**
+- `…/stores/lokjoylokjoy.myshopify.com` (real active store, sorts under 'l') → **"Store not found"**; `…/stores/00430d-6a.myshopify.com` (first on page 1) → renders. Store detail must fetch the store by domain from the server, not rely on the in-memory paginated list. Breaks deep-links, bookmarks, and clicking any store on list pages ≥2.
+
+**SD-2 🟠 "Subscriptions (0) — No subscriptions" on a store that has a subscription**
+- Every store == a subscription (2926/2926), yet the detail's Subscriptions card shows 0. Same client-side-lookup limitation (the store's sub isn't in the loaded page-1 slice). Link store→subscriptions server-side.
+
+**SD-3 🟡 Installed Apps shows the app UUID** (`a4d7dfd1-d27f-4cd1-ab08-6e96cbc8ff3c`) instead of the app name ("Zoko — WhatsApp Marketing API"). Resolve app name.
+
+**SD-4 🟡 First Install / Last Interaction = Jul 30 2026** (record-created date, same as STORE-2); **Timeline card empty** (no events rendered — verify wiring vs genuinely no events).
+
+### Events (route `/#/events`)
+
+139 events. This-week KPIs: Installs 3, Uninstalls 0, Churns 4, Billing Failures 0.
+
+**EVT-1 🔴 Plan changes counted as churns (cancel-trap, → SUB-1)**
+- `85c635` shows `SUBSCRIPTION_CHARGE_ACTIVATED` **and** "Subscription Cancelled" at the same 7:14 AM; `onewoofclub` same at 6:04 AM. These are plan changes (old charge cancelled + new activated), but each cancel counts toward "Churns This Week: 4". The events feed and the churn KPI both over-count plan-change cancels as churn — same root cause as SUB-1.
+
+**EVT-2 🟠 Wrong event-type badge/category** — `SUBSCRIPTION_CHARGE_ACTIVATED` rows are badged green **"INSTALL"** (it's a charge activation, not an install). Fix the event-type → category/badge mapping.
+
+**EVT-3 🟡 Inconsistent event titles** — some rows humanized ("Subscription Cancelled"), others show the raw enum ("SUBSCRIPTION_CHARGE_ACTIVATED"). Humanize all event-type titles.
+
+**To verify:** all event timestamps are Jul 30 (today) — confirm these are real Shopify `occurredAt` vs sync-detection time.
+
+### Risk (route `/#/risk`)
+
+Funnel: safe 729 / 1-cycle 126 / 2-cycle 5 / churned 2066 (= 2926 ✓). At-Risk Stores (131).
+
+**RISK-1 🔴 THREE inconsistent risk distributions across pages** (same metric, 3 answers):
+| Source (endpoint) | Safe | 1-cycle | 2-cycle | Churned |
+|---|---|---|---|---|
+| Subscriptions `/subscriptions/summary` (subscriptions.risk_state) | 718 | — (at-risk 19) | | 2189 |
+| Dashboard `/metrics` (MetricsEngine recompute, charge-based) | 1175 | 71 | 65 | 1615 |
+| Risk `/risk/summary` (stores.risk_state) | 729 | 126 | 5 | 2066 |
+- Three code paths compute risk differently and read different stores (subscriptions.risk_state vs stores.risk_state vs on-the-fly MetricsEngine). Need a **single source of truth**. The `/metrics` (charge-based, 1175) is closest to correct; the two stored-state paths are polluted by SUB-1 AND disagree with each other (718 vs 729). Fixing SUB-1/SUB-2 + unifying the risk source should collapse all three to one number.
+
+**RISK-2 🟡 `/risk/summary` returns `installed_app_ids: []`** (empty) while `/stores` populates it — inconsistent store serialization.
+
+**RISK-3 🟡 Negative LTV shown** — `423ca4-5` has `lifetime_value_cents: -2800` (−$28.00; refunds > revenue). Decide display (show negative w/ context, or floor at 0) and confirm it's expected.
+
+(STORE-2 recurs here: every at-risk store's `first_install_date` = 2026-07-30 record time.)
+
+### Earnings (route `/#/earnings`)
+
+**EARN-1 🔴 Summary cards show $0.00 despite real data in API** (frontend field-mapping bug)
+- UI: Total Earned / Pending / Available all **$0.00**. But `/earnings/status` returns `total_available_cents: 116,257,226 ($1,162,572)`, `total_pending_cents: 1,615,352 ($16,153)`, `total_paid_out_cents: 0`. Data is there — the frontend isn't mapping the `/earnings/status` fields onto the cards.
+
+**EARN-2 🔴 Earnings list rows show Gross/Shopify/Net = $0.00** — the `/earnings` response rows only carry `{date, total_amount_cents}` (e.g. $1,384.22), but the row widget reads `gross`/`shopify`/`net` fields that don't exist in the payload → renders 0 + "PENDING" for every row. Frontend↔backend contract mismatch.
+
+**✅ EARN-1/EARN-2 FIXED (PR pending) — frontend field-mapping.** `EarningsStatus.fromJson` now reads `total_pending/available/paid_out_cents` + `upcoming_availability`; `totalEarned` sums the status totals in live mode; `EarningPeriod.fromJson` maps `total_amount_cents`→net and `date`→dates; per-date rows show **Net** (Gross/Shopify breakdown only when the source provides it, via `hasFeeBreakdown`).
+**EARN-3 🟡 (backend follow-up)** `/earnings` per-date rows lack gross + Shopify-cut, so the row can't show the full Gross/Shopify/Net breakdown the design calls for. Enhance `GetRevenueByDateRange` (revenue repo aggregation) to also emit `gross_amount_cents` per date, then restore the 3-column row for live data.
+
+(Known: `total_paid_out_cents: 0` — PAID_OUT never populated, already in future.md.)
+
+### Analytics (route `/#/analytics`) — Revenue tab only
+
+Revenue Breakdown: Recurring $62,917 (69.6%) / Usage $27,417 (30.4%) / One-Time $0. MRR Movement bar chart renders (Feb–Jul).
+
+**ANALYTICS-1 🟡** MRR Movement is almost entirely "New" (green) bars with a single Contraction and no Churned/Expansion, despite heavy churn in the data — verify the New/Expansion/Contraction/Churn attribution. Forecasting / Profit & Expense / Cohorts / Multi-App tabs not yet tested.
+
+---
+
+### Reports (route `/#/reports`)
+
+Catalog renders: Retention & Risk (Revenue at Risk, Churn, Retention, Retention Cohorts, Reviews, Uninstall Context), Revenue & Billing (Earnings, MRR, Revenue Mix, Usage & One-Time, Usage Trends, Subscriptions, Payout Schedule, Payout History), Growth (below fold). **Per-report values not yet verified** — several depend on `risk_state` (Revenue at Risk, Churn, Retention, Subscriptions) and earnings, so expect them to move once the root-cause fixes land. Re-test each after fixes.
+
+### Webhooks (route `/#/webhooks`)
+Empty: 0 webhook events, "No webhooks match your filters". Likely legitimate (app syncs via Partner API polling, not webhooks).
+**WEBHOOK-1 🟡** Success Rate shows **0%** with 0 webhooks — should render "—"/N/A to avoid implying total failure.
+
+### AI Insights (route `/#/insights`)
+Daily Briefs: "No insights available yet. Insights are generated daily after your first sync." (Jul 30 2:19 PM). Revenue chat panel renders with input.
+**AII-1 🟡** Daily brief empty — verify the daily-brief generation job runs post-sync. Chat not interactively tested.
+
+### Apps (route `/#/apps`)
+1 connected app (Zoko — WhatsApp Marketing API), "Synced". Tabs: Connected Apps, Reviews.
+**APPS-1 🔴 "0 installs" despite 2,926 stores/subscriptions** — the app-card install count is 0. `FetchInstallCount` (counts `RELATIONSHIP_INSTALLED` events) isn't populating the real number (and likely also misses `RELATIONSHIP_REACTIVATED` reinstalls, cf. SUB-3). Should reflect the true install base.
+**APPS-2 🟡** Rating shows ★ 0 — verify against real App Store rating / Reviews tab (not deep-tested).
+
+### API Keys (route `/#/api-keys`)
+"3 active keys" (CI/CD Pipeline, Staging, Production) + Old Integration (REVOKED). Scopes/dates/revoke/create all render.
+**APIKEYS-1 🟡** Key names/dates look like they could be seed/demo data (CI/CD Pipeline, Staging Key, lg_live_/lg_test_ prefixes) — confirm these are real user-created keys, not seeded fixtures showing in prod.
+
+### Routing note 🟡
+Some nav destinations don't match their obvious hash path: `/#/dashboard` → "no routes" (real route `/`), `/#/ai-insights` → "no routes" (real route `/#/insights`). Deep-linking those literal paths 404s. Confirm no internal link/bookmark uses them.
+
+---
+
+## Proposed fix batch (to do together)
+
+**Group A — Risk/churn correctness (biggest impact):**
+- **SUB-1** cancel-trap reconciliation: a CANCELLED/UNINSTALLED event churns only if no recurring charge since that event (billed-after-cancel ⇒ active). *(backend, StatusProcessor + needs event timestamp)*
+- **SUB-2** re-run `ClassifyRisk` after any status update. *(backend)*
+- **RISK-1** unify risk to a single source of truth so Subscriptions / Dashboard / Risk agree. *(backend)*
+- Fixes cascade to STORE-1, SD (badges), EVT-1 (plan-change churns), and risk-dependent Reports.
+
+**Group B — Earnings frontend contract:**
+- **EARN-1/EARN-2** map `/earnings/status` (available/pending/paid_out) to the summary cards and `total_amount_cents` to the row Net; stop reading non-existent gross/shopify/net fields. *(frontend)*
+
+**Group C — Store detail:**
+- **SD-1/SD-2** fetch store (and its subscriptions) by domain server-side instead of client-side page-1 lookup. *(frontend + maybe a store-by-domain endpoint)*
+- **SD-3** resolve app name; **STORE-2/SD-4** real install/interaction dates (not record time).
+
+**Group D — Counts & polish:**
+- **APPS-1** install count = 0 → populate real install base from `RELATIONSHIP_INSTALLED` (+ REACTIVATED). *(backend)*
+- **DASH-2** MRR Trend chart data source; **EVT-2/EVT-3** event badge/title mapping; **RISK-2** store serialization; **RISK-3** negative LTV display; **ANALYTICS-1** MRR-movement attribution; **DASH-3** This Week Activity; **WEBHOOK-1** success-rate N/A; **AII-1** daily-brief job; **APIKEYS-1** verify seed vs real; routing note (`/dashboard`,`/ai-insights` literal paths 404).
+
+## Still to deep-test (top-level nav done)
+- The ~16 individual **Reports** (values, CSV export) — several will shift after Group A/B fixes; re-test post-fix.
+- **Analytics** sub-tabs: Forecasting, Profit & Expense, Cohorts, Multi-App.
+- **Apps → Reviews** tab; AI Insights **chat** (interactive).
+
+---
+
+**Deferred (already in future.md):**
+- Transactions `loadMore` swallows page errors; store filter is client-only/page-scoped (PR #45 follow-ups).

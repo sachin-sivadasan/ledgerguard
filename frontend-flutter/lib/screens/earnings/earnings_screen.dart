@@ -210,6 +210,10 @@ class _EarningsTab extends StatelessWidget {
 
           const SizedBox(height: LgSpacing.s600),
           ...periods.map((period) {
+            // Live per-date rows have no month label; fall back to the date.
+            final title = period.month.isNotEmpty
+                ? period.month
+                : dateFmt.format(period.startDate);
             return Padding(
               padding: const EdgeInsets.only(bottom: LgSpacing.s300),
               child: LgCard(
@@ -223,17 +227,29 @@ class _EarningsTab extends StatelessWidget {
                           Row(
                             children: [
                               Expanded(
-                                child: Text(period.month,
+                                child: Text(title,
                                     style: theme.textTheme.titleSmall),
                               ),
-                              LgBadge(
-                                label: period.statusLabel.toUpperCase(),
-                                tone: _statusTone(period.status),
-                              ),
+                              // Per-date status isn't provided for live rows; only
+                              // badge the rich (demo/breakdown) source to avoid
+                              // labelling every historical row "PENDING".
+                              if (period.hasFeeBreakdown)
+                                LgBadge(
+                                  label: period.statusLabel.toUpperCase(),
+                                  tone: _statusTone(period.status),
+                                )
+                              else
+                                Text('Net: ${period.netFormatted}',
+                                    style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: LgColors.success)),
                             ],
                           ),
-                          const SizedBox(height: LgSpacing.s200),
-                          LgBreakpoints.isMobile(context)
+                          // Full gross/fee breakdown only when the source has it.
+                          if (period.hasFeeBreakdown) ...[
+                            const SizedBox(height: LgSpacing.s200),
+                            LgBreakpoints.isMobile(context)
                               ? Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -253,6 +269,7 @@ class _EarningsTab extends StatelessWidget {
                                     Text('Net: ${period.netFormatted}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: LgColors.success)),
                                   ],
                                 ),
+                          ],
                           if (period.paidOutDate != null) ...[
                             const SizedBox(height: LgSpacing.s100),
                             Text(

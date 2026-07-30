@@ -101,6 +101,15 @@ class EarningsProvider extends ChangeNotifier {
         ..sort((a, b) => b.startDate.compareTo(a.startDate));
 
   String get totalEarned {
+    // Live: total earned = everything the developer has accrued across all
+    // states (pending + available + paid out), sourced from the earnings-status
+    // summary. The per-period list only carries net-per-date, so summing it by
+    // status under-reports (paid-out is not yet populated → would read $0).
+    if (!_demoMode && _liveEarningsStatus != null) {
+      final s = _liveEarningsStatus!;
+      final cents = s.pendingCents + s.availableCents + s.paidOutCents;
+      return '\$${(cents / 100).toStringAsFixed(2)}';
+    }
     final cents = _allPeriods
         .where((p) => p.status == EarningStatus.paidOut)
         .fold<int>(0, (sum, p) => sum + p.netEarningsCents);

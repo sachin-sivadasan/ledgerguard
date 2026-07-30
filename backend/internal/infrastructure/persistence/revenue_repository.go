@@ -79,11 +79,16 @@ func (r *PostgresRevenueRepository) GetRevenueByDateRange(
 	return aggregations, nil
 }
 
-// GetMonthlyEarnings rolls transactions up by calendar month: gross =
-// SUM(gross_amount_cents), net = SUM(net_amount_cents) (both falling back to
-// amount_cents when the split column is null, matching the transactions list),
-// plus per-earnings-status counts so the service can derive one month status.
-// Revenue charge types only (RECURRING/USAGE/ONE_TIME); newest month first.
+// GetMonthlyEarnings rolls transactions up by calendar month with per-status
+// counts (for deriving one month status), newest month first.
+//   net   = SUM(COALESCE(net_amount_cents, amount_cents, 0))
+//   gross = SUM(COALESCE(gross_amount_cents, net_amount_cents, amount_cents, 0))
+// Gross falls back to NET (not 0) when the split column is null so the derived
+// Shopify cut (gross − net) is never spuriously negative for legacy rows — this
+// deliberately differs from the transactions-list query, which shows gross as an
+// independent column and can leave it 0. All revenue charge types incl. REFUND
+// (natural-negative) so the monthly net reconciles with the transactions/earnings
+// totals rather than overstating a refund-heavy month.
 func (r *PostgresRevenueRepository) GetMonthlyEarnings(
 	ctx context.Context,
 	appID uuid.UUID,
@@ -93,7 +98,7 @@ func (r *PostgresRevenueRepository) GetMonthlyEarnings(
 		WITH monthly AS (
 			SELECT
 				DATE_TRUNC('month', transaction_date) AS month_start,
-				SUM(COALESCE(gross_amount_cents, amount_cents, 0)) AS gross,
+				SUM(COALESCE(gross_amount_cents, net_amount_cents, amount_cents, 0)) AS gross,
 				SUM(COALESCE(net_amount_cents, amount_cents, 0)) AS net,
 				COUNT(*) FILTER (WHERE earnings_status = 'PENDING') AS pending_ct,
 				COUNT(*) FILTER (WHERE earnings_status = 'AVAILABLE') AS available_ct,
@@ -102,7 +107,7 @@ func (r *PostgresRevenueRepository) GetMonthlyEarnings(
 			WHERE app_id = $1
 				AND transaction_date >= $2
 				AND transaction_date <= $3
-				AND charge_type IN ('RECURRING', 'USAGE', 'ONE_TIME')
+				AND charge_type IN ('RECURRING', 'USAGE', 'ONE_TIME', 'REFUND')
 			GROUP BY DATE_TRUNC('month', transaction_date)
 		)
 		SELECT

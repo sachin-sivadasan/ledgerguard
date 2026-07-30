@@ -469,3 +469,39 @@ func TestRevenueHandler_GetEarningPeriods(t *testing.T) {
 		t.Errorf("May row fields wrong: %+v", resp.Earnings[0])
 	}
 }
+
+func TestRevenueHandler_GetEarningPeriods_BadDate(t *testing.T) {
+	userID, partnerID, appID := uuid.New(), uuid.New(), uuid.New()
+	partnerRepo := &mockPartnerRepoForRevenue{account: &entity.PartnerAccount{ID: partnerID, UserID: userID}}
+	appRepo := &mockAppRepoForRevenue{apps: []*entity.App{{ID: appID, PartnerAccountID: partnerID, PartnerAppID: "gid://partners/App/1", Name: "A"}}}
+	handler := NewRevenueHandler(service.NewRevenueMetricsService(&mockRevenueRepository{}), partnerRepo, appRepo)
+
+	req := httptest.NewRequest("GET", "/x/earnings/periods?start=05-2026", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("appID", appID.String())
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = req.WithContext(middleware.SetUserContext(req.Context(), &entity.User{ID: userID}))
+	rr := httptest.NewRecorder()
+	handler.GetEarningPeriods(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("bad start date: expected 400, got %d", rr.Code)
+	}
+}
+
+func TestRevenueHandler_GetEarningPeriods_StartAfterEnd(t *testing.T) {
+	userID, partnerID, appID := uuid.New(), uuid.New(), uuid.New()
+	partnerRepo := &mockPartnerRepoForRevenue{account: &entity.PartnerAccount{ID: partnerID, UserID: userID}}
+	appRepo := &mockAppRepoForRevenue{apps: []*entity.App{{ID: appID, PartnerAccountID: partnerID, PartnerAppID: "gid://partners/App/1", Name: "A"}}}
+	handler := NewRevenueHandler(service.NewRevenueMetricsService(&mockRevenueRepository{}), partnerRepo, appRepo)
+
+	req := httptest.NewRequest("GET", "/x/earnings/periods?start=2026-05-01&end=2026-01-01", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("appID", appID.String())
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = req.WithContext(middleware.SetUserContext(req.Context(), &entity.User{ID: userID}))
+	rr := httptest.NewRecorder()
+	handler.GetEarningPeriods(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("start>end: expected 400, got %d", rr.Code)
+	}
+}

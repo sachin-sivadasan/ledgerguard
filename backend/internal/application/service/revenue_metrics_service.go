@@ -155,13 +155,16 @@ func (s *RevenueMetricsService) GetMonthlyEarnings(
 		Earnings:  make([]MonthlyEarningResponse, 0, len(aggs)),
 	}
 	for _, a := range aggs {
+		// Least-settled state present wins. Default PENDING covers a month whose
+		// rows carry no recognized earnings_status (counts all zero) — treat as
+		// not-yet-cleared rather than silently "paid out".
 		status := "PENDING"
-		if a.PendingCount > 0 {
-			status = "PENDING"
-		} else if a.AvailableCount > 0 {
-			status = "AVAILABLE"
-		} else if a.PaidOutCount > 0 {
-			status = "PAID_OUT"
+		if a.PendingCount == 0 {
+			if a.AvailableCount > 0 {
+				status = "AVAILABLE"
+			} else if a.PaidOutCount > 0 {
+				status = "PAID_OUT"
+			}
 		}
 		resp.Earnings = append(resp.Earnings, MonthlyEarningResponse{
 			Month:            a.MonthLabel,

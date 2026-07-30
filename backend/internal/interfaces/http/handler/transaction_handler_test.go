@@ -19,6 +19,7 @@ import (
 type mockTxRepo struct {
 	transactions []*entity.Transaction
 	findErr      error
+	summary      *repository.TransactionSummary
 }
 
 func (m *mockTxRepo) Upsert(ctx context.Context, tx *entity.Transaction) error { return nil }
@@ -236,5 +237,47 @@ func TestTransactionHandler_List_OutOfRangePage(t *testing.T) {
 	}
 	if resp["total"].(float64) != 5 {
 		t.Errorf("expected total=5, got %v", resp["total"])
+	}
+}
+
+func (m *mockTxRepo) GetTransactionSummary(_ context.Context, _ uuid.UUID, _ repository.TransactionFilters) (*repository.TransactionSummary, error) {
+	if m.findErr != nil {
+		return nil, m.findErr
+	}
+	if m.summary != nil {
+		return m.summary, nil
+	}
+	return &repository.TransactionSummary{}, nil
+}
+
+func TestTransactionHandler_Summary(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	appID := uuid.New()
+	app := &entity.App{ID: appID, PartnerAccountID: partnerAccount.ID, Name: "Test App"}
+
+	txRepo := &mockTxRepo{summary: &repository.TransactionSummary{GrossCents: 72811, NetCents: 59517, Count: 22548}}
+	handler := NewTransactionHandler(txRepo, &mockPartnerRepoForSub{account: partnerAccount}, &mockAppRepoForSub{app: app})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/transactions/summary", nil)
+	req = withURLParam(req, "appID", appID.String())
+	req = req.WithContext(contextWithUser(req.Context(), &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}))
+	rec := httptest.NewRecorder()
+	handler.Summary(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var resp map[string]int64
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp["grossCents"] != 72811 || resp["netCents"] != 59517 {
+		t.Errorf("gross/net: got %d/%d", resp["grossCents"], resp["netCents"])
+	}
+	if resp["shopifyCutCents"] != 72811-59517 {
+		t.Errorf("shopifyCutCents: expected %d (gross-net), got %d", 72811-59517, resp["shopifyCutCents"])
+	}
+	if resp["count"] != 22548 {
+		t.Errorf("count: expected 22548, got %d", resp["count"])
 	}
 }

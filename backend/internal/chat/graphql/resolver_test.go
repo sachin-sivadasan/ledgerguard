@@ -625,3 +625,7 @@ func TestApp_SingleByID(t *testing.T) {
 		t.Errorf("expected installCount 10, got %d", result.InstallCount)
 	}
 }
+
+func (m *mockTransactionRepo) GetTransactionSummary(_ context.Context, _ uuid.UUID, _ repository.TransactionFilters) (*repository.TransactionSummary, error) {
+	return &repository.TransactionSummary{}, nil
+}

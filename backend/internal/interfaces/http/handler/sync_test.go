@@ -432,3 +432,7 @@ func TestSyncHandler_SyncApp_AppNotFound(t *testing.T) {
 		t.Errorf("expected status %d, got %d", http.StatusNotFound, rec.Code)
 	}
 }
+
+func (m *mockSyncTransactionRepo) GetTransactionSummary(_ context.Context, _ uuid.UUID, _ repository.TransactionFilters) (*repository.TransactionSummary, error) {
+	return &repository.TransactionSummary{}, nil
+}

@@ -1017,3 +1017,7 @@ func TestFullSyncProcessor_CreatesChildJobs(t *testing.T) {
 		t.Errorf("Expected at least 2 child jobs, got %d", childCount)
 	}
 }
+
+func (m *mockTransactionRepo) GetTransactionSummary(_ context.Context, _ uuid.UUID, _ repository.TransactionFilters) (*repository.TransactionSummary, error) {
+	return &repository.TransactionSummary{}, nil
+}

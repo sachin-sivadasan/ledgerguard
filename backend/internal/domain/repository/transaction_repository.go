@@ -39,6 +39,14 @@ type EarningsByDate struct {
 	AmountCents int64
 }
 
+// TransactionSummary is the aggregate gross/net/count over a filtered set of
+// transactions (server-side, so the UI totals don't depend on the loaded page).
+type TransactionSummary struct {
+	GrossCents int64
+	NetCents   int64
+	Count      int64
+}
+
 type TransactionRepository interface {
 	// Upsert inserts or updates a transaction (idempotent by shopify_gid)
 	Upsert(ctx context.Context, tx *entity.Transaction) error
@@ -57,6 +65,10 @@ type TransactionRepository interface {
 
 	// GetEarningsSummary returns aggregated earnings by status
 	GetEarningsSummary(ctx context.Context, appID uuid.UUID) (*EarningsSummary, error)
+
+	// GetTransactionSummary returns SUM(gross)/SUM(net)/count over the filtered set
+	// (same filters as FindByAppIDPaginated), for the UI's Gross/Net/Cut totals.
+	GetTransactionSummary(ctx context.Context, appID uuid.UUID, filters TransactionFilters) (*TransactionSummary, error)
 
 	// GetPendingByAvailableDate returns pending earnings grouped by available_date
 	GetPendingByAvailableDate(ctx context.Context, appID uuid.UUID) ([]EarningsByDate, error)

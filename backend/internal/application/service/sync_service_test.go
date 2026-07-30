@@ -363,3 +363,7 @@ func TestSyncService_SyncAllApps(t *testing.T) {
 		t.Errorf("expected 1 result, got %d", len(results))
 	}
 }
+
+func (m *mockTransactionRepo) GetTransactionSummary(_ context.Context, _ uuid.UUID, _ repository.TransactionFilters) (*repository.TransactionSummary, error) {
+	return &repository.TransactionSummary{}, nil
+}

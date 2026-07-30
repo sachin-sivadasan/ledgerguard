@@ -500,3 +500,7 @@ func TestDeltaIsGood_Semantics(t *testing.T) {
 		})
 	}
 }
+
+func (m *mockTxRepo) GetTransactionSummary(_ context.Context, _ uuid.UUID, _ repository.TransactionFilters) (*repository.TransactionSummary, error) {
+	return &repository.TransactionSummary{}, nil
+}

@@ -18,6 +18,8 @@ class TransactionProvider extends ChangeNotifier {
   String? _storeFilter;
 
   List<Transaction> _liveTransactions = [];
+  // Server-side aggregate over the FULL filtered set (live mode). Null until loaded.
+  TransactionSummary? _summary;
   int _currentPage = 1;
   int _totalPages = 1;
   int _totalCount = 0;
@@ -49,18 +51,29 @@ class TransactionProvider extends ChangeNotifier {
     _error = null;
     _currentPage = 1;
     _liveTransactions = [];
+    _summary = null;
     notifyListeners();
+    final chargeType =
+        _typeFilter != null ? chargeTypeToApi(_typeFilter!) : null;
     try {
       final result = await _transactionService.fetchTransactions(
         appId,
         page: 1,
         pageSize: _pageSize,
+        chargeType: chargeType,
         cancelToken: _cancelToken,
       );
       _liveTransactions = result.items;
       _totalCount = result.total;
       _totalPages = result.totalPages;
       _currentPage = result.page;
+      // Totals must reflect the whole dataset, not just the first page —
+      // fetch the server-side aggregate alongside the first page.
+      _summary = await _transactionService.fetchSummary(
+        appId,
+        chargeType: chargeType,
+        cancelToken: _cancelToken,
+      );
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) return;
       _error = e.message;
@@ -82,6 +95,8 @@ class TransactionProvider extends ChangeNotifier {
         _selectedAppId!,
         page: _currentPage + 1,
         pageSize: _pageSize,
+        chargeType:
+            _typeFilter != null ? chargeTypeToApi(_typeFilter!) : null,
       );
       _liveTransactions.addAll(result.items);
       _currentPage = result.page;
@@ -98,7 +113,8 @@ class TransactionProvider extends ChangeNotifier {
     var list =
         _demoMode ? mockTransactions.toList() : _liveTransactions.toList();
 
-    if (_typeFilter != null) {
+    // Live data is already type-filtered server-side; only filter client-side in demo mode.
+    if (_typeFilter != null && _demoMode) {
       list = list.where((t) => t.chargeType == _typeFilter).toList();
     }
     // Only filter by app in demo mode — live data is already fetched per-app
@@ -115,10 +131,17 @@ class TransactionProvider extends ChangeNotifier {
     return list;
   }
 
-  int get totalGrossCents =>
-      transactions.fold<int>(0, (sum, t) => sum + t.grossAmountCents);
-  int get totalNetCents =>
-      transactions.fold<int>(0, (sum, t) => sum + t.netAmountCents);
+  // In live mode, totals come from the server-side aggregate over the entire
+  // filtered dataset. In demo mode, fold over the local mock rows.
+  int get totalGrossCents => _demoMode || _summary == null
+      ? transactions.fold<int>(0, (sum, t) => sum + t.grossAmountCents)
+      : _summary!.grossCents;
+  int get totalNetCents => _demoMode || _summary == null
+      ? transactions.fold<int>(0, (sum, t) => sum + t.netAmountCents)
+      : _summary!.netCents;
+  int get shopifyCutCents => _demoMode || _summary == null
+      ? totalGrossCents - totalNetCents
+      : _summary!.shopifyCutCents;
 
   void setTypeFilter(ChargeType? type) {
     _typeFilter = type;

@@ -112,7 +112,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                       const SizedBox(height: LgSpacing.s200),
                       _SummaryRow('Net Total', '\$${(provider.totalNetCents / 100).toStringAsFixed(2)}', theme),
                       const SizedBox(height: LgSpacing.s200),
-                      _SummaryRow('Shopify Cut', '\$${((provider.totalGrossCents - provider.totalNetCents) / 100).toStringAsFixed(2)}', theme, valueColor: LgColors.warning),
+                      _SummaryRow('Shopify Cut', '\$${(provider.shopifyCutCents / 100).toStringAsFixed(2)}', theme, valueColor: LgColors.warning),
                     ],
                   )
                 : Row(
@@ -125,7 +125,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                       const SizedBox(width: LgSpacing.s600),
                       Text('Shopify Cut: ', style: theme.textTheme.bodySmall),
                       Text(
-                        '\$${((provider.totalGrossCents - provider.totalNetCents) / 100).toStringAsFixed(2)}',
+                        '\$${(provider.shopifyCutCents / 100).toStringAsFixed(2)}',
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: LgColors.warning),
                       ),
                     ],

@@ -131,17 +131,22 @@ class TransactionProvider extends ChangeNotifier {
     return list;
   }
 
-  // In live mode, totals come from the server-side aggregate over the entire
-  // filtered dataset. In demo mode, fold over the local mock rows.
-  int get totalGrossCents => _demoMode || _summary == null
-      ? transactions.fold<int>(0, (sum, t) => sum + t.grossAmountCents)
-      : _summary!.grossCents;
-  int get totalNetCents => _demoMode || _summary == null
-      ? transactions.fold<int>(0, (sum, t) => sum + t.netAmountCents)
-      : _summary!.netCents;
-  int get shopifyCutCents => _demoMode || _summary == null
-      ? totalGrossCents - totalNetCents
-      : _summary!.shopifyCutCents;
+  // Totals come from the server-side aggregate over the entire filtered dataset
+  // in live mode. Fall back to folding over the visible rows when there is no
+  // server summary yet, in demo mode, or when a client-only store filter is
+  // active (store isn't sent to the server, so the aggregate would ignore it and
+  // disagree with the narrowed list).
+  bool get _useServerTotals =>
+      !_demoMode && _summary != null && _storeFilter == null;
+  int get totalGrossCents => _useServerTotals
+      ? _summary!.grossCents
+      : transactions.fold<int>(0, (sum, t) => sum + t.grossAmountCents);
+  int get totalNetCents => _useServerTotals
+      ? _summary!.netCents
+      : transactions.fold<int>(0, (sum, t) => sum + t.netAmountCents);
+  int get shopifyCutCents => _useServerTotals
+      ? _summary!.shopifyCutCents
+      : totalGrossCents - totalNetCents;
 
   void setTypeFilter(ChargeType? type) {
     _typeFilter = type;

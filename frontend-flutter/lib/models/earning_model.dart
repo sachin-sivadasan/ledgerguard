@@ -24,22 +24,31 @@ class EarningPeriod {
   });
 
   factory EarningPeriod.fromJson(Map<String, dynamic> json) {
+    // The live /earnings endpoint returns per-date rows shaped as
+    // {date, total_amount_cents} (net earning for that day), while demo/mock
+    // and any richer source use {month, start_date, gross_cents, ...}. Accept both.
+    final dateStr = json['date'] as String?;
+    final fallbackDate = dateStr ?? DateTime.now().toIso8601String();
     return EarningPeriod(
-      id: json['id'].toString(),
+      id: json['id']?.toString() ?? dateStr ?? '',
       month: json['month'] as String? ?? '',
-      startDate: DateTime.parse(json['start_date'] as String? ??
-          DateTime.now().toIso8601String()),
-      endDate: DateTime.parse(
-          json['end_date'] as String? ?? DateTime.now().toIso8601String()),
+      startDate: DateTime.parse(json['start_date'] as String? ?? fallbackDate),
+      endDate: DateTime.parse(json['end_date'] as String? ?? fallbackDate),
       grossCents: json['gross_cents'] as int? ?? 0,
       shopifyCutCents: json['shopify_cut_cents'] as int? ?? 0,
-      netEarningsCents: json['net_earnings_cents'] as int? ?? 0,
+      netEarningsCents:
+          json['net_earnings_cents'] as int? ?? json['total_amount_cents'] as int? ?? 0,
       status: _parseStatus(json['status'] as String? ?? 'PENDING'),
       paidOutDate: json['paid_out_date'] != null
           ? DateTime.parse(json['paid_out_date'] as String)
           : null,
     );
   }
+
+  /// True when this row carries a real gross/fee breakdown (demo/rich source).
+  /// The live per-date earnings feed only has a net amount, so callers should
+  /// render just the net rather than a misleading "Gross: \$0.00 / Shopify: \$0.00".
+  bool get hasFeeBreakdown => grossCents > 0 || shopifyCutCents > 0;
 
   static EarningStatus _parseStatus(String s) {
     switch (s.toUpperCase()) {
@@ -188,11 +197,18 @@ class EarningsStatus {
   });
 
   factory EarningsStatus.fromJson(Map<String, dynamic> json) {
+    // Live API keys: total_pending_cents / total_available_cents /
+    // total_paid_out_cents / upcoming_availability. Fall back to the shorter
+    // names for backward/demo compatibility.
     return EarningsStatus(
-      pendingCents: json['pending_cents'] as int? ?? 0,
-      availableCents: json['available_cents'] as int? ?? 0,
-      paidOutCents: json['paid_out_cents'] as int? ?? 0,
-      upcoming: (json['upcoming'] as List<dynamic>?)
+      pendingCents:
+          json['total_pending_cents'] as int? ?? json['pending_cents'] as int? ?? 0,
+      availableCents:
+          json['total_available_cents'] as int? ?? json['available_cents'] as int? ?? 0,
+      paidOutCents:
+          json['total_paid_out_cents'] as int? ?? json['paid_out_cents'] as int? ?? 0,
+      upcoming: ((json['upcoming_availability'] ?? json['upcoming'])
+                  as List<dynamic>?)
               ?.map((u) =>
                   UpcomingAvailability.fromJson(u as Map<String, dynamic>))
               .toList() ??

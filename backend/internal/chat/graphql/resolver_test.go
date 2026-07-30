@@ -425,7 +425,8 @@ func TestEarnings_AggregatesTransactions(t *testing.T) {
 		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeRecurring, GrossAmountCents: 5000, NetAmountCents: 4250, Currency: "USD"},
 		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeUsage, GrossAmountCents: 1000, NetAmountCents: 850, Currency: "USD"},
 		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeOneTime, GrossAmountCents: 500, NetAmountCents: 425, Currency: "USD"},
-		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeRefund, GrossAmountCents: 200, NetAmountCents: 200, Currency: "USD"},
+		// Refund net is stored negative (Shopify's signed payout effect).
+		{ID: uuid.New(), AppID: appID, ChargeType: valueobject.ChargeTypeRefund, GrossAmountCents: -200, NetAmountCents: -200, Currency: "USD"},
 	}
 
 	resolver := newTestResolver(func(r *Resolver) {

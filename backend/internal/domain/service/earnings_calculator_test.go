@@ -232,3 +232,22 @@ func TestEarningsCalculator_SummarizeEarnings(t *testing.T) {
 		t.Errorf("PaidOutCount = %d, want 1", summary.PaidOutCount)
 	}
 }
+
+// TestEarningsCalculator_SummarizeEarnings_NegativeRefundSubtracts pins the assumption the
+// refund rework relies on: SummarizeEarnings is unchanged and a negative-net refund
+// subtracts naturally (it must NOT be abs'd or special-cased).
+func TestEarningsCalculator_SummarizeEarnings_NegativeRefundSubtracts(t *testing.T) {
+	calc := NewEarningsCalculator()
+	transactions := []*entity.Transaction{
+		{NetAmountCents: 5000, EarningsStatus: entity.EarningsStatusAvailable},
+		// Refund net stored negative — reduces available earnings.
+		{NetAmountCents: -700, EarningsStatus: entity.EarningsStatusAvailable},
+	}
+	summary := calc.SummarizeEarnings(transactions)
+	if summary.AvailableCents != 4300 {
+		t.Errorf("availableCents: expected 4300 (5000 - 700), got %d", summary.AvailableCents)
+	}
+	if summary.TotalCents() != 4300 {
+		t.Errorf("totalCents: expected 4300, got %d", summary.TotalCents())
+	}
+}

@@ -703,3 +703,28 @@ func TestExecuteWithRetry_RewindsBodyOnRetry(t *testing.T) {
 		t.Errorf("expected 1 event after successful retry, got %d", len(events))
 	}
 }
+
+// TestParseTransaction_AppSaleAdjustmentRefund: a refund/adjustment is classified REFUND
+// with Shopify's natural NEGATIVE net preserved (so any SUM(net) nets it out).
+func TestParseTransaction_AppSaleAdjustmentRefund(t *testing.T) {
+	c := &ShopifyPartnerClient{}
+	node := transactionNode{
+		Typename:  "AppSaleAdjustment",
+		ID:        "gid://partners/AppSaleAdjustment/1",
+		CreatedAt: "2026-02-15T10:00:00Z",
+		App:       &struct{ ID string `json:"id"`; Name string `json:"name"` }{ID: "gid://partners/App/99", Name: "Test App"},
+		Shop:      &struct{ ID string `json:"id"`; MyshopifyDomain string `json:"myshopifyDomain"`; Name string `json:"name"` }{ID: "gid://shopify/Shop/1", MyshopifyDomain: "s.myshopify.com", Name: "S"},
+		GrossAmount: &struct{ Amount string `json:"amount"`; CurrencyCode string `json:"currencyCode"` }{Amount: "-10.00", CurrencyCode: "USD"},
+		NetAmount:   &struct{ Amount string `json:"amount"`; CurrencyCode string `json:"currencyCode"` }{Amount: "-7.00", CurrencyCode: "USD"},
+	}
+	tx := c.parseTransaction(node, uuid.New())
+	if tx == nil {
+		t.Fatal("expected a transaction, got nil")
+	}
+	if tx.ChargeType != valueobject.ChargeTypeRefund {
+		t.Errorf("expected REFUND, got %s", tx.ChargeType)
+	}
+	if tx.NetAmountCents != -700 {
+		t.Errorf("expected natural negative net -700, got %d", tx.NetAmountCents)
+	}
+}

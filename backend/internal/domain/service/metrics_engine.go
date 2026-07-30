@@ -58,7 +58,9 @@ func (m *MetricsEngine) CalculateTotalRevenue(transactions []*entity.Transaction
 		case valueobject.ChargeTypeRecurring, valueobject.ChargeTypeUsage, valueobject.ChargeTypeOneTime:
 			total += tx.AmountCents()
 		case valueobject.ChargeTypeRefund:
-			total -= tx.AmountCents()
+			// Refund net is stored negative (Shopify's signed payout effect), so ADD it —
+			// it naturally reduces total revenue.
+			total += tx.AmountCents()
 		}
 	}
 	return total

@@ -5,10 +5,56 @@ import '../core/network/api_client.dart';
 import '../models/paginated_result.dart';
 import '../models/subscription_model.dart';
 
+/// Aggregate subscription counts computed server-side over ALL subscriptions
+/// (GET /subscriptions/summary), so KPIs don't depend on how many pages are loaded.
+/// Active/AtRisk/Churned partition the total by risk_state (SAFE / one|two-cycle-missed /
+/// CHURNED).
+class SubscriptionSummary {
+  final int activeCount;
+  final int atRiskCount;
+  final int churnedCount;
+  final int avgPriceCents;
+  final int totalCount;
+
+  const SubscriptionSummary({
+    required this.activeCount,
+    required this.atRiskCount,
+    required this.churnedCount,
+    required this.avgPriceCents,
+    required this.totalCount,
+  });
+
+  factory SubscriptionSummary.fromJson(Map<String, dynamic> j) =>
+      SubscriptionSummary(
+        activeCount: (j['activeCount'] as num?)?.toInt() ?? 0,
+        atRiskCount: (j['atRiskCount'] as num?)?.toInt() ?? 0,
+        churnedCount: (j['churnedCount'] as num?)?.toInt() ?? 0,
+        avgPriceCents: (j['avgPriceCents'] as num?)?.toInt() ?? 0,
+        totalCount: (j['totalCount'] as num?)?.toInt() ?? 0,
+      );
+}
+
 class SubscriptionService {
   final ApiClient _client;
 
   SubscriptionService(this._client);
+
+  /// Fetches the server-side aggregate summary (all subscriptions for the app).
+  Future<SubscriptionSummary?> fetchSummary(
+    String appId, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final response = await _client.get(
+        '/api/v1/apps/$appId/subscriptions/summary',
+        cancelToken: cancelToken,
+      );
+      return SubscriptionSummary.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      debugPrint('[SubscriptionService] summary error: ${e.response?.statusCode}');
+      return null;
+    }
+  }
 
   Future<PaginatedResult<Subscription>> fetchSubscriptions(
     String appId, {

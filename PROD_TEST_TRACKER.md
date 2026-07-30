@@ -42,7 +42,13 @@ Last updated: 2026-07-30
 
 ### Subscriptions
 
-**✅ SUB-1 / SUB-2 FIXED (PR pending) — cancel-trap reconciliation.** `Subscription.ApplyEventStatus` now reconciles the event-derived status against billing: a terminal CANCELLED/UNINSTALLED churns only when NO recurring charge post-dates the event (else it's a stale/plan-change cancel → kept ACTIVE), and risk is re-derived from charge recency after every status refresh (fixes the ACTIVE/CHURNED contradiction). Applied in both `status_processor.go` and `sync_service.go` via `GetLatestSubscriptionStatusWithTime`. Needs deploy + full resync. **RISK-1** should then converge (all three pages ultimately derive from `sub.RiskState`; the 718/729/1175 split was live-subs over-churned vs stores vs snapshot) — verify after resync.
+**✅ SUB-1 / SUB-2 FIXED + VERIFIED (PR #49, deployed+resynced).** Active 718 → **1,057**; `lokjoylokjoy` (billed Jul 22, was CANCELLED/CHURNED) → **ACTIVE/SAFE**. Subscriptions (1,057) and Risk (1,068) now converge (were 718/729).
+
+**RISK-1 🟠 residual — Dashboard snapshot lags.** After the fix: Subscriptions `/summary` safe **1,057**, Risk `/summary` safe **1,068** (converged), but Dashboard `/metrics` safe **1,176**. Cause: `/metrics` reads the **daily snapshot written during ledger rebuild — BEFORE `StatusProcessor` reconciliation** (pure charge-recency), while the other two read the post-reconciliation live state. The reconciled ~1,060 is the more-correct number (excludes ~120 subs that genuinely uninstalled/cancelled with no billing after). **Fix:** recompute/refresh the daily snapshot AFTER StatusProcessor runs (or have the metrics endpoint read live subs). Then all three agree.
+
+---
+
+**✅ SUB-1 / SUB-2 (original writeup) — cancel-trap reconciliation.** `Subscription.ApplyEventStatus` now reconciles the event-derived status against billing: a terminal CANCELLED/UNINSTALLED churns only when NO recurring charge post-dates the event (else it's a stale/plan-change cancel → kept ACTIVE), and risk is re-derived from charge recency after every status refresh (fixes the ACTIVE/CHURNED contradiction). Applied in both `status_processor.go` and `sync_service.go` via `GetLatestSubscriptionStatusWithTime`. Needs deploy + full resync. **RISK-1** should then converge (all three pages ultimately derive from `sub.RiskState`; the 718/729/1175 split was live-subs over-churned vs stores vs snapshot) — verify after resync.
 
 **SUB-1 🔴 Cancel trap — active subs mis-churned by stale/plan-change CANCELED events** (original finding)
 - Live data: real active ≈ **1,167** (subs billed within 60d, Shopify's grace), but page shows **718**.

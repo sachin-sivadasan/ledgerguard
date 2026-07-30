@@ -32,6 +32,9 @@ class SubscriptionProvider extends ChangeNotifier {
   int _currentPage = 1;
   int _totalPages = 1;
   int _totalCount = 0;
+  // Server-side KPI totals over ALL subscriptions (live mode). Null until loaded / in
+  // demo mode, where the counts are computed from the local list instead.
+  SubscriptionSummary? _summary;
   static const int _pageSize = 25;
 
   SubscriptionProvider(this._subscriptionService);
@@ -61,6 +64,7 @@ class SubscriptionProvider extends ChangeNotifier {
     _error = null;
     _currentPage = 1;
     _liveSubscriptions = [];
+    _summary = null;
     notifyListeners();
     try {
       final result = await _subscriptionService.fetchSubscriptions(
@@ -74,6 +78,13 @@ class SubscriptionProvider extends ChangeNotifier {
       _totalCount = result.total;
       _totalPages = result.totalPages;
       _currentPage = result.page;
+      // KPI counts come from a server-side aggregate over ALL subscriptions, not the
+      // loaded page (returns null on failure → KPIs fall back to 0 rather than a
+      // page-scoped undercount).
+      _summary = await _subscriptionService.fetchSummary(
+        appId,
+        cancelToken: _cancelToken,
+      );
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) return;
       _error = e.message;
@@ -165,21 +176,32 @@ class SubscriptionProvider extends ChangeNotifier {
     return _allSubscriptions.where((s) => s.appId == _selectedAppId).toList();
   }
 
-  int get activeCount =>
-      _appFilteredSubs
+  // KPI counts: live mode uses the server-side summary (all subscriptions); demo mode
+  // computes from the local mock list. This keeps the cards accurate regardless of how
+  // many pages are loaded. (Live "active" = SAFE risk_state, matching the server's
+  // SAFE/at-risk/churned partition of the total.)
+  int get activeCount => _demoMode
+      ? _appFilteredSubs
           .where((s) => s.status == SubscriptionStatus.active)
-          .length;
+          .length
+      : (_summary?.activeCount ?? 0);
 
-  int get atRiskCount => _appFilteredSubs
-      .where((s) =>
-          s.riskState == RiskState.oneCycleMissed ||
-          s.riskState == RiskState.twoCycleMissed)
-      .length;
+  int get atRiskCount => _demoMode
+      ? _appFilteredSubs
+          .where((s) =>
+              s.riskState == RiskState.oneCycleMissed ||
+              s.riskState == RiskState.twoCycleMissed)
+          .length
+      : (_summary?.atRiskCount ?? 0);
 
-  int get churnedCount =>
-      _appFilteredSubs.where((s) => s.riskState == RiskState.churned).length;
+  int get churnedCount => _demoMode
+      ? _appFilteredSubs.where((s) => s.riskState == RiskState.churned).length
+      : (_summary?.churnedCount ?? 0);
 
   String get avgPrice {
+    if (!_demoMode) {
+      return '\$${((_summary?.avgPriceCents ?? 0) / 100).toStringAsFixed(2)}';
+    }
     final subs = _appFilteredSubs;
     if (subs.isEmpty) return '\$0.00';
     final avg =

@@ -10,7 +10,6 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
-	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
 )
 
@@ -320,21 +319,12 @@ func (s *SyncService) enrichSubscriptionStatus(ctx context.Context, app *entity.
 			continue
 		}
 
-		// Determine status from events
-		newStatus := external.GetLatestSubscriptionStatus(events)
-		if newStatus != "" && newStatus != sub.Status {
-			sub.Status = newStatus
-			sub.UpdatedAt = time.Now().UTC()
-
-			// Uninstalled or cancelled = terminal churn. This is intentional (not
-			// cycle-graded like a merely-late ACTIVE sub): GetLatestSubscriptionStatus
-			// now suppresses the "cancel trap" (an upgrade/downgrade's cancel no
-			// longer surfaces as CANCELLED), so a CANCELLED here is a genuine
-			// merchant-initiated cancellation — real churn, no grace window.
-			if newStatus == "UNINSTALLED" || newStatus == "CANCELLED" {
-				sub.RiskState = valueobject.RiskStateChurned
-			}
-
+		// Reconcile the event-derived status against billing reality (see
+		// Subscription.ApplyEventStatus): a terminal CANCELLED/UNINSTALLED churns
+		// only when no recurring charge post-dates the event (else it's a stale/
+		// plan-change cancel), and risk is re-derived from charge recency.
+		newStatus, statusAt := external.GetLatestSubscriptionStatusWithTime(events)
+		if sub.ApplyEventStatus(newStatus, statusAt, time.Now().UTC()) {
 			// Upsert the updated subscription
 			if err := s.subRepo.Upsert(ctx, sub); err != nil {
 				continue // Log but don't fail

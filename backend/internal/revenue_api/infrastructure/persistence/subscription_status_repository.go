@@ -32,7 +32,7 @@ func (r *PostgresSubscriptionStatusRepository) Upsert(ctx context.Context, statu
 			risk_state, is_paid_current_cycle, months_overdue,
 			last_successful_charge_date, expected_next_charge_date, status, last_synced_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-		ON CONFLICT (shopify_gid) DO UPDATE SET
+		ON CONFLICT (app_id, shopify_gid) DO UPDATE SET
 			shop_name = EXCLUDED.shop_name,
 			plan_name = EXCLUDED.plan_name,
 			risk_state = EXCLUDED.risk_state,
@@ -76,7 +76,7 @@ func (r *PostgresSubscriptionStatusRepository) UpsertBatch(ctx context.Context, 
 			risk_state, is_paid_current_cycle, months_overdue,
 			last_successful_charge_date, expected_next_charge_date, status, last_synced_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-		ON CONFLICT (shopify_gid) DO UPDATE SET
+		ON CONFLICT (app_id, shopify_gid) DO UPDATE SET
 			shop_name = EXCLUDED.shop_name,
 			plan_name = EXCLUDED.plan_name,
 			risk_state = EXCLUDED.risk_state,

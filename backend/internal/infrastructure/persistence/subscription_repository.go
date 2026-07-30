@@ -33,7 +33,7 @@ func (r *PostgresSubscriptionRepository) Upsert(ctx context.Context, subscriptio
 			last_recurring_charge_date, expected_next_charge_date, risk_state,
 			activated_at, created_at, updated_at, deleted_at, stable_domain_key
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-		ON CONFLICT (shopify_gid) DO UPDATE SET
+		ON CONFLICT (app_id, shopify_gid) DO UPDATE SET
 			shopify_shop_gid = EXCLUDED.shopify_shop_gid,
 			shop_name = EXCLUDED.shop_name,
 			plan_name = EXCLUDED.plan_name,

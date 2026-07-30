@@ -135,10 +135,11 @@ func (s *Subscription) ApplyEventStatus(newStatus string, eventAt, now time.Time
 
 	terminal := newStatus == "UNINSTALLED" || newStatus == "CANCELLED"
 
-	// Billed after the terminal event → the event is stale (plan change / old-plan
-	// cancel); active billing wins.
-	if terminal && s.LastRecurringChargeDate != nil && !eventAt.IsZero() &&
-		s.LastRecurringChargeDate.After(eventAt) {
+	// A terminal event is overridden only when the subscription shows *current*
+	// billing that post-dates it — a stale/plan-change cancel that active billing
+	// has outlived. See billedSince for the recency bound and the unknown-event-time
+	// fallback.
+	if terminal && s.billedSince(eventAt, now) {
 		newStatus = "ACTIVE"
 		terminal = false
 	}
@@ -164,6 +165,35 @@ func (s *Subscription) ApplyEventStatus(newStatus string, eventAt, now time.Time
 		s.UpdatedAt = now
 	}
 	return changed
+}
+
+// billedSince reports whether the subscription shows active billing that should
+// override a terminal (CANCELLED/UNINSTALLED) app event — i.e. the "cancel trap"
+// where Shopify emits an old-plan cancel but the merchant keeps being charged.
+//
+// It requires a recurring charge that is both (a) after the terminal event, so a
+// genuine cancellation with no later billing still churns, and (b) recent — within
+// one billing interval + a 30-day grace of now — so a single stale trailing charge
+// can't resurrect a long-dead sub. When eventAt is unknown (unparseable OccurredAt,
+// zero), it falls back to charge recency alone so a missing timestamp doesn't
+// silently reinstate the cancel trap.
+func (s *Subscription) billedSince(eventAt, now time.Time) bool {
+	if s.LastRecurringChargeDate == nil {
+		return false
+	}
+	last := *s.LastRecurringChargeDate
+
+	cycleDays := 30
+	if s.BillingInterval == valueobject.BillingIntervalAnnual {
+		cycleDays = 365
+	}
+	window := time.Duration(cycleDays+30) * 24 * time.Hour
+	recent := now.Sub(last) <= window
+
+	if eventAt.IsZero() {
+		return recent
+	}
+	return last.After(eventAt) && recent
 }
 
 // IsActive returns true if the subscription is active

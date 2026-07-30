@@ -71,6 +71,56 @@ func TestSubscription_ApplyEventStatus(t *testing.T) {
 		}
 	})
 
+	t.Run("a stale trailing charge after the cancel does NOT resurrect the sub (I1)", func(t *testing.T) {
+		cancelAt := now.AddDate(0, 0, -100)  // cancelled 100d ago
+		lastCharge := now.AddDate(0, 0, -70) // one charge after the cancel, but 70d ago (> 60d window)
+		s := &Subscription{
+			Status:                  "ACTIVE",
+			RiskState:               valueobject.RiskStateSafe,
+			BillingInterval:         valueobject.BillingIntervalMonthly,
+			LastRecurringChargeDate: ptr(lastCharge),
+			ExpectedNextChargeDate:  ptr(lastCharge.AddDate(0, 1, 0)),
+		}
+		if !s.ApplyEventStatus("CANCELLED", cancelAt, now) {
+			t.Fatal("expected a change")
+		}
+		if s.Status != "CANCELLED" || s.RiskState != valueobject.RiskStateChurned {
+			t.Errorf("stale trailing charge: got %q/%q, want CANCELLED/CHURNED", s.Status, s.RiskState)
+		}
+	})
+
+	t.Run("unknown event time falls back to charge recency: recent charge keeps ACTIVE (I2)", func(t *testing.T) {
+		s := &Subscription{
+			Status:                  "ACTIVE",
+			RiskState:               valueobject.RiskStateChurned,
+			BillingInterval:         valueobject.BillingIntervalMonthly,
+			LastRecurringChargeDate: ptr(now.AddDate(0, 0, -8)),
+			ExpectedNextChargeDate:  ptr(futureCharge),
+		}
+		if !s.ApplyEventStatus("CANCELLED", time.Time{}, now) {
+			t.Fatal("expected a change")
+		}
+		if s.Status != "ACTIVE" || s.RiskState != valueobject.RiskStateSafe {
+			t.Errorf("zero eventAt + recent charge: got %q/%q, want ACTIVE/SAFE", s.Status, s.RiskState)
+		}
+	})
+
+	t.Run("unknown event time + stale charge still churns (I2)", func(t *testing.T) {
+		s := &Subscription{
+			Status:                  "ACTIVE",
+			RiskState:               valueobject.RiskStateSafe,
+			BillingInterval:         valueobject.BillingIntervalMonthly,
+			LastRecurringChargeDate: ptr(now.AddDate(0, 0, -100)),
+			ExpectedNextChargeDate:  ptr(now.AddDate(0, 0, -70)),
+		}
+		if !s.ApplyEventStatus("UNINSTALLED", time.Time{}, now) {
+			t.Fatal("expected a change")
+		}
+		if s.Status != "UNINSTALLED" || s.RiskState != valueobject.RiskStateChurned {
+			t.Errorf("zero eventAt + stale charge: got %q/%q, want UNINSTALLED/CHURNED", s.Status, s.RiskState)
+		}
+	})
+
 	t.Run("re-classifies risk even when status is unchanged (fixes stale ACTIVE/CHURNED)", func(t *testing.T) {
 		s := &Subscription{
 			Status:                 "ACTIVE",

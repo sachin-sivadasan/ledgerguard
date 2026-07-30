@@ -1035,3 +1035,20 @@ Forward-paginate: `events(shopId: $shopId, first: 100, after: $cursor)` with `pa
 - Event fetch works; app-events populate; Installs/Uninstall/Activation reports get real data after a resync.
 - Slightly more API calls for shops with >100 events (rare); rate-limited by the per-partner token bucket.
 - Tests: `TestFetchAppEvents_PaginatesForwardWithFirstAfter` (asserts no `last:`, uses `first: 100`, follows the cursor across pages) + `TestFetchAppEvents_SinglePageStops`.
+
+### ADR-048: subscription shopify_gid unique PER APP, not globally
+
+**Date:** 2026-07-30
+**Status:** Implemented (migration 000045)
+
+**Context:**
+`subscriptions.shopify_gid` (and the CQRS read model `api_subscription_status.shopify_gid`) were **globally** UNIQUE. But the same Shopify `AppSubscription` GID can appear under more than one `app_id` — e.g. two LedgerGuard app records pointing at the same Partner app (an AppSubscription GID is unique to a Shopify app, so a shared GID across two LG apps means they resolve to the same Partner app). The ledger rebuild's `Upsert ... ON CONFLICT (shopify_gid) DO UPDATE` had no `app_id` in the conflict target or the SET, so when app A's rebuild inserted a subscription whose GID already existed under app B, it silently **UPDATED app B's row** (keeping B's `app_id`) instead of inserting — with **no error**. A "completed" full sync therefore dropped real subscriptions: app `a4d7dfd1…` was missing **88** active, long-lived paying stores (45–63 recurring charges each, 2021→2026) whose GIDs were held by app `b2c81cf9…`. Diagnosed via DB queries: 0 within-app GID collisions, but the missing domains existed under a different `app_id` with real GIDs.
+
+**Decision:**
+Scope uniqueness per app: `UNIQUE (app_id, shopify_gid)` on `subscriptions`, and a `(app_id, shopify_gid)` unique index on `api_subscription_status`; change both Upserts to `ON CONFLICT (app_id, shopify_gid)`. Each app now owns its rows independently; one app's rebuild can't clobber another's. Migration 000045 (schema v44→v45).
+
+**Consequences:**
+- After deploy + resync, app `a4d7dfd1…` recovers its full subscription set (~2917 vs 2829).
+- **Root cause upstream:** the two app records almost certainly point at the SAME Partner app (they share AppSubscription GIDs) — a duplicate/overlapping app record that should be reconciled/removed separately; the per-app constraint is the correct multi-tenancy fix regardless.
+- `SubscriptionRepository.FindByShopifyGID(gid)` (webhook paths) still assumes a globally-unique GID — now it may match >1 app's row; threading app context there is a follow-up.
+- Transactions also use a global `ON CONFLICT (shopify_gid)`; a shared tx GID across apps could bounce similarly — separate follow-up (tracked).

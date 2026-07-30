@@ -107,6 +107,78 @@ func (s *RevenueMetricsService) GetEarningsByDateRange(
 	return response, nil
 }
 
+// MonthlyEarningResponse is one month's earnings card: gross, the Shopify cut
+// (gross − net), net earnings, and a single derived status.
+type MonthlyEarningResponse struct {
+	Month            string `json:"month"`
+	StartDate        string `json:"start_date"`
+	EndDate          string `json:"end_date"`
+	GrossCents       int64  `json:"gross_cents"`
+	ShopifyCutCents  int64  `json:"shopify_cut_cents"`
+	NetEarningsCents int64  `json:"net_earnings_cents"`
+	Status           string `json:"status"` // PENDING | AVAILABLE | PAID_OUT
+}
+
+// MonthlyEarningsResponse wraps the monthly earnings list (same envelope as the
+// daily earnings response so the client decodes it identically).
+type MonthlyEarningsResponse struct {
+	StartDate string                   `json:"start_date"`
+	EndDate   string                   `json:"end_date"`
+	Earnings  []MonthlyEarningResponse `json:"earnings"`
+}
+
+// GetMonthlyEarnings returns per-month earnings cards (gross / Shopify cut / net +
+// status) for the range. A month's status is the least-settled state present:
+// PENDING if any earnings are still pending, else AVAILABLE, else PAID_OUT.
+func (s *RevenueMetricsService) GetMonthlyEarnings(
+	ctx context.Context,
+	appID uuid.UUID,
+	startDate, endDate time.Time,
+) (*MonthlyEarningsResponse, error) {
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	if endDate.After(today) {
+		endDate = today
+	}
+	if startDate.After(endDate) {
+		return nil, ErrInvalidDateRange
+	}
+
+	aggs, err := s.revenueRepo.GetMonthlyEarnings(ctx, appID, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &MonthlyEarningsResponse{
+		StartDate: startDate.Format("2006-01-02"),
+		EndDate:   endDate.Format("2006-01-02"),
+		Earnings:  make([]MonthlyEarningResponse, 0, len(aggs)),
+	}
+	for _, a := range aggs {
+		// Least-settled state present wins. Default PENDING covers a month whose
+		// rows carry no recognized earnings_status (counts all zero) — treat as
+		// not-yet-cleared rather than silently "paid out".
+		status := "PENDING"
+		if a.PendingCount == 0 {
+			if a.AvailableCount > 0 {
+				status = "AVAILABLE"
+			} else if a.PaidOutCount > 0 {
+				status = "PAID_OUT"
+			}
+		}
+		resp.Earnings = append(resp.Earnings, MonthlyEarningResponse{
+			Month:            a.MonthLabel,
+			StartDate:        a.StartDate,
+			EndDate:          a.EndDate,
+			GrossCents:       a.GrossCents,
+			ShopifyCutCents:  a.GrossCents - a.NetCents,
+			NetEarningsCents: a.NetCents,
+			Status:           status,
+		})
+	}
+	return resp, nil
+}
+
 // EarningsStatusResponse represents earnings availability status
 type EarningsStatusResponse struct {
 	TotalPendingCents      int64                     `json:"total_pending_cents"`

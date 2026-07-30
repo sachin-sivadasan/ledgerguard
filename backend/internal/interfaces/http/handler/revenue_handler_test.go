@@ -19,6 +19,7 @@ import (
 // mockRevenueRepository implements repository.RevenueRepository for testing
 type mockRevenueRepository struct {
 	aggregations []repository.RevenueAggregation
+	monthly      []repository.MonthlyEarningAggregation
 	err          error
 }
 
@@ -27,6 +28,13 @@ func (m *mockRevenueRepository) GetRevenueByDateRange(ctx context.Context, appID
 		return nil, m.err
 	}
 	return m.aggregations, nil
+}
+
+func (m *mockRevenueRepository) GetMonthlyEarnings(ctx context.Context, appID uuid.UUID, startDate, endDate time.Time) ([]repository.MonthlyEarningAggregation, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.monthly, nil
 }
 
 // mockPartnerRepoForRevenue implements just what we need from PartnerAccountRepository
@@ -398,5 +406,102 @@ func TestRevenueHandler_GetEarnings_InvalidAppID(t *testing.T) {
 
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("expected status 400, got %d", rr.Code)
+	}
+}
+
+func TestRevenueHandler_GetEarningPeriods(t *testing.T) {
+	userID := uuid.New()
+	partnerID := uuid.New()
+	appID := uuid.New()
+
+	partnerRepo := &mockPartnerRepoForRevenue{
+		account: &entity.PartnerAccount{ID: partnerID, UserID: userID},
+	}
+	appRepo := &mockAppRepoForRevenue{
+		apps: []*entity.App{{ID: appID, PartnerAccountID: partnerID, PartnerAppID: "gid://partners/App/12345", Name: "Test App"}},
+	}
+	revenueRepo := &mockRevenueRepository{
+		monthly: []repository.MonthlyEarningAggregation{
+			// Newest first, as the repo returns. Mixed statuses to exercise derivation.
+			{MonthLabel: "May 2026", StartDate: "2026-05-01", EndDate: "2026-05-31", GrossCents: 1420000, NetCents: 1136000, PendingCount: 3, AvailableCount: 1},
+			{MonthLabel: "Apr 2026", StartDate: "2026-04-01", EndDate: "2026-04-30", GrossCents: 1280000, NetCents: 1024000, AvailableCount: 5},
+			{MonthLabel: "Mar 2026", StartDate: "2026-03-01", EndDate: "2026-03-31", GrossCents: 100000, NetCents: 80000, PaidOutCount: 2},
+		},
+	}
+
+	revenueSvc := service.NewRevenueMetricsService(revenueRepo)
+	handler := NewRevenueHandler(revenueSvc, partnerRepo, appRepo)
+
+	req := httptest.NewRequest("GET", "/api/v1/apps/x/earnings/periods?start=2026-01-01&end=2026-05-31", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("appID", appID.String())
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = req.WithContext(middleware.SetUserContext(req.Context(), &entity.User{ID: userID, Email: "t@e.com"}))
+
+	rr := httptest.NewRecorder()
+	handler.GetEarningPeriods(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var resp service.MonthlyEarningsResponse
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(resp.Earnings) != 3 {
+		t.Fatalf("expected 3 months, got %d", len(resp.Earnings))
+	}
+	// Shopify cut = gross - net.
+	if resp.Earnings[0].ShopifyCutCents != 1420000-1136000 {
+		t.Errorf("May cut: expected %d, got %d", 1420000-1136000, resp.Earnings[0].ShopifyCutCents)
+	}
+	// Status derivation: any pending -> PENDING; else available -> AVAILABLE; else PAID_OUT.
+	if resp.Earnings[0].Status != "PENDING" {
+		t.Errorf("May status: expected PENDING, got %s", resp.Earnings[0].Status)
+	}
+	if resp.Earnings[1].Status != "AVAILABLE" {
+		t.Errorf("Apr status: expected AVAILABLE, got %s", resp.Earnings[1].Status)
+	}
+	if resp.Earnings[2].Status != "PAID_OUT" {
+		t.Errorf("Mar status: expected PAID_OUT, got %s", resp.Earnings[2].Status)
+	}
+	if resp.Earnings[0].Month != "May 2026" || resp.Earnings[0].NetEarningsCents != 1136000 {
+		t.Errorf("May row fields wrong: %+v", resp.Earnings[0])
+	}
+}
+
+func TestRevenueHandler_GetEarningPeriods_BadDate(t *testing.T) {
+	userID, partnerID, appID := uuid.New(), uuid.New(), uuid.New()
+	partnerRepo := &mockPartnerRepoForRevenue{account: &entity.PartnerAccount{ID: partnerID, UserID: userID}}
+	appRepo := &mockAppRepoForRevenue{apps: []*entity.App{{ID: appID, PartnerAccountID: partnerID, PartnerAppID: "gid://partners/App/1", Name: "A"}}}
+	handler := NewRevenueHandler(service.NewRevenueMetricsService(&mockRevenueRepository{}), partnerRepo, appRepo)
+
+	req := httptest.NewRequest("GET", "/x/earnings/periods?start=05-2026", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("appID", appID.String())
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = req.WithContext(middleware.SetUserContext(req.Context(), &entity.User{ID: userID}))
+	rr := httptest.NewRecorder()
+	handler.GetEarningPeriods(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("bad start date: expected 400, got %d", rr.Code)
+	}
+}
+
+func TestRevenueHandler_GetEarningPeriods_StartAfterEnd(t *testing.T) {
+	userID, partnerID, appID := uuid.New(), uuid.New(), uuid.New()
+	partnerRepo := &mockPartnerRepoForRevenue{account: &entity.PartnerAccount{ID: partnerID, UserID: userID}}
+	appRepo := &mockAppRepoForRevenue{apps: []*entity.App{{ID: appID, PartnerAccountID: partnerID, PartnerAppID: "gid://partners/App/1", Name: "A"}}}
+	handler := NewRevenueHandler(service.NewRevenueMetricsService(&mockRevenueRepository{}), partnerRepo, appRepo)
+
+	req := httptest.NewRequest("GET", "/x/earnings/periods?start=2026-05-01&end=2026-01-01", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("appID", appID.String())
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = req.WithContext(middleware.SetUserContext(req.Context(), &entity.User{ID: userID}))
+	rr := httptest.NewRecorder()
+	handler.GetEarningPeriods(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("start>end: expected 400, got %d", rr.Code)
 	}
 }

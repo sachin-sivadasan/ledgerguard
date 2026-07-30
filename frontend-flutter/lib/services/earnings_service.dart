@@ -18,8 +18,11 @@ class EarningsService {
       final now = DateTime.now();
       final start = dateFmt.format(now.subtract(const Duration(days: 365)));
       final end = dateFmt.format(now);
+      // Monthly period cards (gross / Shopify cut / net + status) — the daily
+      // /earnings feed carries only a net total per day, which can't render the
+      // wireframe's per-month breakdown.
       final response = await _client.get(
-        '/api/v1/apps/$appId/earnings',
+        '/api/v1/apps/$appId/earnings/periods',
         queryParameters: {'start': start, 'end': end},
         cancelToken: cancelToken,
       );

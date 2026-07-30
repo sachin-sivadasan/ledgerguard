@@ -220,6 +220,7 @@ func New(cfg Config) *chi.Mux {
 				// Earnings timeline routes
 				if cfg.RevenueHandler != nil {
 					r.Get("/{appID}/earnings", cfg.RevenueHandler.GetEarnings)
+					r.Get("/{appID}/earnings/periods", cfg.RevenueHandler.GetEarningPeriods)
 					r.Get("/{appID}/earnings/status", cfg.RevenueHandler.GetEarningsStatus)
 					r.Get("/{appID}/revenue/concentration", cfg.RevenueHandler.GetRevenueConcentration)
 				}

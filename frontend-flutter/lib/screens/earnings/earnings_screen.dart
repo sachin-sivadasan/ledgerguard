@@ -246,29 +246,13 @@ class _EarningsTab extends StatelessWidget {
                                         color: LgColors.success)),
                             ],
                           ),
-                          // Full gross/fee breakdown only when the source has it.
+                          // Full gross/fee breakdown only when the source has it
+                          // (monthly period cards). Matches wireframe 14-earnings:
+                          // stacked label/value columns — Gross, Shopify Fee (rate%)
+                          // in red as a negative, Net in green.
                           if (period.hasFeeBreakdown) ...[
-                            const SizedBox(height: LgSpacing.s200),
-                            LgBreakpoints.isMobile(context)
-                              ? Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Gross: ${period.grossFormatted}', style: theme.textTheme.bodyMedium),
-                                    const SizedBox(height: LgSpacing.s100),
-                                    Text('Shopify: ${period.shopifyCutFormatted}', style: TextStyle(fontSize: 13, color: LgColors.textSecondary)),
-                                    const SizedBox(height: LgSpacing.s100),
-                                    Text('Net: ${period.netFormatted}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: LgColors.success)),
-                                  ],
-                                )
-                              : Row(
-                                  children: [
-                                    Text('Gross: ${period.grossFormatted}', style: theme.textTheme.bodyMedium),
-                                    const SizedBox(width: LgSpacing.s400),
-                                    Text('Shopify: ${period.shopifyCutFormatted}', style: TextStyle(fontSize: 13, color: LgColors.textSecondary)),
-                                    const SizedBox(width: LgSpacing.s400),
-                                    Text('Net: ${period.netFormatted}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: LgColors.success)),
-                                  ],
-                                ),
+                            const SizedBox(height: LgSpacing.s300),
+                            _PeriodBreakdown(period: period),
                           ],
                           if (period.paidOutDate != null) ...[
                             const SizedBox(height: LgSpacing.s100),
@@ -297,6 +281,77 @@ class _EarningsTab extends StatelessWidget {
         EarningStatus.available => BadgeTone.info,
         EarningStatus.paidOut => BadgeTone.success,
       };
+}
+
+/// The Gross / Shopify Fee (rate%) / Net breakdown for one earnings period card,
+/// per wireframe 14-earnings. Row on desktop, stacked on mobile.
+class _PeriodBreakdown extends StatelessWidget {
+  final EarningPeriod period;
+  const _PeriodBreakdown({required this.period});
+
+  @override
+  Widget build(BuildContext context) {
+    final cut = period.shopifyCutCents;
+    // Guard the derived rate: clamp to [0,100] so a legacy/refund month with an
+    // odd gross/net ratio can't render e.g. "-12%" or "140%".
+    final rate = period.grossCents > 0
+        ? ((cut * 100 / period.grossCents).round()).clamp(0, 100)
+        : 0;
+    // Only show the fee as a negative when there actually is a cut; never emit a
+    // double-minus for a (shouldn't-happen) net > gross month.
+    final feeValue =
+        cut > 0 ? '-${period.shopifyCutFormatted}' : period.shopifyCutFormatted;
+    final cells = <Widget>[
+      _EarningMetric(label: 'Gross', value: period.grossFormatted),
+      _EarningMetric(
+          label: 'Shopify Fee ($rate%)',
+          value: feeValue,
+          color: LgColors.critical),
+      _EarningMetric(
+          label: 'Net', value: period.netFormatted, color: LgColors.success),
+    ];
+    if (LgBreakpoints.isMobile(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final c in cells)
+            Padding(
+                padding: const EdgeInsets.only(bottom: LgSpacing.s200),
+                child: c),
+        ],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [for (final c in cells) Expanded(child: c)],
+    );
+  }
+}
+
+/// A stacked label-over-value cell for the earnings period card (Gross / Shopify
+/// Fee / Net), per wireframe 14-earnings.
+class _EarningMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? color;
+  const _EarningMetric({required this.label, required this.value, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: LgColors.textSecondary)),
+        const SizedBox(height: LgSpacing.s100),
+        Text(value,
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: color ?? LgColors.textPrimary)),
+      ],
+    );
+  }
 }
 
 class _FeesAndTiersTab extends StatefulWidget {

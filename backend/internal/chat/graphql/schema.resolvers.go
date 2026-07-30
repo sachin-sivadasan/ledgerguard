@@ -208,7 +208,9 @@ func (r *queryResolver) Earnings(ctx context.Context, appID string) (*Earnings, 
 		case valueobject.ChargeTypeOneTime:
 			oneTimeCents += tx.AmountCents()
 		case valueobject.ChargeTypeRefund:
-			refundCents += tx.AmountCents()
+			// Refund net is stored negative; negate to accumulate a positive refund
+			// magnitude (total = ... - refundCents below).
+			refundCents -= tx.AmountCents()
 		}
 	}
 

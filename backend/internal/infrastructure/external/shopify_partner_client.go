@@ -716,12 +716,13 @@ func (c *ShopifyPartnerClient) inferChargeType(node transactionNode) valueobject
 		return valueobject.ChargeTypeUsage
 	case "AppOneTimeSale":
 		return valueobject.ChargeTypeOneTime
-	case "AppSaleAdjustment", "AppCredit":
-		// AppSaleAdjustment = refund/downgrade/chargeback of an app charge; AppCredit = a
-		// merchant credit. Both are refunds. Their netAmount is NEGATIVE (deducted from
-		// payout) and is stored as-is — the truthful signed effect on the payout, so any
-		// SUM(net) naturally nets them out. Consumers that display refunds as a positive
-		// magnitude negate locally (see revenue_mix / metrics_engine).
+	case "AppSaleAdjustment":
+		// Refund/downgrade/chargeback of an app charge. Its netAmount is NEGATIVE (deducted
+		// from payout) and is stored as-is — the truthful signed effect on the payout, so
+		// any SUM(net) nets it out. Consumers that display refunds as a positive magnitude
+		// negate locally (see revenue_mix / metrics_engine / earnings resolver). NOTE: only
+		// AppSaleAdjustment is fetched (fragment above); AppCredit would need its own
+		// verified fragment before it can be ingested, so it's intentionally not mapped here.
 		return valueobject.ChargeTypeRefund
 	default:
 		return valueobject.ChargeTypeRecurring

@@ -1,5 +1,34 @@
 enum ChargeType { recurring, usage, oneTime, refund }
 
+/// Server API value for a charge-type filter (matches the backend chargeType param).
+String chargeTypeToApi(ChargeType c) => switch (c) {
+      ChargeType.recurring => 'RECURRING',
+      ChargeType.usage => 'USAGE',
+      ChargeType.oneTime => 'ONE_TIME',
+      ChargeType.refund => 'REFUND',
+    };
+
+/// Aggregate transaction totals computed server-side over the full filtered set.
+class TransactionSummary {
+  final int grossCents;
+  final int netCents;
+  final int shopifyCutCents;
+  final int count;
+  const TransactionSummary({
+    required this.grossCents,
+    required this.netCents,
+    required this.shopifyCutCents,
+    required this.count,
+  });
+  factory TransactionSummary.fromJson(Map<String, dynamic> j) =>
+      TransactionSummary(
+        grossCents: (j['grossCents'] as num?)?.toInt() ?? 0,
+        netCents: (j['netCents'] as num?)?.toInt() ?? 0,
+        shopifyCutCents: (j['shopifyCutCents'] as num?)?.toInt() ?? 0,
+        count: (j['count'] as num?)?.toInt() ?? 0,
+      );
+}
+
 class Transaction {
   final String id;
   final DateTime date;

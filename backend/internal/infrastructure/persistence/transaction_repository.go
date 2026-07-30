@@ -293,6 +293,48 @@ func (r *PostgresTransactionRepository) FindByAppIDPaginated(ctx context.Context
 	}, nil
 }
 
+// GetTransactionSummary sums gross/net and counts over the filtered set (same WHERE as
+// FindByAppIDPaginated, minus pagination) so the UI totals reflect the whole set, not the
+// loaded page. Net uses COALESCE(net_amount_cents, amount_cents), matching the list query.
+func (r *PostgresTransactionRepository) GetTransactionSummary(ctx context.Context, appID uuid.UUID, filters repository.TransactionFilters) (*repository.TransactionSummary, error) {
+	var conditions []string
+	var args []interface{}
+	argNum := 1
+
+	conditions = append(conditions, fmt.Sprintf("app_id = $%d", argNum))
+	args = append(args, appID)
+	argNum++
+
+	if !filters.From.IsZero() {
+		conditions = append(conditions, fmt.Sprintf("transaction_date >= $%d", argNum))
+		args = append(args, filters.From)
+		argNum++
+	}
+	if !filters.To.IsZero() {
+		conditions = append(conditions, fmt.Sprintf("transaction_date <= $%d", argNum))
+		args = append(args, filters.To)
+		argNum++
+	}
+	if filters.ChargeType != "" {
+		conditions = append(conditions, fmt.Sprintf("charge_type = $%d", argNum))
+		args = append(args, filters.ChargeType)
+		argNum++
+	}
+
+	query := fmt.Sprintf(`
+		SELECT COALESCE(SUM(COALESCE(gross_amount_cents, 0)), 0),
+		       COALESCE(SUM(COALESCE(net_amount_cents, amount_cents)), 0),
+		       COUNT(*)
+		FROM transactions WHERE %s
+	`, strings.Join(conditions, " AND "))
+
+	var summary repository.TransactionSummary
+	if err := r.pool.QueryRow(ctx, query, args...).Scan(&summary.GrossCents, &summary.NetCents, &summary.Count); err != nil {
+		return nil, fmt.Errorf("transaction summary query failed: %w", err)
+	}
+	return &summary, nil
+}
+
 // scanTransaction scans a row into a Transaction entity
 func (r *PostgresTransactionRepository) scanTransaction(rows pgx.Rows) (*entity.Transaction, error) {
 	var tx entity.Transaction

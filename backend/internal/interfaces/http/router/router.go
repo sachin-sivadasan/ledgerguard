@@ -239,6 +239,7 @@ func New(cfg Config) *chi.Mux {
 				// Transaction list route
 				if cfg.TransactionHandler != nil {
 					r.Get("/{appID}/transactions", cfg.TransactionHandler.List)
+					r.Get("/{appID}/transactions/summary", cfg.TransactionHandler.Summary)
 				}
 
 				// Store list route

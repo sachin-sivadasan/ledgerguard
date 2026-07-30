@@ -750,3 +750,7 @@ func TestLedgerService_SetsActivatedAtFromFirstRecurringCharge(t *testing.T) {
 		t.Errorf("StartDate(): expected %v, got %v", firstCharge, sub.StartDate())
 	}
 }
+
+func (m *mockTxRepoForLedger) GetTransactionSummary(_ context.Context, _ uuid.UUID, _ repository.TransactionFilters) (*repository.TransactionSummary, error) {
+	return &repository.TransactionSummary{}, nil
+}

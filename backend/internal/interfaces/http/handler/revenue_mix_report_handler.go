@@ -113,7 +113,9 @@ func buildRevenueMixReport(txs []*entity.Transaction) revenueMixReport {
 		case valueobject.ChargeTypeOneTime:
 			oneTimeCents += tx.AmountCents()
 		case valueobject.ChargeTypeRefund:
-			refundCents += tx.AmountCents()
+			// Refund net is stored negative; negate to accumulate a positive refund
+			// magnitude (net = gross − refundCents below; RefundCents displayed positive).
+			refundCents -= tx.AmountCents()
 		default:
 			// An unrecognized/empty ChargeType (e.g. a new Partner API charge type)
 			// is excluded from gross so segments stay internally consistent — but log

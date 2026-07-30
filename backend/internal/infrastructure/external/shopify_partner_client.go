@@ -526,6 +526,17 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
 						}
+						... on AppSaleAdjustment {
+							chargeId
+							app { id name }
+							shop {
+								id
+								myshopifyDomain
+								name
+							}
+							grossAmount { amount currencyCode }
+							netAmount { amount currencyCode }
+						}
 					}
 				}
 				pageInfo {
@@ -705,7 +716,12 @@ func (c *ShopifyPartnerClient) inferChargeType(node transactionNode) valueobject
 		return valueobject.ChargeTypeUsage
 	case "AppOneTimeSale":
 		return valueobject.ChargeTypeOneTime
-	case "AppCredit":
+	case "AppSaleAdjustment", "AppCredit":
+		// AppSaleAdjustment = refund/downgrade/chargeback of an app charge; AppCredit = a
+		// merchant credit. Both are refunds. Their netAmount is NEGATIVE (deducted from
+		// payout) and is stored as-is — the truthful signed effect on the payout, so any
+		// SUM(net) naturally nets them out. Consumers that display refunds as a positive
+		// magnitude negate locally (see revenue_mix / metrics_engine).
 		return valueobject.ChargeTypeRefund
 	default:
 		return valueobject.ChargeTypeRecurring

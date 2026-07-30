@@ -75,16 +75,16 @@ func serveRevenueMix(t *testing.T, txs []*entity.Transaction, query string) (*ht
 	return rec, report
 }
 
-// mixedRevenueTxs: recurring 5000+1000=6000, usage 3000, one-time 1000, refund 500.
-// gross = 10000, net = 9500. Usage != One-time so a Usage↔One-time case-label swap
-// would be caught.
+// mixedRevenueTxs: recurring 5000+1000=6000, usage 3000, one-time 1000, refund -500
+// (refund net is stored negative). gross = 10000, refund magnitude = 500, net = 9500.
+// Usage != One-time so a Usage↔One-time case-label swap would be caught.
 func mixedRevenueTxs() []*entity.Transaction {
 	return []*entity.Transaction{
 		mixTx(valueobject.ChargeTypeRecurring, 5000, "USD"),
 		mixTx(valueobject.ChargeTypeRecurring, 1000, "USD"),
 		mixTx(valueobject.ChargeTypeUsage, 3000, "USD"),
 		mixTx(valueobject.ChargeTypeOneTime, 1000, "USD"),
-		mixTx(valueobject.ChargeTypeRefund, 500, "USD"),
+		mixTx(valueobject.ChargeTypeRefund, -500, "USD"),
 	}
 }
 

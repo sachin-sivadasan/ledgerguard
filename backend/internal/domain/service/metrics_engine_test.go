@@ -89,10 +89,11 @@ func TestMetricsEngine_CalculateTotalRevenue(t *testing.T) {
 		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 2000},
 		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeUsage, NetAmountCents: 500},
 		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeOneTime, NetAmountCents: 100},
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRefund, NetAmountCents: 200},
+		// Refund net is stored NEGATIVE (Shopify's signed payout effect).
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRefund, NetAmountCents: -200},
 	}
 
-	// RECURRING + USAGE + ONE_TIME - REFUNDS
+	// RECURRING + USAGE + ONE_TIME + REFUND(negative)
 	totalRevenue := engine.CalculateTotalRevenue(transactions)
 	expected := int64(2400) // 2000 + 500 + 100 - 200
 
@@ -166,7 +167,8 @@ func TestMetricsEngine_ComputeAllMetrics(t *testing.T) {
 		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRecurring, NetAmountCents: 5000},
 		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeUsage, NetAmountCents: 1000},
 		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeOneTime, NetAmountCents: 200},
-		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRefund, NetAmountCents: 100},
+		// Refund net is stored NEGATIVE.
+		{ID: uuid.New(), ChargeType: valueobject.ChargeTypeRefund, NetAmountCents: -100},
 	}
 
 	snapshot := engine.ComputeAllMetrics(appID, subscriptions, transactions, now)

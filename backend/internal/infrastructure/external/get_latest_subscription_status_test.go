@@ -142,6 +142,59 @@ func TestGetLatestSubscriptionStatus(t *testing.T) {
 			events: []AppEvent{ev("RELATIONSHIP_INSTALLED", base)},
 			want:   "PENDING",
 		},
+		// --- missing-event-type regression: recurring renewals emit
+		// SUBSCRIPTION_CHARGE_ACTIVATED (not ACCEPTED), and reinstalls emit
+		// RELATIONSHIP_REACTIVATED (not INSTALLED). Before these were handled, an
+		// active/reinstalled shop's newest event was skipped and the loop fell through
+		// to a stale UNINSTALLED/CANCELED — mass-mislabelling live subs as churned.
+		{
+			name: "recurring activation is ACTIVE even after an older uninstall",
+			events: []AppEvent{
+				ev("RELATIONSHIP_UNINSTALLED", base.Add(1*time.Hour)),
+				ev("SUBSCRIPTION_CHARGE_ACTIVATED", base.Add(4*time.Hour)), // newest
+			},
+			want: "ACTIVE",
+		},
+		{
+			name: "activated wins a same-timestamp tie against a cancel (plan change)",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_CANCELED", base.Add(2*time.Hour)),
+				ev("SUBSCRIPTION_CHARGE_ACTIVATED", base.Add(2*time.Hour)),
+			},
+			want: "ACTIVE",
+		},
+		{
+			name: "reactivation (reinstall) after an uninstall is not churn",
+			events: []AppEvent{
+				ev("RELATIONSHIP_UNINSTALLED", base.Add(1*time.Hour)),
+				ev("RELATIONSHIP_REACTIVATED", base.Add(3*time.Hour)), // newest, no later charge yet
+			},
+			want: "PENDING",
+		},
+		{
+			name: "relationship deactivated is terminal like uninstall",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_ACTIVATED", base.Add(1*time.Hour)),
+				ev("RELATIONSHIP_DEACTIVATED", base.Add(5*time.Hour)),
+			},
+			want: "UNINSTALLED",
+		},
+		{
+			name: "expired charge reads as cancelled when latest",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_ACCEPTED", base),
+				ev("SUBSCRIPTION_CHARGE_EXPIRED", base.Add(3*time.Hour)),
+			},
+			want: "CANCELLED",
+		},
+		{
+			name: "declined charge reads as a payment issue (frozen), recoverable",
+			events: []AppEvent{
+				ev("SUBSCRIPTION_CHARGE_ACTIVATED", base),
+				ev("SUBSCRIPTION_CHARGE_DECLINED", base.Add(3*time.Hour)),
+			},
+			want: "FROZEN",
+		},
 		{
 			name:   "empty",
 			events: nil,

@@ -790,15 +790,15 @@ func (c *ShopifyPartnerClient) getPartnerAppGID(ctx context.Context) string {
 
 // AppEvent represents an app lifecycle event from the Partner API
 type AppEvent struct {
-	Type      string // RELATIONSHIP_INSTALLED, SUBSCRIPTION_CHARGE_ACCEPTED, SUBSCRIPTION_CHARGE_CANCELED, RELATIONSHIP_UNINSTALLED
+	Type      string // one of Partner API AppEventTypes, e.g. RELATIONSHIP_INSTALLED/REACTIVATED/UNINSTALLED/DEACTIVATED, SUBSCRIPTION_CHARGE_ACTIVATED/ACCEPTED/CANCELED/EXPIRED/FROZEN/UNFROZEN/DECLINED (see GetLatestSubscriptionStatus)
 	ShopID    string
 	ShopName  string
 	OccurredAt time.Time
 }
 
-// FetchAppEvents retrieves lifecycle events for an app, optionally filtered by shop
-// Events include: RELATIONSHIP_INSTALLED, SUBSCRIPTION_CHARGE_ACCEPTED,
-// SUBSCRIPTION_CHARGE_CANCELED, RELATIONSHIP_UNINSTALLED
+// FetchAppEvents retrieves lifecycle events for an app, optionally filtered by shop.
+// Events span the full Partner API AppEventTypes enum (relationship + subscription-charge
+// lifecycle); GetLatestSubscriptionStatus interprets the status-relevant ones.
 func (c *ShopifyPartnerClient) FetchAppEvents(
 	ctx context.Context,
 	organizationID, accessToken string,
@@ -960,17 +960,25 @@ func GetLatestSubscriptionStatus(events []AppEvent) string {
 
 	for _, event := range sorted {
 		switch event.Type {
-		case "RELATIONSHIP_UNINSTALLED":
+		case "RELATIONSHIP_UNINSTALLED", "RELATIONSHIP_DEACTIVATED":
+			// Uninstalled, or the relationship was deactivated (store closed/frozen
+			// by Shopify) — terminal churn.
 			return "UNINSTALLED"
-		case "SUBSCRIPTION_CHARGE_CANCELED":
+		case "SUBSCRIPTION_CHARGE_CANCELED", "SUBSCRIPTION_CHARGE_EXPIRED":
+			// Cancelled, or the charge expired (approval window lapsed / not renewed).
 			return "CANCELLED"
-		case "SUBSCRIPTION_CHARGE_FROZEN":
+		case "SUBSCRIPTION_CHARGE_FROZEN", "SUBSCRIPTION_CHARGE_DECLINED":
+			// Frozen, or a payment was declined — a recoverable payment issue, not
+			// terminal churn.
 			return "FROZEN"
-		case "SUBSCRIPTION_CHARGE_UNFROZEN", "SUBSCRIPTION_CHARGE_ACCEPTED":
-			// Unfrozen restores billing; accepted (re)starts it — both ACTIVE.
+		case "SUBSCRIPTION_CHARGE_ACTIVATED", "SUBSCRIPTION_CHARGE_UNFROZEN", "SUBSCRIPTION_CHARGE_ACCEPTED":
+			// Activated = a recurring charge went live (the event monthly renewals
+			// emit — NOT ACCEPTED, which only fires at initial approval); unfrozen
+			// restores billing; accepted (re)starts it — all ACTIVE.
 			return "ACTIVE"
-		case "RELATIONSHIP_INSTALLED":
-			// Installed but no subscription event yet - could be trial or pending
+		case "RELATIONSHIP_INSTALLED", "RELATIONSHIP_REACTIVATED":
+			// Installed or reinstalled (reactivated) but no subscription-charge event
+			// yet — trial or pending. A later charge event, if any, outranks this.
 			return "PENDING"
 		}
 	}
@@ -984,17 +992,21 @@ func GetLatestSubscriptionStatus(events []AppEvent) string {
 // one) reads as ACTIVE, not churn.
 func statusEventPriority(eventType string) int {
 	switch eventType {
+	case "SUBSCRIPTION_CHARGE_ACTIVATED":
+		return 7 // recurring charge live — strongest active signal
 	case "SUBSCRIPTION_CHARGE_ACCEPTED":
-		return 5
+		return 6
 	case "SUBSCRIPTION_CHARGE_UNFROZEN":
+		return 5
+	case "RELATIONSHIP_REACTIVATED":
 		return 4
 	case "RELATIONSHIP_INSTALLED":
 		return 3
-	case "SUBSCRIPTION_CHARGE_FROZEN":
+	case "SUBSCRIPTION_CHARGE_FROZEN", "SUBSCRIPTION_CHARGE_DECLINED":
 		return 2
-	case "SUBSCRIPTION_CHARGE_CANCELED":
+	case "SUBSCRIPTION_CHARGE_CANCELED", "SUBSCRIPTION_CHARGE_EXPIRED":
 		return 1
-	case "RELATIONSHIP_UNINSTALLED":
+	case "RELATIONSHIP_UNINSTALLED", "RELATIONSHIP_DEACTIVATED":
 		return 0
 	default:
 		return -1

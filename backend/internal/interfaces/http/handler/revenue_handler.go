@@ -123,6 +123,59 @@ func (h *RevenueHandler) GetEarnings(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(metrics)
 }
 
+// GetEarningPeriods handles GET /api/v1/apps/{appID}/earnings/periods
+// Returns per-month earnings cards (gross / Shopify cut / net + status) for the
+// range. Query params: start (YYYY-MM-DD), end (YYYY-MM-DD); defaults to the
+// last 365 days when omitted.
+func (h *RevenueHandler) GetEarningPeriods(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	if user := middleware.UserFromContext(ctx); user == nil {
+		writeJSONErrorResponse(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
+	if lookupErr != nil {
+		writeJSONErrorResponse(w, lookupErr.statusCode, lookupErr.message)
+		return
+	}
+
+	// Default to the trailing 365 days so the client can omit the range.
+	end := time.Now().UTC()
+	start := end.AddDate(-1, 0, 0)
+	if s := r.URL.Query().Get("start"); s != "" {
+		if t, err := time.Parse("2006-01-02", s); err == nil {
+			start = t
+		} else {
+			writeJSONErrorResponse(w, http.StatusBadRequest, "invalid start date format, use YYYY-MM-DD")
+			return
+		}
+	}
+	if s := r.URL.Query().Get("end"); s != "" {
+		if t, err := time.Parse("2006-01-02", s); err == nil {
+			end = t
+		} else {
+			writeJSONErrorResponse(w, http.StatusBadRequest, "invalid end date format, use YYYY-MM-DD")
+			return
+		}
+	}
+
+	result, err := h.revenueService.GetMonthlyEarnings(ctx, app.ID, start, end)
+	if err != nil {
+		if err == service.ErrInvalidDateRange {
+			writeJSONErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		log.Printf("GetEarningPeriods: failed for app %s: %v", app.ID, err)
+		writeJSONErrorResponse(w, http.StatusInternalServerError, "failed to fetch earning periods")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
 // GetRevenueConcentration handles GET /api/v1/apps/{appID}/revenue/concentration?top=10
 // Returns top stores by revenue for the app
 func (h *RevenueHandler) GetRevenueConcentration(w http.ResponseWriter, r *http.Request) {

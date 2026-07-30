@@ -135,7 +135,7 @@ Funnel: safe 729 / 1-cycle 126 / 2-cycle 5 / churned 2066 (= 2926 ✓). At-Risk 
 **EARN-2 🔴 Earnings list rows show Gross/Shopify/Net = $0.00** — the `/earnings` response rows only carry `{date, total_amount_cents}` (e.g. $1,384.22), but the row widget reads `gross`/`shopify`/`net` fields that don't exist in the payload → renders 0 + "PENDING" for every row. Frontend↔backend contract mismatch.
 
 **✅ EARN-1/EARN-2 FIXED (PR pending) — frontend field-mapping.** `EarningsStatus.fromJson` now reads `total_pending/available/paid_out_cents` + `upcoming_availability`; `totalEarned` sums the status totals in live mode; `EarningPeriod.fromJson` maps `total_amount_cents`→net and `date`→dates; per-date rows show **Net** (Gross/Shopify breakdown only when the source provides it, via `hasFeeBreakdown`).
-**EARN-3 🟡 (backend follow-up)** `/earnings` per-date rows lack gross + Shopify-cut, so the row can't show the full Gross/Shopify/Net breakdown the design calls for. Enhance `GetRevenueByDateRange` (revenue repo aggregation) to also emit `gross_amount_cents` per date, then restore the 3-column row for live data.
+**✅ EARN-3 FIXED (PR pending) — monthly earnings periods.** New `GET /earnings/periods` endpoint aggregates transactions by month (gross, net, Shopify cut = gross−net, derived status), and the Earnings tab now renders the wireframe's monthly cards (Month + PENDING/AVAILABLE/PAID_OUT badge + Gross / Shopify Fee (rate%) / Net). Replaces the hundreds of daily rows. Needs a backend deploy.
 
 (Known: `total_paid_out_cents: 0` — PAID_OUT never populated, already in future.md.)
 

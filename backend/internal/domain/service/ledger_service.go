@@ -419,7 +419,9 @@ func (s *LedgerService) RefreshTodaySnapshot(ctx context.Context, appID uuid.UUI
 	if err != nil {
 		return fmt.Errorf("failed to load subscriptions: %w", err)
 	}
-	// Usage/revenue metrics use the trailing 30-day window, matching the backfill.
+	// Usage/revenue metrics use the trailing 30 days ending NOW. This intentionally
+	// includes today's intraday transactions (the backfill's per-day window ends at
+	// that day's midnight), so today's "current" revenue reflects activity so far.
 	txsInWindow, err := s.txRepo.FindByAppID(ctx, appID, now.AddDate(0, 0, -30), now)
 	if err != nil {
 		return fmt.Errorf("failed to load transactions: %w", err)

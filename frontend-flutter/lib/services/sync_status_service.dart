@@ -5,7 +5,10 @@ class SyncJob {
   final String appId;
   final String status;
   final String? currentWave;
+  final String? jobType;
   final int progressPct;
+  final int completedItems;
+  final int totalItems;
   final String? message;
   final DateTime createdAt;
   final DateTime? completedAt;
@@ -15,7 +18,10 @@ class SyncJob {
     required this.appId,
     required this.status,
     this.currentWave,
+    this.jobType,
     required this.progressPct,
+    this.completedItems = 0,
+    this.totalItems = 0,
     this.message,
     required this.createdAt,
     this.completedAt,
@@ -27,7 +33,10 @@ class SyncJob {
       appId: json['app_id'].toString(),
       status: json['status'] as String? ?? 'unknown',
       currentWave: json['current_wave'] as String?,
-      progressPct: json['progress_pct'] as int? ?? 0,
+      jobType: json['job_type'] as String?,
+      progressPct: (json['progress_pct'] as num?)?.toInt() ?? 0,
+      completedItems: (json['completed_items'] as num?)?.toInt() ?? 0,
+      totalItems: (json['total_items'] as num?)?.toInt() ?? 0,
       message: json['message'] as String?,
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
@@ -36,6 +45,17 @@ class SyncJob {
           : null,
     );
   }
+
+  /// Fraction complete (0–1). The API sends completed_items/total_items per job
+  /// (not progress_pct), so derive from those; fall back to progress_pct.
+  double get progress {
+    if (totalItems > 0) {
+      return (completedItems / totalItems).clamp(0.0, 1.0);
+    }
+    return (progressPct / 100.0).clamp(0.0, 1.0);
+  }
+
+  bool get isFullSync => jobType == 'full_sync';
 
   bool get isActive =>
       status == 'pending' || status == 'processing' || status == 'queued';

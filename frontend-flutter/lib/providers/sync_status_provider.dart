@@ -68,12 +68,22 @@ class SyncStatusProvider extends ChangeNotifier {
         try {
           final jobs = await _service.getActiveSyncJobs(appId);
           if (jobs.isNotEmpty) {
-            final job = jobs.first;
+            // The parent full_sync reports 0/0; the child jobs (transaction/
+            // status/event/…) carry the real completed/total counts. Represent
+            // progress with the furthest-along child that actually has items.
+            final withItems = jobs.where((j) => j.totalItems > 0).toList();
+            final lead = withItems.isNotEmpty
+                ? withItems.reduce((a, b) => a.progress >= b.progress ? a : b)
+                : jobs.first;
+            // Cancel should target the parent full_sync (cascades to children).
+            final cancelTarget =
+                jobs.firstWhere((j) => j.isFullSync, orElse: () => lead);
             newStates[appId] = AppSyncState(
               isSyncing: true,
-              message: job.message ?? _waveMessage(job.currentWave),
-              progress: job.progressPct / 100.0,
-              jobId: job.id,
+              message: lead.message ??
+                  _waveMessage(lead.jobType ?? lead.currentWave),
+              progress: lead.progress,
+              jobId: cancelTarget.id,
             );
           }
         } catch (e) {
@@ -123,7 +133,12 @@ class SyncStatusProvider extends ChangeNotifier {
         return 'Syncing events...';
       case 'status_sync':
         return 'Syncing statuses...';
+      case 'store_sync':
+        return 'Syncing stores...';
+      case 'review_sync':
+        return 'Syncing reviews...';
       case 'snapshot':
+      case 'snapshot_sync':
         return 'Building snapshots...';
       default:
         return 'Syncing...';

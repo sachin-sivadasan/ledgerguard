@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sort"
 	"time"
@@ -400,6 +401,34 @@ func (s *LedgerService) BackfillHistoricalSnapshots(ctx context.Context, appID u
 	}
 
 	return len(batch), nil
+}
+
+// RefreshTodaySnapshot overwrites TODAY's daily snapshot using the CURRENT
+// subscriptions from the store — i.e. after status_sync has reconciled their risk
+// (the cancel-trap fix). BackfillHistoricalSnapshots derives every day's risk by
+// replaying transactions (charge-recency only), so today's row would otherwise
+// disagree with the reconciled Subscriptions/Risk pages. Run this in Wave 3, after
+// status_sync, so the Dashboard's current KPIs match (RISK-1 convergence).
+func (s *LedgerService) RefreshTodaySnapshot(ctx context.Context, appID uuid.UUID) error {
+	if s.snapshotRepo == nil || s.metrics == nil {
+		return nil
+	}
+	now := time.Now().UTC()
+
+	subscriptions, err := s.subRepo.FindByAppID(ctx, appID)
+	if err != nil {
+		return fmt.Errorf("failed to load subscriptions: %w", err)
+	}
+	// Usage/revenue metrics use the trailing 30 days ending NOW. This intentionally
+	// includes today's intraday transactions (the backfill's per-day window ends at
+	// that day's midnight), so today's "current" revenue reflects activity so far.
+	txsInWindow, err := s.txRepo.FindByAppID(ctx, appID, now.AddDate(0, 0, -30), now)
+	if err != nil {
+		return fmt.Errorf("failed to load transactions: %w", err)
+	}
+
+	snapshot := s.metrics.ComputeAllMetrics(appID, subscriptions, txsInWindow, now)
+	return s.snapshotRepo.Upsert(ctx, snapshot)
 }
 
 // filterTransactionsInRange returns transactions within the given date range

@@ -98,16 +98,19 @@ func (p *FullSyncProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 	p.progress.Update(ctx, payload.JobID, queue.Progress{
 		Total:     totalChildren,
 		Completed: 1,
-		Message:   "Transaction sync done — starting Wave 2 (events, snapshots, status, stores)...",
+		Message:   "Transaction sync done — starting Wave 2 (events, status, stores)...",
 	})
 
-	// Wave 2: depends on subscriptions from ledger rebuild (transaction_sync)
+	// Wave 2: depends on subscriptions from ledger rebuild (transaction_sync).
+	// NOTE: snapshot_sync is intentionally NOT here — it must run in Wave 3, after
+	// status_sync reconciles subscription risk, so the daily metrics snapshot
+	// (Dashboard) matches the reconciled Subscriptions/Risk pages instead of the
+	// pre-reconciliation charge-only risk (RISK-1).
 	wave2Types := []struct {
 		jobType    string
 		entityType string
 	}{
 		{entity.SyncJobTypeEventSync, "event"},
-		{entity.SyncJobTypeSnapshotSync, "snapshot"},
 		{entity.SyncJobTypeStatusSync, "subscription"},
 		{entity.SyncJobTypeStoreSync, "store"},
 	}
@@ -138,9 +141,39 @@ func (p *FullSyncProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 		wave2JobIDs = append(wave2JobIDs, childJob.ID.String())
 	}
 
-	// Wait for remaining Wave 1 + all Wave 2 jobs
+	// Wait for remaining Wave 1 + all Wave 2 jobs (status reconciliation must finish
+	// before the snapshot).
 	allRemaining := append(wave1JobIDs[1:], wave2JobIDs...)
-	if err := p.waitForChildren(ctx, payload, allRemaining, "Waiting for all sync jobs..."); err != nil {
+	if err := p.waitForChildren(ctx, payload, allRemaining, "Waiting for events, status, stores..."); err != nil {
+		return err
+	}
+
+	// Wave 3: snapshot — runs AFTER status_sync so the daily metrics snapshot
+	// reflects the reconciled subscription risk (RISK-1 convergence).
+	p.progress.Update(ctx, payload.JobID, queue.Progress{
+		Total:     totalChildren,
+		Completed: 5,
+		Message:   "Status reconciled — Wave 3 (daily snapshot)...",
+	})
+
+	snapshotJob := entity.NewChildSyncJob(parentJob, entity.SyncJobTypeSnapshotSync, "snapshot")
+	if err := p.syncJobRepo.Create(ctx, snapshotJob); err != nil {
+		return fmt.Errorf("failed to create snapshot child job: %w", err)
+	}
+	snapshotPayload := &queue.SyncJobPayload{
+		JobID:            snapshotJob.ID,
+		AppID:            snapshotJob.AppID,
+		UserID:           snapshotJob.UserID,
+		PartnerAccountID: snapshotJob.PartnerAccountID,
+		JobType:          snapshotJob.JobType,
+		ParentJobID:      snapshotJob.ParentJobID,
+		Priority:         snapshotJob.Priority,
+		EntityType:       snapshotJob.EntityType,
+		EnqueuedAt:       time.Now().UTC(),
+	}
+	if err := queue.Enqueue(ctx, p.redisClient, snapshotPayload); err != nil {
+		_ = p.syncJobRepo.MarkFailed(ctx, snapshotJob.ID, err.Error())
+	} else if err := p.waitForChildren(ctx, payload, []string{snapshotJob.ID.String()}, "Waiting for daily snapshot..."); err != nil {
 		return err
 	}
 

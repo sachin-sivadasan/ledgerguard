@@ -91,13 +91,24 @@ end
 note right of FSP: Wave 2 — Depends on subscriptions\n(from ledger rebuild)
 
 FSP -> Redis: LPUSH :queue {event_sync}
-FSP -> Redis: LPUSH :queue {snapshot_sync}
 FSP -> Redis: LPUSH :queue {status_sync}
 FSP -> Redis: LPUSH :queue {store_sync}
 
-loop poll all children until done (5s)
+note right of FSP: status_sync reconciles each sub's event-derived\nstatus against billing (cancel-trap): a CANCELLED/\nUNINSTALLED churns only when no recurring charge\npost-dates the event; risk is re-derived from charge\nrecency (Subscription.ApplyEventStatus).
+
+loop poll Wave 2 children until done (5s)
   FSP -> DB: FindByParentJobID(parentID)
 end
+
+note right of FSP: Wave 3 — AFTER status_sync so the daily snapshot\nreflects the RECONCILED risk (else Dashboard would\nshow pre-reconciliation charge-only risk — RISK-1).
+
+FSP -> Redis: LPUSH :queue {snapshot_sync}
+
+loop poll snapshot child until done (5s)
+  FSP -> DB: FindByParentJobID(parentID)
+end
+
+note right of FSP: SnapshotProcessor: BackfillHistoricalSnapshots\n(replay txns) then RefreshTodaySnapshot (recompute\ntoday from the current reconciled subscriptions).
 
 FSP --> Worker: nil (or UpdateStatus partial_failure)
 deactivate FSP

@@ -78,6 +78,14 @@ func (p *SnapshotProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 		return fmt.Errorf("failed to backfill snapshots: %w", err)
 	}
 
+	// Overwrite TODAY's snapshot from the CURRENT (status-reconciled) subscriptions.
+	// The backfill derives every day's risk by replaying transactions (charge-recency
+	// only); this Wave-3 step — running after status_sync — makes today's Dashboard
+	// KPIs match the reconciled Subscriptions/Risk pages (RISK-1 convergence).
+	if err := p.ledger.RefreshTodaySnapshot(ctx, payload.AppID); err != nil {
+		return fmt.Errorf("failed to refresh today's snapshot: %w", err)
+	}
+
 	p.progress.ForceUpdate(ctx, payload.JobID, queue.Progress{
 		Total:     snapshotCount,
 		Completed: snapshotCount,

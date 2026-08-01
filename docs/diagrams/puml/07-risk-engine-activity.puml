@@ -5,6 +5,20 @@ skinparam activityArrowThickness 2
 
 start
 
+partition "status_sync reconciliation\n(Subscription.ApplyEventStatus)" {
+  :Input: event-derived status + deciding event time (eventAt) + now;
+  if (status is terminal\n(CANCELLED / UNINSTALLED)?) then (yes)
+    if (recurring charge post-dates the event\nAND is recent? (billedSince)) then (yes)
+      #lightgreen:Stale / plan-change cancel —\nactive billing wins: status := ACTIVE;
+    else (no)
+      #salmon:Genuine churn: status := terminal\nRiskState := **CHURNED**;
+      stop
+    endif
+  else (non-terminal)
+  endif
+  :Re-derive risk from charge recency below\n(ClassifyRisk) — never leave a stale ACTIVE/CHURNED mix;
+}
+
 :Input: Subscription + now (time);
 
 if (Status is CANCELLED\nor EXPIRED?) then (yes)

@@ -186,6 +186,10 @@ func (m *mockLedgerRebuilder) BackfillHistoricalSnapshots(ctx context.Context, a
 	return 0, m.err
 }
 
+func (m *mockLedgerRebuilder) RefreshTodaySnapshot(ctx context.Context, appID uuid.UUID) error {
+	return m.err
+}
+
 func TestSyncService_SyncApp_Success(t *testing.T) {
 	appID := uuid.New()
 	partnerAccountID := uuid.New()

@@ -67,13 +67,14 @@ class SyncStatusProvider extends ChangeNotifier {
       for (final appId in _watchedAppIds) {
         try {
           final jobs = await _service.getActiveSyncJobs(appId);
-          if (jobs.isNotEmpty) {
-            final job = jobs.first;
+          final sel = SyncProgressSelection.from(jobs);
+          if (sel != null) {
             newStates[appId] = AppSyncState(
               isSyncing: true,
-              message: job.message ?? _waveMessage(job.currentWave),
-              progress: job.progressPct / 100.0,
-              jobId: job.id,
+              message: sel.lead.message ??
+                  _waveMessage(sel.lead.jobType ?? sel.lead.currentWave),
+              progress: sel.lead.progress,
+              jobId: sel.cancelTarget.id,
             );
           }
         } catch (e) {
@@ -123,7 +124,12 @@ class SyncStatusProvider extends ChangeNotifier {
         return 'Syncing events...';
       case 'status_sync':
         return 'Syncing statuses...';
+      case 'store_sync':
+        return 'Syncing stores...';
+      case 'review_sync':
+        return 'Syncing reviews...';
       case 'snapshot':
+      case 'snapshot_sync':
         return 'Building snapshots...';
       default:
         return 'Syncing...';

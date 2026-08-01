@@ -44,7 +44,9 @@ Last updated: 2026-07-30
 
 **✅ SUB-1 / SUB-2 FIXED + VERIFIED (PR #49, deployed+resynced).** Active 718 → **1,057**; `lokjoylokjoy` (billed Jul 22, was CANCELLED/CHURNED) → **ACTIVE/SAFE**. Subscriptions (1,057) and Risk (1,068) now converge (were 718/729).
 
-**RISK-1 🟠 residual — Dashboard snapshot lags.** After the fix: Subscriptions `/summary` safe **1,057**, Risk `/summary` safe **1,068** (converged), but Dashboard `/metrics` safe **1,176**. Cause: `/metrics` reads the **daily snapshot written during ledger rebuild — BEFORE `StatusProcessor` reconciliation** (pure charge-recency), while the other two read the post-reconciliation live state. The reconciled ~1,060 is the more-correct number (excludes ~120 subs that genuinely uninstalled/cancelled with no billing after). **Fix:** recompute/refresh the daily snapshot AFTER StatusProcessor runs (or have the metrics endpoint read live subs). Then all three agree.
+**✅ RISK-1 Dashboard convergence FIXED + VERIFIED (PR #50, deployed+resynced).** After the Wave-3 snapshot + RefreshTodaySnapshot: Subscriptions `/summary` and Dashboard `/metrics` now report **identical** safe **1,061** / at-risk 21 / churned **1,848** (Dashboard was 1,176). Remaining: the **Risk page `/risk/summary` (stores.risk_state)** still differs — safe 1,076, at-risk 130, churned 1,724 — because store health/risk is a **separate cycle-based grading**, not the subscription risk. Unifying store risk with subscription risk is a follow-up (RISK-1b).
+
+**RISK-1 🟠 residual (historical writeup) — Dashboard snapshot lags.** After the fix: Subscriptions `/summary` safe **1,057**, Risk `/summary` safe **1,068** (converged), but Dashboard `/metrics` safe **1,176**. Cause: `/metrics` reads the **daily snapshot written during ledger rebuild — BEFORE `StatusProcessor` reconciliation** (pure charge-recency), while the other two read the post-reconciliation live state. The reconciled ~1,060 is the more-correct number (excludes ~120 subs that genuinely uninstalled/cancelled with no billing after). **Fix:** recompute/refresh the daily snapshot AFTER StatusProcessor runs (or have the metrics endpoint read live subs). Then all three agree.
 
 ---
 
@@ -173,6 +175,8 @@ Daily Briefs: "No insights available yet. Insights are generated daily after you
 1 connected app (Zoko — WhatsApp Marketing API), "Synced". Tabs: Connected Apps, Reviews.
 **APPS-1 🔴 "0 installs" despite 2,926 stores/subscriptions** — the app-card install count is 0. `FetchInstallCount` (counts `RELATIONSHIP_INSTALLED` events) isn't populating the real number (and likely also misses `RELATIONSHIP_REACTIVATED` reinstalls, cf. SUB-3). Should reflect the true install base.
 **APPS-2 🟡** Rating shows ★ 0 — verify against real App Store rating / Reviews tab (not deep-tested).
+
+**✅ APPS-3 FIXED (PR pending) — sync progress now derives from completed/total.** `SyncJob.progress` computes `completed_items/total_items` (clamped, falls back to `progress_pct`); `SyncStatusProvider._poll` picks the furthest-along child job (not the 0/0 parent) and cancels the parent full_sync. Frontend-only.
 
 **APPS-3 🟠 Sync progress stuck at 0% on the Apps screen** (user-reported; ROOT CAUSE CONFIRMED live)
 - Symptom: at `/#/apps` during a sync, the "Syncing…" state, progress bar, and Cancel button **do** render — but the bar/percentage is **stuck at 0%** even though the job is well underway (observed `status_sync` at `completed_items 2154 / total_items 2930` ≈ 73%).

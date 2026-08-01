@@ -116,11 +116,15 @@ func (m *mockSyncJobRepo) MarkPendingIfProcessing(_ context.Context, id uuid.UUI
 // --- AppRepo ---
 
 type mockAppRepo struct {
-	apps map[uuid.UUID]*entity.App
+	apps            map[uuid.UUID]*entity.App
+	updateCallCount int
 }
 
-func (m *mockAppRepo) Create(_ context.Context, _ *entity.App) error         { return nil }
-func (m *mockAppRepo) Update(_ context.Context, _ *entity.App) error         { return nil }
+func (m *mockAppRepo) Create(_ context.Context, _ *entity.App) error { return nil }
+func (m *mockAppRepo) Update(_ context.Context, _ *entity.App) error {
+	m.updateCallCount++
+	return nil
+}
 func (m *mockAppRepo) Delete(_ context.Context, _ uuid.UUID) error           { return nil }
 func (m *mockAppRepo) FindByPartnerAccountID(_ context.Context, _ uuid.UUID) ([]*entity.App, error) {
 	return nil, nil
@@ -847,7 +851,10 @@ func TestStoreProcessor_PersistsInstallCount(t *testing.T) {
 		t.Fatalf("Process failed: %v", err)
 	}
 
-	// FindByID returns the same pointer Process mutates.
+	// Verify it was actually persisted (Update called), not just mutated in place.
+	if appRepo.updateCallCount != 1 {
+		t.Errorf("expected 1 appRepo.Update call to persist install count, got %d", appRepo.updateCallCount)
+	}
 	if got := appRepo.apps[appID].InstallCount; got != 3 {
 		t.Errorf("install count: expected 3 distinct domains, got %d", got)
 	}

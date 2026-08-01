@@ -227,9 +227,10 @@ func (m *mockTransactionRepo) FindByAppIDPaginated(_ context.Context, _ uuid.UUI
 // --- LedgerRebuilder ---
 
 type mockLedgerRebuilder struct {
-	rebuildCalled   bool
-	backfillCalled  bool
-	backfillResult  int
+	rebuildCalled      bool
+	backfillCalled     bool
+	backfillResult     int
+	refreshTodayCalled bool
 }
 
 func (m *mockLedgerRebuilder) RebuildFromTransactions(_ context.Context, _ uuid.UUID, _ time.Time) (*domainservice.LedgerRebuildResult, error) {
@@ -239,6 +240,11 @@ func (m *mockLedgerRebuilder) RebuildFromTransactions(_ context.Context, _ uuid.
 func (m *mockLedgerRebuilder) BackfillHistoricalSnapshots(_ context.Context, _ uuid.UUID, _ []*entity.Transaction) (int, error) {
 	m.backfillCalled = true
 	return m.backfillResult, nil
+}
+
+func (m *mockLedgerRebuilder) RefreshTodaySnapshot(_ context.Context, _ uuid.UUID) error {
+	m.refreshTodayCalled = true
+	return nil
 }
 
 // --- EventFetcher ---
@@ -601,6 +607,10 @@ func TestSnapshotProcessor_Success(t *testing.T) {
 
 	if !ledger.backfillCalled {
 		t.Error("Expected backfill to be called")
+	}
+	// RISK-1: today's snapshot must be refreshed from the reconciled subs after backfill.
+	if !ledger.refreshTodayCalled {
+		t.Error("Expected RefreshTodaySnapshot to be called after backfill")
 	}
 }
 

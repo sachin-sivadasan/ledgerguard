@@ -42,6 +42,7 @@ type Decryptor interface {
 type LedgerRebuilder interface {
 	RebuildFromTransactions(ctx context.Context, appID uuid.UUID, now time.Time) (*domainservice.LedgerRebuildResult, error)
 	BackfillHistoricalSnapshots(ctx context.Context, appID uuid.UUID, transactions []*entity.Transaction) (int, error)
+	RefreshTodaySnapshot(ctx context.Context, appID uuid.UUID) error
 }
 
 // SyncResult contains the result of a sync operation
@@ -222,6 +223,13 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 		if s.eventFetcher != nil && s.subRepo != nil {
 			_ = s.enrichSubscriptionStatus(fetchCtx, app, partnerAccount, string(accessToken))
 			// Ignore enrichment errors - status defaults to ACTIVE
+
+			// Backfill computed today's snapshot from charge-only risk; recompute it
+			// now from the reconciled subscriptions so the Dashboard KPIs match the
+			// Subscriptions/Risk pages (RISK-1). Best-effort, non-fatal.
+			if bfErr := s.ledger.RefreshTodaySnapshot(ctx, appID); bfErr != nil {
+				log.Printf("SyncService: refresh today snapshot failed for app %s: %v", appID, bfErr)
+			}
 		}
 
 		// Fetch shop brand data for new domains (if configured)

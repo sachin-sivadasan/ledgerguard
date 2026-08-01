@@ -40,11 +40,13 @@ Ledger --> Sync: LedgerRebuildResult
 deactivate Ledger
 
 Sync -> Ledger: BackfillHistoricalSnapshots(appID, allTxs)
-note right of Ledger: Daily snapshots (365/year)\nO(n log n) sort + pointer\nUpsertBatch (batches of 50)
+note right of Ledger: Daily snapshots (365/year)\nO(n log n) sort + pointer\nUpsertBatch (batches of 50)\n(risk here is charge-only — reconciled below)
 
 opt EventFetcher configured
   Sync -> Events: enrichSubscriptionStatus()
-  note right of Events: Fetch app lifecycle events\nUpdate ACTIVE/CANCELLED/UNINSTALLED
+  note right of Events: Fetch app lifecycle events →\nSubscription.ApplyEventStatus: cancel-trap\nreconciliation (CANCELLED/UNINSTALLED churns\nonly if no recurring charge post-dates the event),\nthen re-derive risk from charge recency
+  Sync -> Ledger: RefreshTodaySnapshot(appID)
+  note right of Ledger: Recompute TODAY's snapshot from the\nreconciled subs so Dashboard matches\nSubscriptions/Risk (RISK-1)
 end
 
 opt BrandFetcher configured

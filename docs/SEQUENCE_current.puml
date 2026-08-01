@@ -994,13 +994,12 @@ database "PostgreSQL" as DB
 
 note over FSP
   Orchestrator — dispatches
-  6 child jobs in 2 waves
+  6 child jobs in 3 waves
 end note
 
 == Wave 1 — Independent ==
 
 FSP -> Redis: LPUSH transaction_sync
-FSP -> Redis: LPUSH event_sync
 FSP -> Redis: LPUSH review_sync
 
 loop poll transaction_sync (5s)
@@ -1008,13 +1007,34 @@ loop poll transaction_sync (5s)
   note right: Wait before Wave 2
 end
 
-== Wave 2 — Dependent ==
+== Wave 2 — Depends on subscriptions (ledger rebuild) ==
 
-FSP -> Redis: LPUSH snapshot_sync
+FSP -> Redis: LPUSH event_sync
 FSP -> Redis: LPUSH status_sync
 FSP -> Redis: LPUSH store_sync
 
-loop poll all children (5s)
+note right of FSP
+  status_sync reconciles each sub's event status
+  against billing (cancel-trap): CANCELLED/UNINSTALLED
+  churns only if no recurring charge post-dates the
+  event; risk re-derived from charge recency.
+end note
+
+loop poll Wave 2 children (5s)
+  FSP -> DB: FindByParentJobID(parentID)
+end
+
+== Wave 3 — Snapshot AFTER status reconciliation (RISK-1) ==
+
+FSP -> Redis: LPUSH snapshot_sync
+note right of FSP
+  Runs after status_sync so the daily snapshot
+  reflects reconciled risk. SnapshotProcessor also
+  RefreshTodaySnapshot from the current subs, so
+  Dashboard KPIs match Subscriptions/Risk.
+end note
+
+loop poll snapshot child (5s)
   FSP -> DB: FindByParentJobID(parentID)
 end
 

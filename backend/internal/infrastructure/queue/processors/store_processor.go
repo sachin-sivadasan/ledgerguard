@@ -58,7 +58,7 @@ func NewStoreProcessor(
 func (p *StoreProcessor) Type() string { return entity.SyncJobTypeStoreSync }
 
 func (p *StoreProcessor) Process(ctx context.Context, payload *queue.SyncJobPayload) error {
-	_, err := p.appRepo.FindByID(ctx, payload.AppID)
+	app, err := p.appRepo.FindByID(ctx, payload.AppID)
 	if err != nil {
 		return fmt.Errorf("failed to find app %s: %w", payload.AppID, err)
 	}
@@ -73,6 +73,16 @@ func (p *StoreProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 	for _, sub := range subscriptions {
 		if sub.MyshopifyDomain != "" {
 			domainSet[sub.MyshopifyDomain] = true
+		}
+	}
+
+	// Persist the install count = distinct installed shops (domains), so the Apps
+	// screen reflects the real install base every sync (APPS-1) instead of staying
+	// 0 until the manual RefreshInstallCount is called. Best-effort, non-fatal.
+	if app.InstallCount != len(domainSet) {
+		app.InstallCount = len(domainSet)
+		if err := p.appRepo.Update(ctx, app); err != nil {
+			log.Printf("[queue] StoreProcessor: failed to persist install count (%d) for app %s: %v", len(domainSet), payload.AppID, err)
 		}
 	}
 

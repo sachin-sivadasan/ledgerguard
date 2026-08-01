@@ -823,6 +823,36 @@ func TestStoreProcessor_FetchesNewDomains(t *testing.T) {
 	}
 }
 
+func TestStoreProcessor_PersistsInstallCount(t *testing.T) {
+	_, lm, pt := setupRedis(t)
+	appID, userID, partnerID, appRepo, _, _ := setupProcessorContext(t)
+
+	syncJobRepo := newMockSyncJobRepo()
+	shopRepo := newMockShopRepo()
+	// 3 distinct domains across 4 subs (one duplicate) — install count = 3.
+	subRepo := &mockSubRepo{
+		subs: []*entity.Subscription{
+			{ID: uuid.New(), AppID: appID, MyshopifyDomain: "a.myshopify.com"},
+			{ID: uuid.New(), AppID: appID, MyshopifyDomain: "b.myshopify.com"},
+			{ID: uuid.New(), AppID: appID, MyshopifyDomain: "a.myshopify.com"},
+			{ID: uuid.New(), AppID: appID, MyshopifyDomain: "c.myshopify.com"},
+		},
+	}
+	payload := makePayload(appID, userID, partnerID, entity.SyncJobTypeStoreSync)
+	syncJobRepo.jobs[payload.JobID] = entity.NewSyncJob(appID, userID, partnerID, entity.SyncJobTypeStoreSync, 0)
+	syncJobRepo.jobs[payload.JobID].ID = payload.JobID
+
+	p := NewStoreProcessor(&mockBrandFetcher{}, shopRepo, subRepo, appRepo, nil, nil, syncJobRepo, lm, pt)
+	if err := p.Process(context.Background(), payload); err != nil {
+		t.Fatalf("Process failed: %v", err)
+	}
+
+	// FindByID returns the same pointer Process mutates.
+	if got := appRepo.apps[appID].InstallCount; got != 3 {
+		t.Errorf("install count: expected 3 distinct domains, got %d", got)
+	}
+}
+
 func TestStoreProcessor_SkipsExistingDomains(t *testing.T) {
 	_, lm, pt := setupRedis(t)
 	appID, userID, partnerID, appRepo, _, _ := setupProcessorContext(t)

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../models/event_model.dart';
 import '../../models/subscription_model.dart';
 import '../../models/timeline_event.dart';
+import '../../providers/apps_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/store_provider.dart';
 import '../../theme/app_colors.dart';
@@ -12,21 +14,61 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_breakpoints.dart';
 import '../../widgets/lg_badge.dart';
 import '../../widgets/lg_card.dart';
+import '../../widgets/lg_error_state.dart';
 import '../../widgets/lg_page.dart';
 import '../../widgets/lg_risk_badge.dart';
 import '../../widgets/lg_status_badge.dart';
 
-class StoreDetailScreen extends StatelessWidget {
+class StoreDetailScreen extends StatefulWidget {
   final String storeId;
   const StoreDetailScreen({super.key, required this.storeId});
 
   @override
+  State<StoreDetailScreen> createState() => _StoreDetailScreenState();
+}
+
+class _StoreDetailScreenState extends State<StoreDetailScreen>
+    with DataLoadingMixin {
+  @override
+  void loadData(String appId) {
+    // storeId is the shop domain — fetch this specific store + its subs by domain
+    // so a deep-link / any store past list page 1 resolves (SD-1/SD-2).
+    context.read<StoreProvider>().loadStoreDetail(appId, widget.storeId);
+  }
+
+  @override
+  void didUpdateWidget(covariant StoreDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // GoRouter reuses this State when only the :id path param changes (store A →
+    // store B). DataLoadingMixin keys off appId, not storeId, so re-trigger the
+    // load ourselves; refreshData() re-runs loadData with the current app.
+    if (oldWidget.storeId != widget.storeId) {
+      refreshData();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = context.watch<StoreProvider>();
-    final store = provider.getById(storeId);
     final theme = Theme.of(context);
     final dateFmt = DateFormat('MMM d, y');
 
+    if (provider.detailLoading && provider.detailStore == null) {
+      return LgPage(
+        title: 'Store',
+        backAction: () => context.go('/stores'),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (provider.detailError != null && provider.detailStore == null) {
+      return LgPage(
+        title: 'Store',
+        backAction: () => context.go('/stores'),
+        child: LgErrorState(message: provider.detailError!, onRetry: retryLoad),
+      );
+    }
+
+    final store = provider.detailStore;
     if (store == null) {
       return LgPage(
         title: 'Store',
@@ -35,7 +77,7 @@ class StoreDetailScreen extends StatelessWidget {
       );
     }
 
-    final subscriptions = provider.getSubscriptionsForStore(store.shopDomain);
+    final subscriptions = provider.detailSubscriptions;
 
     return LgPage(
       title: store.shopDomain.replaceAll('.myshopify.com', ''),
@@ -65,17 +107,23 @@ class StoreDetailScreen extends StatelessWidget {
                   ],
                 ),
               );
+              // Resolve real connected-app names once (SD-3 — was showing the
+              // raw app UUID); fall back to demo names, then the id.
+              final appNames = {
+                for (final a in context.read<AppsProvider>().apps) a.id: a.name,
+              };
               final appsCard = LgCard(
                 title: 'Installed Apps',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: store.installedAppIds.map((appId) {
-                    final name = switch (appId) {
-                      'app-1' => 'InventorySync Pro',
-                      'app-2' => 'ReviewBoost',
-                      'app-3' => 'ShipTracker',
-                      _ => appId,
-                    };
+                    final name = appNames[appId] ??
+                        switch (appId) {
+                          'app-1' => 'InventorySync Pro',
+                          'app-2' => 'ReviewBoost',
+                          'app-3' => 'ShipTracker',
+                          _ => appId,
+                        };
                     return Padding(
                       padding: const EdgeInsets.only(bottom: LgSpacing.s200),
                       child: Row(

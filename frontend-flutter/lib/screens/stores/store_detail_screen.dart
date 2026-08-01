@@ -37,6 +37,17 @@ class _StoreDetailScreenState extends State<StoreDetailScreen>
   }
 
   @override
+  void didUpdateWidget(covariant StoreDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // GoRouter reuses this State when only the :id path param changes (store A →
+    // store B). DataLoadingMixin keys off appId, not storeId, so re-trigger the
+    // load ourselves; refreshData() re-runs loadData with the current app.
+    if (oldWidget.storeId != widget.storeId) {
+      refreshData();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = context.watch<StoreProvider>();
     final theme = Theme.of(context);
@@ -96,22 +107,17 @@ class _StoreDetailScreenState extends State<StoreDetailScreen>
                   ],
                 ),
               );
+              // Resolve real connected-app names once (SD-3 — was showing the
+              // raw app UUID); fall back to demo names, then the id.
+              final appNames = {
+                for (final a in context.read<AppsProvider>().apps) a.id: a.name,
+              };
               final appsCard = LgCard(
                 title: 'Installed Apps',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: store.installedAppIds.map((appId) {
-                    // Resolve the real connected-app name; fall back to demo names,
-                    // then the id (SD-3 — was showing the raw app UUID).
-                    final apps = context.read<AppsProvider>().apps;
-                    String? matchName;
-                    for (final a in apps) {
-                      if (a.id == appId) {
-                        matchName = a.name;
-                        break;
-                      }
-                    }
-                    final name = matchName ??
+                    final name = appNames[appId] ??
                         switch (appId) {
                           'app-1' => 'InventorySync Pro',
                           'app-2' => 'ReviewBoost',

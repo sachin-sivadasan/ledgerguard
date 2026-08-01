@@ -24,10 +24,10 @@ void main() {
     expect(m?.shopDomain, 'shop.myshopify.com');
   });
 
-  test('falls back to the first hit when no exact match', () {
+  test('no exact match → null (never a substring sibling)', () {
     final results = [store('a-shop.myshopify.com'), store('b-shop.myshopify.com')];
-    final m = StoreProvider.matchStoreByDomain(results, 'shop');
-    expect(m?.shopDomain, 'a-shop.myshopify.com');
+    // Querying a substring that has no exact-domain store must NOT return a sibling.
+    expect(StoreProvider.matchStoreByDomain(results, 'shop'), isNull);
   });
 
   test('empty results → null (store not found)', () {

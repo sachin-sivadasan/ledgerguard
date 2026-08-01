@@ -35,6 +35,9 @@ class StoreProvider extends ChangeNotifier {
   List<Subscription> _detailSubs = [];
   bool _detailLoading = false;
   String? _detailError;
+  // Guards against a slow load for store A overwriting a newer load for store B
+  // (the detail state is a single shared slot).
+  String? _detailRequestDomain;
 
   Store? get detailStore => _detailStore;
   List<Subscription> get detailSubscriptions => _detailSubs;
@@ -175,6 +178,7 @@ class StoreProvider extends ChangeNotifier {
       return;
     }
 
+    _detailRequestDomain = domain;
     _detailLoading = true;
     _detailError = null;
     _detailStore = null;
@@ -182,32 +186,38 @@ class StoreProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final storeRes =
-          await _storeService.fetchStores(appId, search: domain, pageSize: 5);
+          await _storeService.fetchStores(appId, search: domain, pageSize: 10);
+      if (_detailRequestDomain != domain) return; // superseded by a newer load
       final match = matchStoreByDomain(storeRes.items, domain);
       _detailStore = match;
       if (match != null) {
         final subRes = await _subscriptionService.fetchSubscriptions(appId,
-            search: domain, pageSize: 25);
+            search: domain, pageSize: 100);
+        if (_detailRequestDomain != domain) return; // superseded
         _detailSubs = subRes.items
             .where((s) => s.shopDomain == match.shopDomain)
             .toList();
       }
     } on DioException catch (e) {
+      if (_detailRequestDomain != domain) return;
       _detailError = e.message;
     } catch (e) {
+      if (_detailRequestDomain != domain) return;
       _detailError = e.toString();
     }
     _detailLoading = false;
     notifyListeners();
   }
 
-  /// Picks the exact-domain store from a search result set, else the first hit
-  /// (server `search` is a substring match), else null (not found).
+  /// Picks the EXACT-domain store from a `search` result set (server `search` is
+  /// a substring match, so a sibling like `shoply` can appear when querying
+  /// `shop`). Returns null when the exact store isn't present — a true "not
+  /// found", never a substring sibling.
   static Store? matchStoreByDomain(List<Store> results, String domain) {
     for (final s in results) {
       if (s.shopDomain == domain) return s;
     }
-    return results.isNotEmpty ? results.first : null;
+    return null;
   }
 
   List<Subscription> getSubscriptionsForStore(String shopDomain) {

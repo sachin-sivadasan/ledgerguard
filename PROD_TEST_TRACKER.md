@@ -96,7 +96,9 @@ Live KPIs: MRR $62,917 (+4.2%), Renewal 40.2%, Revenue at Risk $6,241, Usage Rev
 
 The detail page makes **no store-by-ID request** — it resolves the store (and its subs) **client-side from the already-loaded first list page** (`/stores?page=1&pageSize=20` + `/subscriptions?page=1&pageSize=100`).
 
-**SD-1 🔴 Deep-link / any store beyond list page 1 → "Store not found"**
+**✅ SD-1 / SD-2 / SD-3 FIXED (PR pending) — store detail loads by domain.** `StoreProvider.loadStoreDetail(appId, domain)` fetches the store + its subscriptions server-side via the existing `search` param on both endpoints (exact-domain match), so deep-links and any store past list page 1 resolve; the screen is now stateful (DataLoadingMixin) with loading/not-found/error states. SD-3: Installed Apps shows the real connected-app name (from AppsProvider) instead of the app UUID. Frontend-only. (STORE-2 record-date on install/interaction is still open — separate.)
+
+**SD-1 🔴 Deep-link / any store beyond list page 1 → "Store not found"** (original finding)
 - `…/stores/lokjoylokjoy.myshopify.com` (real active store, sorts under 'l') → **"Store not found"**; `…/stores/00430d-6a.myshopify.com` (first on page 1) → renders. Store detail must fetch the store by domain from the server, not rely on the in-memory paginated list. Breaks deep-links, bookmarks, and clicking any store on list pages ≥2.
 
 **SD-2 🟠 "Subscriptions (0) — No subscriptions" on a store that has a subscription**

@@ -29,6 +29,18 @@ class StoreProvider extends ChangeNotifier {
   int _totalCount = 0;
   static const int _pageSize = 20;
 
+  // Store-detail state — fetched by domain so it works on a cold deep-link and for
+  // any store beyond the loaded list page (SD-1/SD-2), not just page 1.
+  Store? _detailStore;
+  List<Subscription> _detailSubs = [];
+  bool _detailLoading = false;
+  String? _detailError;
+
+  Store? get detailStore => _detailStore;
+  List<Subscription> get detailSubscriptions => _detailSubs;
+  bool get detailLoading => _detailLoading;
+  String? get detailError => _detailError;
+
   StoreProvider(this._storeService, this._subscriptionService);
 
   bool get demoMode => _demoMode;
@@ -145,6 +157,57 @@ class StoreProvider extends ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Loads a single store (and its subscriptions) BY DOMAIN from the server, so
+  /// the detail page resolves on a deep-link / for stores past the loaded list
+  /// page. The route param (storeId) is the shop domain. Reuses the server-side
+  /// `search` on both endpoints, then keeps the exact-domain match.
+  Future<void> loadStoreDetail(String appId, String domain) async {
+    if (_demoMode) {
+      _detailStore = getById(domain);
+      _detailSubs = _detailStore != null
+          ? getSubscriptionsForStore(_detailStore!.shopDomain)
+          : const [];
+      _detailLoading = false;
+      _detailError = null;
+      notifyListeners();
+      return;
+    }
+
+    _detailLoading = true;
+    _detailError = null;
+    _detailStore = null;
+    _detailSubs = const [];
+    notifyListeners();
+    try {
+      final storeRes =
+          await _storeService.fetchStores(appId, search: domain, pageSize: 5);
+      final match = matchStoreByDomain(storeRes.items, domain);
+      _detailStore = match;
+      if (match != null) {
+        final subRes = await _subscriptionService.fetchSubscriptions(appId,
+            search: domain, pageSize: 25);
+        _detailSubs = subRes.items
+            .where((s) => s.shopDomain == match.shopDomain)
+            .toList();
+      }
+    } on DioException catch (e) {
+      _detailError = e.message;
+    } catch (e) {
+      _detailError = e.toString();
+    }
+    _detailLoading = false;
+    notifyListeners();
+  }
+
+  /// Picks the exact-domain store from a search result set, else the first hit
+  /// (server `search` is a substring match), else null (not found).
+  static Store? matchStoreByDomain(List<Store> results, String domain) {
+    for (final s in results) {
+      if (s.shopDomain == domain) return s;
+    }
+    return results.isNotEmpty ? results.first : null;
   }
 
   List<Subscription> getSubscriptionsForStore(String shopDomain) {

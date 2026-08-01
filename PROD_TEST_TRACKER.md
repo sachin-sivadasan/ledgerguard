@@ -175,7 +175,9 @@ Daily Briefs: "No insights available yet. Insights are generated daily after you
 
 ### Apps (route `/#/apps`)
 1 connected app (Zoko — WhatsApp Marketing API), "Synced". Tabs: Connected Apps, Reviews.
-**APPS-1 🔴 "0 installs" despite 2,926 stores/subscriptions** — the app-card install count is 0. `FetchInstallCount` (counts `RELATIONSHIP_INSTALLED` events) isn't populating the real number (and likely also misses `RELATIONSHIP_REACTIVATED` reinstalls, cf. SUB-3). Should reflect the true install base.
+**✅ APPS-1 FIXED (PR pending) — install count populated during sync.** `StoreProcessor` (store_sync, runs every full sync) now persists `app.InstallCount = ` distinct installed shops (domains) — the same count the Stores page shows (≈2,926) — instead of leaving it 0 until the manual `RefreshInstallCount` (Partner-API `FetchInstallCount`) is called. Backend; needs deploy + resync. (Count is total distinct shops with activity, matching Stores; not net-active — deliberate, matches user expectation. Sync now **owns** `InstallCount`; the manual Partner-API `RefreshInstallCount`/`FetchInstallCount` net-active path is **superseded** — could be retired later.)
+
+**APPS-1 🔴 "0 installs" despite 2,926 stores/subscriptions** (original finding) — the app-card install count is 0. `FetchInstallCount` (counts `RELATIONSHIP_INSTALLED` events) isn't populating the real number (and likely also misses `RELATIONSHIP_REACTIVATED` reinstalls, cf. SUB-3). Should reflect the true install base.
 **APPS-2 🟡** Rating shows ★ 0 — verify against real App Store rating / Reviews tab (not deep-tested).
 
 **✅ APPS-3 FIXED (PR pending) — sync progress now derives from completed/total.** `SyncJob.progress` computes `completed_items/total_items` (clamped, falls back to `progress_pct`); `SyncStatusProvider._poll` picks the furthest-along child job (not the 0/0 parent) and cancels the parent full_sync. Frontend-only.

@@ -116,11 +116,15 @@ func (m *mockSyncJobRepo) MarkPendingIfProcessing(_ context.Context, id uuid.UUI
 // --- AppRepo ---
 
 type mockAppRepo struct {
-	apps map[uuid.UUID]*entity.App
+	apps            map[uuid.UUID]*entity.App
+	updateCallCount int
 }
 
-func (m *mockAppRepo) Create(_ context.Context, _ *entity.App) error         { return nil }
-func (m *mockAppRepo) Update(_ context.Context, _ *entity.App) error         { return nil }
+func (m *mockAppRepo) Create(_ context.Context, _ *entity.App) error { return nil }
+func (m *mockAppRepo) Update(_ context.Context, _ *entity.App) error {
+	m.updateCallCount++
+	return nil
+}
 func (m *mockAppRepo) Delete(_ context.Context, _ uuid.UUID) error           { return nil }
 func (m *mockAppRepo) FindByPartnerAccountID(_ context.Context, _ uuid.UUID) ([]*entity.App, error) {
 	return nil, nil
@@ -820,6 +824,39 @@ func TestStoreProcessor_FetchesNewDomains(t *testing.T) {
 
 	if len(shopRepo.upserted) != 2 {
 		t.Errorf("Expected 2 shops upserted, got %d", len(shopRepo.upserted))
+	}
+}
+
+func TestStoreProcessor_PersistsInstallCount(t *testing.T) {
+	_, lm, pt := setupRedis(t)
+	appID, userID, partnerID, appRepo, _, _ := setupProcessorContext(t)
+
+	syncJobRepo := newMockSyncJobRepo()
+	shopRepo := newMockShopRepo()
+	// 3 distinct domains across 4 subs (one duplicate) — install count = 3.
+	subRepo := &mockSubRepo{
+		subs: []*entity.Subscription{
+			{ID: uuid.New(), AppID: appID, MyshopifyDomain: "a.myshopify.com"},
+			{ID: uuid.New(), AppID: appID, MyshopifyDomain: "b.myshopify.com"},
+			{ID: uuid.New(), AppID: appID, MyshopifyDomain: "a.myshopify.com"},
+			{ID: uuid.New(), AppID: appID, MyshopifyDomain: "c.myshopify.com"},
+		},
+	}
+	payload := makePayload(appID, userID, partnerID, entity.SyncJobTypeStoreSync)
+	syncJobRepo.jobs[payload.JobID] = entity.NewSyncJob(appID, userID, partnerID, entity.SyncJobTypeStoreSync, 0)
+	syncJobRepo.jobs[payload.JobID].ID = payload.JobID
+
+	p := NewStoreProcessor(&mockBrandFetcher{}, shopRepo, subRepo, appRepo, nil, nil, syncJobRepo, lm, pt)
+	if err := p.Process(context.Background(), payload); err != nil {
+		t.Fatalf("Process failed: %v", err)
+	}
+
+	// Verify it was actually persisted (Update called), not just mutated in place.
+	if appRepo.updateCallCount != 1 {
+		t.Errorf("expected 1 appRepo.Update call to persist install count, got %d", appRepo.updateCallCount)
+	}
+	if got := appRepo.apps[appID].InstallCount; got != 3 {
+		t.Errorf("install count: expected 3 distinct domains, got %d", got)
 	}
 }
 

@@ -67,23 +67,14 @@ class SyncStatusProvider extends ChangeNotifier {
       for (final appId in _watchedAppIds) {
         try {
           final jobs = await _service.getActiveSyncJobs(appId);
-          if (jobs.isNotEmpty) {
-            // The parent full_sync reports 0/0; the child jobs (transaction/
-            // status/event/…) carry the real completed/total counts. Represent
-            // progress with the furthest-along child that actually has items.
-            final withItems = jobs.where((j) => j.totalItems > 0).toList();
-            final lead = withItems.isNotEmpty
-                ? withItems.reduce((a, b) => a.progress >= b.progress ? a : b)
-                : jobs.first;
-            // Cancel should target the parent full_sync (cascades to children).
-            final cancelTarget =
-                jobs.firstWhere((j) => j.isFullSync, orElse: () => lead);
+          final sel = SyncProgressSelection.from(jobs);
+          if (sel != null) {
             newStates[appId] = AppSyncState(
               isSyncing: true,
-              message: lead.message ??
-                  _waveMessage(lead.jobType ?? lead.currentWave),
-              progress: lead.progress,
-              jobId: cancelTarget.id,
+              message: sel.lead.message ??
+                  _waveMessage(sel.lead.jobType ?? sel.lead.currentWave),
+              progress: sel.lead.progress,
+              jobId: sel.cancelTarget.id,
             );
           }
         } catch (e) {

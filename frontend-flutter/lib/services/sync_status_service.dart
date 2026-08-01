@@ -61,6 +61,31 @@ class SyncJob {
       status == 'pending' || status == 'processing' || status == 'queued';
 }
 
+/// Which job drives the progress bar vs. which one Cancel targets.
+class SyncProgressSelection {
+  /// The job whose [SyncJob.progress] represents the sync — the furthest-along
+  /// child with real item counts (the parent full_sync reports 0/0).
+  final SyncJob lead;
+
+  /// The job to cancel — the parent full_sync when present (cancel cascades to
+  /// children), otherwise the lead.
+  final SyncJob cancelTarget;
+
+  const SyncProgressSelection(this.lead, this.cancelTarget);
+
+  /// Resolves the lead + cancel target from the active jobs, or null if empty.
+  static SyncProgressSelection? from(List<SyncJob> jobs) {
+    if (jobs.isEmpty) return null;
+    final withItems = jobs.where((j) => j.totalItems > 0).toList();
+    final lead = withItems.isNotEmpty
+        ? withItems.reduce((a, b) => a.progress >= b.progress ? a : b)
+        : jobs.first;
+    final cancelTarget =
+        jobs.firstWhere((j) => j.isFullSync, orElse: () => lead);
+    return SyncProgressSelection(lead, cancelTarget);
+  }
+}
+
 class SyncStatusService {
   final ApiClient _client;
 

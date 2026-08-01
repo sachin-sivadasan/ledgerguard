@@ -174,6 +174,11 @@ Daily Briefs: "No insights available yet. Insights are generated daily after you
 **APPS-1 🔴 "0 installs" despite 2,926 stores/subscriptions** — the app-card install count is 0. `FetchInstallCount` (counts `RELATIONSHIP_INSTALLED` events) isn't populating the real number (and likely also misses `RELATIONSHIP_REACTIVATED` reinstalls, cf. SUB-3). Should reflect the true install base.
 **APPS-2 🟡** Rating shows ★ 0 — verify against real App Store rating / Reviews tab (not deep-tested).
 
+**APPS-3 🟠 Sync progress stuck at 0% on the Apps screen** (user-reported; ROOT CAUSE CONFIRMED live)
+- Symptom: at `/#/apps` during a sync, the "Syncing…" state, progress bar, and Cancel button **do** render — but the bar/percentage is **stuck at 0%** even though the job is well underway (observed `status_sync` at `completed_items 2154 / total_items 2930` ≈ 73%).
+- **Root cause (field mismatch, like EARN-1):** `GET /api/v1/sync/jobs?status=processing` returns each job with **`completed_items` / `total_items`** but **no `progress_pct`**; the frontend model `SyncJobStatus.fromJson` reads `json['progress_pct'] ?? 0` → always 0. Compounding: the parent `full_sync` job reports `total_items: 0` (`0/0`), while the child `status_sync`/`event_sync` jobs carry the real counts — so the provider must pick the child (or aggregate), not the parent.
+- **Fix (frontend, small):** compute progress = `completed_items / total_items` (guard `total>0`) in `SyncJobStatus`; in `SyncStatusProvider._poll`, prefer the child job with `total_items>0` (or aggregate across children) over the `0/0` parent. Files: `frontend-flutter/lib/services/sync_status_service.dart`, `lib/providers/sync_status_provider.dart`. (Alternative: backend emits `progress_pct` on `/sync/jobs`.)
+
 ### API Keys (route `/#/api-keys`)
 "3 active keys" (CI/CD Pipeline, Staging, Production) + Old Integration (REVOKED). Scopes/dates/revoke/create all render.
 **APIKEYS-1 🟡** Key names/dates look like they could be seed/demo data (CI/CD Pipeline, Staging Key, lg_live_/lg_test_ prefixes) — confirm these are real user-created keys, not seeded fixtures showing in prod.

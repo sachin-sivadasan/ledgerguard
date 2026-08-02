@@ -16,7 +16,7 @@ Last updated: 2026-07-30
 | Transactions | ✅ Fixed (PR #45) | Server-side Gross/Net/Cut totals + full-history window; live count 49,607 verified |
 | Subscriptions | 🔴 Open findings | See SUB-1..SUB-3 below — partial fix shipped (PR #46), reconciliation fix pending |
 | Dashboard | 🔴 Open findings | route is `/` (not `/dashboard`); see DASH-1..DASH-3 |
-| Stores | 🟠 Open findings | 2926 stores; see STORE-1..STORE-2 |
+| Stores | 🟠 STORE-2 fixed; STORE-1 w/ SUB-1 | 2926 stores; install/interaction dates event-sourced |
 | Store Detail | 🔴 Open findings | route `/#/stores/{domain}`; see SD-1..SD-4 |
 | Events | ✅ EVT-1/2/3 fixed | app-wide events; badge/title mapping fixed |
 | Risk | 🔴 Open findings | see RISK-1..RISK-3 |
@@ -87,8 +87,8 @@ Live KPIs: MRR $62,917 (+4.2%), Renewal 40.2%, Revenue at Risk $6,241, Usage Rev
 
 **STORE-1 🔴 Store risk badges over-churned** — inherits the polluted `risk_state` (same root cause as SUB-1). Many "Churned/10% health" stores are actually active. Fixes with SUB-1.
 
-**STORE-2 🟠 `first_install_date` / `last_interaction` = record-created time, not real dates**
-- `/stores` returns `first_install_date: 2026-07-30T07:18:45Z` for every store — that's the resync record-creation timestamp, not the shop's real first-install date. `last_interaction` likewise = today. Violates CreatedAt-is-record-date. Source install date from the earliest `RELATIONSHIP_INSTALLED` event or earliest transaction (cf. `activated_at` backfill already done for subs). Affects tenure/LTV-age if any consumer uses it.
+**STORE-2 ✅ `first_install_date` / `last_interaction` now event-sourced (was record-created time)**
+- `/stores` (and `/risk/summary`) previously returned the resync record-creation timestamp for every store's `first_install_date`, and `UpdatedAt` (rebuild time) for `last_interaction`. Fixed: both endpoints now join the `app_events` stream (keyed by myshopify domain) via a shared `buildStoreDatesFromEvents` helper — `first_install_date` = earliest `RELATIONSHIP_INSTALLED`/`REACTIVATED` event, `last_interaction` = most-recent event of any type. Fallbacks (no matching events): install = `sub.StartDate()` (ActivatedAt = earliest recurring charge), interaction = `LastRecurringChargeDate` else UpdatedAt. `appEventRepo` is nil-tolerant. Backend-only. (PR pending)
 
 **Not a bug:** hashed store domains (`00430d-6a.myshopify.com`) are Shopify's anonymized handles for churned/uninstalled shops; alphabetically sorted so they lead the list.
 
@@ -106,7 +106,7 @@ The detail page makes **no store-by-ID request** — it resolves the store (and 
 
 **SD-3 🟡 Installed Apps shows the app UUID** (`a4d7dfd1-d27f-4cd1-ab08-6e96cbc8ff3c`) instead of the app name ("Zoko — WhatsApp Marketing API"). Resolve app name.
 
-**SD-4 🟡 First Install / Last Interaction = Jul 30 2026** (record-created date, same as STORE-2); **Timeline card empty** (no events rendered — verify wiring vs genuinely no events).
+**SD-4 🟡 First Install / Last Interaction dates** ✅ fixed via STORE-2 (now event-sourced from `/stores`). **Timeline card empty** still open — verify wiring vs genuinely no events (the store-detail timeline reads its own events feed; re-check after backend deploy now that app-wide events are populated).
 
 ### Events (route `/#/events`)
 

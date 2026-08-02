@@ -16,6 +16,7 @@ import (
 type StoreHandler struct {
 	subscriptionRepo repository.SubscriptionRepository
 	txRepo           repository.TransactionRepository
+	appEventRepo     repository.AppEventRepository // optional; nil-tolerant
 	partnerRepo      repository.PartnerAccountRepository
 	appRepo          repository.AppRepository
 	riskEngine       *domainservice.RiskEngine
@@ -24,6 +25,7 @@ type StoreHandler struct {
 func NewStoreHandler(
 	subscriptionRepo repository.SubscriptionRepository,
 	txRepo repository.TransactionRepository,
+	appEventRepo repository.AppEventRepository,
 	partnerRepo repository.PartnerAccountRepository,
 	appRepo repository.AppRepository,
 	riskEngine *domainservice.RiskEngine,
@@ -31,6 +33,7 @@ func NewStoreHandler(
 	return &StoreHandler{
 		subscriptionRepo: subscriptionRepo,
 		txRepo:           txRepo,
+		appEventRepo:     appEventRepo,
 		partnerRepo:      partnerRepo,
 		appRepo:          appRepo,
 		riskEngine:       riskEngine,
@@ -56,12 +59,26 @@ func (h *StoreHandler) List(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	h.riskEngine.ClassifyAll(subs, now)
 
-	// Group subscriptions by domain
+	// Real install / last-interaction dates come from the app-event stream (keyed
+	// by myshopify domain for charged shops); subscription business dates are the
+	// fallback. CreatedAt/UpdatedAt are record timestamps reset on every rebuild,
+	// so they must NOT be used as install/interaction dates (STORE-2).
+	var eventDates map[string]storeDates
+	if h.appEventRepo != nil {
+		if events, err := h.appEventRepo.FindByAppID(r.Context(), app.ID); err == nil {
+			eventDates = buildStoreDatesFromEvents(events)
+		}
+	}
+
+	// Group subscriptions by domain, tracking real signals (business start date,
+	// most-recent charge) separately from the record UpdatedAt fallback so the
+	// rebuild timestamp never masquerades as a real interaction date.
 	type storeInfo struct {
-		domain       string
-		riskState    valueobject.RiskState
-		firstInstall time.Time
-		lastActivity time.Time
+		domain     string
+		riskState  valueobject.RiskState
+		subStart   time.Time  // min business start date across the domain's subs
+		lastCharge *time.Time // max recurring-charge date across the domain's subs
+		updatedAt  time.Time  // max record UpdatedAt (last-resort fallback)
 	}
 	storeMap := make(map[string]*storeInfo)
 	for _, sub := range subs {
@@ -69,24 +86,24 @@ func (h *StoreHandler) List(w http.ResponseWriter, r *http.Request) {
 		if domain == "" {
 			continue
 		}
+		subStart := sub.StartDate()
 		existing, ok := storeMap[domain]
 		if !ok {
-			storeMap[domain] = &storeInfo{
-				domain:       domain,
-				riskState:    sub.RiskState,
-				firstInstall: sub.CreatedAt,
-				lastActivity: sub.UpdatedAt,
-			}
+			existing = &storeInfo{domain: domain, riskState: sub.RiskState, subStart: subStart, updatedAt: sub.UpdatedAt}
+			storeMap[domain] = existing
 		} else {
 			if riskPriority(sub.RiskState) > riskPriority(existing.riskState) {
 				existing.riskState = sub.RiskState
 			}
-			if sub.CreatedAt.Before(existing.firstInstall) {
-				existing.firstInstall = sub.CreatedAt
+			if subStart.Before(existing.subStart) {
+				existing.subStart = subStart
 			}
-			if sub.UpdatedAt.After(existing.lastActivity) {
-				existing.lastActivity = sub.UpdatedAt
+			if sub.UpdatedAt.After(existing.updatedAt) {
+				existing.updatedAt = sub.UpdatedAt
 			}
+		}
+		if sub.LastRecurringChargeDate != nil && (existing.lastCharge == nil || sub.LastRecurringChargeDate.After(*existing.lastCharge)) {
+			existing.lastCharge = sub.LastRecurringChargeDate
 		}
 	}
 
@@ -112,14 +129,17 @@ func (h *StoreHandler) List(w http.ResponseWriter, r *http.Request) {
 	// Build sorted list of all stores
 	allStores := make([]storeJSON, 0, len(storeMap))
 	for domain, info := range storeMap {
+		ed := eventDates[domain] // zero-value when the shop has no events
+		firstInstall := resolveFirstInstall(ed.firstInstall, info.subStart)
+		lastInteraction := resolveLastInteraction(ed.lastInteraction, info.lastCharge, info.updatedAt)
 		allStores = append(allStores, storeJSON{
 			ID:                 domain,
 			ShopDomain:         domain,
 			InstalledAppIDs:    []string{app.ID.String()},
 			HealthScore:        healthScoreFromRisk(info.riskState),
 			LifetimeValueCents: ltvMap[domain],
-			FirstInstallDate:   info.firstInstall.Format(time.RFC3339),
-			LastInteraction:    info.lastActivity.Format(time.RFC3339),
+			FirstInstallDate:   firstInstall.Format(time.RFC3339),
+			LastInteraction:    lastInteraction.Format(time.RFC3339),
 			RiskState:          string(info.riskState),
 		})
 	}

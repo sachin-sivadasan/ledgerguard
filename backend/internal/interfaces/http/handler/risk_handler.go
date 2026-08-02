@@ -12,6 +12,7 @@ import (
 
 type RiskHandler struct {
 	subscriptionRepo repository.SubscriptionRepository
+	appEventRepo     repository.AppEventRepository // optional; nil-tolerant
 	partnerRepo      repository.PartnerAccountRepository
 	appRepo          repository.AppRepository
 	riskEngine       *domainservice.RiskEngine
@@ -19,12 +20,14 @@ type RiskHandler struct {
 
 func NewRiskHandler(
 	subscriptionRepo repository.SubscriptionRepository,
+	appEventRepo repository.AppEventRepository,
 	partnerRepo repository.PartnerAccountRepository,
 	appRepo repository.AppRepository,
 	riskEngine *domainservice.RiskEngine,
 ) *RiskHandler {
 	return &RiskHandler{
 		subscriptionRepo: subscriptionRepo,
+		appEventRepo:     appEventRepo,
 		partnerRepo:      partnerRepo,
 		appRepo:          appRepo,
 		riskEngine:       riskEngine,
@@ -50,6 +53,16 @@ func (h *RiskHandler) Summary(w http.ResponseWriter, r *http.Request) {
 	h.riskEngine.ClassifyAll(subs, now)
 	summary := h.riskEngine.CalculateRiskSummary(subs)
 
+	// Real install / last-interaction dates from the app-event stream; subscription
+	// business dates are the fallback. CreatedAt/UpdatedAt are record timestamps
+	// (reset on rebuild) and must not be used as install/interaction dates (STORE-2).
+	var eventDates map[string]storeDates
+	if h.appEventRepo != nil {
+		if events, err := h.appEventRepo.FindByAppID(r.Context(), app.ID); err == nil {
+			eventDates = buildStoreDatesFromEvents(events)
+		}
+	}
+
 	// Build at-risk stores list
 	type atRiskStoreJSON struct {
 		ID                 string   `json:"id"`
@@ -66,14 +79,17 @@ func (h *RiskHandler) Summary(w http.ResponseWriter, r *http.Request) {
 	for _, sub := range subs {
 		if sub.RiskState == valueobject.RiskStateOneCycleMissed ||
 			sub.RiskState == valueobject.RiskStateTwoCyclesMissed {
+			ed := eventDates[sub.MyshopifyDomain] // zero-value when the shop has no events
+			firstInstall := resolveFirstInstall(ed.firstInstall, sub.StartDate())
+			lastInteraction := resolveLastInteraction(ed.lastInteraction, sub.LastRecurringChargeDate, sub.UpdatedAt)
 			atRiskStores = append(atRiskStores, atRiskStoreJSON{
 				ID:                 sub.ID.String(),
 				ShopDomain:         sub.MyshopifyDomain,
 				InstalledAppIDs:    []string{},
 				HealthScore:        healthScoreFromRisk(sub.RiskState),
 				LifetimeValueCents: sub.BasePriceCents,
-				FirstInstallDate:   sub.CreatedAt.Format(time.RFC3339),
-				LastInteraction:    sub.UpdatedAt.Format(time.RFC3339),
+				FirstInstallDate:   firstInstall.Format(time.RFC3339),
+				LastInteraction:    lastInteraction.Format(time.RFC3339),
 				RiskState:          string(sub.RiskState),
 			})
 		}

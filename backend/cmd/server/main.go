@@ -14,8 +14,16 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/scheduler"
 	appservice "github.com/sachin-sivadasan/ledgerguard/internal/application/service"
-	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
+	"github.com/sachin-sivadasan/ledgerguard/internal/chat"
+	chatgraphql "github.com/sachin-sivadasan/ledgerguard/internal/chat/graphql"
+	chatapps "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/apps"
+	chatearnings "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/earnings"
+	chatmetrics "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/metrics"
+	chatrisk "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/risk"
+	chatstorehealth "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/store_health"
+	chatsubs "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/subscriptions"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/config"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
@@ -25,20 +33,12 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/handler"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/router"
-	"github.com/sachin-sivadasan/ledgerguard/pkg/crypto"
-	"github.com/sachin-sivadasan/ledgerguard/internal/chat"
-	chatgraphql "github.com/sachin-sivadasan/ledgerguard/internal/chat/graphql"
-	chatapps "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/apps"
-	chatearnings "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/earnings"
-	chatmetrics "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/metrics"
-	chatrisk "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/risk"
-	chatstorehealth "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/store_health"
-	chatsubs "github.com/sachin-sivadasan/ledgerguard/internal/chat/modules/subscriptions"
-	apikeyhandler "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/handler"
 	apikeysvc "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/application/service"
 	apikeypersist "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/infrastructure/persistence"
 	revenueGraphQL "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/graphql"
+	apikeyhandler "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/handler"
 	revenueMiddleware "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/middleware"
+	"github.com/sachin-sivadasan/ledgerguard/pkg/crypto"
 )
 
 func main() {
@@ -332,7 +332,13 @@ func run() error {
 	var storeHandler *handler.StoreHandler
 	if subscriptionRepo != nil && txRepo != nil && partnerRepo != nil && appRepo != nil {
 		storeRiskEngine := domainservice.NewRiskEngine()
-		storeHandler = handler.NewStoreHandler(subscriptionRepo, txRepo, partnerRepo, appRepo, storeRiskEngine)
+		// Guard against a typed-nil interface: only pass the event repo when it
+		// was actually constructed, so the handler's nil check behaves.
+		var storeEventRepo repository.AppEventRepository
+		if appEventRepo != nil {
+			storeEventRepo = appEventRepo
+		}
+		storeHandler = handler.NewStoreHandler(subscriptionRepo, txRepo, storeEventRepo, partnerRepo, appRepo, storeRiskEngine)
 		log.Println("Store handler initialized")
 	}
 
@@ -472,7 +478,11 @@ func run() error {
 	var riskHandler *handler.RiskHandler
 	if subscriptionRepo != nil && partnerRepo != nil && appRepo != nil {
 		riskRiskEngine := domainservice.NewRiskEngine()
-		riskHandler = handler.NewRiskHandler(subscriptionRepo, partnerRepo, appRepo, riskRiskEngine)
+		var riskEventRepo repository.AppEventRepository
+		if appEventRepo != nil {
+			riskEventRepo = appEventRepo
+		}
+		riskHandler = handler.NewRiskHandler(subscriptionRepo, riskEventRepo, partnerRepo, appRepo, riskRiskEngine)
 		log.Println("Risk handler initialized")
 	}
 
@@ -844,59 +854,59 @@ func run() error {
 
 	// Build router config
 	routerCfg := router.Config{
-		HealthHandler:                   healthHandler,
-		MeHandler:                       meHandler,
-		ManualTokenHandler:              manualTokenHandler,
-		IntegrationStatusHandler:        integrationStatusHandler,
-		AppHandler:                      appHandler,
-		MetricsHandler:                  metricsHandler,
-		RevenueHandler:                  revenueHandler,
-		FeeHandler:                      feeHandler,
-		SyncHandler:                     syncHandler,
-		SubscriptionHandler:             subscriptionHandler,
-		StoreHealthHandler:              storeHealthHandler,
-		UserPreferencesHandler:          userPreferencesHandler,
-		NotificationPreferencesHandler:  notificationPreferencesHandler,
-		DeviceHandler:                   deviceHandler,
-		InsightHandler:                  insightHandler,
-		WebhookHandler:                  webhookHandler,
-		BillingHandler:                  billingHandler,
-		ReviewHandler:                   reviewHandler,
-		TransactionHandler:              transactionHandler,
-		StoreHandler:                    storeHandler,
-		EventHandler:                    eventHandler,
-		CohortHandler:                   cohortHandler,
-		ForecastHandler:                 forecastHandler,
-		RevenueAtRiskHandler:            revenueAtRiskHandler,
-		ChurnHandler:                    churnHandler,
-		RetentionHandler:                retentionHandler,
-		MRRReportHandler:                mrrReportHandler,
-		ActiveCustomersReportHandler:    activeCustomersReportHandler,
-		EarningsReportHandler:           earningsReportHandler,
-		RevenueMixReportHandler:         revenueMixReportHandler,
-		UsageReportHandler:              usageReportHandler,
-		UsageTrendsReportHandler:        usageTrendsReportHandler,
-		SubscriptionsReportHandler:      subscriptionsReportHandler,
-		PayoutScheduleReportHandler:     payoutScheduleReportHandler,
-		PayoutHistoryReportHandler:      payoutHistoryReportHandler,
-		UninstallContextHandler:         uninstallContextHandler,
-		InstallsReportHandler:           installsReportHandler,
-		ActivationReportHandler:         activationReportHandler,
-		NetNewSubsReportHandler:         netNewSubsReportHandler,
-		RiskHandler:                     riskHandler,
-		OrgHandler:                      orgHandler,
-		OrgAuditHandler:                 orgAuditHandler,
-		OrgContextMW:                    orgContextMW,
-		QueueSyncHandler:                queueSyncHandler,
-		AdminHandler:                    adminHandler,
-		APIKeyHandler:                   apiKeyHandler,
-		GraphQLHandler:                  graphqlHandler,
-		SubscriptionStatusHandler:       subscriptionStatusHandler,
-		UsageStatusHandler:              usageStatusHandler,
-		RevenueAPIGraphQLHandler:        revenueAPIGraphQLHandler,
-		AuthMW:                          authMW,
-		AdminMW:                         adminMW,
-		InternalMW:                      internalMW,
+		HealthHandler:                  healthHandler,
+		MeHandler:                      meHandler,
+		ManualTokenHandler:             manualTokenHandler,
+		IntegrationStatusHandler:       integrationStatusHandler,
+		AppHandler:                     appHandler,
+		MetricsHandler:                 metricsHandler,
+		RevenueHandler:                 revenueHandler,
+		FeeHandler:                     feeHandler,
+		SyncHandler:                    syncHandler,
+		SubscriptionHandler:            subscriptionHandler,
+		StoreHealthHandler:             storeHealthHandler,
+		UserPreferencesHandler:         userPreferencesHandler,
+		NotificationPreferencesHandler: notificationPreferencesHandler,
+		DeviceHandler:                  deviceHandler,
+		InsightHandler:                 insightHandler,
+		WebhookHandler:                 webhookHandler,
+		BillingHandler:                 billingHandler,
+		ReviewHandler:                  reviewHandler,
+		TransactionHandler:             transactionHandler,
+		StoreHandler:                   storeHandler,
+		EventHandler:                   eventHandler,
+		CohortHandler:                  cohortHandler,
+		ForecastHandler:                forecastHandler,
+		RevenueAtRiskHandler:           revenueAtRiskHandler,
+		ChurnHandler:                   churnHandler,
+		RetentionHandler:               retentionHandler,
+		MRRReportHandler:               mrrReportHandler,
+		ActiveCustomersReportHandler:   activeCustomersReportHandler,
+		EarningsReportHandler:          earningsReportHandler,
+		RevenueMixReportHandler:        revenueMixReportHandler,
+		UsageReportHandler:             usageReportHandler,
+		UsageTrendsReportHandler:       usageTrendsReportHandler,
+		SubscriptionsReportHandler:     subscriptionsReportHandler,
+		PayoutScheduleReportHandler:    payoutScheduleReportHandler,
+		PayoutHistoryReportHandler:     payoutHistoryReportHandler,
+		UninstallContextHandler:        uninstallContextHandler,
+		InstallsReportHandler:          installsReportHandler,
+		ActivationReportHandler:        activationReportHandler,
+		NetNewSubsReportHandler:        netNewSubsReportHandler,
+		RiskHandler:                    riskHandler,
+		OrgHandler:                     orgHandler,
+		OrgAuditHandler:                orgAuditHandler,
+		OrgContextMW:                   orgContextMW,
+		QueueSyncHandler:               queueSyncHandler,
+		AdminHandler:                   adminHandler,
+		APIKeyHandler:                  apiKeyHandler,
+		GraphQLHandler:                 graphqlHandler,
+		SubscriptionStatusHandler:      subscriptionStatusHandler,
+		UsageStatusHandler:             usageStatusHandler,
+		RevenueAPIGraphQLHandler:       revenueAPIGraphQLHandler,
+		AuthMW:                         authMW,
+		AdminMW:                        adminMW,
+		InternalMW:                     internalMW,
 	}
 
 	// Wire Revenue API middleware (API key auth, rate limiting, audit logging)

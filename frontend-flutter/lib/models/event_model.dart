@@ -14,6 +14,7 @@ enum EventType {
   riskStateChange,
   reviewSubmitted,
   usageCharge,
+  other,
 }
 
 class AppEvent {
@@ -67,14 +68,21 @@ class AppEvent {
       case 'APP_DEACTIVATED':
       case 'RELATIONSHIP_DEACTIVATED':
         return EventType.appDeactivated;
+      // Both the mapped (SUBSCRIPTION_*) and raw Partner (SUBSCRIPTION_CHARGE_*)
+      // forms are handled so a badge is correct even if the backend passes a raw
+      // type through. SUBSCRIPTION_CHARGE_ACTIVATED is the common renewal event —
+      // it previously fell to the default and was mislabelled as an install.
       case 'SUBSCRIPTION_ACTIVATED':
+      case 'SUBSCRIPTION_CHARGE_ACTIVATED':
       case 'SUBSCRIPTION_CHARGE_ACCEPTED':
         return EventType.subscriptionActivated;
       case 'SUBSCRIPTION_CANCELLED':
       case 'SUBSCRIPTION_CHARGE_CANCELED':
+      case 'SUBSCRIPTION_CHARGE_EXPIRED':
         return EventType.subscriptionCancelled;
       case 'SUBSCRIPTION_FROZEN':
       case 'SUBSCRIPTION_CHARGE_FROZEN':
+      case 'SUBSCRIPTION_CHARGE_DECLINED':
         return EventType.subscriptionFrozen;
       case 'SUBSCRIPTION_UNFROZEN':
       case 'SUBSCRIPTION_CHARGE_UNFROZEN':
@@ -92,9 +100,15 @@ class AppEvent {
       case 'REVIEW_SUBMITTED':
         return EventType.reviewSubmitted;
       case 'USAGE_CHARGE':
+      case 'USAGE_CHARGE_APPLIED':
         return EventType.usageCharge;
+      case 'ONE_TIME_CHARGE_ACTIVATED':
+      case 'ONE_TIME_CHARGE_ACCEPTED':
+        return EventType.billingSuccess;
       default:
-        return EventType.appInstall;
+        // Unknown/unmapped lifecycle types render neutrally instead of being
+        // silently mislabelled as an app install (the old default).
+        return EventType.other;
     }
   }
 }

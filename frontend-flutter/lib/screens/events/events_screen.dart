@@ -246,6 +246,7 @@ IconData _eventIcon(EventType type) => switch (type) {
       EventType.riskStateChange => Icons.warning_amber,
       EventType.reviewSubmitted => Icons.star_outline,
       EventType.usageCharge => Icons.data_usage,
+      EventType.other => Icons.info_outline,
     };
 
 Color _eventColor(EventType type) => switch (type) {
@@ -264,6 +265,7 @@ Color _eventColor(EventType type) => switch (type) {
       EventType.riskStateChange => LgColors.warning,
       EventType.reviewSubmitted => LgColors.info,
       EventType.usageCharge => LgColors.info,
+      EventType.other => LgColors.textSecondary,
     };
 
 String _eventBadgeLabel(EventType type) => switch (type) {
@@ -282,6 +284,7 @@ String _eventBadgeLabel(EventType type) => switch (type) {
       EventType.riskStateChange => 'RISK CHANGE',
       EventType.reviewSubmitted => 'REVIEW',
       EventType.usageCharge => 'USAGE',
+      EventType.other => 'EVENT',
     };
 
 BadgeTone _eventBadgeTone(EventType type) => switch (type) {
@@ -300,6 +303,7 @@ BadgeTone _eventBadgeTone(EventType type) => switch (type) {
       EventType.riskStateChange => BadgeTone.warning,
       EventType.reviewSubmitted => BadgeTone.info,
       EventType.usageCharge => BadgeTone.info,
+      EventType.other => BadgeTone.defaultTone,
     };
 
 class _TypeFilter extends StatelessWidget {
@@ -313,10 +317,13 @@ class _TypeFilter extends StatelessWidget {
       onSelected: onChanged,
       itemBuilder: (ctx) => [
         const PopupMenuItem(value: null, child: Text('All Types')),
-        ...EventType.values.map((t) => PopupMenuItem(
-              value: t,
-              child: Text(_eventBadgeLabel(t)),
-            )),
+        // `other` is a catch-all for unmapped types — not a meaningful filter.
+        ...EventType.values.where((t) => t != EventType.other).map(
+              (t) => PopupMenuItem(
+                value: t,
+                child: Text(_eventBadgeLabel(t)),
+              ),
+            ),
       ],
       child: Chip(
         label: Text(value != null ? _eventBadgeLabel(value!) : 'Type'),

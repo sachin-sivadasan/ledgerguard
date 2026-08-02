@@ -13,9 +13,9 @@ import (
 )
 
 type InsightHandler struct {
-	insightRepo    repository.DailyInsightRepository
-	appRepo        repository.AppRepository
-	partnerRepo    repository.PartnerAccountRepository
+	insightRepo repository.DailyInsightRepository
+	appRepo     repository.AppRepository
+	partnerRepo repository.PartnerAccountRepository
 }
 
 func NewInsightHandler(
@@ -24,9 +24,9 @@ func NewInsightHandler(
 	partnerRepo repository.PartnerAccountRepository,
 ) *InsightHandler {
 	return &InsightHandler{
-		insightRepo:    insightRepo,
-		appRepo:        appRepo,
-		partnerRepo:    partnerRepo,
+		insightRepo: insightRepo,
+		appRepo:     appRepo,
+		partnerRepo: partnerRepo,
 	}
 }
 

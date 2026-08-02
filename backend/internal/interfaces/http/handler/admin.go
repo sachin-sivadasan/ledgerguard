@@ -21,10 +21,10 @@ type ReadModelRebuilder interface {
 
 // AdminHandler serves admin dashboard endpoints.
 type AdminHandler struct {
-	adminRepo         repository.AdminRepository
-	notifSched        *scheduler.NotificationScheduler
-	catchupSched      *scheduler.DailyCatchupScheduler
-	readModelBuilder  ReadModelRebuilder
+	adminRepo        repository.AdminRepository
+	notifSched       *scheduler.NotificationScheduler
+	catchupSched     *scheduler.DailyCatchupScheduler
+	readModelBuilder ReadModelRebuilder
 }
 
 func NewAdminHandler(adminRepo repository.AdminRepository) *AdminHandler {

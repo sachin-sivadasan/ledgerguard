@@ -97,10 +97,10 @@ func (h *TransactionHandler) Summary(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"grossCents":     summary.GrossCents,
-		"netCents":       summary.NetCents,
+		"grossCents":      summary.GrossCents,
+		"netCents":        summary.NetCents,
 		"shopifyCutCents": summary.GrossCents - summary.NetCents,
-		"count":          summary.Count,
+		"count":           summary.Count,
 	})
 }
 

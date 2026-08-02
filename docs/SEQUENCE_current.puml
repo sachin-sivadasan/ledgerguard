@@ -1014,6 +1014,14 @@ FSP -> Redis: LPUSH status_sync
 FSP -> Redis: LPUSH store_sync
 
 note right of FSP
+  event_sync fetches the APP-WIDE event stream in one
+  paginated call (all shops incl. free/never-charged) →
+  app_events, and derives active-install count
+  (latest relationship event = INSTALLED/REACTIVATED)
+  → app.InstallCount. Also feeds the Installs report.
+end note
+
+note right of FSP
   status_sync reconciles each sub's event status
   against billing (cancel-trap): CANCELLED/UNINSTALLED
   churns only if no recurring charge post-dates the

@@ -94,6 +94,8 @@ FSP -> Redis: LPUSH :queue {event_sync}
 FSP -> Redis: LPUSH :queue {status_sync}
 FSP -> Redis: LPUSH :queue {store_sync}
 
+note right of FSP: event_sync fetches the APP-WIDE event stream in ONE\npaginated call (all shops incl. free/never-charged),\nstores app_events, and derives the install count via a\nper-shop state machine: active = latest relationship\nevent is INSTALLED/REACTIVATED (persists app.InstallCount).
+
 note right of FSP: status_sync reconciles each sub's event-derived\nstatus against billing (cancel-trap): a CANCELLED/\nUNINSTALLED churns only when no recurring charge\npost-dates the event; risk is re-derived from charge\nrecency (Subscription.ApplyEventStatus).
 
 loop poll Wave 2 children until done (5s)

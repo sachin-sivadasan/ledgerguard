@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -58,86 +59,74 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 		return err
 	}
 
-	// Get subscriptions to iterate shop GIDs
+	// Map known (charged) shops' GID -> myshopify domain, so their events keep a
+	// domain identifier the Store timeline / Events page can match on. Never-charged
+	// shops (not in our subscriptions) fall back to the event's shop name/GID.
 	subscriptions, err := p.subRepo.FindByAppID(ctx, payload.AppID)
 	if err != nil {
 		return fmt.Errorf("failed to find subscriptions: %w", err)
 	}
-
-	log.Printf("[queue] EventProcessor: processing %d subscriptions for app %s (job %s)", len(subscriptions), payload.AppID, payload.JobID)
-
-	p.progress.Update(ctx, payload.JobID, queue.Progress{
-		Total:   len(subscriptions),
-		Message: fmt.Sprintf("Fetching events for %d shops...", len(subscriptions)),
-	})
-
-	fetchCtx := external.WithOrganizationID(ctx, pCtx.OrganizationID)
-	var allEvents []*entity.AppEvent
-	completed := 0
-	failed := 0 // shops whose events could not be fetched
-
+	gidToDomain := make(map[string]string, len(subscriptions))
 	for _, sub := range subscriptions {
-		if sub.ShopifyShopGID == "" {
-			log.Printf("[queue] EventProcessor: skipping subscription %s — no ShopifyShopGID (job %s)", sub.ID, payload.JobID)
-			completed++
-			continue
+		if sub.ShopifyShopGID != "" && sub.MyshopifyDomain != "" {
+			gidToDomain[sub.ShopifyShopGID] = sub.MyshopifyDomain
 		}
-
-		if cancelled, _ := p.lockManager.IsCancelled(ctx, payload.JobID); cancelled {
-			return fmt.Errorf("job cancelled")
-		}
-
-		if (completed+1)%100 == 0 || completed+1 == len(subscriptions) {
-			log.Printf("[queue] EventProcessor: fetching events (%d/%d) (job %s)", completed+1, len(subscriptions), payload.JobID)
-		}
-
-		events, err := p.eventFetcher.FetchAppEvents(fetchCtx, pCtx.OrganizationID, pCtx.AccessToken, pCtx.App.PartnerAppID, sub.ShopifyShopGID)
-		if err != nil {
-			log.Printf("[queue] EventProcessor: error fetching events for shop %s: %v (job %s)", sub.ShopifyShopGID, err, payload.JobID)
-			completed++
-			failed++
-			continue
-		}
-
-		for _, ev := range events {
-			rawData, _ := json.Marshal(ev)
-			// Store myshopify domain for display; fall back to GID if domain is empty
-			shopIdentifier := sub.ShopifyShopGID
-			if sub.MyshopifyDomain != "" {
-				shopIdentifier = sub.MyshopifyDomain
-			}
-			allEvents = append(allEvents, entity.NewAppEvent(payload.AppID, shopIdentifier, ev.Type, ev.OccurredAt, rawData))
-		}
-
-		completed++
-		p.progress.Update(ctx, payload.JobID, queue.Progress{
-			Total:     len(subscriptions),
-			Completed: completed,
-			Message:   fmt.Sprintf("Fetched events for %d/%d shops", completed, len(subscriptions)),
-		})
 	}
 
-	// Upsert all events
+	p.progress.Update(ctx, payload.JobID, queue.Progress{
+		Message: "Fetching app-wide lifecycle events...",
+	})
+
+	// Fetch the ENTIRE app event stream (all shops, all lifecycle types) in one
+	// paginated call — not per-shop. This captures every shop, including the free /
+	// never-charged installs that have no subscription, so install metrics match
+	// the Shopify Partner dashboard (previously we only saw charged shops).
+	fetchCtx := external.WithOrganizationID(ctx, pCtx.OrganizationID)
+	events, err := p.eventFetcher.FetchAppEvents(fetchCtx, pCtx.OrganizationID, pCtx.AccessToken, pCtx.App.PartnerAppID, "")
+	if err != nil {
+		return fmt.Errorf("failed to fetch app events: %w", err)
+	}
+
+	if cancelled, _ := p.lockManager.IsCancelled(ctx, payload.JobID); cancelled {
+		return fmt.Errorf("job cancelled")
+	}
+
+	allEvents := make([]*entity.AppEvent, 0, len(events))
+	for _, ev := range events {
+		rawData, _ := json.Marshal(ev)
+		shopIdentifier := gidToDomain[ev.ShopID]
+		if shopIdentifier == "" {
+			shopIdentifier = ev.ShopName
+		}
+		if shopIdentifier == "" {
+			shopIdentifier = ev.ShopID
+		}
+		allEvents = append(allEvents, entity.NewAppEvent(payload.AppID, shopIdentifier, ev.Type, ev.OccurredAt, rawData))
+	}
+
 	if len(allEvents) > 0 {
 		if err := p.appEventRepo.UpsertBatch(ctx, allEvents); err != nil {
 			return fmt.Errorf("failed to store events: %w", err)
 		}
 	}
 
-	// Surface partial failures: without the old 10-sub cap the per-shop loop now spans the
-	// whole account, so swallowed per-shop fetch errors must not masquerade as a clean sync
-	// (e.g. a token expiring mid-run would otherwise silently drop many shops' events).
-	doneMsg := fmt.Sprintf("Stored %d events", len(allEvents))
-	if failed > 0 {
-		doneMsg = fmt.Sprintf("Stored %d events, %d shops failed (see logs)", len(allEvents), failed)
-		log.Printf("[queue] EventProcessor: WARNING %d/%d shops failed to fetch for app %s (job %s)", failed, len(subscriptions), payload.AppID, payload.JobID)
+	// Derive install metrics from the relationship events and persist the active
+	// install count (APPS-1: the Apps card's "installs" = currently-installed shops).
+	activeInstalls, totalInstalls := external.CountInstalls(events)
+	if pCtx.App.InstallCount != activeInstalls {
+		pCtx.App.InstallCount = activeInstalls
+		pCtx.App.UpdatedAt = time.Now().UTC()
+		if err := p.appRepo.Update(ctx, pCtx.App); err != nil {
+			log.Printf("[queue] EventProcessor: failed to persist install count (%d) for app %s: %v", activeInstalls, payload.AppID, err)
+		}
 	}
+
 	p.progress.ForceUpdate(ctx, payload.JobID, queue.Progress{
-		Total:     len(subscriptions),
-		Completed: len(subscriptions),
-		Message:   doneMsg,
+		Total:     len(allEvents),
+		Completed: len(allEvents),
+		Message:   fmt.Sprintf("Stored %d events; %d active installs (%d total)", len(allEvents), activeInstalls, totalInstalls),
 	})
 
-	log.Printf("[queue] EventProcessor: stored %d events (%d shops failed) for app %s (job %s)", len(allEvents), failed, payload.AppID, payload.JobID)
+	log.Printf("[queue] EventProcessor: stored %d app-wide events, %d active / %d total installs for app %s (job %s)", len(allEvents), activeInstalls, totalInstalls, payload.AppID, payload.JobID)
 	return nil
 }

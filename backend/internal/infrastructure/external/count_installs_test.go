@@ -39,6 +39,25 @@ func TestCountInstalls(t *testing.T) {
 	}
 }
 
+// Same-timestamp install+uninstall must resolve deterministically (active wins),
+// regardless of slice order — the API doesn't guarantee order.
+func TestCountInstalls_SameTimestampTieBreak(t *testing.T) {
+	at := time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC)
+	// Order A: uninstall before install in the slice.
+	a1, _ := CountInstalls([]AppEvent{
+		{Type: "RELATIONSHIP_UNINSTALLED", ShopID: "s", OccurredAt: at},
+		{Type: "RELATIONSHIP_INSTALLED", ShopID: "s", OccurredAt: at},
+	})
+	// Order B: install before uninstall.
+	a2, _ := CountInstalls([]AppEvent{
+		{Type: "RELATIONSHIP_INSTALLED", ShopID: "s", OccurredAt: at},
+		{Type: "RELATIONSHIP_UNINSTALLED", ShopID: "s", OccurredAt: at},
+	})
+	if a1 != 1 || a2 != 1 {
+		t.Errorf("same-timestamp tie-break not deterministic/active: got %d and %d, want 1 and 1", a1, a2)
+	}
+}
+
 func TestCountInstalls_Empty(t *testing.T) {
 	a, tot := CountInstalls(nil)
 	if a != 0 || tot != 0 {

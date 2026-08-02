@@ -12,65 +12,65 @@ import (
 )
 
 type Config struct {
-	HealthHandler                   *handler.HealthHandler
-	MeHandler                       *handler.MeHandler
-	ManualTokenHandler              *handler.ManualTokenHandler
-	IntegrationStatusHandler        *handler.IntegrationStatusHandler
-	AppHandler                      *handler.AppHandler
-	MetricsHandler                  *handler.MetricsHandler
-	RevenueHandler                  *handler.RevenueHandler
-	SyncHandler                     *handler.SyncHandler
-	SubscriptionHandler             *handler.SubscriptionHandler
-	StoreHealthHandler              *handler.StoreHealthHandler
-	FeeHandler                      *handler.FeeHandler
-	UserPreferencesHandler          *handler.UserPreferencesHandler
-	NotificationPreferencesHandler  *handler.NotificationPreferencesHandler
-	DeviceHandler                   *handler.DeviceHandler
-	InsightHandler                  *handler.InsightHandler
-	WebhookHandler                  *handler.WebhookHandler
-	BillingHandler                  *handler.BillingHandler
-	ReviewHandler                   *handler.ReviewHandler
-	APIKeyHandler                   *apikeyhandler.APIKeyHandler
-	QueueSyncHandler                *handler.QueueSyncHandler
-	AdminHandler                    *handler.AdminHandler
-	TransactionHandler              *handler.TransactionHandler
-	StoreHandler                    *handler.StoreHandler
-	EventHandler                    *handler.EventHandler
-	CohortHandler                   *handler.CohortHandler
-	ForecastHandler                 *handler.ForecastHandler
-	RevenueAtRiskHandler            *handler.RevenueAtRiskHandler
-	ChurnHandler                    *handler.ChurnHandler
-	RetentionHandler                *handler.RetentionHandler
-	MRRReportHandler                *handler.MRRReportHandler
-	ActiveCustomersReportHandler    *handler.ActiveCustomersReportHandler
-	EarningsReportHandler           *handler.EarningsReportHandler
-	RevenueMixReportHandler         *handler.RevenueMixReportHandler
-	UsageReportHandler              *handler.UsageReportHandler
-	UsageTrendsReportHandler        *handler.UsageTrendsReportHandler
-	SubscriptionsReportHandler      *handler.SubscriptionsReportHandler
-	PayoutScheduleReportHandler     *handler.PayoutScheduleReportHandler
-	PayoutHistoryReportHandler      *handler.PayoutHistoryReportHandler
-	UninstallContextHandler         *handler.UninstallContextHandler
-	InstallsReportHandler           *handler.InstallsReportHandler
-	ActivationReportHandler         *handler.ActivationReportHandler
-	NetNewSubsReportHandler         *handler.NetNewSubsReportHandler
-	RiskHandler                     *handler.RiskHandler
-	OrgHandler                      *handler.OrgHandler
-	OrgAuditHandler                 *handler.OrgAuditHandler
-	OrgContextMW                    func(next http.Handler) http.Handler // Org resolution + membership check
-	GraphQLHandler                  http.Handler       // Internal chat GraphQL endpoint
-	ChatHandler                     http.HandlerFunc   // POST /api/v1/chat (SSE)
-	ChatModulesHandler              http.HandlerFunc   // GET /api/v1/chat/modules
+	HealthHandler                  *handler.HealthHandler
+	MeHandler                      *handler.MeHandler
+	ManualTokenHandler             *handler.ManualTokenHandler
+	IntegrationStatusHandler       *handler.IntegrationStatusHandler
+	AppHandler                     *handler.AppHandler
+	MetricsHandler                 *handler.MetricsHandler
+	RevenueHandler                 *handler.RevenueHandler
+	SyncHandler                    *handler.SyncHandler
+	SubscriptionHandler            *handler.SubscriptionHandler
+	StoreHealthHandler             *handler.StoreHealthHandler
+	FeeHandler                     *handler.FeeHandler
+	UserPreferencesHandler         *handler.UserPreferencesHandler
+	NotificationPreferencesHandler *handler.NotificationPreferencesHandler
+	DeviceHandler                  *handler.DeviceHandler
+	InsightHandler                 *handler.InsightHandler
+	WebhookHandler                 *handler.WebhookHandler
+	BillingHandler                 *handler.BillingHandler
+	ReviewHandler                  *handler.ReviewHandler
+	APIKeyHandler                  *apikeyhandler.APIKeyHandler
+	QueueSyncHandler               *handler.QueueSyncHandler
+	AdminHandler                   *handler.AdminHandler
+	TransactionHandler             *handler.TransactionHandler
+	StoreHandler                   *handler.StoreHandler
+	EventHandler                   *handler.EventHandler
+	CohortHandler                  *handler.CohortHandler
+	ForecastHandler                *handler.ForecastHandler
+	RevenueAtRiskHandler           *handler.RevenueAtRiskHandler
+	ChurnHandler                   *handler.ChurnHandler
+	RetentionHandler               *handler.RetentionHandler
+	MRRReportHandler               *handler.MRRReportHandler
+	ActiveCustomersReportHandler   *handler.ActiveCustomersReportHandler
+	EarningsReportHandler          *handler.EarningsReportHandler
+	RevenueMixReportHandler        *handler.RevenueMixReportHandler
+	UsageReportHandler             *handler.UsageReportHandler
+	UsageTrendsReportHandler       *handler.UsageTrendsReportHandler
+	SubscriptionsReportHandler     *handler.SubscriptionsReportHandler
+	PayoutScheduleReportHandler    *handler.PayoutScheduleReportHandler
+	PayoutHistoryReportHandler     *handler.PayoutHistoryReportHandler
+	UninstallContextHandler        *handler.UninstallContextHandler
+	InstallsReportHandler          *handler.InstallsReportHandler
+	ActivationReportHandler        *handler.ActivationReportHandler
+	NetNewSubsReportHandler        *handler.NetNewSubsReportHandler
+	RiskHandler                    *handler.RiskHandler
+	OrgHandler                     *handler.OrgHandler
+	OrgAuditHandler                *handler.OrgAuditHandler
+	OrgContextMW                   func(next http.Handler) http.Handler // Org resolution + membership check
+	GraphQLHandler                 http.Handler                         // Internal chat GraphQL endpoint
+	ChatHandler                    http.HandlerFunc                     // POST /api/v1/chat (SSE)
+	ChatModulesHandler             http.HandlerFunc                     // GET /api/v1/chat/modules
 	// Revenue API handlers (external, API key auth)
-	SubscriptionStatusHandler       *apikeyhandler.SubscriptionStatusHandler
-	UsageStatusHandler              *apikeyhandler.UsageStatusHandler
-	RevenueAPIGraphQLHandler        http.Handler
-	AuthMW                          func(next http.Handler) http.Handler
-	AdminMW                         func(next http.Handler) http.Handler // RequireRoles(ADMIN)
-	InternalMW                      func(next http.Handler) http.Handler // Internal key authentication
-	APIKeyAuthMW                    func(next http.Handler) http.Handler // API key validation
-	APIKeyRateLimiterMW             func(next http.Handler) http.Handler // Per-key rate limiting
-	APIKeyAuditLoggerMW             func(next http.Handler) http.Handler // API audit logging
+	SubscriptionStatusHandler *apikeyhandler.SubscriptionStatusHandler
+	UsageStatusHandler        *apikeyhandler.UsageStatusHandler
+	RevenueAPIGraphQLHandler  http.Handler
+	AuthMW                    func(next http.Handler) http.Handler
+	AdminMW                   func(next http.Handler) http.Handler // RequireRoles(ADMIN)
+	InternalMW                func(next http.Handler) http.Handler // Internal key authentication
+	APIKeyAuthMW              func(next http.Handler) http.Handler // API key validation
+	APIKeyRateLimiterMW       func(next http.Handler) http.Handler // Per-key rate limiting
+	APIKeyAuditLoggerMW       func(next http.Handler) http.Handler // API audit logging
 }
 
 func New(cfg Config) *chi.Mux {
@@ -357,8 +357,11 @@ func New(cfg Config) *chi.Mux {
 				}
 
 				// Install count routes
+				// install count is now derived from the app-wide event stream during
+				// event_sync (see EventProcessor / CountInstalls); the old manual
+				// Partner-API refresh (FetchInstallCount, set-difference) is retired
+				// as it produced a divergent number.
 				r.Get("/{appID}/install-count", cfg.AppHandler.GetInstallCount)
-				r.Post("/{appID}/refresh-install-count", cfg.AppHandler.RefreshInstallCount)
 
 				// App store slug route
 				r.Patch("/{appID}/store-slug", cfg.AppHandler.UpdateStoreSlug)

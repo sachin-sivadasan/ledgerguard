@@ -58,6 +58,7 @@ func NewStoreProcessor(
 func (p *StoreProcessor) Type() string { return entity.SyncJobTypeStoreSync }
 
 func (p *StoreProcessor) Process(ctx context.Context, payload *queue.SyncJobPayload) error {
+	// Existence guard: fail fast if the app is gone (brand fetch below has no app dep).
 	if _, err := p.appRepo.FindByID(ctx, payload.AppID); err != nil {
 		return fmt.Errorf("failed to find app %s: %w", payload.AppID, err)
 	}

@@ -841,8 +841,14 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 
 	var events []AppEvent
 	cursor := ""
-	// Safety bound: 1000 pages × 100 = 100k events; per-shop app-events are far fewer.
-	for page := 0; page < 1000; page++ {
+	// Safety bound. This is called BOTH per-shop and APP-WIDE (empty shopId → every
+	// shop's full lifecycle stream), so the app-wide path can be large; 20000 pages ×
+	// 100 = 2M events. If the bound is hit while the API still reports more pages we
+	// return an error rather than silently truncating — a partial stream would yield a
+	// wrong install count with no signal.
+	const maxPages = 20000
+	truncated := false
+	for page := 0; page < maxPages; page++ {
 		variables := map[string]interface{}{
 			"appId": appGID,
 		}
@@ -931,8 +937,14 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 			break
 		}
 		cursor = lastCursor
+		if page == maxPages-1 {
+			truncated = true // hit the bound with more pages still available
+		}
 	}
 
+	if truncated {
+		return nil, fmt.Errorf("app events exceeded %d-page safety bound for app %s; refusing to compute from a truncated stream", maxPages, appGID)
+	}
 	return events, nil
 }
 
@@ -982,7 +994,12 @@ func CountInstalls(events []AppEvent) (active, total int) {
 		if isInstall {
 			s.everInst = true
 		}
-		if !s.seen || ev.OccurredAt.After(s.latest) {
+		// Latest event by OccurredAt wins; at an EQUAL timestamp an active signal
+		// outranks an inactive one (deterministic tie-break, mirroring the
+		// cancel-trap preference in statusEventPriority) so the count is stable
+		// across resyncs regardless of API/slice order.
+		if !s.seen || ev.OccurredAt.After(s.latest) ||
+			(ev.OccurredAt.Equal(s.latest) && isActive && !s.active) {
 			s.latest = ev.OccurredAt
 			s.active = isActive
 			s.seen = true

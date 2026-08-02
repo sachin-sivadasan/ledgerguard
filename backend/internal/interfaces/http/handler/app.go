@@ -212,7 +212,7 @@ func (h *AppHandler) SelectApp(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message":            "App added successfully",
 		"id":                 appID,
-		"uuid":              app.ID.String(),
+		"uuid":               app.ID.String(),
 		"name":               app.Name,
 		"revenue_share_tier": app.RevenueShareTier.String(),
 		"sync_triggered":     syncTriggered,
@@ -252,7 +252,7 @@ func (h *AppHandler) ListApps(w http.ResponseWriter, r *http.Request) {
 
 		appResponses[i] = map[string]interface{}{
 			"id":                 appID,
-			"uuid":              app.ID.String(),
+			"uuid":               app.ID.String(),
 			"name":               app.Name,
 			"tracking_enabled":   app.TrackingEnabled,
 			"revenue_share_tier": app.RevenueShareTier.String(),
@@ -326,67 +326,6 @@ func (h *AppHandler) UpdateAppTier(w http.ResponseWriter, r *http.Request) {
 		"display_name":       app.RevenueShareTier.DisplayName(),
 		"description":        app.RevenueShareTier.Description(),
 		"revenue_share_pct":  app.RevenueShareTier.RevenueSharePercent(),
-	})
-}
-
-// RefreshInstallCount refreshes the install count for an app from the Partner API
-// POST /api/v1/apps/{appID}/refresh-install-count
-func (h *AppHandler) RefreshInstallCount(w http.ResponseWriter, r *http.Request) {
-	user := middleware.UserFromContext(r.Context())
-	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return
-	}
-
-	// Check if partner client is configured
-	if h.partnerClient == nil {
-		writeJSONError(w, http.StatusServiceUnavailable, "Shopify Partner API not configured")
-		return
-	}
-
-	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
-	if lookupErr != nil {
-		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
-		return
-	}
-
-	// Get partner account for decryption
-	partnerAccount, partnerLookupErr := resolvePartnerAccount(r, h.partnerRepo)
-	if partnerLookupErr != nil {
-		writeJSONError(w, partnerLookupErr.statusCode, partnerLookupErr.message)
-		return
-	}
-
-	// Decrypt access token
-	decryptedToken, err := h.decryptor.Decrypt(partnerAccount.EncryptedAccessToken)
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to decrypt token")
-		return
-	}
-
-	// Fetch install count from Partner API
-	installCount, err := h.partnerClient.FetchInstallCount(
-		r.Context(),
-		partnerAccount.PartnerID,
-		string(decryptedToken),
-		app.PartnerAppID,
-	)
-	if err != nil {
-		writeJSONError(w, http.StatusBadGateway, "failed to fetch install count from Partner API: "+err.Error())
-		return
-	}
-
-	// Update app with new install count
-	app.InstallCount = installCount
-	if err := h.appRepo.Update(r.Context(), app); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to update app")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":       "Install count refreshed successfully",
-		"install_count": installCount,
 	})
 }
 

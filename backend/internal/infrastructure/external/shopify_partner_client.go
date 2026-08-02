@@ -22,7 +22,7 @@ import (
 
 // Rate limiting errors
 var (
-	ErrRateLimited       = errors.New("rate limited by Shopify Partner API")
+	ErrRateLimited      = errors.New("rate limited by Shopify Partner API")
 	ErrMaxRetriesExceed = errors.New("max retries exceeded for Shopify Partner API request")
 )
 
@@ -44,21 +44,21 @@ type RateLimiterConfig struct {
 // DefaultRateLimiterConfig returns sensible defaults for Shopify Partner API
 func DefaultRateLimiterConfig() RateLimiterConfig {
 	return RateLimiterConfig{
-		RequestsPerSecond: 4,              // Shopify's documented rate
-		BurstSize:         4,              // Allow small bursts
-		MaxRetries:        3,              // Retry up to 3 times
-		BaseBackoff:       time.Second,    // Start with 1s backoff
+		RequestsPerSecond: 4,                // Shopify's documented rate
+		BurstSize:         4,                // Allow small bursts
+		MaxRetries:        3,                // Retry up to 3 times
+		BaseBackoff:       time.Second,      // Start with 1s backoff
 		MaxBackoff:        30 * time.Second, // Max 30s backoff
 	}
 }
 
 // tokenBucket implements a simple token bucket rate limiter
 type tokenBucket struct {
-	mu           sync.Mutex
-	tokens       float64
-	maxTokens    float64
-	refillRate   float64 // tokens per second
-	lastRefill   time.Time
+	mu         sync.Mutex
+	tokens     float64
+	maxTokens  float64
+	refillRate float64 // tokens per second
+	lastRefill time.Time
 }
 
 func newTokenBucket(tokensPerSecond float64, burst int) *tokenBucket {
@@ -111,12 +111,12 @@ const partnerAPIVersion = "2026-04"
 
 // ShopifyPartnerClient handles communication with Shopify Partner API
 type ShopifyPartnerClient struct {
-	httpClient   *http.Client
-	baseURL      string
-	rateLimiter  *tokenBucket           // Deprecated: single limiter for backward compat
-	limiters     map[string]*tokenBucket // Per-partner rate limiters keyed by org ID
-	limiterMu    sync.RWMutex           // Protects limiters map
-	config       RateLimiterConfig
+	httpClient  *http.Client
+	baseURL     string
+	rateLimiter *tokenBucket            // Deprecated: single limiter for backward compat
+	limiters    map[string]*tokenBucket // Per-partner rate limiters keyed by org ID
+	limiterMu   sync.RWMutex            // Protects limiters map
+	config      RateLimiterConfig
 }
 
 // ShopifyPartnerClientOption is a functional option for configuring the client
@@ -790,9 +790,9 @@ func (c *ShopifyPartnerClient) getPartnerAppGID(ctx context.Context) string {
 
 // AppEvent represents an app lifecycle event from the Partner API
 type AppEvent struct {
-	Type      string // one of Partner API AppEventTypes, e.g. RELATIONSHIP_INSTALLED/REACTIVATED/UNINSTALLED/DEACTIVATED, SUBSCRIPTION_CHARGE_ACTIVATED/ACCEPTED/CANCELED/EXPIRED/FROZEN/UNFROZEN/DECLINED (see GetLatestSubscriptionStatus)
-	ShopID    string
-	ShopName  string
+	Type       string // one of Partner API AppEventTypes, e.g. RELATIONSHIP_INSTALLED/REACTIVATED/UNINSTALLED/DEACTIVATED, SUBSCRIPTION_CHARGE_ACTIVATED/ACCEPTED/CANCELED/EXPIRED/FROZEN/UNFROZEN/DECLINED (see GetLatestSubscriptionStatus)
+	ShopID     string
+	ShopName   string
 	OccurredAt time.Time
 }
 
@@ -934,6 +934,69 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 	}
 
 	return events, nil
+}
+
+// CountInstalls derives install metrics from the app-wide RELATIONSHIP event
+// stream by running a per-shop state machine over the relationship events:
+//   - active  = shops whose LATEST relationship event is INSTALLED or REACTIVATED
+//     (currently installed; matches Shopify's Partner "active installs" / Mantle
+//     "active users").
+//   - total   = distinct shops that have ever installed (any INSTALLED event) —
+//     the lifetime install base (Mantle "Installed").
+//
+// Shops are keyed by ShopID (GID), falling back to ShopName. Non-relationship
+// events (subscription charges etc.) are ignored.
+func CountInstalls(events []AppEvent) (active, total int) {
+	type shopState struct {
+		latest   time.Time
+		seen     bool
+		active   bool
+		everInst bool
+	}
+	byShop := make(map[string]*shopState)
+	for _, ev := range events {
+		var isRel, isActive, isInstall bool
+		switch ev.Type {
+		case "RELATIONSHIP_INSTALLED":
+			isRel, isActive, isInstall = true, true, true
+		case "RELATIONSHIP_REACTIVATED":
+			isRel, isActive = true, true
+		case "RELATIONSHIP_UNINSTALLED", "RELATIONSHIP_DEACTIVATED":
+			isRel = true // inactive
+		}
+		if !isRel {
+			continue
+		}
+		key := ev.ShopID
+		if key == "" {
+			key = ev.ShopName
+		}
+		if key == "" {
+			continue
+		}
+		s := byShop[key]
+		if s == nil {
+			s = &shopState{}
+			byShop[key] = s
+		}
+		if isInstall {
+			s.everInst = true
+		}
+		if !s.seen || ev.OccurredAt.After(s.latest) {
+			s.latest = ev.OccurredAt
+			s.active = isActive
+			s.seen = true
+		}
+	}
+	for _, s := range byShop {
+		if s.everInst {
+			total++
+		}
+		if s.active {
+			active++
+		}
+	}
+	return active, total
 }
 
 // GetLatestSubscriptionStatus determines subscription status from the latest

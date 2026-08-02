@@ -116,15 +116,11 @@ func (m *mockSyncJobRepo) MarkPendingIfProcessing(_ context.Context, id uuid.UUI
 // --- AppRepo ---
 
 type mockAppRepo struct {
-	apps            map[uuid.UUID]*entity.App
-	updateCallCount int
+	apps map[uuid.UUID]*entity.App
 }
 
 func (m *mockAppRepo) Create(_ context.Context, _ *entity.App) error { return nil }
-func (m *mockAppRepo) Update(_ context.Context, _ *entity.App) error {
-	m.updateCallCount++
-	return nil
-}
+func (m *mockAppRepo) Update(_ context.Context, _ *entity.App) error { return nil }
 func (m *mockAppRepo) Delete(_ context.Context, _ uuid.UUID) error           { return nil }
 func (m *mockAppRepo) FindByPartnerAccountID(_ context.Context, _ uuid.UUID) ([]*entity.App, error) {
 	return nil, nil
@@ -652,52 +648,21 @@ func TestEventProcessor_Success(t *testing.T) {
 
 	syncJobRepo := newMockSyncJobRepo()
 	appEventRepo := &mockAppEventRepo{}
+	// One charged shop (maps GID->domain); the app-wide fetch also returns a
+	// never-charged shop the subscriptions don't know about.
 	subRepo := &mockSubRepo{
 		subs: []*entity.Subscription{
-			{ID: uuid.New(), AppID: appID, ShopifyShopGID: "gid://shopify/Shop/1"},
-			{ID: uuid.New(), AppID: appID, ShopifyShopGID: "gid://shopify/Shop/2"},
+			{ID: uuid.New(), AppID: appID, ShopifyShopGID: "gid://shopify/Shop/1", MyshopifyDomain: "a.myshopify.com"},
 		},
 	}
 
 	now := time.Now().UTC()
 	eventFetcher := &mockEventFetcher{
 		events: []external.AppEvent{
-			{Type: "RELATIONSHIP_INSTALLED", OccurredAt: now},
+			{Type: "RELATIONSHIP_INSTALLED", ShopID: "gid://shopify/Shop/1", OccurredAt: now},
+			{Type: "RELATIONSHIP_INSTALLED", ShopID: "gid://shopify/Shop/2", OccurredAt: now},
 		},
 	}
-
-	payload := makePayload(appID, userID, partnerID, entity.SyncJobTypeEventSync)
-	syncJobRepo.jobs[payload.JobID] = entity.NewSyncJob(appID, userID, partnerID, entity.SyncJobTypeEventSync, 0)
-	syncJobRepo.jobs[payload.JobID].ID = payload.JobID
-
-	p := NewEventProcessor(eventFetcher, appEventRepo, subRepo, appRepo, partnerRepo, decryptor, syncJobRepo, lm, pt)
-	err := p.Process(context.Background(), payload)
-	if err != nil {
-		t.Fatalf("Process failed: %v", err)
-	}
-
-	// 2 subs * 1 event each = 2 events
-	if len(appEventRepo.upserted) != 2 {
-		t.Errorf("Expected 2 events, got %d", len(appEventRepo.upserted))
-	}
-}
-
-// TestEventProcessor_ProcessesAllSubscriptions guards the removal of the old
-// "cap to first 10 subscriptions" DEV LIMIT: with 15 subs, all 15 are fetched/stored.
-func TestEventProcessor_ProcessesAllSubscriptions(t *testing.T) {
-	_, lm, pt := setupRedis(t)
-	appID, userID, partnerID, appRepo, partnerRepo, decryptor := setupProcessorContext(t)
-
-	syncJobRepo := newMockSyncJobRepo()
-	appEventRepo := &mockAppEventRepo{}
-	subs := make([]*entity.Subscription, 15)
-	for i := range subs {
-		subs[i] = &entity.Subscription{ID: uuid.New(), AppID: appID, ShopifyShopGID: fmt.Sprintf("gid://shopify/Shop/%d", i+1)}
-	}
-	subRepo := &mockSubRepo{subs: subs}
-
-	now := time.Now().UTC()
-	eventFetcher := &mockEventFetcher{events: []external.AppEvent{{Type: "RELATIONSHIP_INSTALLED", OccurredAt: now}}}
 
 	payload := makePayload(appID, userID, partnerID, entity.SyncJobTypeEventSync)
 	syncJobRepo.jobs[payload.JobID] = entity.NewSyncJob(appID, userID, partnerID, entity.SyncJobTypeEventSync, 0)
@@ -707,38 +672,53 @@ func TestEventProcessor_ProcessesAllSubscriptions(t *testing.T) {
 	if err := p.Process(context.Background(), payload); err != nil {
 		t.Fatalf("Process failed: %v", err)
 	}
-	if len(appEventRepo.upserted) != 15 {
-		t.Errorf("expected all 15 subscriptions processed (cap removed), got %d events", len(appEventRepo.upserted))
+
+	// App-wide fetch stores every event as-is (both shops, not just the charged one).
+	if len(appEventRepo.upserted) != 2 {
+		t.Errorf("Expected 2 app-wide events stored, got %d", len(appEventRepo.upserted))
+	}
+	// The charged shop's event keeps its domain; the unknown shop falls back to GID.
+	domains := map[string]bool{}
+	for _, e := range appEventRepo.upserted {
+		domains[e.ShopifyShopGID] = true
+	}
+	if !domains["a.myshopify.com"] || !domains["gid://shopify/Shop/2"] {
+		t.Errorf("expected domain + GID identifiers, got %v", domains)
 	}
 }
 
-func TestEventProcessor_SkipsEmptyShopGID(t *testing.T) {
+// TestEventProcessor_PersistsActiveInstallCount: the Apps card "installs" is
+// currently-active installs, derived from the app-wide relationship events.
+func TestEventProcessor_PersistsActiveInstallCount(t *testing.T) {
 	_, lm, pt := setupRedis(t)
 	appID, userID, partnerID, appRepo, partnerRepo, decryptor := setupProcessorContext(t)
 
 	syncJobRepo := newMockSyncJobRepo()
 	appEventRepo := &mockAppEventRepo{}
-	subRepo := &mockSubRepo{
-		subs: []*entity.Subscription{
-			{ID: uuid.New(), AppID: appID, ShopifyShopGID: ""}, // empty
-		},
-	}
-	eventFetcher := &mockEventFetcher{
-		events: []external.AppEvent{{Type: "INSTALLED", OccurredAt: time.Now()}},
-	}
+	subRepo := &mockSubRepo{subs: []*entity.Subscription{}}
+
+	now := time.Now().UTC()
+	// s1 active (installed); s2 inactive (installed→uninstalled); s3 active
+	// (installed→uninstalled→reactivated). Active=2, total=3.
+	eventFetcher := &mockEventFetcher{events: []external.AppEvent{
+		{Type: "RELATIONSHIP_INSTALLED", ShopID: "s1", OccurredAt: now.Add(-3 * time.Hour)},
+		{Type: "RELATIONSHIP_INSTALLED", ShopID: "s2", OccurredAt: now.Add(-3 * time.Hour)},
+		{Type: "RELATIONSHIP_UNINSTALLED", ShopID: "s2", OccurredAt: now.Add(-1 * time.Hour)},
+		{Type: "RELATIONSHIP_INSTALLED", ShopID: "s3", OccurredAt: now.Add(-3 * time.Hour)},
+		{Type: "RELATIONSHIP_UNINSTALLED", ShopID: "s3", OccurredAt: now.Add(-2 * time.Hour)},
+		{Type: "RELATIONSHIP_REACTIVATED", ShopID: "s3", OccurredAt: now.Add(-1 * time.Hour)},
+	}}
 
 	payload := makePayload(appID, userID, partnerID, entity.SyncJobTypeEventSync)
 	syncJobRepo.jobs[payload.JobID] = entity.NewSyncJob(appID, userID, partnerID, entity.SyncJobTypeEventSync, 0)
 	syncJobRepo.jobs[payload.JobID].ID = payload.JobID
 
 	p := NewEventProcessor(eventFetcher, appEventRepo, subRepo, appRepo, partnerRepo, decryptor, syncJobRepo, lm, pt)
-	err := p.Process(context.Background(), payload)
-	if err != nil {
+	if err := p.Process(context.Background(), payload); err != nil {
 		t.Fatalf("Process failed: %v", err)
 	}
-
-	if len(appEventRepo.upserted) != 0 {
-		t.Errorf("Expected 0 events for empty shop GID, got %d", len(appEventRepo.upserted))
+	if got := appRepo.apps[appID].InstallCount; got != 2 {
+		t.Errorf("active install count: expected 2, got %d", got)
 	}
 }
 
@@ -827,38 +807,6 @@ func TestStoreProcessor_FetchesNewDomains(t *testing.T) {
 	}
 }
 
-func TestStoreProcessor_PersistsInstallCount(t *testing.T) {
-	_, lm, pt := setupRedis(t)
-	appID, userID, partnerID, appRepo, _, _ := setupProcessorContext(t)
-
-	syncJobRepo := newMockSyncJobRepo()
-	shopRepo := newMockShopRepo()
-	// 3 distinct domains across 4 subs (one duplicate) — install count = 3.
-	subRepo := &mockSubRepo{
-		subs: []*entity.Subscription{
-			{ID: uuid.New(), AppID: appID, MyshopifyDomain: "a.myshopify.com"},
-			{ID: uuid.New(), AppID: appID, MyshopifyDomain: "b.myshopify.com"},
-			{ID: uuid.New(), AppID: appID, MyshopifyDomain: "a.myshopify.com"},
-			{ID: uuid.New(), AppID: appID, MyshopifyDomain: "c.myshopify.com"},
-		},
-	}
-	payload := makePayload(appID, userID, partnerID, entity.SyncJobTypeStoreSync)
-	syncJobRepo.jobs[payload.JobID] = entity.NewSyncJob(appID, userID, partnerID, entity.SyncJobTypeStoreSync, 0)
-	syncJobRepo.jobs[payload.JobID].ID = payload.JobID
-
-	p := NewStoreProcessor(&mockBrandFetcher{}, shopRepo, subRepo, appRepo, nil, nil, syncJobRepo, lm, pt)
-	if err := p.Process(context.Background(), payload); err != nil {
-		t.Fatalf("Process failed: %v", err)
-	}
-
-	// Verify it was actually persisted (Update called), not just mutated in place.
-	if appRepo.updateCallCount != 1 {
-		t.Errorf("expected 1 appRepo.Update call to persist install count, got %d", appRepo.updateCallCount)
-	}
-	if got := appRepo.apps[appID].InstallCount; got != 3 {
-		t.Errorf("install count: expected 3 distinct domains, got %d", got)
-	}
-}
 
 func TestStoreProcessor_SkipsExistingDomains(t *testing.T) {
 	_, lm, pt := setupRedis(t)

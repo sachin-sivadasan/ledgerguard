@@ -88,7 +88,7 @@ func (m *mockAppRepoForForecast) FindByPartnerAppID(ctx context.Context, partner
 	return m.app, nil
 }
 func (m *mockAppRepoForForecast) Update(ctx context.Context, app *entity.App) error { return nil }
-func (m *mockAppRepoForForecast) Delete(ctx context.Context, id uuid.UUID) error   { return nil }
+func (m *mockAppRepoForForecast) Delete(ctx context.Context, id uuid.UUID) error    { return nil }
 func (m *mockAppRepoForForecast) FindAllByPartnerAppID(ctx context.Context, partnerAppID string) ([]*entity.App, error) {
 	return []*entity.App{m.app}, nil
 }

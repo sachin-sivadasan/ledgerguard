@@ -291,7 +291,7 @@ func TestActiveCustomers_DateBoundaryInclusive(t *testing.T) {
 	startOnTo.ActivatedAt = &onTo
 	startPastTo := safeSub(appID, "s2.myshopify.com", "Pro", 5000)
 	startPastTo.ActivatedAt = &past
-	churnOnTo := nnChurnedSub(appID, "c1.myshopify.com", older, onTo)  // churn on to
+	churnOnTo := nnChurnedSub(appID, "c1.myshopify.com", older, onTo)   // churn on to
 	churnPastTo := nnChurnedSub(appID, "c2.myshopify.com", older, past) // churn past to
 
 	subs := []*entity.Subscription{startOnTo, startPastTo, churnOnTo, churnPastTo}
@@ -363,7 +363,7 @@ func TestActiveCustomers_MonthlyGranularity(t *testing.T) {
 	appID := uuid.New()
 	jan1 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	snaps := []*entity.DailyMetricsSnapshot{
-		acSnap(appID, jan1, 10, 0, 0, 0),                // Jan
+		acSnap(appID, jan1, 10, 0, 0, 0),                   // Jan
 		acSnap(appID, jan1.AddDate(0, 0, 15), 12, 0, 0, 0), // Jan (later → wins bucket)
 		acSnap(appID, jan1.AddDate(0, 1, 0), 14, 0, 0, 0),  // Feb
 	}

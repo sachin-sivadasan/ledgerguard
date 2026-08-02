@@ -180,6 +180,50 @@ func TestEventHandler_List_CustomPage(t *testing.T) {
 	}
 }
 
+// TestMapEventType covers the Partner→UI type mapping, guarding the EVT-2
+// regression where SUBSCRIPTION_CHARGE_ACTIVATED (the common renewal event) fell
+// through the default and was mislabelled as an app install.
+func TestMapEventType(t *testing.T) {
+	cases := map[string]string{
+		"RELATIONSHIP_INSTALLED":                 "APP_INSTALL",
+		"RELATIONSHIP_UNINSTALLED":               "APP_UNINSTALL",
+		"SUBSCRIPTION_CHARGE_ACTIVATED":          "SUBSCRIPTION_ACTIVATED",
+		"SUBSCRIPTION_CHARGE_ACCEPTED":           "SUBSCRIPTION_ACTIVATED",
+		"SUBSCRIPTION_CHARGE_CANCELED":           "SUBSCRIPTION_CANCELLED",
+		"SUBSCRIPTION_CHARGE_EXPIRED":            "SUBSCRIPTION_CANCELLED",
+		"SUBSCRIPTION_CHARGE_FROZEN":             "SUBSCRIPTION_FROZEN",
+		"SUBSCRIPTION_CHARGE_DECLINED":           "SUBSCRIPTION_FROZEN",
+		"SUBSCRIPTION_CHARGE_UNFROZEN":           "SUBSCRIPTION_UNFROZEN",
+		"USAGE_CHARGE_APPLIED":                   "USAGE_CHARGE",
+		"ONE_TIME_CHARGE_ACTIVATED":              "BILLING_SUCCESS",
+		"SUBSCRIPTION_APPROACHING_CAPPED_AMOUNT": "SUBSCRIPTION_APPROACHING_CAPPED_AMOUNT", // unmapped → passthrough
+	}
+	for in, want := range cases {
+		if got := mapEventType(in); got != want {
+			t.Errorf("mapEventType(%q) = %q, want %q", in, got, want)
+		}
+	}
+	// The renewal event must NOT be mislabelled as an install.
+	if got := mapEventType("SUBSCRIPTION_CHARGE_ACTIVATED"); got == "APP_INSTALL" {
+		t.Errorf("SUBSCRIPTION_CHARGE_ACTIVATED must not map to APP_INSTALL")
+	}
+}
+
+// TestEventTitleDescription verifies mapped types get human titles rather than
+// the raw enum passthrough (EVT-3).
+func TestEventTitleDescription(t *testing.T) {
+	titles := map[string]string{
+		"SUBSCRIPTION_ACTIVATED": "Subscription Activated",
+		"USAGE_CHARGE":           "Usage Charge",
+		"BILLING_SUCCESS":        "Charge Succeeded",
+	}
+	for in, want := range titles {
+		if got, _ := eventTitleDescription(in, "store.myshopify.com"); got != want {
+			t.Errorf("eventTitleDescription(%q) title = %q, want %q", in, got, want)
+		}
+	}
+}
+
 // TestEventHandler_List_StoreDomainResolvesToShopGIDs verifies that a
 // ?storeDomain= filter is resolved to the matching subscription's shop GID(s)
 // before querying, since app_events stores shopify_shop_gid (GIDs), not domains.

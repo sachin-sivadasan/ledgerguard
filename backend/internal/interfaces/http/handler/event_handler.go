@@ -151,14 +151,20 @@ func mapEventType(eventType string) string {
 		return "APP_REACTIVATED"
 	case "RELATIONSHIP_DEACTIVATED":
 		return "APP_DEACTIVATED"
-	case "SUBSCRIPTION_CHARGE_ACCEPTED":
+	case "SUBSCRIPTION_CHARGE_ACTIVATED", "SUBSCRIPTION_CHARGE_ACCEPTED":
+		// ACTIVATED is the recurring-charge-went-live event (every renewal), NOT an
+		// install — without this it fell through to the raw type + an "INSTALL" badge.
 		return "SUBSCRIPTION_ACTIVATED"
-	case "SUBSCRIPTION_CHARGE_CANCELED":
+	case "SUBSCRIPTION_CHARGE_CANCELED", "SUBSCRIPTION_CHARGE_EXPIRED":
 		return "SUBSCRIPTION_CANCELLED"
-	case "SUBSCRIPTION_CHARGE_FROZEN":
+	case "SUBSCRIPTION_CHARGE_FROZEN", "SUBSCRIPTION_CHARGE_DECLINED":
 		return "SUBSCRIPTION_FROZEN"
 	case "SUBSCRIPTION_CHARGE_UNFROZEN":
 		return "SUBSCRIPTION_UNFROZEN"
+	case "USAGE_CHARGE_APPLIED":
+		return "USAGE_CHARGE"
+	case "ONE_TIME_CHARGE_ACTIVATED", "ONE_TIME_CHARGE_ACCEPTED":
+		return "BILLING_SUCCESS"
 	default:
 		return eventType
 	}
@@ -183,6 +189,10 @@ func eventTitleDescription(eventType, shopGID string) (string, string) {
 		return "Subscription Frozen", domain + " subscription was frozen"
 	case "SUBSCRIPTION_UNFROZEN":
 		return "Subscription Unfrozen", domain + " subscription was unfrozen"
+	case "USAGE_CHARGE":
+		return "Usage Charge", domain + " incurred a usage charge"
+	case "BILLING_SUCCESS":
+		return "Charge Succeeded", domain + " completed a charge"
 	default:
 		return eventType, domain + " triggered " + eventType
 	}

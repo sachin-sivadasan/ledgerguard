@@ -24,10 +24,10 @@ func (h *MeHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"id":          user.ID.String(),
-		"email":       user.Email,
-		"role":        user.Role.String(),
-		"plan_tier":   user.PlanTier.String(),
-		"created_at":  user.CreatedAt,
+		"id":         user.ID.String(),
+		"email":      user.Email,
+		"role":       user.Role.String(),
+		"plan_tier":  user.PlanTier.String(),
+		"created_at": user.CreatedAt,
 	})
 }

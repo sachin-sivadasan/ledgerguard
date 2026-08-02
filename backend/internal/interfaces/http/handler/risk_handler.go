@@ -67,14 +67,14 @@ func (h *RiskHandler) Summary(w http.ResponseWriter, r *http.Request) {
 		if sub.RiskState == valueobject.RiskStateOneCycleMissed ||
 			sub.RiskState == valueobject.RiskStateTwoCyclesMissed {
 			atRiskStores = append(atRiskStores, atRiskStoreJSON{
-				ID:               sub.ID.String(),
-				ShopDomain:       sub.MyshopifyDomain,
-				InstalledAppIDs:  []string{},
-				HealthScore:      healthScoreFromRisk(sub.RiskState),
+				ID:                 sub.ID.String(),
+				ShopDomain:         sub.MyshopifyDomain,
+				InstalledAppIDs:    []string{},
+				HealthScore:        healthScoreFromRisk(sub.RiskState),
 				LifetimeValueCents: sub.BasePriceCents,
-				FirstInstallDate: sub.CreatedAt.Format(time.RFC3339),
-				LastInteraction:  sub.UpdatedAt.Format(time.RFC3339),
-				RiskState:        string(sub.RiskState),
+				FirstInstallDate:   sub.CreatedAt.Format(time.RFC3339),
+				LastInteraction:    sub.UpdatedAt.Format(time.RFC3339),
+				RiskState:          string(sub.RiskState),
 			})
 		}
 	}

@@ -334,6 +334,7 @@ class _StoreTimeline extends StatelessWidget {
         EventType.riskStateChange => Icons.warning_amber,
         EventType.reviewSubmitted => Icons.star_outline,
         EventType.usageCharge => Icons.data_usage,
+        EventType.other => Icons.info_outline,
       };
 
   Color _appEventColor(EventType type) => switch (type) {
@@ -352,6 +353,7 @@ class _StoreTimeline extends StatelessWidget {
         EventType.riskStateChange => LgColors.warning,
         EventType.reviewSubmitted => LgColors.info,
         EventType.usageCharge => LgColors.info,
+        EventType.other => LgColors.textSecondary,
       };
 
   String _appEventBadge(EventType type) => switch (type) {
@@ -370,6 +372,7 @@ class _StoreTimeline extends StatelessWidget {
         EventType.riskStateChange => 'RISK CHANGE',
         EventType.reviewSubmitted => 'REVIEW',
         EventType.usageCharge => 'USAGE',
+        EventType.other => 'EVENT',
       };
 
   BadgeTone _appEventTone(EventType type) => switch (type) {
@@ -388,6 +391,7 @@ class _StoreTimeline extends StatelessWidget {
         EventType.riskStateChange => BadgeTone.warning,
         EventType.reviewSubmitted => BadgeTone.info,
         EventType.usageCharge => BadgeTone.info,
+        EventType.other => BadgeTone.defaultTone,
       };
 }
 

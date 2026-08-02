@@ -64,7 +64,7 @@ type revenueAtRiskStore struct {
 
 // revenueAtRiskTrendPoint is a single point in the at-risk MRR time series.
 type revenueAtRiskTrendPoint struct {
-	Date       string `json:"date"`
+	Date        string `json:"date"`
 	AtRiskCents int64  `json:"atRiskCents"`
 }
 

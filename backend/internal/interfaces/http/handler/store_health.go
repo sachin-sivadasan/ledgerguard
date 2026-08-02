@@ -42,27 +42,27 @@ func (h *StoreHealthHandler) SetShopRepo(shopRepo repository.ShopRepository) {
 
 // StoreHealthResponse represents the store health API response
 type StoreHealthResponse struct {
-	Subscription *SubscriptionResponse   `json:"subscription"`
-	Transactions []TransactionResponse   `json:"transactions"`
+	Subscription *SubscriptionResponse    `json:"subscription"`
+	Transactions []TransactionResponse    `json:"transactions"`
 	Earnings     *EarningsSummaryResponse `json:"earnings"`
 }
 
 // SubscriptionResponse represents subscription data in response
 type SubscriptionResponse struct {
-	ID                   string     `json:"id"`
-	ShopifyGID           string     `json:"shopify_gid"`
-	MyshopifyDomain      string     `json:"myshopify_domain"`
-	ShopName             string     `json:"shop_name"`
-	PlanName             string     `json:"plan_name"`
-	BasePriceCents       int64      `json:"base_price_cents"`
-	BillingInterval      string     `json:"billing_interval"`
-	RiskState            string     `json:"risk_state"`
-	Status               string     `json:"status"`
-	CreatedAt            time.Time  `json:"created_at"`
-	LastChargeDate       *time.Time `json:"last_charge_date,omitempty"`
-	ExpectedNextCharge   *time.Time `json:"expected_next_charge,omitempty"`
-	ShopLogoURL          string     `json:"shop_logo_url,omitempty"`
-	ShopSquareLogoURL    string     `json:"shop_square_logo_url,omitempty"`
+	ID                 string     `json:"id"`
+	ShopifyGID         string     `json:"shopify_gid"`
+	MyshopifyDomain    string     `json:"myshopify_domain"`
+	ShopName           string     `json:"shop_name"`
+	PlanName           string     `json:"plan_name"`
+	BasePriceCents     int64      `json:"base_price_cents"`
+	BillingInterval    string     `json:"billing_interval"`
+	RiskState          string     `json:"risk_state"`
+	Status             string     `json:"status"`
+	CreatedAt          time.Time  `json:"created_at"`
+	LastChargeDate     *time.Time `json:"last_charge_date,omitempty"`
+	ExpectedNextCharge *time.Time `json:"expected_next_charge,omitempty"`
+	ShopLogoURL        string     `json:"shop_logo_url,omitempty"`
+	ShopSquareLogoURL  string     `json:"shop_square_logo_url,omitempty"`
 }
 
 // TransactionResponse represents transaction data in response

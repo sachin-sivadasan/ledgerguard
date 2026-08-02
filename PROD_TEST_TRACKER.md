@@ -18,7 +18,7 @@ Last updated: 2026-07-30
 | Dashboard | 🔴 Open findings | route is `/` (not `/dashboard`); see DASH-1..DASH-3 |
 | Stores | 🟠 Open findings | 2926 stores; see STORE-1..STORE-2 |
 | Store Detail | 🔴 Open findings | route `/#/stores/{domain}`; see SD-1..SD-4 |
-| Events | 🟠 Open findings | 139 events; see EVT-1..EVT-3 |
+| Events | ✅ EVT-1/2/3 fixed | app-wide events; badge/title mapping fixed |
 | Risk | 🔴 Open findings | see RISK-1..RISK-3 |
 | Earnings | 🔴 Open findings | all $0.00 in UI, data exists in API; see EARN-1..EARN-2 |
 | Analytics | 🟢 Mostly OK | Revenue/MRR-movement render; see ANALYTICS-1 (minor) — only Revenue tab checked |
@@ -115,9 +115,9 @@ The detail page makes **no store-by-ID request** — it resolves the store (and 
 **EVT-1 🔴 Plan changes counted as churns (cancel-trap, → SUB-1)**
 - `85c635` shows `SUBSCRIPTION_CHARGE_ACTIVATED` **and** "Subscription Cancelled" at the same 7:14 AM; `onewoofclub` same at 6:04 AM. These are plan changes (old charge cancelled + new activated), but each cancel counts toward "Churns This Week: 4". The events feed and the churn KPI both over-count plan-change cancels as churn — same root cause as SUB-1.
 
-**EVT-2 🟠 Wrong event-type badge/category** — `SUBSCRIPTION_CHARGE_ACTIVATED` rows are badged green **"INSTALL"** (it's a charge activation, not an install). Fix the event-type → category/badge mapping.
+**EVT-2 ✅ Wrong event-type badge/category** — `SUBSCRIPTION_CHARGE_ACTIVATED` rows were badged green **"INSTALL"**. Two root causes fixed: (a) backend `mapEventType` had no ACTIVATED case → passed the raw type through; (b) frontend `_parseEventType` default returned `EventType.appInstall`, so *any* unmapped type showed as an install. Fixed: backend now maps ACTIVATED→SUBSCRIPTION_ACTIVATED (+ EXPIRED/DECLINED/USAGE_CHARGE_APPLIED/ONE_TIME_CHARGE_*); frontend adds a neutral `EventType.other` fallback (grey "EVENT" badge) instead of appInstall, plus belt-and-suspenders raw-type cases. (PR pending)
 
-**EVT-3 🟡 Inconsistent event titles** — some rows humanized ("Subscription Cancelled"), others show the raw enum ("SUBSCRIPTION_CHARGE_ACTIVATED"). Humanize all event-type titles.
+**EVT-3 ✅ Inconsistent event titles** — raw enum titles ("SUBSCRIPTION_CHARGE_ACTIVATED") came from the backend `eventTitleDescription` default passthrough for unmapped types. Now that `mapEventType` maps the common types, they render humanized titles ("Subscription Activated"). (PR pending)
 
 **To verify:** all event timestamps are Jul 30 (today) — confirm these are real Shopify `occurredAt` vs sync-detection time.
 

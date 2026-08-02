@@ -164,7 +164,7 @@ func TestChurn_AdaptiveGranularityDownsamples(t *testing.T) {
 	snapshots := []*entity.DailyMetricsSnapshot{
 		{ID: uuid.New(), AppID: appID, Date: time.Date(2026, 5, 10, 0, 0, 0, 0, time.UTC), ChurnedCount: 1, TotalSubscriptions: 10},
 		{ID: uuid.New(), AppID: appID, Date: time.Date(2026, 5, 28, 0, 0, 0, 0, time.UTC), ChurnedCount: 3, TotalSubscriptions: 10}, // last May → wins the May bucket (0.3)
-		{ID: uuid.New(), AppID: appID, Date: time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC), ChurnedCount: 2, TotalSubscriptions: 8}, // latest overall (0.25)
+		{ID: uuid.New(), AppID: appID, Date: time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC), ChurnedCount: 2, TotalSubscriptions: 8},  // latest overall (0.25)
 	}
 	h := NewChurnHandler(
 		&mockSubscriptionRepo{subscriptions: subs},

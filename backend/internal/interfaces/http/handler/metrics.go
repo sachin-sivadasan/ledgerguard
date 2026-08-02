@@ -83,11 +83,11 @@ func (h *MetricsHandler) GetLatestMetrics(w http.ResponseWriter, r *http.Request
 	// For now, return sample metrics based on app ID
 	metrics := map[string]interface{}{
 		"app_id":                  app.ID.String(),
-		"active_mrr_cents":        125000,  // $1,250.00
-		"revenue_at_risk_cents":   15000,   // $150.00
-		"usage_revenue_cents":     35000,   // $350.00
-		"total_revenue_cents":     175000,  // $1,750.00
-		"renewal_success_rate":    0.92,    // 92%
+		"active_mrr_cents":        125000, // $1,250.00
+		"revenue_at_risk_cents":   15000,  // $150.00
+		"usage_revenue_cents":     35000,  // $350.00
+		"total_revenue_cents":     175000, // $1,750.00
+		"renewal_success_rate":    0.92,   // 92%
 		"safe_count":              45,
 		"one_cycle_missed_count":  5,
 		"two_cycles_missed_count": 2,
@@ -346,25 +346,25 @@ func (h *MetricsHandler) toMetricsResponse(pm *entity.PeriodMetrics) metricsResp
 
 // AggregateMetricsResponse represents combined metrics across all apps
 type AggregateMetricsResponse struct {
-	AppCount             int                      `json:"app_count"`
-	TotalMRRCents        int64                    `json:"total_mrr_cents"`
-	TotalAtRiskCents     int64                    `json:"total_at_risk_cents"`
-	TotalSubscriptions   int                      `json:"total_subscriptions"`
-	TotalAtRiskCount     int                      `json:"total_at_risk_count"`
-	TotalChurnedCount    int                      `json:"total_churned_count"`
-	AverageRenewalRate   float64                  `json:"average_renewal_rate"`
-	Apps                 []AppMetricsSummary      `json:"apps"`
+	AppCount           int                 `json:"app_count"`
+	TotalMRRCents      int64               `json:"total_mrr_cents"`
+	TotalAtRiskCents   int64               `json:"total_at_risk_cents"`
+	TotalSubscriptions int                 `json:"total_subscriptions"`
+	TotalAtRiskCount   int                 `json:"total_at_risk_count"`
+	TotalChurnedCount  int                 `json:"total_churned_count"`
+	AverageRenewalRate float64             `json:"average_renewal_rate"`
+	Apps               []AppMetricsSummary `json:"apps"`
 }
 
 // AppMetricsSummary represents quick metrics for a single app
 type AppMetricsSummary struct {
-	ID                 string  `json:"id"`
-	Name               string  `json:"name"`
-	MRRCents           int64   `json:"mrr_cents"`
-	AtRiskCents        int64   `json:"at_risk_cents"`
-	SubscriptionCount  int     `json:"subscription_count"`
-	AtRiskCount        int     `json:"at_risk_count"`
-	RenewalRate        float64 `json:"renewal_rate"`
+	ID                string  `json:"id"`
+	Name              string  `json:"name"`
+	MRRCents          int64   `json:"mrr_cents"`
+	AtRiskCents       int64   `json:"at_risk_cents"`
+	SubscriptionCount int     `json:"subscription_count"`
+	AtRiskCount       int     `json:"at_risk_count"`
+	RenewalRate       float64 `json:"renewal_rate"`
 }
 
 // GetAggregateMetrics returns combined metrics across all user's apps.

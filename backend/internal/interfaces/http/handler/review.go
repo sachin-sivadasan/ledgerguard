@@ -18,10 +18,10 @@ import (
 )
 
 type ReviewHandler struct {
-	reviewRepo repository.AppReviewRepository
-	appRepo    repository.AppRepository
+	reviewRepo  repository.AppReviewRepository
+	appRepo     repository.AppRepository
 	partnerRepo repository.PartnerAccountRepository
-	scraper    *external.ShopifyAppStoreClient
+	scraper     *external.ShopifyAppStoreClient
 }
 
 func NewReviewHandler(
@@ -181,8 +181,8 @@ func (h *ReviewHandler) Scrape(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"message":     "Scrape completed",
-		"new_reviews": len(reviews),
+		"message":       "Scrape completed",
+		"new_reviews":   len(reviews),
 		"total_reviews": total,
 	})
 }

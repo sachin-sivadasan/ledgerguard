@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
-	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
@@ -47,7 +46,6 @@ func TestStoreHandler_List_UsesEventSourcedDates(t *testing.T) {
 		&mockEventRepo{events: events},
 		&mockPartnerRepoForSub{account: partnerAccount},
 		&mockAppRepoForSub{app: app},
-		domainservice.NewRiskEngine(),
 	)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/stores", nil)
@@ -82,5 +80,58 @@ func TestStoreHandler_List_UsesEventSourcedDates(t *testing.T) {
 	}
 	if resp.Stores[0].FirstInstallDate == rebuildTime.Format(time.RFC3339) {
 		t.Error("first_install_date still equals the record-created rebuild time (STORE-2 regression)")
+	}
+}
+
+// TestStoreHandler_List_UsesPersistedRiskState is the STORE-1 regression guard:
+// the store badge/health must reflect the persisted (reconciled) risk_state, not a
+// live re-classification. A cancel-trap store (CANCELLED but persisted SAFE) must
+// not be re-churned on the Stores page.
+func TestStoreHandler_List_UsesPersistedRiskState(t *testing.T) {
+	partnerAccount := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	appID := uuid.New()
+	app := &entity.App{ID: appID, PartnerAccountID: partnerAccount.ID, Name: "Test App", PartnerAppID: "gid://partners/App/1"}
+
+	past := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	sub := &entity.Subscription{
+		ID: uuid.New(), AppID: appID, MyshopifyDomain: "trap.myshopify.com",
+		Status: "CANCELLED", ExpectedNextChargeDate: &past, RiskState: valueobject.RiskStateSafe,
+	}
+
+	handler := NewStoreHandler(
+		&mockSubscriptionRepo{subscriptions: []*entity.Subscription{sub}},
+		&mockTxRepo{},
+		nil, // appEventRepo optional
+		&mockPartnerRepoForSub{account: partnerAccount},
+		&mockAppRepoForSub{app: app},
+	)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/apps/"+appID.String()+"/stores", nil)
+	req = withURLParam(req, "appID", appID.String())
+	req = req.WithContext(contextWithUser(req.Context(), &entity.User{ID: partnerAccount.UserID, Role: valueobject.RoleOwner}))
+
+	rec := httptest.NewRecorder()
+	handler.List(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var resp struct {
+		Stores []struct {
+			RiskState   string `json:"risk_state"`
+			HealthScore int    `json:"health_score"`
+		} `json:"stores"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Stores) != 1 {
+		t.Fatalf("expected 1 store, got %d", len(resp.Stores))
+	}
+	if resp.Stores[0].RiskState != string(valueobject.RiskStateSafe) {
+		t.Errorf("risk_state = %q, want SAFE (persisted; a live re-classify would churn the CANCELLED store)", resp.Stores[0].RiskState)
+	}
+	if resp.Stores[0].HealthScore != 90 {
+		t.Errorf("health_score = %d, want 90 (derived from persisted SAFE)", resp.Stores[0].HealthScore)
 	}
 }

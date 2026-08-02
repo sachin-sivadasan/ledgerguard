@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
-	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
@@ -19,7 +18,6 @@ type StoreHandler struct {
 	appEventRepo     repository.AppEventRepository // optional; nil-tolerant
 	partnerRepo      repository.PartnerAccountRepository
 	appRepo          repository.AppRepository
-	riskEngine       *domainservice.RiskEngine
 }
 
 func NewStoreHandler(
@@ -28,7 +26,6 @@ func NewStoreHandler(
 	appEventRepo repository.AppEventRepository,
 	partnerRepo repository.PartnerAccountRepository,
 	appRepo repository.AppRepository,
-	riskEngine *domainservice.RiskEngine,
 ) *StoreHandler {
 	return &StoreHandler{
 		subscriptionRepo: subscriptionRepo,
@@ -36,7 +33,6 @@ func NewStoreHandler(
 		appEventRepo:     appEventRepo,
 		partnerRepo:      partnerRepo,
 		appRepo:          appRepo,
-		riskEngine:       riskEngine,
 	}
 }
 
@@ -57,7 +53,12 @@ func (h *StoreHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	h.riskEngine.ClassifyAll(subs, now)
+
+	// Use the PERSISTED, reconciled risk_state (from the sync pipeline's cancel-trap
+	// reconciliation) for each store's badge/health — the same source as the Risk
+	// and Subscriptions pages. Do NOT re-run RiskEngine.ClassifyAll here: its naive
+	// status→risk rule would re-churn cancel-trap stores and diverge (STORE-1 /
+	// RISK-1b).
 
 	// Real install / last-interaction dates come from the app-event stream (keyed
 	// by myshopify domain for charged shops); subscription business dates are the

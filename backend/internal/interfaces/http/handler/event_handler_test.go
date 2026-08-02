@@ -216,6 +216,9 @@ func TestEventTitleDescription(t *testing.T) {
 		"SUBSCRIPTION_ACTIVATED": "Subscription Activated",
 		"USAGE_CHARGE":           "Usage Charge",
 		"BILLING_SUCCESS":        "Charge Succeeded",
+		// Unmapped types are humanized rather than shown as a raw enum.
+		"CREDIT_APPLIED": "Credit Applied",
+		"CREDIT_PENDING": "Credit Pending",
 	}
 	for in, want := range titles {
 		if got, _ := eventTitleDescription(in, "store.myshopify.com"); got != want {

@@ -194,8 +194,21 @@ func eventTitleDescription(eventType, shopGID string) (string, string) {
 	case "BILLING_SUCCESS":
 		return "Charge Succeeded", domain + " completed a charge"
 	default:
-		return eventType, domain + " triggered " + eventType
+		// Humanize any unmapped Partner type (e.g. CREDIT_APPLIED -> "Credit
+		// Applied") so the timeline never surfaces a raw enum. The frontend still
+		// routes these through its neutral `other` badge.
+		title := humanizeEventType(eventType)
+		return title, domain + " — " + title
 	}
+}
+
+// humanizeEventType turns an UPPER_SNAKE_CASE event type into Title Case words.
+func humanizeEventType(eventType string) string {
+	words := strings.Fields(strings.ReplaceAll(strings.ToLower(eventType), "_", " "))
+	for i, w := range words {
+		words[i] = strings.ToUpper(w[:1]) + w[1:]
+	}
+	return strings.Join(words, " ")
 }
 
 // extractDomainFromGID extracts a readable domain from a Shopify shop GID or returns it as-is

@@ -117,7 +117,7 @@ The detail page makes **no store-by-ID request** — it resolves the store (and 
 
 **EVT-2 ✅ Wrong event-type badge/category** — `SUBSCRIPTION_CHARGE_ACTIVATED` rows were badged green **"INSTALL"**. Two root causes fixed: (a) backend `mapEventType` had no ACTIVATED case → passed the raw type through; (b) frontend `_parseEventType` default returned `EventType.appInstall`, so *any* unmapped type showed as an install. Fixed: backend now maps ACTIVATED→SUBSCRIPTION_ACTIVATED (+ EXPIRED/DECLINED/USAGE_CHARGE_APPLIED/ONE_TIME_CHARGE_*); frontend adds a neutral `EventType.other` fallback (grey "EVENT" badge) instead of appInstall, plus belt-and-suspenders raw-type cases. (PR pending)
 
-**EVT-3 ✅ Inconsistent event titles** — raw enum titles ("SUBSCRIPTION_CHARGE_ACTIVATED") came from the backend `eventTitleDescription` default passthrough for unmapped types. Now that `mapEventType` maps the common types, they render humanized titles ("Subscription Activated"). (PR pending)
+**EVT-3 ✅ Inconsistent event titles** — raw enum titles ("SUBSCRIPTION_CHARGE_ACTIVATED") came from the backend `eventTitleDescription` default passthrough for unmapped types. Now that `mapEventType` maps the common types, they render humanized titles ("Subscription Activated"). (PR #56 merged, deployed.) Prod verify (full 1,800-event history): 219 `SUBSCRIPTION_ACTIVATED` events now render correctly (previously badged "INSTALL"); the only residual raw titles were `CREDIT_APPLIED`/`CREDIT_PENDING` (8 events) — closed by humanizing the `eventTitleDescription` default so *any* unmapped type reads as Title Case ("Credit Applied").
 
 **To verify:** all event timestamps are Jul 30 (today) — confirm these are real Shopify `occurredAt` vs sync-detection time.
 

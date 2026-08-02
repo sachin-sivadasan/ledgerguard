@@ -932,6 +932,13 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 			events = append(events, event)
 		}
 
+		// App-wide fetch can span thousands of pages — heartbeat so the long call
+		// isn't silent. Only for the app-wide path (shopGID == "") to avoid spamming
+		// the per-shop status_sync calls.
+		if shopGID == "" && (page+1)%50 == 0 {
+			log.Printf("[partner] app-wide events: %d fetched so far (page %d) for app %s", len(events), page+1, appGID)
+		}
+
 		// Next cursor is the last edge's cursor (Partner API has no pageInfo.endCursor).
 		if !result.Data.App.Events.PageInfo.HasNextPage || lastCursor == "" {
 			break

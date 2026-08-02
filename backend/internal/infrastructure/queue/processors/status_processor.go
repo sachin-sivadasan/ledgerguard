@@ -107,6 +107,12 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 			Completed: i + 1,
 			Message:   fmt.Sprintf("Processed %d/%d subscriptions", i+1, len(subscriptions)),
 		})
+
+		// Periodic stdout heartbeat — the per-shop loop is the slow part of Wave 2
+		// (one Partner-API fetch per shop) and would otherwise be silent for minutes.
+		if (i+1)%500 == 0 {
+			log.Printf("[queue] StatusProcessor: reconciled %d/%d shops (%d updated, %d failed) for app %s (job %s)", i+1, len(subscriptions), updated, failed, payload.AppID, payload.JobID)
+		}
 	}
 
 	// Surface partial failures: without the old 10-sub cap the per-shop loop now spans the

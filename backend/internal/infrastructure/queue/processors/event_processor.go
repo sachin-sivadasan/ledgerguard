@@ -76,6 +76,7 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 	p.progress.Update(ctx, payload.JobID, queue.Progress{
 		Message: "Fetching app-wide lifecycle events...",
 	})
+	log.Printf("[queue] EventProcessor: fetching app-wide event stream for app %s (job %s)", payload.AppID, payload.JobID)
 
 	// Fetch the ENTIRE app event stream (all shops, all lifecycle types) in one
 	// paginated call — not per-shop. This captures every shop, including the free /
@@ -86,6 +87,7 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 	if err != nil {
 		return fmt.Errorf("failed to fetch app events: %w", err)
 	}
+	log.Printf("[queue] EventProcessor: fetched %d app-wide events for app %s — storing + computing installs (job %s)", len(events), payload.AppID, payload.JobID)
 
 	if cancelled, _ := p.lockManager.IsCancelled(ctx, payload.JobID); cancelled {
 		return fmt.Errorf("job cancelled")

@@ -19,7 +19,7 @@ Last updated: 2026-07-30
 | Stores | ✅ STORE-1/STORE-2 fixed | dates event-sourced; risk badges use persisted state |
 | Store Detail | 🔴 Open findings | route `/#/stores/{domain}`; see SD-1..SD-4 |
 | Events | ✅ EVT-1/2/3 fixed | app-wide events; badge/title mapping fixed |
-| Risk | 🟠 RISK-1b fixed | RISK-2/RISK-3 minor open |
+| Risk | ✅ RISK-1b/2/3 fixed | risk section fully closed |
 | Earnings | 🔴 Open findings | all $0.00 in UI, data exists in API; see EARN-1..EARN-2 |
 | Analytics | 🟢 Mostly OK | Revenue/MRR-movement render; see ANALYTICS-1 (minor) — only Revenue tab checked |
 | Reports | ⏳ Catalog OK | ~16 report cards render; per-report deep-test pending (many inherit risk/earnings root causes) |
@@ -135,11 +135,11 @@ Funnel: safe 729 / 1-cycle 126 / 2-cycle 5 / churned 2066 (= 2926 ✓). At-Risk 
 | Risk `/risk/summary` (stores.risk_state) | 729 | 126 | 5 | 2066 |
 - Three code paths compute risk differently and read different stores (subscriptions.risk_state vs stores.risk_state vs on-the-fly MetricsEngine). Need a **single source of truth**. The `/metrics` (charge-based, 1175) is closest to correct; the two stored-state paths are polluted by SUB-1 AND disagree with each other (718 vs 729). Fixing SUB-1/SUB-2 + unifying the risk source should collapse all three to one number.
 
-**RISK-2 🟡 `/risk/summary` returns `installed_app_ids: []`** (empty) while `/stores` populates it — inconsistent store serialization.
+**RISK-2 ✅ `/risk/summary` returned `installed_app_ids: []`** — now populated with the current app id, matching `/stores` serialization. (PR pending)
 
-**RISK-3 🟡 Negative LTV shown** — `423ca4-5` has `lifetime_value_cents: -2800` (−$28.00; refunds > revenue). Decide display (show negative w/ context, or floor at 0) and confirm it's expected.
+**RISK-3 ✅ Negative LTV display** — decided to KEEP the real value (negative net LTV = refunds/chargebacks exceeded revenue, a genuine signal — not floored to 0). Fixed the frontend formatter so the sign precedes the currency symbol (`-$28.00`, was `$-28.00`). `store_model.dart` `ltvFormatted`; unit test `store_ltv_format_test.dart`. (PR pending)
 
-(STORE-2 recurs here: every at-risk store's `first_install_date` = 2026-07-30 record time.)
+(STORE-2 recurs here — ✅ now fixed: at-risk store install/interaction dates are event-sourced.)
 
 ### Earnings (route `/#/earnings`)
 

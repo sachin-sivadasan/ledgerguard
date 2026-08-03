@@ -60,7 +60,8 @@ func TestRiskHandler_Summary_UsesPersistedRiskState(t *testing.T) {
 			Churned  int `json:"churned"`
 		} `json:"distribution"`
 		AtRiskStores []struct {
-			ShopDomain string `json:"shop_domain"`
+			ShopDomain      string   `json:"shop_domain"`
+			InstalledAppIDs []string `json:"installed_app_ids"`
 		} `json:"at_risk_stores"`
 	}
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
@@ -78,5 +79,9 @@ func TestRiskHandler_Summary_UsesPersistedRiskState(t *testing.T) {
 	}
 	if len(resp.AtRiskStores) != 1 || resp.AtRiskStores[0].ShopDomain != "atrisk.myshopify.com" {
 		t.Errorf("at_risk_stores = %+v, want [atrisk.myshopify.com]", resp.AtRiskStores)
+	}
+	// RISK-2: installed_app_ids must be populated with the app (was empty []).
+	if got := resp.AtRiskStores[0].InstalledAppIDs; len(got) != 1 || got[0] != appID.String() {
+		t.Errorf("installed_app_ids = %v, want [%s]", got, appID.String())
 	}
 }

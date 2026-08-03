@@ -74,6 +74,26 @@ rebuild, `firebase deploy`, and log in with the test account.
 
 ---
 
+## Redeploy (update to latest) — with disk hygiene
+```bash
+cd /opt/ledgerguard
+git pull && \
+  docker compose --env-file /opt/ledgerguard/.env -f deploy/cohost/docker-compose.cohost.yml up -d --build && \
+  docker builder prune -f && docker image prune -f
+```
+The two prunes keep the shared box from filling with orphaned **build cache** and
+**dangling images** left by each `--build` (mirrors checkoutmate — which had 20+
+deploys accumulate ~56 GB / 78% disk before adding `docker builder prune -f` to its
+deploy). Scoped on purpose: `builder prune` = cache only; `image prune` (no `-a`) =
+untagged images only, so no running/tagged image (LedgerGuard's or checkoutmate's) is
+touched. **Never** `docker system prune -af` here — `-a` deletes images not tied to a
+*running* container, which can wipe a stopped service's base image.
+
+One-time reclaim if disk is already high: `docker builder prune -f && docker image prune -f`
+(check first with `docker system df`).
+
+---
+
 ## Rollback / teardown (LedgerGuard only — checkoutmate untouched)
 ```bash
 cd /opt/ledgerguard

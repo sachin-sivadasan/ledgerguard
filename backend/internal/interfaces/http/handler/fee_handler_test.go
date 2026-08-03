@@ -51,24 +51,23 @@ func doMonthlyFees(t *testing.T, tier valueobject.RevenueShareTier, txs []*entit
 	return resp
 }
 
-// TestMonthlyFees_GuardMatches: actual shopifyFee equals the expected TOTAL tier fee
-// (revenue share 15% + processing 2.9% = 17.9%) → fee_guard_ok true, variance 0, real
-// shopify_cut populated (RPT-FEES-1).
+// TestMonthlyFees_GuardMatches: actual shopifyFee equals the tier's revenue share
+// (15% of gross) → fee_guard_ok true, variance 0, real shopify_cut populated (RPT-FEES-1).
 func TestMonthlyFees_GuardMatches(t *testing.T) {
 	appID := uuid.New()
-	// tier 15% + 2.9% processing = 17.9% of $100 gross = $17.90 retained.
+	// tier 15% of $100 gross = $15.00 retained (pure revenue share, no processing).
 	resp := doMonthlyFees(t, valueobject.RevenueShareTierSmallDev15,
-		[]*entity.Transaction{feeTx(appID, 10000, 1790)})
+		[]*entity.Transaction{feeTx(appID, 10000, 1500)})
 
-	if p := resp["expected_fee_pct"].(float64); p < 17.8 || p > 18.0 {
-		t.Errorf("expected_fee_pct = %v, want ~17.9 (15%% share + 2.9%% processing)", p)
+	if resp["expected_fee_pct"].(float64) != 15 {
+		t.Errorf("expected_fee_pct = %v, want 15", resp["expected_fee_pct"])
 	}
 	m := resp["months"].([]any)[0].(map[string]any)
-	if m["shopify_cut_cents"].(float64) != 1790 {
-		t.Errorf("shopify_cut_cents = %v, want 1790 (real, from shopifyFee)", m["shopify_cut_cents"])
+	if m["shopify_cut_cents"].(float64) != 1500 {
+		t.Errorf("shopify_cut_cents = %v, want 1500 (real, from shopifyFee)", m["shopify_cut_cents"])
 	}
-	if m["expected_cut_cents"].(float64) != 1790 {
-		t.Errorf("expected_cut_cents = %v, want 1790 (revenue share + processing)", m["expected_cut_cents"])
+	if m["expected_cut_cents"].(float64) != 1500 {
+		t.Errorf("expected_cut_cents = %v, want 1500 (revenue share)", m["expected_cut_cents"])
 	}
 	if m["fee_variance_cents"].(float64) != 0 {
 		t.Errorf("fee_variance_cents = %v, want 0", m["fee_variance_cents"])
@@ -78,33 +77,32 @@ func TestMonthlyFees_GuardMatches(t *testing.T) {
 	}
 }
 
-// TestMonthlyFees_GuardFlagsOvercharge: Shopify retained 22.9% (a 20%-tier rate) but the
-// app's tier expects 17.9% → variance beyond 1% of gross trips the Fee Guard.
+// TestMonthlyFees_GuardFlagsOvercharge: Shopify retained 20% but the app's tier is 15%
+// → variance beyond 1% of gross trips the Fee Guard (catches a wrong rate / misconfigured
+// tier, exactly the case seen live where a 0%-configured app was charged ~15%).
 func TestMonthlyFees_GuardFlagsOvercharge(t *testing.T) {
 	appID := uuid.New()
 	resp := doMonthlyFees(t, valueobject.RevenueShareTierSmallDev15,
-		[]*entity.Transaction{feeTx(appID, 10000, 2290)}) // 22.9% actual vs 17.9% expected
+		[]*entity.Transaction{feeTx(appID, 10000, 2000)}) // 20% actual vs 15% expected
 
 	m := resp["months"].([]any)[0].(map[string]any)
 	if m["fee_variance_cents"].(float64) != 500 {
-		t.Errorf("fee_variance_cents = %v, want 500 (2290 actual − 1790 expected)", m["fee_variance_cents"])
+		t.Errorf("fee_variance_cents = %v, want 500 (2000 actual − 1500 expected)", m["fee_variance_cents"])
 	}
 	if m["fee_guard_ok"] != false {
 		t.Errorf("fee_guard_ok = %v, want false (overcharge exceeds 1%% of gross)", m["fee_guard_ok"])
 	}
 }
 
-// TestMonthlyFees_ZeroTierProcessingNotFlagged: the RPT-FEES-1 misfire guard — a
-// 0%-revenue-share app still has ~2.9% processing retained; the guard must NOT flag it
-// (expected includes processing, so a 2.9% actual is within tolerance).
-func TestMonthlyFees_ZeroTierProcessingNotFlagged(t *testing.T) {
+// TestMonthlyFees_ZeroTierNoFee: a correctly-configured 0% app that Shopify retains ~0
+// from → guard passes.
+func TestMonthlyFees_ZeroTierNoFee(t *testing.T) {
 	appID := uuid.New()
-	// SMALL_DEV_0 (0% share); Shopify retained ~2.9% processing on $100 = ~$2.90.
 	resp := doMonthlyFees(t, valueobject.RevenueShareTierSmallDev0,
-		[]*entity.Transaction{feeTx(appID, 10000, 290)})
+		[]*entity.Transaction{feeTx(appID, 10000, 0)})
 
 	m := resp["months"].([]any)[0].(map[string]any)
 	if m["fee_guard_ok"] != true {
-		t.Errorf("fee_guard_ok = %v, want true (0%% tier + 2.9%% processing must not misfire)", m["fee_guard_ok"])
+		t.Errorf("fee_guard_ok = %v, want true (0%% tier, 0 fee)", m["fee_guard_ok"])
 	}
 }

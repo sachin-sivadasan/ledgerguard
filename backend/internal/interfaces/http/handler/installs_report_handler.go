@@ -257,14 +257,46 @@ func buildInstallsReport(events []*entity.AppEvent, subsByShop map[string]*entit
 	}
 }
 
+// canonicalShopKey maps every identifier a shop may have been stored under
+// (GID, myshopify domain, shop name) to one canonical key (the domain), built
+// from subscriptions. A shop's stored app_events key changes over its life —
+// event_processor stores free shops under ShopName, then under the domain once
+// they pay — so the SAME shop is fragmented across keys in app_events. Counting
+// distinct shops without collapsing those keys double-counts every shop that
+// transitioned free→paid, inflating the lifecycle tiles. Uncharged shops (no
+// subscription) keep their single stored key.
+func canonicalShopKey(subs []*entity.Subscription) map[string]string {
+	canon := make(map[string]string)
+	for _, s := range subs {
+		if s.MyshopifyDomain == "" {
+			continue
+		}
+		canon[s.MyshopifyDomain] = s.MyshopifyDomain
+		if s.ShopifyShopGID != "" {
+			canon[s.ShopifyShopGID] = s.MyshopifyDomain
+		}
+		if s.ShopName != "" {
+			canon[s.ShopName] = s.MyshopifyDomain
+		}
+	}
+	return canon
+}
+
 // computeLifecycleAndConversion derives the all-time lifecycle tile counts (from the
 // RELATIONSHIP_* event stream, via the same state machine that persists the app's
 // install count) and the install→paid conversion (distinct shops that ever received
 // a recurring charge, over the lifetime install base).
 func computeLifecycleAndConversion(events []*entity.AppEvent, subs []*entity.Subscription) (installLifecycle, installConversion) {
+	// Collapse each shop's multiple stored keys to one canonical key so a
+	// free→paid shop isn't counted twice (see canonicalShopKey).
+	canon := canonicalShopKey(subs)
 	ext := make([]external.AppEvent, 0, len(events))
 	for _, e := range events {
-		ext = append(ext, external.AppEvent{Type: e.EventType, ShopID: e.ShopifyShopGID, OccurredAt: e.OccurredAt})
+		key := e.ShopifyShopGID
+		if c, ok := canon[key]; ok {
+			key = c
+		}
+		ext = append(ext, external.AppEvent{Type: e.EventType, ShopID: key, OccurredAt: e.OccurredAt})
 	}
 	lc := external.CountLifecycle(ext)
 

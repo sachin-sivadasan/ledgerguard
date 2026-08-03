@@ -11,6 +11,7 @@ import (
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
@@ -56,6 +57,25 @@ type installEvent struct {
 	Date   string `json:"date"`
 }
 
+// installLifecycle is the all-time install-lifecycle snapshot (current state,
+// NOT windowed) — distinct-shop counts for the tile row (APPS-1b).
+type installLifecycle struct {
+	Active      int `json:"active"`      // currently installed (latest event INSTALLED/REACTIVATED)
+	Installed   int `json:"installed"`   // lifetime install base (ever installed)
+	Uninstalled int `json:"uninstalled"` // currently uninstalled (latest event UNINSTALLED)
+	Reactivated int `json:"reactivated"` // returning shops (ever reactivated)
+	Deactivated int `json:"deactivated"` // latest event DEACTIVATED
+}
+
+// installConversion is the install→paid headline (APPS-1b). Paid = distinct shops
+// that ever received a recurring charge; Installs = lifetime install base. Rate is
+// paid/installs in [0,1]. The detailed funnel lives in the Activation report.
+type installConversion struct {
+	Installs int     `json:"installs"`
+	Paid     int     `json:"paid"`
+	Rate     float64 `json:"rate"`
+}
+
 // installsReport is the full JSON contract for the Installs report.
 type installsReport struct {
 	Installs   int                 `json:"installs"`
@@ -64,6 +84,9 @@ type installsReport struct {
 	Interval   string              `json:"interval"` // trend granularity: day / week / month
 	Trend      []installTrendPoint `json:"trend"`
 	Events     []installEvent      `json:"events"`
+	// Lifecycle + Conversion are all-time snapshots (not affected by from/to).
+	Lifecycle  installLifecycle  `json:"lifecycle"`
+	Conversion installConversion `json:"conversion"`
 	// EventsTotal is the full recent-events count before ?limit/?offset paging, so
 	// the report preview and the dedicated page can show "N of M" / page correctly.
 	EventsTotal int64 `json:"eventsTotal"`
@@ -100,6 +123,9 @@ func (h *InstallsReportHandler) GetInstalls(w http.ResponseWriter, r *http.Reque
 	}
 
 	report := buildInstallsReport(events, indexSubsByShop(subs), from, to)
+	// Lifecycle tiles + install→paid conversion are all-time snapshots, computed
+	// over the full event stream + subscriptions (independent of the from/to window).
+	report.Lifecycle, report.Conversion = computeLifecycleAndConversion(events, subs)
 	allEvents := report.Events
 	report.EventsTotal = int64(len(allEvents))
 
@@ -229,6 +255,44 @@ func buildInstallsReport(events []*entity.AppEvent, subsByShop map[string]*entit
 		Trend:      trend,
 		Events:     recent,
 	}
+}
+
+// computeLifecycleAndConversion derives the all-time lifecycle tile counts (from the
+// RELATIONSHIP_* event stream, via the same state machine that persists the app's
+// install count) and the install→paid conversion (distinct shops that ever received
+// a recurring charge, over the lifetime install base).
+func computeLifecycleAndConversion(events []*entity.AppEvent, subs []*entity.Subscription) (installLifecycle, installConversion) {
+	ext := make([]external.AppEvent, 0, len(events))
+	for _, e := range events {
+		ext = append(ext, external.AppEvent{Type: e.EventType, ShopID: e.ShopifyShopGID, OccurredAt: e.OccurredAt})
+	}
+	lc := external.CountLifecycle(ext)
+
+	lifecycle := installLifecycle{
+		Active:      lc.Active,
+		Installed:   lc.EverInstalled,
+		Uninstalled: lc.Uninstalled,
+		Reactivated: lc.Reactivated,
+		Deactivated: lc.Deactivated,
+	}
+
+	paidDomains := make(map[string]struct{})
+	for _, s := range subs {
+		if s.LastRecurringChargeDate != nil && s.MyshopifyDomain != "" {
+			paidDomains[s.MyshopifyDomain] = struct{}{}
+		}
+	}
+	conv := installConversion{Installs: lc.EverInstalled, Paid: len(paidDomains)}
+	if lc.EverInstalled > 0 {
+		conv.Rate = float64(conv.Paid) / float64(lc.EverInstalled)
+		// A paying shop whose original INSTALLED event predates our stored event
+		// history is counted in Paid but not EverInstalled; cap the headline at 100%
+		// so it never reads e.g. "120%". Raw Paid/Installs counts stay honest.
+		if conv.Rate > 1 {
+			conv.Rate = 1
+		}
+	}
+	return lifecycle, conv
 }
 
 // writeInstallEventsCSV writes the recent install/uninstall events as a CSV attachment.

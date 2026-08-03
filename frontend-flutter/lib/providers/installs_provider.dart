@@ -128,6 +128,14 @@ class InstallsProvider extends ChangeNotifier {
       uninstalls: 18,
       net: 44,
       eventsTotal: 3,
+      lifecycle: const InstallLifecycle(
+        active: 240,
+        installed: 318,
+        uninstalled: 62,
+        reactivated: 14,
+        deactivated: 16,
+      ),
+      conversion: const InstallConversion(installs: 318, paid: 76, rate: 0.239),
       trend: List.generate(10, (i) {
         return InstallTrendPoint(
           date: base.add(Duration(days: i * 3)),

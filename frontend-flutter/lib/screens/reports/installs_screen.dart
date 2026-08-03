@@ -184,6 +184,10 @@ class _InstallsScreenState extends State<InstallsScreen> with DataLoadingMixin {
           else ...[
             _HeroRow(report: report),
             const SizedBox(height: LgSpacing.s600),
+            _LifecycleRow(report: report),
+            const SizedBox(height: LgSpacing.s600),
+            _ConversionCard(report: report),
+            const SizedBox(height: LgSpacing.s600),
             _TrendCard(report: report),
             const SizedBox(height: LgSpacing.s600),
             _EventsTable(report: report),
@@ -299,6 +303,147 @@ class _KpiCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+// ─── Install lifecycle tiles (all-time snapshot) ────────────────────
+class _LifecycleRow extends StatelessWidget {
+  final InstallsReport report;
+  const _LifecycleRow({required this.report});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final lc = report.lifecycle;
+    final tiles = <Widget>[
+      _KpiCard(
+        label: 'Active',
+        value: '${lc.active}',
+        color: LgColors.success,
+        footnote: 'currently installed',
+      ),
+      _KpiCard(
+        label: 'Installed',
+        value: '${lc.installed}',
+        color: LgColors.info,
+        footnote: 'lifetime installs',
+      ),
+      _KpiCard(
+        label: 'Uninstalled',
+        value: '${lc.uninstalled}',
+        color: LgColors.critical,
+        footnote: 'currently uninstalled',
+      ),
+      _KpiCard(
+        label: 'Reactivated',
+        value: '${lc.reactivated}',
+        color: LgColors.warning,
+        footnote: 'returning stores',
+      ),
+      _KpiCard(
+        label: 'Deactivated',
+        value: '${lc.deactivated}',
+        color: LgColors.textSecondary,
+        footnote: 'disabled (not uninstalled)',
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Install lifecycle',
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        Text(
+          'All-time snapshot across every store — independent of the date range above.',
+          style: theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+        ),
+        const SizedBox(height: LgSpacing.s400),
+        if (LgBreakpoints.isMobile(context))
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < tiles.length; i++) ...[
+                if (i > 0) const SizedBox(height: LgSpacing.s300),
+                tiles[i],
+              ],
+            ],
+          )
+        else
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < tiles.length; i++) ...[
+                  if (i > 0) const SizedBox(width: LgSpacing.s300),
+                  Expanded(child: tiles[i]),
+                ],
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ─── Install → Paid conversion headline ─────────────────────────────
+class _ConversionCard extends StatelessWidget {
+  final InstallsReport report;
+  const _ConversionCard({required this.report});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final conv = report.conversion;
+    final headline = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Install → Paid conversion',
+          style: theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+        ),
+        const SizedBox(height: LgSpacing.s200),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              conv.ratePercent,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: LgColors.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: LgSpacing.s200),
+            Flexible(
+              child: Text(
+                '${conv.paid} of ${conv.installs} installs became paying',
+                style: theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+    final funnelButton = TextButton(
+      onPressed: () => context.go('/reports/activation'),
+      child: const Text('View funnel →'),
+    );
+
+    return LgCard(
+      // Stack the funnel link under the headline on mobile so the "N of M …"
+      // caption isn't squeezed between the big % and the button.
+      child: LgBreakpoints.isMobile(context)
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                headline,
+                Align(alignment: Alignment.centerLeft, child: funnelButton),
+              ],
+            )
+          : Row(children: [Expanded(child: headline), funnelButton]),
     );
   }
 }

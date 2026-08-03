@@ -503,6 +503,7 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 							}
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
+							shopifyFee { amount currencyCode }
 						}
 						... on AppUsageSale {
 							chargeId
@@ -514,6 +515,7 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 							}
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
+							shopifyFee { amount currencyCode }
 						}
 						... on AppOneTimeSale {
 							chargeId
@@ -525,6 +527,7 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 							}
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
+							shopifyFee { amount currencyCode }
 						}
 						... on AppSaleAdjustment {
 							chargeId
@@ -536,6 +539,7 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 							}
 							grossAmount { amount currencyCode }
 							netAmount { amount currencyCode }
+							shopifyFee { amount currencyCode }
 						}
 					}
 				}
@@ -653,6 +657,12 @@ type transactionNode struct {
 		Amount       string `json:"amount"`
 		CurrencyCode string `json:"currencyCode"`
 	} `json:"netAmount,omitempty"`
+	// ShopifyFee is the amount Shopify retained (the revenue-share cut). Exposed by
+	// all four sale types; drives the Profit & Expense report + Fee Guard.
+	ShopifyFee *struct {
+		Amount       string `json:"amount"`
+		CurrencyCode string `json:"currencyCode"`
+	} `json:"shopifyFee,omitempty"`
 }
 
 // parseTransaction converts a Partner API transaction to a domain entity
@@ -694,6 +704,14 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 		currency,
 		transactionDate,
 	)
+
+	// Shopify's retained fee (revenue-share cut) — populates the Profit & Expense
+	// report and enables the Fee Guard (actual vs expected per revenue-share tier).
+	if node.ShopifyFee != nil {
+		var dollars float64
+		fmt.Sscanf(node.ShopifyFee.Amount, "%f", &dollars)
+		tx.ShopifyFeeCents = int64(dollars * 100)
+	}
 
 	// Add shop details and source app GID for per-app filtering
 	tx.ShopifyShopGID = shopGID

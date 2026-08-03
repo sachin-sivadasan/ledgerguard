@@ -263,12 +263,24 @@ class ExpenseBreakdown {
   final int infraCostCents;
   final int paymentFeesCents;
 
+  /// Fee Guard: expected Shopify cut (gross × the app's revenue-share tier), the
+  /// actual−expected variance, and whether they agree within tolerance. `feeGuardOk`
+  /// defaults to true so pre-Guard/empty payloads don't render a false alarm.
+  final int expectedCutCents;
+  final int feeVarianceCents;
+  final bool feeGuardOk;
+  final double effectiveFeePct;
+
   const ExpenseBreakdown({
     required this.month,
     required this.grossRevenueCents,
     required this.shopifyCutCents,
     required this.infraCostCents,
     required this.paymentFeesCents,
+    this.expectedCutCents = 0,
+    this.feeVarianceCents = 0,
+    this.feeGuardOk = true,
+    this.effectiveFeePct = 0,
   });
 
   factory ExpenseBreakdown.fromJson(Map<String, dynamic> json) {
@@ -278,6 +290,10 @@ class ExpenseBreakdown {
       shopifyCutCents: json['shopify_cut_cents'] as int? ?? 0,
       infraCostCents: json['infrastructure_cents'] as int? ?? 0,
       paymentFeesCents: json['processing_fee_cents'] as int? ?? 0,
+      expectedCutCents: json['expected_cut_cents'] as int? ?? 0,
+      feeVarianceCents: json['fee_variance_cents'] as int? ?? 0,
+      feeGuardOk: json['fee_guard_ok'] as bool? ?? true,
+      effectiveFeePct: (json['effective_fee_pct'] as num?)?.toDouble() ?? 0,
     );
   }
 

@@ -109,7 +109,7 @@ class ProfitTab extends StatelessWidget {
             spacing: LgSpacing.s400,
             children: const [
               _Legend('Net Profit', LgColors.success),
-              _Legend('Shopify 20%', LgColors.warning),
+              _Legend('Shopify Cut', LgColors.warning),
               _Legend('Infra + Fees', LgColors.critical),
             ],
           ),
@@ -138,12 +138,12 @@ class ProfitTab extends StatelessWidget {
         2: FlexColumnWidth(1),
         3: FlexColumnWidth(1),
         4: FlexColumnWidth(1),
-        5: FlexColumnWidth(1),
+        5: FlexColumnWidth(1.2),
       },
       children: [
         TableRow(
           decoration: BoxDecoration(color: LgColors.surfaceSecondary),
-          children: ['Month', 'Gross', 'Shopify Cut', 'Infra', 'Fees', 'Net Profit']
+          children: ['Month', 'Gross', 'Shopify Cut', 'Net Profit', 'Fee Guard']
               .map((h) => Padding(
                     padding: const EdgeInsets.all(8),
                     child: Text(h, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: LgColors.textSecondary)),
@@ -155,12 +155,40 @@ class ProfitTab extends StatelessWidget {
                 _Cell(e.month),
                 _Cell('\$${(e.grossRevenueCents / 100).toStringAsFixed(0)}'),
                 _Cell('\$${(e.shopifyCutCents / 100).toStringAsFixed(0)}'),
-                _Cell('\$${(e.infraCostCents / 100).toStringAsFixed(0)}'),
-                _Cell('\$${(e.paymentFeesCents / 100).toStringAsFixed(0)}'),
                 _Cell('\$${(e.netProfitCents / 100).toStringAsFixed(0)}'),
+                _FeeGuardCell(ok: e.feeGuardOk, varianceCents: e.feeVarianceCents),
               ],
             )),
       ],
+    );
+  }
+}
+
+/// Fee Guard status cell: ✓ when Shopify's retained cut matches the app's expected
+/// revenue-share tier, else a warning with the signed variance ("Shopify may have
+/// charged the wrong rate").
+class _FeeGuardCell extends StatelessWidget {
+  final bool ok;
+  final int varianceCents;
+  const _FeeGuardCell({required this.ok, required this.varianceCents});
+
+  @override
+  Widget build(BuildContext context) {
+    final dollars = (varianceCents.abs() / 100).toStringAsFixed(0);
+    final sign = varianceCents >= 0 ? '+' : '−';
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: ok
+          ? const Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.verified_outlined, size: 15, color: LgColors.success),
+              SizedBox(width: 4),
+              Text('OK', style: TextStyle(fontSize: 13, color: LgColors.success)),
+            ])
+          : Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.warning_amber_rounded, size: 15, color: LgColors.warning),
+              const SizedBox(width: 4),
+              Text('$sign\$$dollars', style: const TextStyle(fontSize: 13, color: LgColors.warning)),
+            ]),
     );
   }
 }

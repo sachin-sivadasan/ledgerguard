@@ -525,7 +525,6 @@ func TestFetchTransactions_EmptyTransactions(t *testing.T) {
 	}
 }
 
-
 // TestFetchAppEvents_PaginatesForwardWithFirstAfter verifies the app-events fetch uses
 // forward pagination (first/after, NOT `last` — which the Partner API rejects with
 // "Using last without before is not supported") and collects events across all pages.
@@ -712,10 +711,23 @@ func TestParseTransaction_AppSaleAdjustmentRefund(t *testing.T) {
 		Typename:  "AppSaleAdjustment",
 		ID:        "gid://partners/AppSaleAdjustment/1",
 		CreatedAt: "2026-02-15T10:00:00Z",
-		App:       &struct{ ID string `json:"id"`; Name string `json:"name"` }{ID: "gid://partners/App/99", Name: "Test App"},
-		Shop:      &struct{ ID string `json:"id"`; MyshopifyDomain string `json:"myshopifyDomain"`; Name string `json:"name"` }{ID: "gid://shopify/Shop/1", MyshopifyDomain: "s.myshopify.com", Name: "S"},
-		GrossAmount: &struct{ Amount string `json:"amount"`; CurrencyCode string `json:"currencyCode"` }{Amount: "-10.00", CurrencyCode: "USD"},
-		NetAmount:   &struct{ Amount string `json:"amount"`; CurrencyCode string `json:"currencyCode"` }{Amount: "-7.00", CurrencyCode: "USD"},
+		App: &struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}{ID: "gid://partners/App/99", Name: "Test App"},
+		Shop: &struct {
+			ID              string `json:"id"`
+			MyshopifyDomain string `json:"myshopifyDomain"`
+			Name            string `json:"name"`
+		}{ID: "gid://shopify/Shop/1", MyshopifyDomain: "s.myshopify.com", Name: "S"},
+		GrossAmount: &struct {
+			Amount       string `json:"amount"`
+			CurrencyCode string `json:"currencyCode"`
+		}{Amount: "-10.00", CurrencyCode: "USD"},
+		NetAmount: &struct {
+			Amount       string `json:"amount"`
+			CurrencyCode string `json:"currencyCode"`
+		}{Amount: "-7.00", CurrencyCode: "USD"},
 	}
 	tx := c.parseTransaction(node, uuid.New())
 	if tx == nil {
@@ -726,5 +738,44 @@ func TestParseTransaction_AppSaleAdjustmentRefund(t *testing.T) {
 	}
 	if tx.NetAmountCents != -700 {
 		t.Errorf("expected natural negative net -700, got %d", tx.NetAmountCents)
+	}
+}
+
+// TestParseTransaction_ShopifyFee: the shopifyFee field (Shopify's retained cut) is
+// parsed into ShopifyFeeCents — the signal that drives Profit & Expense + the Fee Guard.
+func TestParseTransaction_ShopifyFee(t *testing.T) {
+	c := &ShopifyPartnerClient{}
+	node := transactionNode{
+		Typename:  "AppSubscriptionSale",
+		ID:        "gid://partners/AppSubscriptionSale/1",
+		CreatedAt: "2026-02-15T10:00:00Z",
+		App: &struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}{ID: "gid://partners/App/99", Name: "Test App"},
+		Shop: &struct {
+			ID              string `json:"id"`
+			MyshopifyDomain string `json:"myshopifyDomain"`
+			Name            string `json:"name"`
+		}{ID: "gid://shopify/Shop/1", MyshopifyDomain: "s.myshopify.com", Name: "S"},
+		GrossAmount: &struct {
+			Amount       string `json:"amount"`
+			CurrencyCode string `json:"currencyCode"`
+		}{Amount: "100.00", CurrencyCode: "USD"},
+		NetAmount: &struct {
+			Amount       string `json:"amount"`
+			CurrencyCode string `json:"currencyCode"`
+		}{Amount: "85.00", CurrencyCode: "USD"},
+		ShopifyFee: &struct {
+			Amount       string `json:"amount"`
+			CurrencyCode string `json:"currencyCode"`
+		}{Amount: "15.00", CurrencyCode: "USD"},
+	}
+	tx := c.parseTransaction(node, uuid.New())
+	if tx == nil {
+		t.Fatal("expected a transaction, got nil")
+	}
+	if tx.ShopifyFeeCents != 1500 {
+		t.Errorf("expected ShopifyFeeCents=1500 (from $15.00 shopifyFee), got %d", tx.ShopifyFeeCents)
 	}
 }

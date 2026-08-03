@@ -203,14 +203,24 @@ func (h *FeeHandler) GetMonthlyProfitBreakdown(w http.ResponseWriter, r *http.Re
 	}
 
 	now := time.Now()
+	tier := app.RevenueShareTier
 	type monthBreakdown struct {
-		Month              string  `json:"month"`
-		GrossCents         int64   `json:"gross_cents"`
-		ShopifyCutCents    int64   `json:"shopify_cut_cents"`
-		ProcessingFeeCents int64   `json:"processing_fee_cents"`
-		TaxCents           int64   `json:"tax_cents"`
-		NetCents           int64   `json:"net_cents"`
-		ProfitMarginPct    float64 `json:"profit_margin_pct"`
+		Month           string  `json:"month"`
+		GrossCents      int64   `json:"gross_cents"`
+		ShopifyCutCents int64   `json:"shopify_cut_cents"` // actual, from Shopify's shopifyFee
+		NetCents        int64   `json:"net_cents"`
+		ProfitMarginPct float64 `json:"profit_margin_pct"`
+		EffectiveFeePct float64 `json:"effective_fee_pct"` // actual cut ÷ gross
+		// Fee Guard: expected cut = gross × the app's revenue-share tier %; variance
+		// = actual − expected. FeeGuardOk is false when |variance| exceeds 1% of gross
+		// (Shopify may have charged the wrong rate — the "Guard" differentiator).
+		ExpectedCutCents int64 `json:"expected_cut_cents"`
+		FeeVarianceCents int64 `json:"fee_variance_cents"`
+		FeeGuardOk       bool  `json:"fee_guard_ok"`
+		// Deprecated: Shopify's Partner API does not report processing fee / tax
+		// separately (shopifyFee is the total retained). Kept at 0 for compatibility.
+		ProcessingFeeCents int64 `json:"processing_fee_cents"`
+		TaxCents           int64 `json:"tax_cents"`
 	}
 
 	result := make([]monthBreakdown, 0, months)
@@ -225,27 +235,53 @@ func (h *FeeHandler) GetMonthlyProfitBreakdown(w http.ResponseWriter, r *http.Re
 		}
 
 		summary := h.feeService.CalculateFeeSummary(transactions)
+		gross := summary.TotalGrossAmountCents
+		actualCut := summary.TotalRevenueShareCents
+		// Shopify's `shopifyFee` is its TOTAL retained amount (revenue share +
+		// processing), so compare against the tier's total expected fee — not the
+		// revenue-share portion alone, or a 0%-tier app (whose ~2.9% processing is
+		// still retained) would trip the guard every month.
+		expectedCut := tier.CalculateFeeBreakdown(gross, 0).TotalFeesCents
 
-		var margin float64
-		if summary.TotalGrossAmountCents > 0 {
-			margin = float64(summary.TotalNetAmountCents) / float64(summary.TotalGrossAmountCents) * 100
+		var margin, effectivePct float64
+		if gross > 0 {
+			margin = float64(summary.TotalNetAmountCents) / float64(gross) * 100
+			effectivePct = float64(actualCut) / float64(gross) * 100
 		}
+		variance := actualCut - expectedCut
+		// Within 1% of gross → the charged cut matches the expected tier rate.
+		guardOk := gross <= 0 || abs64(variance) <= gross/100
 
 		result = append(result, monthBreakdown{
-			Month:              monthStart.Format("Jan"),
-			GrossCents:         summary.TotalGrossAmountCents,
-			ShopifyCutCents:    summary.TotalRevenueShareCents,
-			ProcessingFeeCents: summary.TotalProcessingFeeCents,
-			TaxCents:           summary.TotalTaxOnFeesCents,
-			NetCents:           summary.TotalNetAmountCents,
-			ProfitMarginPct:    margin,
+			Month:            monthStart.Format("Jan"),
+			GrossCents:       gross,
+			ShopifyCutCents:  actualCut,
+			NetCents:         summary.TotalNetAmountCents,
+			ProfitMarginPct:  margin,
+			EffectiveFeePct:  effectivePct,
+			ExpectedCutCents: expectedCut,
+			FeeVarianceCents: variance,
+			FeeGuardOk:       guardOk,
 		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"months": result,
+		"tier":              tier.String(),
+		"tier_display_name": tier.DisplayName(),
+		// Total expected effective rate = revenue share + processing (what Shopify's
+		// shopifyFee should sum to), which the Fee Guard compares actuals against.
+		"expected_fee_pct": tier.RevenueSharePercent() + valueobject.ProcessingFeePercent,
+		"months":           result,
 	})
+}
+
+// abs64 returns the absolute value of an int64.
+func abs64(v int64) int64 {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 // ListAvailableTiers returns all available revenue share tiers

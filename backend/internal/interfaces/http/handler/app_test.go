@@ -484,3 +484,51 @@ func TestAppHandler_ListApps_NoUser(t *testing.T) {
 		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rec.Code)
 	}
 }
+
+// TestAppHandler_UpdateStoreSlug covers the slug endpoint that unblocks review sync
+// (RPT-REVIEWS-1): a plain slug is accepted, a pasted App Store URL is normalized to
+// its slug segment, and garbage is rejected 400.
+func TestAppHandler_UpdateStoreSlug(t *testing.T) {
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	appID := uuid.New()
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Zoko"}
+	h := NewAppHandler(nil, &mockPartnerRepoForSub{account: pa}, &mockAppRepoForSub{app: app}, nil)
+
+	do := func(body string) (*httptest.ResponseRecorder, map[string]interface{}) {
+		req := httptest.NewRequest(http.MethodPatch, "/api/v1/apps/"+appID.String()+"/store-slug", bytes.NewBufferString(body))
+		req = withURLParam(req, "appID", appID.String())
+		req = req.WithContext(contextWithUser(req.Context(), &entity.User{ID: pa.UserID, Role: valueobject.RoleOwner}))
+		rec := httptest.NewRecorder()
+		h.UpdateStoreSlug(rec, req)
+		var resp map[string]interface{}
+		_ = json.Unmarshal(rec.Body.Bytes(), &resp)
+		return rec, resp
+	}
+
+	// Plain slug accepted + persisted onto the app.
+	rec, resp := do(`{"app_store_slug":"zoko"}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("valid slug: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if resp["app_store_slug"] != "zoko" || app.AppStoreSlug != "zoko" {
+		t.Errorf("slug not set: resp=%v app=%q", resp["app_store_slug"], app.AppStoreSlug)
+	}
+
+	// A pasted App Store URL is normalized to just the slug segment.
+	rec, resp = do(`{"app_store_slug":"https://apps.shopify.com/klaviyo-email-marketing/reviews?foo=1"}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("url slug: expected 200, got %d", rec.Code)
+	}
+	if resp["app_store_slug"] != "klaviyo-email-marketing" {
+		t.Errorf("url not normalized: got %v", resp["app_store_slug"])
+	}
+
+	// Garbage (spaces/punctuation) is rejected.
+	if rec, _ := do(`{"app_store_slug":"Not A Slug!"}`); rec.Code != http.StatusBadRequest {
+		t.Errorf("invalid slug: expected 400, got %d", rec.Code)
+	}
+	// Empty is rejected too.
+	if rec, _ := do(`{"app_store_slug":"  "}`); rec.Code != http.StatusBadRequest {
+		t.Errorf("empty slug: expected 400, got %d", rec.Code)
+	}
+}

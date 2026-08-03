@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -356,8 +357,29 @@ type updateStoreSlugRequest struct {
 	AppStoreSlug string `json:"app_store_slug"`
 }
 
-// UpdateStoreSlug updates the app store slug for an app
-// PATCH /api/v1/apps/{appID}/store-slug
+// appStoreSlugPattern matches a Shopify App Store slug — the last path segment of
+// apps.shopify.com/<slug> — i.e. lowercase alphanumerics in hyphen-separated words
+// (e.g. "zoko", "klaviyo-email-marketing"). No leading/trailing/double hyphens.
+var appStoreSlugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+
+// normalizeAppStoreSlug trims a user-supplied slug and, if they pasted the full app
+// listing URL, extracts the slug segment (apps.shopify.com/<slug>[/...]).
+func normalizeAppStoreSlug(raw string) string {
+	s := strings.TrimSpace(raw)
+	if i := strings.Index(s, "apps.shopify.com/"); i >= 0 {
+		s = s[i+len("apps.shopify.com/"):]
+	}
+	s = strings.Trim(s, "/")
+	if i := strings.IndexAny(s, "/?#"); i >= 0 {
+		s = s[:i] // drop any /reviews, query, or fragment
+	}
+	return strings.ToLower(s)
+}
+
+// UpdateStoreSlug sets the app's Shopify App Store slug — the key that unblocks review
+// sync (the scraper hits apps.shopify.com/<slug>/reviews). The slug can't be fetched
+// from the Partner API, so it's set manually here.
+// PATCH /api/v1/apps/{appID}/store-slug   body: {"app_store_slug": "zoko"}
 func (h *AppHandler) UpdateStoreSlug(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
@@ -371,13 +393,20 @@ func (h *AppHandler) UpdateStoreSlug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slug := normalizeAppStoreSlug(req.AppStoreSlug)
+	if !appStoreSlugPattern.MatchString(slug) {
+		writeJSONError(w, http.StatusBadRequest,
+			"invalid app_store_slug — expected the apps.shopify.com/<slug> segment (lowercase letters, digits, hyphens)")
+		return
+	}
+
 	app, lookupErr := resolveAppFromRequest(r, h.partnerRepo, h.appRepo)
 	if lookupErr != nil {
 		writeJSONError(w, lookupErr.statusCode, lookupErr.message)
 		return
 	}
 
-	app.AppStoreSlug = req.AppStoreSlug
+	app.AppStoreSlug = slug
 	app.UpdatedAt = time.Now().UTC()
 
 	if err := h.appRepo.Update(r.Context(), app); err != nil {
@@ -387,7 +416,7 @@ func (h *AppHandler) UpdateStoreSlug(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":        "App store slug updated",
+		"message":        "App store slug updated — reviews will populate on the next sync",
 		"app_store_slug": app.AppStoreSlug,
 	})
 }

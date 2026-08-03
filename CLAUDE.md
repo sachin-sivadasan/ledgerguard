@@ -474,7 +474,7 @@ _(Legacy Bloc app `frontend/app/` — not deployed; use only if explicitly asked
 | Staging | `https://app.ledgerspear.com` (custom domain) / `ledgerguard-c7557.web.app` | `https://api.ledgerspear.com` (Hetzner, co-hosted) |
 | Production | TBD | `https://api.ledgerspear.com` (Hetzner) |
 
-> **Backend moved off GCP → Hetzner (2026-07-26).** GCP (`ledgerspear`: Cloud Run + Cloud SQL + VPC connector, ~₹2000/mo) was decommissioned. Backend now runs in Docker Compose on the shared Hetzner VPS via `deploy/cohost/` (see ADR-043 / `docs/HETZNER_MIGRATION_PLAN.md`). Deploy = SSH to box, `git pull`, `docker compose --env-file .env -f deploy/cohost/docker-compose.cohost.yml up -d --build`. `scripts/gcp-deploy.sh` is retired.
+> **Backend moved off GCP → Hetzner (2026-07-26).** GCP (`ledgerspear`: Cloud Run + Cloud SQL + VPC connector, ~₹2000/mo) was decommissioned. Backend now runs in Docker Compose on the shared Hetzner VPS via `deploy/cohost/` (see ADR-043 / `docs/HETZNER_MIGRATION_PLAN.md`). Deploy = SSH to box, `git pull`, `docker compose --env-file .env -f deploy/cohost/docker-compose.cohost.yml up -d --build`, then `docker builder prune -f && docker image prune -f` (disk hygiene — the shared box otherwise fills with orphaned build cache + dangling images; see `deploy/cohost/README.md` "Redeploy" and DECISIONS ADR-049). Never `docker system prune -af` on the shared box. `scripts/gcp-deploy.sh` is retired.
 
 ---
 

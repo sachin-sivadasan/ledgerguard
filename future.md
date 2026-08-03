@@ -141,6 +141,7 @@ Cross-referenced 15 user personas (`docs/USER_PERSONAS.md`) with existing Flutte
 
 | Item | Priority | Notes |
 |------|----------|-------|
+| Docker build-cache GC ceiling (daemon.json) | P3 | Safety net behind ADR-049's deploy-time `docker builder prune -f && docker image prune -f`. If a deploy ever skips the prune, set a build-cache ceiling in `/etc/docker/daemon.json` so cache can't exhaust the shared Hetzner disk: `{"builder":{"gc":{"enabled":true,"defaultKeepStorage":"2GB"}}}` then restart dockerd. Mirrors checkoutmate's deferred FUT item. Coordinate on the shared box (affects both co-hosted projects). |
 | Single risk-classification rule | P2 | There are TWO risk rules: `RiskEngine.ClassifyRisk` (status-aware — FROZEN→at-risk, PENDING→SAFE, terminal→CHURNED) and `Subscription.ClassifyRisk` (charge-recency only, ignores non-ACTIVE status). RISK-1b/STORE-1 (PR #59) made the read paths (`/risk/summary`, `/stores`) stop re-classifying and trust the **persisted** `risk_state` (written via `Subscription.ClassifyRisk` + `ApplyEventStatus` cancel-trap reconciliation), so all pages converge. Deeper fix: fold the status-aware handling (FROZEN/PENDING) into `Subscription.ClassifyRisk` (or make `ApplyEventStatus` the sole authority) and delete `RiskEngine.ClassifyRisk`/`ClassifyAll` so there's ONE rule. Changes persisted numbers → needs a full resync + CLAUDE.md §13 update (the directive's canonical rule is already out of step with the implementation). Also see FROZEN risk grading (Reports section). |
 
 ---

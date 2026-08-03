@@ -1052,3 +1052,19 @@ Scope uniqueness per app: `UNIQUE (app_id, shopify_gid)` on `subscriptions`, and
 - **Root cause upstream:** the two app records almost certainly point at the SAME Partner app (they share AppSubscription GIDs) — a duplicate/overlapping app record that should be reconciled/removed separately; the per-app constraint is the correct multi-tenancy fix regardless.
 - `SubscriptionRepository.FindByShopifyGID(gid)` (webhook paths) still assumes a globally-unique GID — now it may match >1 app's row; threading app context there is a follow-up.
 - Transactions also use a global `ON CONFLICT (shopify_gid)`; a shared tx GID across apps could bounce similarly — separate follow-up (tracked).
+
+### ADR-049: Prune Docker build cache + dangling images on every backend deploy
+
+**Date:** 2026-08-03
+**Status:** Adopted (deploy-command + docs change; no code)
+
+**Context:**
+The backend redeploys with `docker compose … up -d --build` on the shared Hetzner VPS (co-hosted with checkoutmate, ~75 GB disk). Each `--build` leaves orphaned **build cache** and a **dangling (`<none>`) image** as the tag moves to the new build. Left unattended these accumulate until the disk fills — checkoutmate hit ~56 GB / 78% disk over 20+ deploys before fixing it. LedgerGuard was heading the same way (disk climbing, "previous build images taking space").
+
+**Decision:**
+Append `docker builder prune -f && docker image prune -f` to the documented redeploy command (`deploy/cohost/README.md` "Redeploy", CLAUDE.md). Mirrors checkoutmate's fix. One-time reclaim uses the same two commands. Explicitly **not** `docker system prune -af`: its `-a` removes every image not referenced by a *running* container, which on this shared box can delete a stopped service's base image.
+
+**Consequences:**
+- Each deploy leaves ~0 orphaned cache + no dangling images; disk stays flat.
+- `image prune` (no `-a`) only removes untagged images, so no running/tagged image of either co-hosted project is at risk; safe to run on the shared box.
+- Deferred safety net (as in checkoutmate): a `daemon.json` build-cache GC ceiling if the deploy-time prune is ever skipped — logged in future.md.

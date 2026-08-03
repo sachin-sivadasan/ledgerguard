@@ -87,9 +87,11 @@ func (h *RiskHandler) Summary(w http.ResponseWriter, r *http.Request) {
 			firstInstall := resolveFirstInstall(ed.firstInstall, sub.StartDate())
 			lastInteraction := resolveLastInteraction(ed.lastInteraction, sub.LastRecurringChargeDate, sub.UpdatedAt)
 			atRiskStores = append(atRiskStores, atRiskStoreJSON{
-				ID:                 sub.ID.String(),
-				ShopDomain:         sub.MyshopifyDomain,
-				InstalledAppIDs:    []string{},
+				ID:         sub.ID.String(),
+				ShopDomain: sub.MyshopifyDomain,
+				// Populate installed_app_ids with the current app (RISK-2) so this
+				// endpoint's store serialization matches /stores (was empty []).
+				InstalledAppIDs:    []string{app.ID.String()},
 				HealthScore:        healthScoreFromRisk(sub.RiskState),
 				LifetimeValueCents: sub.BasePriceCents,
 				FirstInstallDate:   firstInstall.Format(time.RFC3339),

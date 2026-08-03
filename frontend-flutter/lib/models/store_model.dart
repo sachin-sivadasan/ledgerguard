@@ -24,8 +24,13 @@ class Store {
     this.timeline = const [],
   });
 
-  String get ltvFormatted =>
-      '\$${(lifetimeValueCents / 100).toStringAsFixed(2)}';
+  // Net lifetime value can be negative when refunds/chargebacks exceed revenue
+  // (RISK-3) — keep the real value but place the sign before the currency symbol
+  // ("-$28.00", not "$-28.00").
+  String get ltvFormatted {
+    final sign = lifetimeValueCents < 0 ? '-' : '';
+    return '$sign\$${(lifetimeValueCents.abs() / 100).toStringAsFixed(2)}';
+  }
 
   factory Store.fromJson(Map<String, dynamic> json) {
     return Store(

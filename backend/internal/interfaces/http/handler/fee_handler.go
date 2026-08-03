@@ -237,11 +237,11 @@ func (h *FeeHandler) GetMonthlyProfitBreakdown(w http.ResponseWriter, r *http.Re
 		summary := h.feeService.CalculateFeeSummary(transactions)
 		gross := summary.TotalGrossAmountCents
 		actualCut := summary.TotalRevenueShareCents
-		// Shopify's `shopifyFee` is its TOTAL retained amount (revenue share +
-		// processing), so compare against the tier's total expected fee — not the
-		// revenue-share portion alone, or a 0%-tier app (whose ~2.9% processing is
-		// still retained) would trip the guard every month.
-		expectedCut := tier.CalculateFeeBreakdown(gross, 0).TotalFeesCents
+		// Shopify's `shopifyFee` on app sales is the REVENUE SHARE alone — live data
+		// shows it lands on exactly the tier % (e.g. 15.00%), with no separate
+		// processing fee bundled in. So the expected baseline is the tier's revenue
+		// share, not the full breakdown.
+		expectedCut := tier.CalculateRevenueShareCents(gross)
 
 		var margin, effectivePct float64
 		if gross > 0 {
@@ -269,9 +269,9 @@ func (h *FeeHandler) GetMonthlyProfitBreakdown(w http.ResponseWriter, r *http.Re
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"tier":              tier.String(),
 		"tier_display_name": tier.DisplayName(),
-		// Total expected effective rate = revenue share + processing (what Shopify's
-		// shopifyFee should sum to), which the Fee Guard compares actuals against.
-		"expected_fee_pct": tier.RevenueSharePercent() + valueobject.ProcessingFeePercent,
+		// Expected effective rate = the tier's revenue share (what Shopify's shopifyFee
+		// should equal), which the Fee Guard compares actuals against.
+		"expected_fee_pct": tier.RevenueSharePercent(),
 		"months":           result,
 	})
 }

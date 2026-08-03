@@ -121,6 +121,44 @@ func TestInstalls_LifecycleAndConversion(t *testing.T) {
 	}
 }
 
+// TestInstalls_LifecycleDefragmentsShopKeys guards the fragmentation fix: a shop
+// whose app_events are stored under DIFFERENT keys over its life (ShopName while
+// free, then domain once paying) must count as ONE shop in the lifecycle tiles,
+// not two. Without canonicalization active/installed would double-count it.
+func TestInstalls_LifecycleDefragmentsShopKeys(t *testing.T) {
+	appID := uuid.New()
+	charge := insDay
+	// Same real shop: an early INSTALLED stored under its shop NAME (free era),
+	// then a REACTIVATED stored under its DOMAIN (after it started paying).
+	events := []*entity.AppEvent{
+		installEvt("Acme Store", "RELATIONSHIP_INSTALLED", insDay),
+		installEvt("acme.myshopify.com", "RELATIONSHIP_REACTIVATED", insDay.Add(time.Hour)),
+	}
+	subs := []*entity.Subscription{
+		{ID: uuid.New(), AppID: appID, MyshopifyDomain: "acme.myshopify.com", ShopName: "Acme Store", ShopifyShopGID: "gid://shopify/Shop/1", LastRecurringChargeDate: &charge},
+	}
+
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	h := NewInstallsReportHandler(
+		&mockSubscriptionRepo{subscriptions: subs},
+		&mockAppEventRepo{events: events},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+
+	resp := decodeInstalls(t, doInstalls(t, h, appID, pa, ""))
+	if resp.Lifecycle.Active != 1 {
+		t.Errorf("active = %d, want 1 (the free-name + paid-domain events are ONE shop)", resp.Lifecycle.Active)
+	}
+	if resp.Lifecycle.Installed != 1 {
+		t.Errorf("installed = %d, want 1 (not double-counted across keys)", resp.Lifecycle.Installed)
+	}
+	if resp.Conversion.Installs != 1 || resp.Conversion.Paid != 1 {
+		t.Errorf("conversion = %+v, want Installs:1 Paid:1 (100%%)", resp.Conversion)
+	}
+}
+
 // TestInstalls_KPIsAndUninstallSubstringTrap verifies the install/uninstall counts, net,
 // exclusion of non-lifecycle events, AND that RELATIONSHIP_UNINSTALLED is classified as
 // an Uninstall (its "INSTALL" substring must NOT make it an install).

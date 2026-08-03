@@ -90,7 +90,10 @@ func (h *UninstallContextHandler) GetUninstallContext(w http.ResponseWriter, r *
 		return
 	}
 
-	subsByShop := indexSubsByShop(subs)
+	// Correlate by ANY identifier a shop may carry: uninstall events are stored under
+	// the myshopify domain for charged shops (not the GID indexSubsByShop keys on), so
+	// a GID-only index misses every paying shop → all "Unknown" (RPT-UNINSTALL-1).
+	subsByShop := indexSubsByAnyIdentifier(subs)
 	report := buildUninstallReport(events, subsByShop, from, to)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
@@ -122,6 +125,27 @@ func indexSubsByShop(subs []*entity.Subscription) map[string]*entity.Subscriptio
 		byShop[s.ShopifyShopGID] = s
 	}
 	return byShop
+}
+
+// indexSubsByAnyIdentifier keys subscriptions by EVERY identifier an app event may
+// carry for the shop — GID, myshopify domain, and shop name — so a correlation hits
+// regardless of which form event_processor stored (the domain for charged shops, a
+// GID/name otherwise). Used where correlation matters (uninstall context), vs the
+// GID-only indexSubsByShop used only for display fallbacks.
+func indexSubsByAnyIdentifier(subs []*entity.Subscription) map[string]*entity.Subscription {
+	byKey := make(map[string]*entity.Subscription, len(subs)*2)
+	for _, s := range subs {
+		if s.ShopifyShopGID != "" {
+			byKey[s.ShopifyShopGID] = s
+		}
+		if s.MyshopifyDomain != "" {
+			byKey[s.MyshopifyDomain] = s
+		}
+		if s.ShopName != "" {
+			byKey[s.ShopName] = s
+		}
+	}
+	return byKey
 }
 
 // stateBeforeUninstall maps a correlated subscription to the human-readable state
@@ -171,14 +195,16 @@ func wereAtRiskRate(atRisk, correlated int) float64 {
 }
 
 // tenureMonths returns the sub's tenure at uninstall time in months (days ÷ 30),
-// rounded to 1 decimal. A nil sub yields 0 (the CSV writer blanks a 0; JSON keeps the
-// literal 0). Floored at 0 so a clock-skewed/backfilled uninstall predating CreatedAt
-// can't produce a negative tenure that skews the median.
+// rounded to 1 decimal. Measured from StartDate() (ActivatedAt — the real business
+// start), NOT CreatedAt: CreatedAt is the record/rebuild timestamp (≈ now), which for
+// a past uninstall yields a negative, floored-to-0 tenure (RPT-UNINSTALL-1). A nil sub
+// yields 0. Still floored at 0 so a backfilled uninstall predating the start can't
+// produce a negative that skews the median.
 func tenureMonths(sub *entity.Subscription, uninstalledAt time.Time) float64 {
 	if sub == nil {
 		return 0
 	}
-	days := uninstalledAt.Sub(sub.CreatedAt).Hours() / 24
+	days := uninstalledAt.Sub(sub.StartDate()).Hours() / 24
 	if days < 0 {
 		days = 0
 	}

@@ -76,6 +76,63 @@ func decodeUninstall(t *testing.T, rec *httptest.ResponseRecorder) uninstallRepo
 	return resp
 }
 
+// TestUninstall_CorrelatesDomainKeyedEventAndRealTenure is the RPT-UNINSTALL-1 guard:
+// uninstall events are stored under the myshopify DOMAIN (not the sub's GID), so the
+// correlation must still hit (state + plan resolved, not "Unknown"), and tenure must be
+// measured from ActivatedAt (real start) — not CreatedAt (rebuild ≈ now → 0).
+func TestUninstall_CorrelatesDomainKeyedEventAndRealTenure(t *testing.T) {
+	appID := uuid.New()
+	uninstalledAt := time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)
+	activated := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC) // 6 months before uninstall
+	rebuildNow := time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC) // CreatedAt = "now" (after uninstall)
+
+	sub := &entity.Subscription{
+		ID: uuid.New(), AppID: appID,
+		ShopifyShopGID:  "gid://shopify/Shop/1",
+		MyshopifyDomain: "acme.myshopify.com",
+		PlanName:        "Pro",
+		Status:          "UNINSTALLED",
+		RiskState:       valueobject.RiskStateChurned,
+		ActivatedAt:     &activated,
+		CreatedAt:       rebuildNow,
+	}
+	// Event keyed by the DOMAIN (how event_processor stores charged shops), NOT the GID.
+	events := []*entity.AppEvent{
+		{ID: uuid.New(), ShopifyShopGID: "acme.myshopify.com", EventType: "APP_UNINSTALLED", OccurredAt: uninstalledAt},
+	}
+
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	h := NewUninstallContextHandler(
+		&mockSubscriptionRepo{subscriptions: []*entity.Subscription{sub}},
+		&mockAppEventRepo{events: events},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+	resp := decodeUninstall(t, doUninstall(t, h, appID, pa, "from=2026-01-01&to=2026-12-31"))
+
+	if len(resp.Stores) != 1 {
+		t.Fatalf("expected 1 store, got %d", len(resp.Stores))
+	}
+	s := resp.Stores[0]
+	if s.StateBeforeUninstall != "At-Risk" {
+		t.Errorf("state = %q, want At-Risk (domain-keyed event must correlate, not Unknown)", s.StateBeforeUninstall)
+	}
+	if s.PlanName != "Pro" {
+		t.Errorf("plan = %q, want Pro (correlated)", s.PlanName)
+	}
+	// ~6 months from ActivatedAt, NOT 0 (which CreatedAt-based tenure would give).
+	if s.TenureMonths < 5.5 || s.TenureMonths > 6.5 {
+		t.Errorf("tenureMonths = %v, want ~6 (from ActivatedAt, not CreatedAt→0)", s.TenureMonths)
+	}
+	if resp.MedianTenureMonths < 5.5 {
+		t.Errorf("medianTenureMonths = %v, want ~6", resp.MedianTenureMonths)
+	}
+	if resp.WereAtRiskPct != 1 {
+		t.Errorf("wereAtRiskPct = %v, want 1 (the one correlated store was churned)", resp.WereAtRiskPct)
+	}
+}
+
 // TestUninstall_EventTypeFiltering verifies UNINSTALL* matches case-insensitively and
 // non-uninstall event types are excluded.
 func TestUninstall_EventTypeFiltering(t *testing.T) {

@@ -52,57 +52,72 @@ func doMonthlyFees(t *testing.T, tier valueobject.RevenueShareTier, txs []*entit
 }
 
 // TestMonthlyFees_GuardMatches: actual shopifyFee equals the tier's revenue share
-// (15% of gross) → fee_guard_ok true, variance 0, real shopify_cut populated (RPT-FEES-1).
+// (15% of gross) → guard consistent, real shopify_cut populated (RPT-FEES-1).
 func TestMonthlyFees_GuardMatches(t *testing.T) {
 	appID := uuid.New()
-	// tier 15% of $100 gross = $15.00 retained (pure revenue share, no processing).
 	resp := doMonthlyFees(t, valueobject.RevenueShareTierSmallDev15,
 		[]*entity.Transaction{feeTx(appID, 10000, 1500)})
 
-	if resp["expected_fee_pct"].(float64) != 15 {
-		t.Errorf("expected_fee_pct = %v, want 15", resp["expected_fee_pct"])
+	if resp["detected_fee_pct"].(float64) != 15 {
+		t.Errorf("detected_fee_pct = %v, want 15", resp["detected_fee_pct"])
 	}
 	m := resp["months"].([]any)[0].(map[string]any)
 	if m["shopify_cut_cents"].(float64) != 1500 {
 		t.Errorf("shopify_cut_cents = %v, want 1500 (real, from shopifyFee)", m["shopify_cut_cents"])
 	}
-	if m["expected_cut_cents"].(float64) != 1500 {
-		t.Errorf("expected_cut_cents = %v, want 1500 (revenue share)", m["expected_cut_cents"])
-	}
-	if m["fee_variance_cents"].(float64) != 0 {
-		t.Errorf("fee_variance_cents = %v, want 0", m["fee_variance_cents"])
-	}
 	if m["fee_guard_ok"] != true {
-		t.Errorf("fee_guard_ok = %v, want true", m["fee_guard_ok"])
+		t.Errorf("fee_guard_ok = %v, want true (consistent 15%%)", m["fee_guard_ok"])
 	}
 }
 
-// TestMonthlyFees_GuardFlagsOvercharge: Shopify retained 20% but the app's tier is 15%
-// → variance beyond 1% of gross trips the Fee Guard (catches a wrong rate / misconfigured
-// tier, exactly the case seen live where a 0%-configured app was charged ~15%).
-func TestMonthlyFees_GuardFlagsOvercharge(t *testing.T) {
+// TestMonthlyFees_DetectsActualTierAndFlagsMismatch is the RPT-FEES-2 guard: when the
+// CONFIGURED tier (0%) doesn't match what Shopify actually retains (~15%), the report
+// detects the real rate from the data, reports the configured-vs-actual mismatch
+// (tier_matches=false), and the per-month guard uses the DETECTED rate (so consistent
+// months don't false-alarm).
+func TestMonthlyFees_DetectsActualTierAndFlagsMismatch(t *testing.T) {
+	appID := uuid.New()
+	// App configured 0%, but Shopify actually retained 15% ($15 of $100).
+	resp := doMonthlyFees(t, valueobject.RevenueShareTierSmallDev0,
+		[]*entity.Transaction{feeTx(appID, 10000, 1500)})
+
+	if resp["configured_fee_pct"].(float64) != 0 {
+		t.Errorf("configured_fee_pct = %v, want 0", resp["configured_fee_pct"])
+	}
+	if resp["detected_fee_pct"].(float64) != 15 {
+		t.Errorf("detected_fee_pct = %v, want 15 (snapped from the 15%% actual)", resp["detected_fee_pct"])
+	}
+	if resp["tier_matches"] != false {
+		t.Errorf("tier_matches = %v, want false (configured 0%% ≠ actual 15%%)", resp["tier_matches"])
+	}
+	m := resp["months"].([]any)[0].(map[string]any)
+	if m["expected_cut_cents"].(float64) != 1500 {
+		t.Errorf("expected_cut_cents = %v, want 1500 (gross × DETECTED 15%%, not configured 0%%)", m["expected_cut_cents"])
+	}
+	if m["fee_guard_ok"] != true {
+		t.Errorf("fee_guard_ok = %v, want true (data is self-consistent at 15%%)", m["fee_guard_ok"])
+	}
+}
+
+// TestMonthlyFees_ConfiguredMatchesActual: a correctly-configured 15% app whose data is
+// 15% → tier_matches true.
+func TestMonthlyFees_ConfiguredMatchesActual(t *testing.T) {
 	appID := uuid.New()
 	resp := doMonthlyFees(t, valueobject.RevenueShareTierSmallDev15,
-		[]*entity.Transaction{feeTx(appID, 10000, 2000)}) // 20% actual vs 15% expected
-
-	m := resp["months"].([]any)[0].(map[string]any)
-	if m["fee_variance_cents"].(float64) != 500 {
-		t.Errorf("fee_variance_cents = %v, want 500 (2000 actual − 1500 expected)", m["fee_variance_cents"])
-	}
-	if m["fee_guard_ok"] != false {
-		t.Errorf("fee_guard_ok = %v, want false (overcharge exceeds 1%% of gross)", m["fee_guard_ok"])
+		[]*entity.Transaction{feeTx(appID, 10000, 1500)})
+	if resp["tier_matches"] != true {
+		t.Errorf("tier_matches = %v, want true (configured 15%% == actual 15%%)", resp["tier_matches"])
 	}
 }
 
-// TestMonthlyFees_ZeroTierNoFee: a correctly-configured 0% app that Shopify retains ~0
-// from → guard passes.
-func TestMonthlyFees_ZeroTierNoFee(t *testing.T) {
-	appID := uuid.New()
-	resp := doMonthlyFees(t, valueobject.RevenueShareTierSmallDev0,
-		[]*entity.Transaction{feeTx(appID, 10000, 0)})
-
-	m := resp["months"].([]any)[0].(map[string]any)
-	if m["fee_guard_ok"] != true {
-		t.Errorf("fee_guard_ok = %v, want true (0%% tier, 0 fee)", m["fee_guard_ok"])
+// TestSnapToTierRate pins the rate→tier snapping to the nearest real Shopify rate.
+func TestSnapToTierRate(t *testing.T) {
+	cases := map[float64]float64{
+		0: 0, 3.1: 0, 9.7: 15, 14: 15, 15.02: 15, 17: 15, 18.5: 20, 20: 20, 22: 20,
+	}
+	for in, want := range cases {
+		if got := snapToTierRate(in); got != want {
+			t.Errorf("snapToTierRate(%v) = %v, want %v", in, got, want)
+		}
 	}
 }

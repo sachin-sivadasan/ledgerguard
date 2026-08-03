@@ -955,30 +955,41 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 	return events, nil
 }
 
-// CountInstalls derives install metrics from the app-wide RELATIONSHIP event
-// stream by running a per-shop state machine over the relationship events:
-//   - active  = shops whose LATEST relationship event is INSTALLED or REACTIVATED
-//     (currently installed; matches Shopify's Partner "active installs" / Mantle
+// LifecycleCounts is the current app-wide install-lifecycle snapshot derived from
+// the RELATIONSHIP_* event stream (all values are distinct-shop counts):
+//   - Active        = shops whose LATEST relationship event is INSTALLED or
+//     REACTIVATED (currently installed; = Shopify "active installs" / Mantle
 //     "active users").
-//   - total   = distinct shops that have ever installed (any INSTALLED event) —
-//     the lifetime install base (Mantle "Installed").
-//
-// Shops are keyed by ShopID (GID), falling back to ShopName. Non-relationship
-// events (subscription charges etc.) are ignored.
-func CountInstalls(events []AppEvent) (active, total int) {
+//   - EverInstalled = shops that ever had an INSTALLED event (lifetime install
+//     base; = Mantle "Installed").
+//   - Uninstalled   = shops whose latest relationship event is UNINSTALLED.
+//   - Deactivated   = shops whose latest relationship event is DEACTIVATED.
+//   - Reactivated   = shops that ever had a REACTIVATED event (returning users).
+type LifecycleCounts struct {
+	Active        int
+	EverInstalled int
+	Uninstalled   int
+	Deactivated   int
+	Reactivated   int
+}
+
+// CountLifecycle runs a per-shop state machine over the app-wide RELATIONSHIP
+// event stream. Shops are keyed by ShopID (GID), falling back to ShopName;
+// non-relationship events (subscription charges etc.) are ignored.
+func CountLifecycle(events []AppEvent) LifecycleCounts {
 	type shopState struct {
-		latest   time.Time
-		seen     bool
-		active   bool
-		everInst bool
+		latest     time.Time
+		seen       bool
+		active     bool
+		latestKind string
+		everInst   bool
+		everReact  bool
 	}
 	byShop := make(map[string]*shopState)
 	for _, ev := range events {
-		var isRel, isActive, isInstall bool
+		var isRel, isActive bool
 		switch ev.Type {
-		case "RELATIONSHIP_INSTALLED":
-			isRel, isActive, isInstall = true, true, true
-		case "RELATIONSHIP_REACTIVATED":
+		case "RELATIONSHIP_INSTALLED", "RELATIONSHIP_REACTIVATED":
 			isRel, isActive = true, true
 		case "RELATIONSHIP_UNINSTALLED", "RELATIONSHIP_DEACTIVATED":
 			isRel = true // inactive
@@ -998,8 +1009,11 @@ func CountInstalls(events []AppEvent) (active, total int) {
 			s = &shopState{}
 			byShop[key] = s
 		}
-		if isInstall {
+		switch ev.Type {
+		case "RELATIONSHIP_INSTALLED":
 			s.everInst = true
+		case "RELATIONSHIP_REACTIVATED":
+			s.everReact = true
 		}
 		// Latest event by OccurredAt wins; at an EQUAL timestamp an active signal
 		// outranks an inactive one (deterministic tie-break, mirroring the
@@ -1009,18 +1023,35 @@ func CountInstalls(events []AppEvent) (active, total int) {
 			(ev.OccurredAt.Equal(s.latest) && isActive && !s.active) {
 			s.latest = ev.OccurredAt
 			s.active = isActive
+			s.latestKind = ev.Type
 			s.seen = true
 		}
 	}
+	var lc LifecycleCounts
 	for _, s := range byShop {
 		if s.everInst {
-			total++
+			lc.EverInstalled++
 		}
-		if s.active {
-			active++
+		if s.everReact {
+			lc.Reactivated++
+		}
+		switch s.latestKind {
+		case "RELATIONSHIP_INSTALLED", "RELATIONSHIP_REACTIVATED":
+			lc.Active++
+		case "RELATIONSHIP_UNINSTALLED":
+			lc.Uninstalled++
+		case "RELATIONSHIP_DEACTIVATED":
+			lc.Deactivated++
 		}
 	}
-	return active, total
+	return lc
+}
+
+// CountInstalls returns the active and lifetime install counts. Thin wrapper over
+// CountLifecycle, preserved for existing callers (event_processor install-count).
+func CountInstalls(events []AppEvent) (active, total int) {
+	lc := CountLifecycle(events)
+	return lc.Active, lc.EverInstalled
 }
 
 // GetLatestSubscriptionStatus determines subscription status from the latest

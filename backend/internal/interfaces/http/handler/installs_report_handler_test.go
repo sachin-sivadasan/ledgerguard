@@ -74,6 +74,53 @@ func decodeInstalls(t *testing.T, rec *httptest.ResponseRecorder) installsReport
 
 var insDay = time.Date(2026, 7, 10, 12, 0, 0, 0, time.UTC)
 
+// TestInstalls_LifecycleAndConversion verifies the all-time lifecycle tiles and the
+// install→paid conversion headline (APPS-1b), independent of the from/to window.
+func TestInstalls_LifecycleAndConversion(t *testing.T) {
+	appID := uuid.New()
+	charge := insDay
+	// 4 shops ever installed; shop-b uninstalled, shop-c reactivated (active),
+	// shop-d deactivated. Two of them (a, c) have a recurring charge → paid.
+	events := []*entity.AppEvent{
+		installEvt("shop-a", "RELATIONSHIP_INSTALLED", insDay),
+		installEvt("shop-b", "RELATIONSHIP_INSTALLED", insDay),
+		installEvt("shop-b", "RELATIONSHIP_UNINSTALLED", insDay.Add(2*time.Hour)),
+		installEvt("shop-c", "RELATIONSHIP_INSTALLED", insDay),
+		installEvt("shop-c", "RELATIONSHIP_REACTIVATED", insDay.Add(3*time.Hour)),
+		installEvt("shop-d", "RELATIONSHIP_INSTALLED", insDay),
+		installEvt("shop-d", "RELATIONSHIP_DEACTIVATED", insDay.Add(time.Hour)),
+	}
+	subs := []*entity.Subscription{
+		{ID: uuid.New(), AppID: appID, MyshopifyDomain: "shop-a", LastRecurringChargeDate: &charge},
+		{ID: uuid.New(), AppID: appID, MyshopifyDomain: "shop-c", LastRecurringChargeDate: &charge},
+		{ID: uuid.New(), AppID: appID, MyshopifyDomain: "shop-e"}, // never charged → not paid
+	}
+
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	app := &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "Test App"}
+	h := NewInstallsReportHandler(
+		&mockSubscriptionRepo{subscriptions: subs},
+		&mockAppEventRepo{events: events},
+		&mockAppRepoForSub{app: app},
+		&mockPartnerRepoForSub{account: pa},
+	)
+
+	resp := decodeInstalls(t, doInstalls(t, h, appID, pa, ""))
+
+	lc := resp.Lifecycle
+	if lc.Active != 2 || lc.Installed != 4 || lc.Uninstalled != 1 || lc.Reactivated != 1 || lc.Deactivated != 1 {
+		t.Errorf("lifecycle = %+v, want {Active:2 Installed:4 Uninstalled:1 Reactivated:1 Deactivated:1}", lc)
+	}
+
+	conv := resp.Conversion
+	if conv.Installs != 4 || conv.Paid != 2 {
+		t.Errorf("conversion counts = %+v, want Installs:4 Paid:2", conv)
+	}
+	if conv.Rate < 0.49 || conv.Rate > 0.51 { // 2/4 = 0.5
+		t.Errorf("conversion rate = %v, want ~0.5", conv.Rate)
+	}
+}
+
 // TestInstalls_KPIsAndUninstallSubstringTrap verifies the install/uninstall counts, net,
 // exclusion of non-lifecycle events, AND that RELATIONSHIP_UNINSTALLED is classified as
 // an Uninstall (its "INSTALL" substring must NOT make it an install).

@@ -49,6 +49,49 @@ class InstallEvent {
   }
 }
 
+/// All-time install-lifecycle snapshot (APPS-1b tiles) — distinct-shop counts.
+class InstallLifecycle {
+  final int active; // currently installed
+  final int installed; // lifetime install base
+  final int uninstalled; // currently uninstalled
+  final int reactivated; // returning shops (ever reactivated)
+  final int deactivated;
+
+  const InstallLifecycle({
+    this.active = 0,
+    this.installed = 0,
+    this.uninstalled = 0,
+    this.reactivated = 0,
+    this.deactivated = 0,
+  });
+
+  factory InstallLifecycle.fromJson(Map<String, dynamic> json) => InstallLifecycle(
+        active: (json['active'] as num?)?.toInt() ?? 0,
+        installed: (json['installed'] as num?)?.toInt() ?? 0,
+        uninstalled: (json['uninstalled'] as num?)?.toInt() ?? 0,
+        reactivated: (json['reactivated'] as num?)?.toInt() ?? 0,
+        deactivated: (json['deactivated'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// Install→paid conversion headline (APPS-1b). The full funnel is the Activation report.
+class InstallConversion {
+  final int installs; // lifetime install base (denominator)
+  final int paid; // distinct shops that ever paid
+  final double rate; // paid / installs, 0..1
+
+  const InstallConversion({this.installs = 0, this.paid = 0, this.rate = 0});
+
+  /// Whole-percent string for display, e.g. 0.238 → "24%".
+  String get ratePercent => '${(rate * 100).round()}%';
+
+  factory InstallConversion.fromJson(Map<String, dynamic> json) => InstallConversion(
+        installs: (json['installs'] as num?)?.toInt() ?? 0,
+        paid: (json['paid'] as num?)?.toInt() ?? 0,
+        rate: (json['rate'] as num?)?.toDouble() ?? 0,
+      );
+}
+
 /// Full Installs report payload.
 class InstallsReport {
   final int installs;
@@ -56,6 +99,8 @@ class InstallsReport {
   final int net;
   final List<InstallTrendPoint> trend;
   final List<InstallEvent> events;
+  final InstallLifecycle lifecycle;
+  final InstallConversion conversion;
 
   /// Full event-row count before ?limit/?offset paging — drives the report
   /// preview's "View all N" affordance and the detail page's pagination.
@@ -68,6 +113,8 @@ class InstallsReport {
     required this.trend,
     required this.events,
     required this.eventsTotal,
+    this.lifecycle = const InstallLifecycle(),
+    this.conversion = const InstallConversion(),
   });
 
   factory InstallsReport.fromJson(Map<String, dynamic> json) {
@@ -85,6 +132,12 @@ class InstallsReport {
               .toList() ??
           [],
       events: events,
+      lifecycle: json['lifecycle'] is Map<String, dynamic>
+          ? InstallLifecycle.fromJson(json['lifecycle'] as Map<String, dynamic>)
+          : const InstallLifecycle(),
+      conversion: json['conversion'] is Map<String, dynamic>
+          ? InstallConversion.fromJson(json['conversion'] as Map<String, dynamic>)
+          : const InstallConversion(),
       // Fall back to the visible count for older responses without the field.
       eventsTotal: (json['eventsTotal'] as num?)?.toInt() ?? events.length,
     );

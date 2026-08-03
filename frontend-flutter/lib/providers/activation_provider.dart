@@ -105,16 +105,12 @@ class ActivationProvider extends ChangeNotifier {
     return _service.fetchCsvBytes(appId, from: range.from, to: range.to);
   }
 
-  /// Mock dataset mirroring the wireframe numbers: 62 installs → 38 started
-  /// → 29 paid, 47% overall / 61% install→sub / 76% sub→paid.
+  /// Mock dataset: 2-stage funnel, 62 installs → 29 paid (47%).
   ActivationReport _mockReport() {
     return ActivationReport(
       installs: 62,
-      started: 38,
       paid: 29,
       overallPct: 0.47,
-      installToSubPct: 0.61,
-      subToPaidPct: 0.76,
       stages: [
         ActivationStage(
           key: 'installs',
@@ -123,16 +119,10 @@ class ActivationProvider extends ChangeNotifier {
           pctOfPrior: 1.0,
         ),
         ActivationStage(
-          key: 'started',
-          label: 'Started Subscription',
-          count: 38,
-          pctOfPrior: 0.61,
-        ),
-        ActivationStage(
           key: 'paid',
           label: 'Paid / Recurring',
           count: 29,
-          pctOfPrior: 0.76,
+          pctOfPrior: 0.47,
         ),
       ],
     );

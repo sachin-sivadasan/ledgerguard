@@ -228,3 +228,21 @@ Some nav destinations don't match their obvious hash path: `/#/dashboard` → "n
 
 **Deferred (already in future.md):**
 - Transactions `loadMore` swallows page errors; store filter is client-only/page-scoped (PR #45 follow-ups).
+
+---
+
+## Reports & Analytics deep-dive sweep (2026-08-03)
+
+Swept all 20 report/analytics endpoints in prod (fresh full-history data). **All return HTTP 200 — no crashes/500/503.** Data anomalies found, by priority:
+
+| # | Report | Finding | Sev |
+|---|--------|---------|-----|
+| RPT-ACTIVATION-1 ✅ | `/reports/activation` | ~~`started:0, paid:0` — funnel throttled by sparse `CHARGE_ACCEPTED` events (~120 shops) vs 2,931 real payers~~ **FIXED (PR pending):** redesigned to a **2-stage all-time Installs → Paid funnel** reusing the Installs report's `computeLifecycleAndConversion`, so it's identical to the APPS-1b conversion card by construction (~10,469 → ~2,931 = 28%). Dropped the unreliable event-sourced "Started" middle stage. Backend + frontend + tests rewritten. | ✅ |
+| RPT-FEES-1 | `/fees/monthly` (Profit & Expense) | `shopify_cut_cents: 0, processing_fee_cents: 0, tax_cents: 0` for every month → fee breakdown not computed; profit margin ~97% is just gross−net. This is the **Fee Audit / "Guard" differentiator** — currently inert. | 🟠 |
+| RPT-UNINSTALL-1 | `/reports/uninstall-context` | `wereAtRiskPct: 0, medianTenureMonths: 0`, every store `stateBeforeUninstall: "Unknown"`, `tenureMonths: 0` → the pre-uninstall enrichment join resolves nothing. | 🟠 |
+| RPT-CHURN-WINDOW | `/reports/mrr` (`churnedMrrCents:0`), `/active-customers` (`churnedCount:0`), `/net-new-subscriptions` (`churned:0`) | Windowed churn is 0 across all three despite 318 uninstalls in the window + 55% lifetime churn. Root = no `churned_at` column (churn is a sync-time reconciliation, not date-stamped) — already in future.md (Cohorts polish). | 🟡 |
+| RPT-PAYOUT-1 | `/reports/payout-schedule` | `nextPayoutDate: 2026-07-07` is a month in the PAST (today 08-03); first row `amountCents: -3399`. `/payout-history` fully empty (0 payouts). | 🟡 |
+| RPT-REVIEWS-1 | `/reports/reviews` | `avgRating:0, totalReviews:0` — review sync captured nothing (verify: genuinely no reviews vs `review_sync` not pulling). | 🟡 |
+| RPT-ACTIVE-DEF | `/active-customers` (1,309) vs `/subscriptions` (1,168) vs `/risk` safe (1,168) | "Active customers" = safe+at-risk (1,309); "activeSubs"/risk-safe = safe only (1,168). Definitional split — decide one canonical "active" or label them distinctly. | 🟡 |
+
+**Healthy (data looks correct):** revenue-at-risk, churn (lifetime), retention, mrr (level), earnings, revenue-mix, usage, usage-trends, subscriptions, cohorts, forecast, revenue-concentration, net-new (new side). Installs ✅ (APPS-1b verified).

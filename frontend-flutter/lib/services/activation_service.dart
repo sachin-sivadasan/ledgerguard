@@ -33,45 +33,29 @@ class ActivationStage {
   }
 }
 
-/// Full Activation report payload: the install-to-paid conversion funnel.
+/// Full Activation report payload: the all-time install → paid conversion funnel
+/// (2 stages). Matches the Installs report's conversion headline by construction.
 class ActivationReport {
   final int installs;
-  final int started;
   final int paid;
 
   /// Overall install → paid conversion, 0..1. Clamped in [fromJson].
   final double overallPct;
 
-  /// Install → subscription conversion, 0..1. Clamped in [fromJson].
-  final double installToSubPct;
-
-  /// Subscription → paid conversion, 0..1. Clamped in [fromJson].
-  final double subToPaidPct;
-
   final List<ActivationStage> stages;
 
   ActivationReport({
     required this.installs,
-    required this.started,
     required this.paid,
     required this.overallPct,
-    required this.installToSubPct,
-    required this.subToPaidPct,
     required this.stages,
   });
 
   factory ActivationReport.fromJson(Map<String, dynamic> json) {
     return ActivationReport(
       installs: (json['installs'] as num?)?.toInt() ?? 0,
-      started: (json['started'] as num?)?.toInt() ?? 0,
       paid: (json['paid'] as num?)?.toInt() ?? 0,
       overallPct: ((json['overallPct'] as num?)?.toDouble() ?? 0).clamp(
-        0.0,
-        1.0,
-      ),
-      installToSubPct: ((json['installToSubPct'] as num?)?.toDouble() ?? 0)
-          .clamp(0.0, 1.0),
-      subToPaidPct: ((json['subToPaidPct'] as num?)?.toDouble() ?? 0).clamp(
         0.0,
         1.0,
       ),
@@ -85,11 +69,8 @@ class ActivationReport {
 
   static ActivationReport empty() => ActivationReport(
     installs: 0,
-    started: 0,
     paid: 0,
     overallPct: 0,
-    installToSubPct: 0,
-    subToPaidPct: 0,
     stages: const [],
   );
 }

@@ -128,8 +128,7 @@ class _ActivationScreenState extends State<ActivationScreen>
     final report = provider.report ?? ActivationReport.empty();
     final appsList = appsProvider.apps;
     final showAppFilter = appsList.isNotEmpty;
-    final hasData =
-        report.installs > 0 || report.started > 0 || report.paid > 0;
+    final hasData = report.installs > 0 || report.paid > 0;
 
     return LgPage(
       title: 'Activation',
@@ -194,22 +193,22 @@ class _HeroRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cards = [
       _KpiCard(
-        label: 'Overall Install → Paid',
+        label: 'Install → Paid',
         value: _percent(report.overallPct),
         color: LgColors.success,
         footnote: '${report.paid} paid of ${report.installs} installs',
       ),
       _KpiCard(
-        label: 'Install → Subscription',
-        value: _percent(report.installToSubPct),
+        label: 'Lifetime Installs',
+        value: '${report.installs}',
         color: LgColors.textPrimary,
-        footnote: '${report.started} started a subscription',
+        footnote: 'distinct stores that ever installed',
       ),
       _KpiCard(
-        label: 'Subscription → Paid',
-        value: _percent(report.subToPaidPct),
+        label: 'Paying Stores',
+        value: '${report.paid}',
         color: LgColors.textPrimary,
-        footnote: '${report.paid} reached recurring charge',
+        footnote: 'reached a recurring charge',
       ),
     ];
 
@@ -306,11 +305,10 @@ class _FunnelCard extends StatelessWidget {
     }
 
     final installs = report.installs;
-    final started = report.started;
     final paid = report.paid;
 
-    // Widths are proportional to count / installs, so each bar is narrower
-    // than the one above it. Guard against divide-by-zero.
+    // Widths are proportional to count / installs, so the paid bar is narrower
+    // than installs. Guard against divide-by-zero.
     double frac(int count) {
       if (installs <= 0) return 0;
       return (count / installs).clamp(0.0, 1.0);
@@ -323,7 +321,7 @@ class _FunnelCard extends StatelessWidget {
           Text('Activation funnel', style: theme.textTheme.titleSmall),
           const SizedBox(height: LgSpacing.s100),
           Text(
-            'joins install events ↔ subscriptions',
+            'all-time install → paid conversion',
             style: theme.textTheme.bodySmall?.copyWith(
               color: LgColors.textSecondary,
             ),
@@ -336,34 +334,20 @@ class _FunnelCard extends StatelessWidget {
             borderColor: const Color(0xFF5C6AC4),
             countColor: const Color(0xFF5C6AC4),
             title: stageFor('installs')?.label ?? 'Installs',
-            subtitle: 'Stores that installed the app',
+            subtitle: 'Stores that ever installed the app',
             count: installs,
           ),
-          _ConversionLabel(
-            text: '↓  ${_percent(report.installToSubPct)} convert',
-          ),
-          // Stage 2 — Started Subscription (green, narrower).
-          _FunnelBar(
-            widthFactor: frac(started),
-            fillColor: const Color(0xFFECFDF5),
-            borderColor: LgColors.success,
-            countColor: LgColors.success,
-            title: stageFor('started')?.label ?? 'Started Subscription',
-            subtitle: 'Selected a plan / began billing',
-            count: started,
-            note: '${_percent(report.installToSubPct)} of installs',
-          ),
-          _ConversionLabel(text: '↓  ${_percent(report.subToPaidPct)} convert'),
-          // Stage 3 — Paid / Recurring (green, narrowest).
+          _ConversionLabel(text: '↓  ${_percent(report.overallPct)} convert'),
+          // Stage 2 — Paid / Recurring (green, narrower).
           _FunnelBar(
             widthFactor: frac(paid),
             fillColor: const Color(0xFFECFDF5),
             borderColor: LgColors.success,
             countColor: LgColors.success,
             title: stageFor('paid')?.label ?? 'Paid / Recurring',
-            subtitle: 'Reached first recurring charge',
+            subtitle: 'Reached a recurring charge',
             count: paid,
-            note: '${_percent(report.subToPaidPct)} of subs',
+            note: '${_percent(report.overallPct)} of installs',
           ),
           const SizedBox(height: LgSpacing.s400),
           Text(

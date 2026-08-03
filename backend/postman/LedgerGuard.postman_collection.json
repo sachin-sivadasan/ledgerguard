@@ -247,19 +247,6 @@
             ],
             "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/install-count"
           }
-        },
-        {
-          "name": "Refresh Install Count",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{firebaseToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/apps/{{appUUID}}/refresh-install-count"
-          }
         }
       ]
     },
@@ -1252,6 +1239,49 @@
           }
         },
         {
+          "name": "Activation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/apps/{{appUUID}}/reports/activation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "apps",
+                "{{appUUID}}",
+                "reports",
+                "activation"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-01-01",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2026-07-29",
+                  "disabled": true
+                },
+                {
+                  "key": "format",
+                  "value": "csv",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "Net-New Subscriptions",
           "request": {
             "method": "GET",
@@ -1459,7 +1489,7 @@
                 {
                   "key": "type",
                   "value": "full",
-                  "description": "full | transactions | events | status | snapshot | stores | reviews. 'full' fetches entire history (LookbackDays=0 → SyncHistoryStart)."
+                  "description": "full | transactions | events | status | snapshot | stores | reviews. 'full' fetches entire history (LookbackDays=0 \u2192 SyncHistoryStart)."
                 }
               ]
             }
@@ -1494,7 +1524,7 @@
                 {
                   "key": "app_id",
                   "value": "{{appUUID}}",
-                  "description": "Required — internal app UUID."
+                  "description": "Required \u2014 internal app UUID."
                 },
                 {
                   "key": "status",

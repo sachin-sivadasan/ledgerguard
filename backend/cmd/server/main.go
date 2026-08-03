@@ -331,14 +331,13 @@ func run() error {
 	// Initialize store handler
 	var storeHandler *handler.StoreHandler
 	if subscriptionRepo != nil && txRepo != nil && partnerRepo != nil && appRepo != nil {
-		storeRiskEngine := domainservice.NewRiskEngine()
 		// Guard against a typed-nil interface: only pass the event repo when it
 		// was actually constructed, so the handler's nil check behaves.
 		var storeEventRepo repository.AppEventRepository
 		if appEventRepo != nil {
 			storeEventRepo = appEventRepo
 		}
-		storeHandler = handler.NewStoreHandler(subscriptionRepo, txRepo, storeEventRepo, partnerRepo, appRepo, storeRiskEngine)
+		storeHandler = handler.NewStoreHandler(subscriptionRepo, txRepo, storeEventRepo, partnerRepo, appRepo)
 		log.Println("Store handler initialized")
 	}
 

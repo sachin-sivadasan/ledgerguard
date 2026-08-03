@@ -16,10 +16,10 @@ Last updated: 2026-07-30
 | Transactions | ✅ Fixed (PR #45) | Server-side Gross/Net/Cut totals + full-history window; live count 49,607 verified |
 | Subscriptions | 🔴 Open findings | See SUB-1..SUB-3 below — partial fix shipped (PR #46), reconciliation fix pending |
 | Dashboard | 🔴 Open findings | route is `/` (not `/dashboard`); see DASH-1..DASH-3 |
-| Stores | 🟠 STORE-2 fixed; STORE-1 w/ SUB-1 | 2926 stores; install/interaction dates event-sourced |
+| Stores | ✅ STORE-1/STORE-2 fixed | dates event-sourced; risk badges use persisted state |
 | Store Detail | 🔴 Open findings | route `/#/stores/{domain}`; see SD-1..SD-4 |
 | Events | ✅ EVT-1/2/3 fixed | app-wide events; badge/title mapping fixed |
-| Risk | 🔴 Open findings | see RISK-1..RISK-3 |
+| Risk | 🟠 RISK-1b fixed | RISK-2/RISK-3 minor open |
 | Earnings | 🔴 Open findings | all $0.00 in UI, data exists in API; see EARN-1..EARN-2 |
 | Analytics | 🟢 Mostly OK | Revenue/MRR-movement render; see ANALYTICS-1 (minor) — only Revenue tab checked |
 | Reports | ⏳ Catalog OK | ~16 report cards render; per-report deep-test pending (many inherit risk/earnings root causes) |
@@ -45,6 +45,8 @@ Last updated: 2026-07-30
 **✅ SUB-1 / SUB-2 FIXED + VERIFIED (PR #49, deployed+resynced).** Active 718 → **1,057**; `lokjoylokjoy` (billed Jul 22, was CANCELLED/CHURNED) → **ACTIVE/SAFE**. Subscriptions (1,057) and Risk (1,068) now converge (were 718/729).
 
 **✅ RISK-1 Dashboard convergence FIXED + VERIFIED (PR #50, deployed+resynced).** After the Wave-3 snapshot + RefreshTodaySnapshot: Subscriptions `/summary` and Dashboard `/metrics` now report **identical** safe **1,061** / at-risk 21 / churned **1,848** (Dashboard was 1,176). Remaining: the **Risk page `/risk/summary` (stores.risk_state)** still differs — safe 1,076, at-risk 130, churned 1,724 — because store health/risk is a **separate cycle-based grading**, not the subscription risk. Unifying store risk with subscription risk is a follow-up (RISK-1b).
+
+**✅ RISK-1b FIXED (PR pending) — Risk page now trusts persisted risk_state.** Root cause (not "store risk" as first guessed): `RiskHandler.Summary` re-classified live with `RiskEngine.ClassifyAll` (a naive status→risk rule) while Subscriptions/Dashboard read the persisted `subscriptions.risk_state`. The naive rule **lacks the SUB-1 cancel-trap reconciliation** (it maps terminal status → CHURNED unconditionally) and special-cases FROZEN/PENDING, so it diverged (safe 1,076 vs 1,061 — the ~15 delta = mostly PENDING subs it forced to SAFE). Fix: drop the `ClassifyAll` re-classification; `/risk/summary` now counts the same reconciled persisted state as the other two pages → all three converge at **1,061**. Regression test `TestRiskHandler_Summary_UsesPersistedRiskState` locks it (a CANCELLED-but-persisted-SAFE cancel-trap sub must not be re-churned). Backend-only, no resync needed. Deeper single-rule unification (make the domain `Subscription.ClassifyRisk` status-aware) is a larger follow-up requiring a resync — deferred.
 
 **RISK-1 🟠 residual (historical writeup) — Dashboard snapshot lags.** After the fix: Subscriptions `/summary` safe **1,057**, Risk `/summary` safe **1,068** (converged), but Dashboard `/metrics` safe **1,176**. Cause: `/metrics` reads the **daily snapshot written during ledger rebuild — BEFORE `StatusProcessor` reconciliation** (pure charge-recency), while the other two read the post-reconciliation live state. The reconciled ~1,060 is the more-correct number (excludes ~120 subs that genuinely uninstalled/cancelled with no billing after). **Fix:** recompute/refresh the daily snapshot AFTER StatusProcessor runs (or have the metrics endpoint read live subs). Then all three agree.
 
@@ -85,7 +87,7 @@ Live KPIs: MRR $62,917 (+4.2%), Renewal 40.2%, Revenue at Risk $6,241, Usage Rev
 
 2,926 stores (1:1 with subs). Cards show Health %, LTV, Apps, risk badge.
 
-**STORE-1 🔴 Store risk badges over-churned** — inherits the polluted `risk_state` (same root cause as SUB-1). Many "Churned/10% health" stores are actually active. Fixes with SUB-1.
+**STORE-1 ✅ Store risk badges over-churned** — had TWO causes: (1) the polluted `risk_state` (SUB-1, fixed) and (2) `StoreHandler.List` **re-classified live** via `RiskEngine.ClassifyAll` — the same naive-rule divergence as RISK-1b — so even after SUB-1 the Stores page re-churned cancel-trap stores. Fixed alongside RISK-1b: `StoreHandler` now uses the persisted reconciled `risk_state` for each store's badge/health (dropped ClassifyAll + the now-unused riskEngine dep). Regression test `TestStoreHandler_List_UsesPersistedRiskState`. (PR pending)
 
 **STORE-2 ✅ `first_install_date` / `last_interaction` now event-sourced (was record-created time)**
 - `/stores` (and `/risk/summary`) previously returned the resync record-creation timestamp for every store's `first_install_date`, and `UpdatedAt` (rebuild time) for `last_interaction`. Fixed: both endpoints now join the `app_events` stream (keyed by myshopify domain) via a shared `buildStoreDatesFromEvents` helper — `first_install_date` = earliest `RELATIONSHIP_INSTALLED`/`REACTIVATED` event, `last_interaction` = most-recent event of any type. Fallbacks (no matching events): install = `sub.StartDate()` (ActivatedAt = earliest recurring charge), interaction = `LastRecurringChargeDate` else UpdatedAt. `appEventRepo` is nil-tolerant. Backend-only. (PR pending)

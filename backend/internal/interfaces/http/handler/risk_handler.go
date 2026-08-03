@@ -49,8 +49,12 @@ func (h *RiskHandler) Summary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now().UTC()
-	h.riskEngine.ClassifyAll(subs, now)
+	// Count the PERSISTED risk_state — the reconciled value written by the sync
+	// pipeline (ledger rebuild + StatusProcessor.ApplyEventStatus cancel-trap
+	// reconciliation), the same source Subscriptions /summary and Dashboard
+	// /metrics read. Do NOT re-run RiskEngine.ClassifyAll here (RISK-1b): its
+	// naive status→risk rule lacks the cancel-trap reconciliation and diverged
+	// from the other two pages (safe 1,076 vs 1,061).
 	summary := h.riskEngine.CalculateRiskSummary(subs)
 
 	// Real install / last-interaction dates from the app-event stream; subscription

@@ -25,6 +25,7 @@ import 'providers/activation_provider.dart';
 import 'providers/fee_audit_provider.dart';
 import 'providers/ledger_recon_provider.dart';
 import 'providers/customer_insights_provider.dart';
+import 'providers/plan_label_provider.dart';
 import 'providers/retention_provider.dart';
 import 'providers/usage_provider.dart';
 import 'providers/usage_trends_provider.dart';
@@ -59,6 +60,7 @@ import 'services/activation_service.dart';
 import 'services/fee_audit_service.dart';
 import 'services/ledger_recon_service.dart';
 import 'services/customer_insights_service.dart';
+import 'services/plan_label_service.dart';
 import 'services/retention_service.dart';
 import 'services/usage_service.dart';
 import 'services/usage_trends_service.dart';
@@ -115,6 +117,7 @@ void main() async {
   final feeAuditService = FeeAuditService(apiClient);
   final ledgerReconService = LedgerReconService(apiClient);
   final customerInsightsService = CustomerInsightsService(apiClient);
+  final planLabelService = PlanLabelService(apiClient);
   final uninstallContextService = UninstallContextService(apiClient);
   final reviewsService = ReviewsService(apiClient);
   final eventsService = EventsService(apiClient);
@@ -156,6 +159,7 @@ void main() async {
   final ledgerReconProvider = LedgerReconProvider(ledgerReconService);
   final customerInsightsProvider =
       CustomerInsightsProvider(customerInsightsService);
+  final planLabelProvider = PlanLabelProvider(planLabelService);
   final uninstallContextProvider = UninstallContextProvider(
     uninstallContextService,
   );
@@ -234,6 +238,7 @@ void main() async {
         ChangeNotifierProvider.value(value: feeAuditProvider),
         ChangeNotifierProvider.value(value: ledgerReconProvider),
         ChangeNotifierProvider.value(value: customerInsightsProvider),
+        ChangeNotifierProvider.value(value: planLabelProvider),
         ChangeNotifierProvider.value(value: uninstallContextProvider),
         ChangeNotifierProvider.value(value: reviewsProvider),
         ChangeNotifierProvider.value(value: analyticsProvider),

@@ -71,6 +71,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: LgSpacing.s600),
 
+          // Reports
+          LgCard(
+            title: 'Reports',
+            child: ListTile(
+              leading: const Icon(Icons.sell_outlined),
+              title: const Text('Plan labels'),
+              subtitle: const Text('Name your price tiers for the plan reports'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/settings/plan-labels'),
+            ),
+          ),
+          const SizedBox(height: LgSpacing.s600),
+
           // Organization / Team
           LgCard(
             title: 'Organization',

@@ -24,24 +24,28 @@ import (
 // their MRR never mixes USAGE per the Revenue Classification rule. Mirrors the
 // MRRReportHandler structure (subs + snapshot for the churn denominator).
 type SubscriptionsReportHandler struct {
-	subRepo      repository.SubscriptionRepository
-	snapshotRepo repository.DailyMetricsSnapshotRepository
-	appRepo      repository.AppRepository
-	partnerRepo  repository.PartnerAccountRepository
+	subRepo       repository.SubscriptionRepository
+	snapshotRepo  repository.DailyMetricsSnapshotRepository
+	appRepo       repository.AppRepository
+	partnerRepo   repository.PartnerAccountRepository
+	planLabelRepo repository.PlanLabelRepository
 }
 
-// NewSubscriptionsReportHandler constructs a SubscriptionsReportHandler.
+// NewSubscriptionsReportHandler constructs a SubscriptionsReportHandler. planLabelRepo may
+// be nil (plan labels then fall back to pseudo-labels).
 func NewSubscriptionsReportHandler(
 	subRepo repository.SubscriptionRepository,
 	snapshotRepo repository.DailyMetricsSnapshotRepository,
 	appRepo repository.AppRepository,
 	partnerRepo repository.PartnerAccountRepository,
+	planLabelRepo repository.PlanLabelRepository,
 ) *SubscriptionsReportHandler {
 	return &SubscriptionsReportHandler{
-		subRepo:      subRepo,
-		snapshotRepo: snapshotRepo,
-		appRepo:      appRepo,
-		partnerRepo:  partnerRepo,
+		subRepo:       subRepo,
+		snapshotRepo:  snapshotRepo,
+		appRepo:       appRepo,
+		partnerRepo:   partnerRepo,
+		planLabelRepo: planLabelRepo,
 	}
 }
 
@@ -107,7 +111,8 @@ func (h *SubscriptionsReportHandler) GetSubscriptions(w http.ResponseWriter, r *
 		log.Printf("subscriptions: no snapshot in 90d window for app %s — churn denominator unavailable, LTV undefined", app.ID)
 	}
 
-	report := buildSubscriptionsReport(subs, latest, newPlanLabeler(nil))
+	labeler := newPlanLabeler(planLabelMapFor(r.Context(), h.planLabelRepo, app.ID))
+	report := buildSubscriptionsReport(subs, latest, labeler)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
 		writeSubscriptionsPlansCSV(w, report.Plans)

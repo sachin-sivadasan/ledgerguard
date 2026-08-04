@@ -37,6 +37,7 @@ func activeCustomersFixture(subs []*entity.Subscription, snaps []*entity.DailyMe
 		&mockSnapshotRepoForForecast{snapshots: snaps},
 		&mockAppRepoForSub{app: app},
 		&mockPartnerRepoForSub{account: pa},
+		nil,
 	)
 	return appID, pa, h
 }
@@ -377,6 +378,7 @@ func TestActiveCustomers_MonthlyGranularity(t *testing.T) {
 		&mockSnapshotRepoForForecast{snapshots: snaps},
 		&mockAppRepoForSub{app: app},
 		&mockPartnerRepoForSub{account: pa},
+		nil,
 	)
 	rec := doActiveCustomers(t, h, appID2, pa, "from=2026-01-01&to=2026-06-30") // >92d → month
 	resp := decodeActiveCustomers(t, rec)

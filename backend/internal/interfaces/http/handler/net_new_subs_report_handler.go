@@ -24,21 +24,24 @@ import (
 // or UpdatedAt when no charge date) falls in range — so the KPIs, trend and table all
 // reconcile. Mirrors the MRRReportHandler's new/churned movement logic (as counts).
 type NetNewSubsReportHandler struct {
-	subRepo     repository.SubscriptionRepository
-	appRepo     repository.AppRepository
-	partnerRepo repository.PartnerAccountRepository
+	subRepo       repository.SubscriptionRepository
+	appRepo       repository.AppRepository
+	partnerRepo   repository.PartnerAccountRepository
+	planLabelRepo repository.PlanLabelRepository
 }
 
-// NewNetNewSubsReportHandler constructs a NetNewSubsReportHandler.
+// NewNetNewSubsReportHandler constructs a NetNewSubsReportHandler. planLabelRepo may be nil.
 func NewNetNewSubsReportHandler(
 	subRepo repository.SubscriptionRepository,
 	appRepo repository.AppRepository,
 	partnerRepo repository.PartnerAccountRepository,
+	planLabelRepo repository.PlanLabelRepository,
 ) *NetNewSubsReportHandler {
 	return &NetNewSubsReportHandler{
-		subRepo:     subRepo,
-		appRepo:     appRepo,
-		partnerRepo: partnerRepo,
+		subRepo:       subRepo,
+		appRepo:       appRepo,
+		partnerRepo:   partnerRepo,
+		planLabelRepo: planLabelRepo,
 	}
 }
 
@@ -97,7 +100,8 @@ func (h *NetNewSubsReportHandler) GetNetNewSubs(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	report := buildNetNewSubsReport(subs, from, to, newPlanLabeler(nil))
+	labeler := newPlanLabeler(planLabelMapFor(r.Context(), h.planLabelRepo, app.ID))
+	report := buildNetNewSubsReport(subs, from, to, labeler)
 	allStores := report.NewStores
 	report.NewStoresTotal = int64(len(allStores))
 

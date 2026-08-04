@@ -145,6 +145,7 @@ func run() error {
 	var appRepo *persistence.PostgresAppRepository
 	var txRepo *persistence.PostgresTransactionRepository
 	var subscriptionRepo *persistence.PostgresSubscriptionRepository
+	var planLabelRepo *persistence.PostgresPlanLabelRepository
 	var snapshotRepo *persistence.PostgresDailyMetricsSnapshotRepository
 	var shopRepo *persistence.PostgresShopRepository
 	var billingSubRepo *persistence.PostgresBillingSubscriptionRepository
@@ -160,6 +161,7 @@ func run() error {
 		appRepo = persistence.NewPostgresAppRepository(db.Pool)
 		txRepo = persistence.NewPostgresTransactionRepository(db.Pool)
 		subscriptionRepo = persistence.NewPostgresSubscriptionRepository(db.Pool)
+		planLabelRepo = persistence.NewPostgresPlanLabelRepository(db.Pool)
 		snapshotRepo = persistence.NewPostgresDailyMetricsSnapshotRepository(db.Pool)
 		shopRepo = persistence.NewPostgresShopRepository(db.Pool)
 		billingSubRepo = persistence.NewPostgresBillingSubscriptionRepository(db.Pool)
@@ -392,7 +394,7 @@ func run() error {
 
 	var activeCustomersReportHandler *handler.ActiveCustomersReportHandler
 	if subscriptionRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
-		activeCustomersReportHandler = handler.NewActiveCustomersReportHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo)
+		activeCustomersReportHandler = handler.NewActiveCustomersReportHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo, planLabelRepo)
 		log.Println("Active Customers report handler initialized")
 	}
 
@@ -434,7 +436,7 @@ func run() error {
 	// Initialize subscriptions (ARPU / LTV) report handler (Archetype B — composition)
 	var subscriptionsReportHandler *handler.SubscriptionsReportHandler
 	if subscriptionRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
-		subscriptionsReportHandler = handler.NewSubscriptionsReportHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo)
+		subscriptionsReportHandler = handler.NewSubscriptionsReportHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo, planLabelRepo)
 		log.Println("Subscriptions report handler initialized")
 	}
 
@@ -474,8 +476,14 @@ func run() error {
 
 	var customerInsightsReportHandler *handler.CustomerInsightsReportHandler
 	if subscriptionRepo != nil && appRepo != nil && partnerRepo != nil {
-		customerInsightsReportHandler = handler.NewCustomerInsightsReportHandler(subscriptionRepo, appRepo, partnerRepo)
+		customerInsightsReportHandler = handler.NewCustomerInsightsReportHandler(subscriptionRepo, appRepo, partnerRepo, planLabelRepo)
 		log.Println("Customer insights report handler initialized")
+	}
+
+	var planLabelHandler *handler.PlanLabelHandler
+	if subscriptionRepo != nil && planLabelRepo != nil && appRepo != nil && partnerRepo != nil {
+		planLabelHandler = handler.NewPlanLabelHandler(subscriptionRepo, planLabelRepo, appRepo, partnerRepo)
+		log.Println("Plan label handler initialized")
 	}
 
 	// Initialize activation report handler (Growth, Archetype E — install→paid funnel)
@@ -488,7 +496,7 @@ func run() error {
 	// Initialize net-new subscriptions report handler (Growth, Archetype A — new vs churned)
 	var netNewSubsReportHandler *handler.NetNewSubsReportHandler
 	if subscriptionRepo != nil && appRepo != nil && partnerRepo != nil {
-		netNewSubsReportHandler = handler.NewNetNewSubsReportHandler(subscriptionRepo, appRepo, partnerRepo)
+		netNewSubsReportHandler = handler.NewNetNewSubsReportHandler(subscriptionRepo, appRepo, partnerRepo, planLabelRepo)
 		log.Println("Net-new subscriptions report handler initialized")
 	}
 
@@ -912,6 +920,7 @@ func run() error {
 		FeeAuditReportHandler:          feeAuditReportHandler,
 		LedgerReconReportHandler:       ledgerReconReportHandler,
 		CustomerInsightsReportHandler:  customerInsightsReportHandler,
+		PlanLabelHandler:               planLabelHandler,
 		ActivationReportHandler:        activationReportHandler,
 		NetNewSubsReportHandler:        netNewSubsReportHandler,
 		RiskHandler:                    riskHandler,

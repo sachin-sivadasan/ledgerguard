@@ -20,6 +20,7 @@ func newCustomerInsightsHandler(appID uuid.UUID, pa *entity.PartnerAccount, subs
 		&mockSubscriptionRepo{subscriptions: subs, findAllErr: findErr},
 		&mockAppRepoForSub{app: app},
 		&mockPartnerRepoForSub{account: pa},
+		nil,
 	)
 }
 

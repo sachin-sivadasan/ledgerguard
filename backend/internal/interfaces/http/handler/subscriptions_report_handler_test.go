@@ -36,6 +36,7 @@ func newSubscriptionsHandler(appID uuid.UUID, pa *entity.PartnerAccount, subs []
 		&mockSnapshotRepoForForecast{snapshots: snaps},
 		&mockAppRepoForSub{app: app},
 		&mockPartnerRepoForSub{account: pa},
+		nil,
 	)
 }
 
@@ -348,6 +349,7 @@ func TestSubscriptions_SubRepoErrorReturns503(t *testing.T) {
 		&mockSnapshotRepoForForecast{},
 		&mockAppRepoForSub{app: app},
 		&mockPartnerRepoForSub{account: pa},
+		nil,
 	)
 	rec := doSubscriptions(t, h, appID, pa, "")
 	if rec.Code != http.StatusServiceUnavailable {
@@ -365,6 +367,7 @@ func TestSubscriptions_SnapshotRepoErrorReturns503(t *testing.T) {
 		&mockSnapshotRepoForForecast{rangeErr: errors.New("snapshot db down")},
 		&mockAppRepoForSub{app: app},
 		&mockPartnerRepoForSub{account: pa},
+		nil,
 	)
 	rec := doSubscriptions(t, h, appID, pa, "")
 	if rec.Code != http.StatusServiceUnavailable {

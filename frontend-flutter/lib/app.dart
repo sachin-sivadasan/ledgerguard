@@ -36,6 +36,7 @@ import 'screens/reports/payout_schedule_payouts_screen.dart';
 import 'screens/reports/payout_history_screen.dart';
 import 'screens/reports/payout_history_payouts_screen.dart';
 import 'screens/reports/fee_audit_screen.dart';
+import 'screens/reports/ledger_recon_screen.dart';
 import 'screens/reports/installs_screen.dart';
 import 'screens/reports/installs_events_screen.dart';
 import 'screens/reports/net_new_subs_screen.dart';
@@ -303,6 +304,10 @@ class _AppState extends State<App> {
                     GoRoute(
                       path: 'fee-audit',
                       builder: (c, s) => const FeeAuditScreen(),
+                    ),
+                    GoRoute(
+                      path: 'ledger-reconciliation',
+                      builder: (c, s) => const LedgerReconScreen(),
                     ),
                     GoRoute(
                       path: 'installs/events',

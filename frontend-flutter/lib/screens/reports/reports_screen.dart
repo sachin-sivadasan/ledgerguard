@@ -115,7 +115,8 @@ class ReportsScreen extends StatelessWidget {
       _ReportEntry('Fee Audit', 'Verify Shopify fee calculations',
           route: '/reports/fee-audit'),
       _ReportEntry('Payout Accuracy', 'Reconcile expected vs actual payouts'),
-      _ReportEntry('Ledger Reconciliation', 'Cross-check the rebuilt ledger'),
+      _ReportEntry('Ledger Reconciliation', 'Cross-check the rebuilt ledger',
+          route: '/reports/ledger-reconciliation'),
     ]),
   ];
 

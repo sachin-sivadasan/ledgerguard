@@ -466,6 +466,12 @@ func run() error {
 		log.Println("Fee audit report handler initialized")
 	}
 
+	var ledgerReconReportHandler *handler.LedgerReconciliationReportHandler
+	if txRepo != nil && appRepo != nil && partnerRepo != nil {
+		ledgerReconReportHandler = handler.NewLedgerReconciliationReportHandler(txRepo, appRepo, partnerRepo, domainservice.NewFeeVerificationService())
+		log.Println("Ledger reconciliation report handler initialized")
+	}
+
 	// Initialize activation report handler (Growth, Archetype E — install→paid funnel)
 	var activationReportHandler *handler.ActivationReportHandler
 	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -898,6 +904,7 @@ func run() error {
 		UninstallContextHandler:        uninstallContextHandler,
 		InstallsReportHandler:          installsReportHandler,
 		FeeAuditReportHandler:          feeAuditReportHandler,
+		LedgerReconReportHandler:       ledgerReconReportHandler,
 		ActivationReportHandler:        activationReportHandler,
 		NetNewSubsReportHandler:        netNewSubsReportHandler,
 		RiskHandler:                    riskHandler,

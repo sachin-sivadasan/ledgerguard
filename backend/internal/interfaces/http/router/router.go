@@ -53,6 +53,7 @@ type Config struct {
 	UninstallContextHandler        *handler.UninstallContextHandler
 	InstallsReportHandler          *handler.InstallsReportHandler
 	FeeAuditReportHandler          *handler.FeeAuditReportHandler
+	LedgerReconReportHandler       *handler.LedgerReconciliationReportHandler
 	ActivationReportHandler        *handler.ActivationReportHandler
 	NetNewSubsReportHandler        *handler.NetNewSubsReportHandler
 	RiskHandler                    *handler.RiskHandler
@@ -337,6 +338,11 @@ func New(cfg Config) *chi.Mux {
 				// Fee Audit report route (Guard — actual vs expected Shopify fees)
 				if cfg.FeeAuditReportHandler != nil {
 					r.Get("/{appID}/reports/fee-audit", cfg.FeeAuditReportHandler.GetFeeAudit)
+				}
+
+				// Ledger Reconciliation report route (Guard — gross = net + fee integrity)
+				if cfg.LedgerReconReportHandler != nil {
+					r.Get("/{appID}/reports/ledger-reconciliation", cfg.LedgerReconReportHandler.GetLedgerReconciliation)
 				}
 
 				// Net-New Subscriptions report route (Growth, Archetype A — new vs churned)

@@ -23,6 +23,7 @@ import 'providers/mrr_report_provider.dart';
 import 'providers/active_customers_provider.dart';
 import 'providers/activation_provider.dart';
 import 'providers/fee_audit_provider.dart';
+import 'providers/ledger_recon_provider.dart';
 import 'providers/retention_provider.dart';
 import 'providers/usage_provider.dart';
 import 'providers/usage_trends_provider.dart';
@@ -55,6 +56,7 @@ import 'services/mrr_report_service.dart';
 import 'services/active_customers_service.dart';
 import 'services/activation_service.dart';
 import 'services/fee_audit_service.dart';
+import 'services/ledger_recon_service.dart';
 import 'services/retention_service.dart';
 import 'services/usage_service.dart';
 import 'services/usage_trends_service.dart';
@@ -109,6 +111,7 @@ void main() async {
   final activeCustomersService = ActiveCustomersService(apiClient);
   final activationService = ActivationService(apiClient);
   final feeAuditService = FeeAuditService(apiClient);
+  final ledgerReconService = LedgerReconService(apiClient);
   final uninstallContextService = UninstallContextService(apiClient);
   final reviewsService = ReviewsService(apiClient);
   final eventsService = EventsService(apiClient);
@@ -147,6 +150,7 @@ void main() async {
   );
   final activationProvider = ActivationProvider(activationService);
   final feeAuditProvider = FeeAuditProvider(feeAuditService);
+  final ledgerReconProvider = LedgerReconProvider(ledgerReconService);
   final uninstallContextProvider = UninstallContextProvider(
     uninstallContextService,
   );
@@ -181,6 +185,7 @@ void main() async {
     activeCustomersProvider: activeCustomersProvider,
     activationProvider: activationProvider,
     feeAuditProvider: feeAuditProvider,
+    ledgerReconProvider: ledgerReconProvider,
     uninstallContextProvider: uninstallContextProvider,
     reviewsProvider: reviewsProvider,
     analyticsProvider: analyticsProvider,
@@ -221,6 +226,7 @@ void main() async {
         ChangeNotifierProvider.value(value: activeCustomersProvider),
         ChangeNotifierProvider.value(value: activationProvider),
         ChangeNotifierProvider.value(value: feeAuditProvider),
+        ChangeNotifierProvider.value(value: ledgerReconProvider),
         ChangeNotifierProvider.value(value: uninstallContextProvider),
         ChangeNotifierProvider.value(value: reviewsProvider),
         ChangeNotifierProvider.value(value: analyticsProvider),

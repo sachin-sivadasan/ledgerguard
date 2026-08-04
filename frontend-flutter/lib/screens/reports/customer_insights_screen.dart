@@ -20,6 +20,10 @@ import '../../widgets/lg_service_unavailable.dart';
 String _money(int cents) =>
     NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(cents / 100);
 
+// The backend derives a price-tier label when a plan has no name; this is the last-ditch
+// fallback so a stray empty value never renders as a blank cell.
+String _planLabel(String plan) => plan.isEmpty ? 'Unspecified' : plan;
+
 String _riskLabel(String state) {
   switch (state) {
     case 'SAFE':
@@ -348,7 +352,7 @@ class _PlanRiskTable extends StatelessWidget {
         ),
         ...report.planRisk.map((p) => TableRow(
               children: [
-                _cell(p.planName),
+                _cell(_planLabel(p.planName)),
                 _cell(NumberFormat.decimalPattern().format(p.customers)),
                 Padding(
                   padding: const EdgeInsets.all(8),
@@ -413,7 +417,7 @@ class _TopCustomersTable extends StatelessWidget {
                         Text(c.shopName,
                             style: const TextStyle(
                                 fontSize: 13, fontWeight: FontWeight.w600)),
-                        Text(c.planName,
+                        Text(_planLabel(c.planName),
                             style: const TextStyle(
                                 fontSize: 11, color: LgColors.textSecondary)),
                       ],

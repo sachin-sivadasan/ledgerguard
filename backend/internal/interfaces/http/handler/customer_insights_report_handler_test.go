@@ -158,6 +158,39 @@ func TestCustomerInsights_TopCustomersOrderedAndActiveOnly(t *testing.T) {
 	}
 }
 
+// TestCustomerInsights_PseudoPlanLabels: when subs have no plan name (the common case —
+// the Partner API doesn't provide one), the crosstab segments by a price-tier pseudo-label
+// instead of collapsing into one blank row.
+func TestCustomerInsights_PseudoPlanLabels(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	// Two price tiers, no plan names.
+	a := atRiskSub(appID, "a.myshopify.com", "", 5000, valueobject.RiskStateSafe)
+	b := atRiskSub(appID, "b.myshopify.com", "", 5000, valueobject.RiskStateSafe)
+	c := atRiskSub(appID, "c.myshopify.com", "", 1000, valueobject.RiskStateSafe)
+	h := newCustomerInsightsHandler(appID, pa, []*entity.Subscription{a, b, c}, nil)
+	rec := doCustomerInsights(t, h, appID, pa, "", true)
+
+	var resp customerInsightsReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	// Two distinct price tiers → two named rows, not one blank row.
+	if len(resp.PlanRisk) != 2 {
+		t.Fatalf("planRisk rows = %d, want 2 price tiers", len(resp.PlanRisk))
+	}
+	labels := map[string]bool{}
+	for _, p := range resp.PlanRisk {
+		if p.PlanName == "" {
+			t.Errorf("empty plan label leaked into the crosstab")
+		}
+		labels[p.PlanName] = true
+	}
+	if !labels["$50.00/mo"] || !labels["$10.00/mo"] {
+		t.Errorf("expected pseudo-labels $50.00/mo and $10.00/mo, got %v", labels)
+	}
+}
+
 func TestCustomerInsights_401WithoutUser(t *testing.T) {
 	appID := uuid.New()
 	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}

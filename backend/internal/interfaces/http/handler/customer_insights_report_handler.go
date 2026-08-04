@@ -127,7 +127,9 @@ func (h *CustomerInsightsReportHandler) GetCustomerInsights(w http.ResponseWrite
 		return
 	}
 
-	report := buildCustomerInsights(subs)
+	// Phase 1: pseudo-labels only (nil map). A developer plan-label map from the app will
+	// be threaded in here when the plan-label settings ship.
+	report := buildCustomerInsights(subs, newPlanLabeler(nil))
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
 		writeCustomerInsightsCSV(w, report)
@@ -143,7 +145,7 @@ func (h *CustomerInsightsReportHandler) GetCustomerInsights(w http.ResponseWrite
 // buildCustomerInsights segments the subscriptions into the report's four views. The
 // active base (SAFE + at-risk) drives revenue bands, the plan crosstab, top customers, and
 // the headline KPIs; churned subs contribute only the CHURNED risk segment.
-func buildCustomerInsights(subs []*entity.Subscription) customerInsightsReport {
+func buildCustomerInsights(subs []*entity.Subscription, labeler planLabeler) customerInsightsReport {
 	currency := "USD"
 	for _, s := range subs {
 		if s.Currency != "" {
@@ -189,11 +191,12 @@ func buildCustomerInsights(subs []*entity.Subscription) customerInsightsReport {
 			report.AtRiskMrrCents += mrr
 		}
 
-		row, ok := planAgg[s.PlanName]
+		plan := labeler.label(s)
+		row, ok := planAgg[plan]
 		if !ok {
-			row = &planRiskRow{PlanName: s.PlanName}
-			planAgg[s.PlanName] = row
-			planOrder = append(planOrder, s.PlanName)
+			row = &planRiskRow{PlanName: plan}
+			planAgg[plan] = row
+			planOrder = append(planOrder, plan)
 		}
 		row.Customers++
 		row.MrrCents += mrr
@@ -212,7 +215,7 @@ func buildCustomerInsights(subs []*entity.Subscription) customerInsightsReport {
 	report.RiskSegments = []riskSegment{safeSeg, atRiskSeg, churnedSeg}
 	report.RevenueBands = buildRevenueBands(bandCustomers, bandMrr, report.TotalCustomers)
 	report.PlanRisk = buildPlanRisk(planAgg, planOrder)
-	report.TopCustomers = buildTopCustomers(actives)
+	report.TopCustomers = buildTopCustomers(actives, labeler)
 	return report
 }
 
@@ -262,7 +265,7 @@ func buildPlanRisk(agg map[string]*planRiskRow, order []string) []planRiskRow {
 
 // buildTopCustomers returns the highest-MRR active customers, capped. Ties break by shop
 // name so the ordering is deterministic across rebuilds.
-func buildTopCustomers(actives []*entity.Subscription) []topCustomer {
+func buildTopCustomers(actives []*entity.Subscription, labeler planLabeler) []topCustomer {
 	sorted := make([]*entity.Subscription, len(actives))
 	copy(sorted, actives)
 	sort.SliceStable(sorted, func(i, j int) bool {
@@ -279,7 +282,7 @@ func buildTopCustomers(actives []*entity.Subscription) []topCustomer {
 	for _, s := range sorted[:limit] {
 		top = append(top, topCustomer{
 			ShopName:  s.ShopName,
-			PlanName:  s.PlanName,
+			PlanName:  labeler.label(s),
 			MrrCents:  s.MRRCents(),
 			RiskState: string(s.RiskState),
 		})

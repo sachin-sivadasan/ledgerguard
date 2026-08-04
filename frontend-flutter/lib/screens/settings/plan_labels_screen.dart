@@ -23,6 +23,7 @@ class PlanLabelsScreen extends StatefulWidget {
 
 class _PlanLabelsScreenState extends State<PlanLabelsScreen> {
   final Map<String, TextEditingController> _controllers = {};
+  String? _controllersAppId; // the app the current controllers were seeded for
 
   @override
   void initState() {
@@ -44,8 +45,17 @@ class _PlanLabelsScreenState extends State<PlanLabelsScreen> {
     super.dispose();
   }
 
-  // Keep one controller per tier key, seeded with the current label.
+  // Keep one controller per tier key, seeded with the current label. When the selected app
+  // changes, discard all controllers first — otherwise a tier key shared by two apps (e.g.
+  // both priced at $29 → "MONTHLY:2900") would keep the previous app's text.
   void _syncControllers(PlanLabelProvider provider) {
+    if (_controllersAppId != provider.selectedAppId) {
+      for (final c in _controllers.values) {
+        c.dispose();
+      }
+      _controllers.clear();
+      _controllersAppId = provider.selectedAppId;
+    }
     final keys = provider.tiers.map((t) => t.key).toSet();
     _controllers.removeWhere((k, c) {
       if (!keys.contains(k)) {

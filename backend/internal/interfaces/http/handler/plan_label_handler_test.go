@@ -142,6 +142,16 @@ func TestPlanLabels_PutRejectsDuplicateTier(t *testing.T) {
 	}
 }
 
+func TestPlanLabels_PutRejectsBadInterval(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	body := `{"labels":[{"billingInterval":"weekly","priceCents":2900,"label":"Starter"}]}`
+	rec := doPlanLabels(t, newPlanLabelHandler(appID, pa, nil, &mockPlanLabelRepo{}), http.MethodPut, appID, pa, body, true)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 on malformed interval, got %d", rec.Code)
+	}
+}
+
 func TestPlanLabels_401WithoutUser(t *testing.T) {
 	appID := uuid.New()
 	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}

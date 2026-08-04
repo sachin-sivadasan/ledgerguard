@@ -13,8 +13,12 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
-// planLabelMaxLen caps a label to the DB column width.
-const planLabelMaxLen = 120
+// planLabelMaxLen caps a label to the DB column width; planLabelsMax caps the tier count in
+// one save (an app has a handful of price tiers, never hundreds).
+const (
+	planLabelMaxLen = 120
+	planLabelsMax   = 200
+)
 
 // PlanLabelHandler manages developer-assigned names for price tiers (see plan_label.go).
 // GET returns the distinct price tiers present in the app's un-named subscriptions (the
@@ -145,11 +149,16 @@ func (h *PlanLabelHandler) PutPlanLabels(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 64*1024)
 	var body struct {
 		Labels []planLabelInput `json:"labels"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if len(body.Labels) > planLabelsMax {
+		writeJSONError(w, http.StatusBadRequest, "too many tiers")
 		return
 	}
 
@@ -169,6 +178,12 @@ func (h *PlanLabelHandler) PutPlanLabels(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		interval := valueobject.BillingInterval(in.BillingInterval)
+		// Allow empty (some synced subs carry no interval — planKey treats it as monthly),
+		// but reject a malformed non-empty value that could never match a real tier.
+		if in.BillingInterval != "" && !interval.IsValid() {
+			writeJSONError(w, http.StatusBadRequest, "invalid billingInterval")
+			return
+		}
 		key := planKey(interval, in.PriceCents)
 		if seen[key] {
 			writeJSONError(w, http.StatusBadRequest, "duplicate tier in request")

@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sort"
@@ -216,7 +217,7 @@ func buildCustomerInsights(subs []*entity.Subscription, labeler planLabeler) cus
 
 	report.RiskSegments = []riskSegment{safeSeg, atRiskSeg, churnedSeg}
 	report.RevenueBands = buildRevenueBands(bandCustomers, bandMrr, report.TotalCustomers)
-	report.PlanRisk = buildPlanRisk(planAgg, planOrder)
+	report.PlanRisk = buildPlanRisk(planAgg, planOrder, report.TotalCustomers)
 	report.TopCustomers = buildTopCustomers(actives, labeler)
 	return report
 }
@@ -250,8 +251,10 @@ func buildRevenueBands(customers []int, mrr []int64, totalActive int) []revenueB
 	return bands
 }
 
-// buildPlanRisk flattens the plan crosstab, sorted by MRR descending.
-func buildPlanRisk(agg map[string]*planRiskRow, order []string) []planRiskRow {
+// buildPlanRisk flattens the plan crosstab, sorted by MRR descending, then folds minor
+// tiers (proration/refund noise — see tierSignificanceThreshold) into a single trailing
+// "Other (N tiers)" row so the table shows the real plans, not dozens of one-off prices.
+func buildPlanRisk(agg map[string]*planRiskRow, order []string, totalActive int) []planRiskRow {
 	rows := make([]planRiskRow, 0, len(agg))
 	for _, name := range order {
 		rows = append(rows, *agg[name])
@@ -262,7 +265,31 @@ func buildPlanRisk(agg map[string]*planRiskRow, order []string) []planRiskRow {
 		}
 		return rows[i].PlanName < rows[j].PlanName // stable tie-break across rebuilds
 	})
-	return rows
+
+	if len(rows) <= minTiersToCollapse {
+		return rows
+	}
+	threshold := tierSignificanceThreshold(totalActive)
+	significant := make([]planRiskRow, 0, len(rows))
+	other := planRiskRow{PlanName: "Other"}
+	otherTiers := 0
+	for _, r := range rows {
+		if r.Customers >= threshold || !isPseudoPlanLabel(r.PlanName) {
+			significant = append(significant, r)
+			continue
+		}
+		other.Customers += r.Customers
+		other.SafeCount += r.SafeCount
+		other.AtRiskCount += r.AtRiskCount
+		other.MrrCents += r.MrrCents
+		other.AtRiskMrrCents += r.AtRiskMrrCents
+		otherTiers++
+	}
+	if otherTiers > 0 {
+		other.PlanName = fmt.Sprintf("Other (%d tiers)", otherTiers)
+		significant = append(significant, other)
+	}
+	return significant
 }
 
 // buildTopCustomers returns the highest-MRR active customers, capped. Ties break by shop

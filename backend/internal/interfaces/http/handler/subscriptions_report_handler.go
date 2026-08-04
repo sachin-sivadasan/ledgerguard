@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math"
 	"net/http"
@@ -209,6 +210,12 @@ func buildSubscriptionsReport(subs []*entity.Subscription, latest *entity.DailyM
 		return plans[i].ActiveSubs > plans[j].ActiveSubs
 	})
 
+	// Fold minor tiers (proration/refund noise) into a trailing "Other" row so the table
+	// shows real plans rather than dozens of one-off prices — only past a real long tail.
+	if len(plans) > minTiersToCollapse {
+		plans = foldSubscriptionsTail(plans, activeSubs, rate)
+	}
+
 	arpu := arpuCents(activeMrrCents, activeSubs)
 	return subscriptionsReport{
 		Currency:       currency,
@@ -219,6 +226,40 @@ func buildSubscriptionsReport(subs []*entity.Subscription, latest *entity.DailyM
 		ChurnRate:      rate,
 		Plans:          plans,
 	}
+}
+
+// foldSubscriptionsTail collapses below-threshold plan tiers into one "Other" row. NOTE the
+// significance base here is SAFE-only activeSubs (this report's "active"), whereas Customer
+// Insights / Active Customers use non-churned (SAFE + at-risk); a boundary tier can thus
+// fold in one report and not another — intentional, each uses its own report's base.
+func foldSubscriptionsTail(plans []subscriptionsPlan, activeSubs int, rate float64) []subscriptionsPlan {
+	threshold := tierSignificanceThreshold(activeSubs)
+	kept := make([]subscriptionsPlan, 0, len(plans))
+	var otherMrr int64
+	var otherSubs, otherTiers int
+	var otherPct float64
+	for _, p := range plans {
+		if p.ActiveSubs >= threshold || !isPseudoPlanLabel(p.PlanName) {
+			kept = append(kept, p)
+			continue
+		}
+		otherSubs += p.ActiveSubs
+		otherMrr += p.MrrCents
+		otherPct += p.PctOfSubs
+		otherTiers++
+	}
+	if otherTiers > 0 {
+		oarpu := arpuCents(otherMrr, otherSubs)
+		kept = append(kept, subscriptionsPlan{
+			PlanName:   fmt.Sprintf("Other (%d tiers)", otherTiers),
+			ActiveSubs: otherSubs,
+			MrrCents:   otherMrr,
+			ArpuCents:  oarpu,
+			LtvCents:   ltvCents(oarpu, rate),
+			PctOfSubs:  otherPct,
+		})
+	}
+	return kept
 }
 
 // arpuCents returns monthly MRR ÷ active subs in whole cents (floored via integer

@@ -192,6 +192,82 @@ func TestCustomerInsights_PseudoPlanLabels(t *testing.T) {
 	}
 }
 
+// TestCustomerInsights_CollapsesLongTail: past a real long tail (>12 tiers), minor price
+// tiers (prorations/one-offs) fold into a single "Other (N tiers)" row while the real plan
+// stays.
+func TestCustomerInsights_CollapsesLongTail(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	var subs []*entity.Subscription
+	for i := 0; i < 10; i++ { // one real plan: 10 customers at $50
+		subs = append(subs, atRiskSub(appID, "big.myshopify.com", "", 5000, valueobject.RiskStateSafe))
+	}
+	for i := 0; i < 12; i++ { // 12 one-off proration tiers, one customer each
+		subs = append(subs, atRiskSub(appID, "p.myshopify.com", "", int64(7700+i), valueobject.RiskStateSafe))
+	}
+	rec := doCustomerInsights(t, newCustomerInsightsHandler(appID, pa, subs, nil), appID, pa, "", true)
+
+	var resp customerInsightsReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.PlanRisk) != 2 {
+		t.Fatalf("planRisk rows = %d, want 2 (real plan + Other)", len(resp.PlanRisk))
+	}
+	if resp.PlanRisk[0].PlanName != "$50.00/mo" || resp.PlanRisk[0].Customers != 10 {
+		t.Errorf("row[0] = %+v, want $50.00/mo with 10", resp.PlanRisk[0])
+	}
+	if other := resp.PlanRisk[1]; other.PlanName != "Other (12 tiers)" || other.Customers != 12 {
+		t.Errorf("row[1] = %+v, want Other (12 tiers)/12 customers", other)
+	}
+}
+
+// TestCustomerInsights_NamedTierNotFolded: a developer-named low-volume tier stays as its
+// own row past the collapse threshold (matching the settings, which always keep named
+// tiers) — only unnamed pseudo tiers fold into "Other".
+func TestCustomerInsights_NamedTierNotFolded(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	mo := func(price int64) *entity.Subscription {
+		s := atRiskSub(appID, "s.myshopify.com", "", price, valueobject.RiskStateSafe)
+		s.BillingInterval = valueobject.BillingIntervalMonthly
+		return s
+	}
+	var subs []*entity.Subscription
+	for i := 0; i < 10; i++ { // big plan
+		subs = append(subs, mo(5000))
+	}
+	for i := 0; i < 11; i++ { // 11 one-off prorations
+		subs = append(subs, mo(int64(7700+i)))
+	}
+	subs = append(subs, mo(9900)) // one low-volume tier we'll name → 13 tiers total
+	repo := &mockPlanLabelRepo{labels: []*entity.PlanLabel{
+		{AppID: appID, BillingInterval: valueobject.BillingIntervalMonthly, PriceCents: 9900, Label: "VIP"},
+	}}
+	h := NewCustomerInsightsReportHandler(
+		&mockSubscriptionRepo{subscriptions: subs},
+		&mockAppRepoForSub{app: &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "T"}},
+		&mockPartnerRepoForSub{account: pa},
+		repo,
+	)
+	rec := doCustomerInsights(t, h, appID, pa, "", true)
+
+	var resp customerInsightsReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	names := map[string]bool{}
+	for _, r := range resp.PlanRisk {
+		names[r.PlanName] = true
+	}
+	if !names["VIP"] {
+		t.Errorf("named 'VIP' tier was folded into Other; rows=%v", names)
+	}
+	if !names["$50.00/mo"] || !names["Other (11 tiers)"] {
+		t.Errorf("expected the big plan + Other (11 tiers); rows=%v", names)
+	}
+}
+
 func TestCustomerInsights_401WithoutUser(t *testing.T) {
 	appID := uuid.New()
 	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}

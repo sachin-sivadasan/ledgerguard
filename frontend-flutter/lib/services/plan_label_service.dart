@@ -31,20 +31,31 @@ class PlanTier {
       );
 }
 
+/// The nameable tiers plus a count of minor tiers (prorations/one-offs) the backend hid.
+class PlanTiersResult {
+  final List<PlanTier> tiers;
+  final int hiddenTiers;
+  const PlanTiersResult({required this.tiers, required this.hiddenTiers});
+}
+
 class PlanLabelService {
   final ApiClient _client;
 
   PlanLabelService(this._client);
 
-  Future<List<PlanTier>> fetchTiers(String appId, {CancelToken? cancelToken}) async {
+  Future<PlanTiersResult> fetchTiers(String appId, {CancelToken? cancelToken}) async {
     final response = await _client.get(
       '/api/v1/apps/$appId/plan-labels',
       cancelToken: cancelToken,
     );
-    final tiers = (response.data as Map<String, dynamic>)['tiers'] as List<dynamic>?;
-    return (tiers ?? const [])
-        .map((e) => PlanTier.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final data = response.data as Map<String, dynamic>;
+    final tiers = data['tiers'] as List<dynamic>?;
+    return PlanTiersResult(
+      tiers: (tiers ?? const [])
+          .map((e) => PlanTier.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      hiddenTiers: (data['hiddenTiers'] as num?)?.toInt() ?? 0,
+    );
   }
 
   /// Saves the full label set (each entry echoes a tier's interval + price with the

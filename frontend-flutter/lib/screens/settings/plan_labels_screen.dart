@@ -154,7 +154,8 @@ class _PlanLabelsScreenState extends State<PlanLabelsScreen>
           appChip,
           const SizedBox(height: LgSpacing.s400),
           Text(
-            'A price change creates a new tier, so you can name "Starter" and "Starter (old)" separately.',
+            'A price change creates a new tier, so you can name "Starter" and "Starter (old)" separately.'
+            '${provider.hiddenTiers > 0 ? ' ${provider.hiddenTiers} minor tiers (prorations / one-off charges) are not shown.' : ''}',
             style: Theme.of(context)
                 .textTheme
                 .bodySmall

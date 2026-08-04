@@ -52,6 +52,10 @@ type planTierJSON struct {
 
 type planLabelsResponse struct {
 	Tiers []planTierJSON `json:"tiers"`
+	// HiddenTiers is the number of minor price tiers omitted (prorations / one-off / refund
+	// amounts below the significance threshold and never named) — surfaced so the UI can
+	// note them rather than silently dropping them.
+	HiddenTiers int `json:"hiddenTiers"`
 }
 
 type planLabelInput struct {
@@ -98,6 +102,7 @@ func (h *PlanLabelHandler) GetPlanLabels(w http.ResponseWriter, r *http.Request)
 		customers int
 	}
 	byKey := map[string]*tierAgg{}
+	totalActive := 0
 	for _, s := range subs {
 		if s.PlanName != "" || s.RiskState.IsChurned() {
 			continue
@@ -109,16 +114,31 @@ func (h *PlanLabelHandler) GetPlanLabels(w http.ResponseWriter, r *http.Request)
 			byKey[key] = a
 		}
 		a.customers++
+		totalActive++
 	}
 
+	// Only surface tiers worth naming: a real plan (≥ the significance threshold and a
+	// positive price) or one that already has a saved label. The rest (prorations, refund
+	// amounts) are counted as hidden so the UI can note them.
+	// Below a real long tail, every tier is nameable; past it, filter to the significant
+	// ones (or already-named) and count the rest as hidden.
+	collapse := len(byKey) > minTiersToCollapse
+	threshold := tierSignificanceThreshold(totalActive)
 	tiers := make([]planTierJSON, 0, len(byKey))
+	hidden := 0
 	for key, a := range byKey {
+		saved := savedByKey[key]
+		significant := !collapse || (a.price > 0 && a.customers >= threshold)
+		if !significant && saved == "" {
+			hidden++
+			continue
+		}
 		tiers = append(tiers, planTierJSON{
 			BillingInterval: string(a.interval),
 			PriceCents:      a.price,
 			Key:             key,
 			PseudoLabel:     pseudoPlanLabel(a.interval, a.price),
-			Label:           savedByKey[key],
+			Label:           saved,
 			Customers:       a.customers,
 		})
 	}
@@ -131,7 +151,7 @@ func (h *PlanLabelHandler) GetPlanLabels(w http.ResponseWriter, r *http.Request)
 	})
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(planLabelsResponse{Tiers: tiers}); err != nil {
+	if err := json.NewEncoder(w).Encode(planLabelsResponse{Tiers: tiers, HiddenTiers: hidden}); err != nil {
 		log.Printf("plan-labels: encode: %v", err)
 	}
 }

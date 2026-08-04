@@ -541,6 +541,18 @@ func (c *ShopifyPartnerClient) fetchTransactionPage(
 							netAmount { amount currencyCode }
 							shopifyFee { amount currencyCode }
 						}
+						... on AppSaleCredit {
+							chargeId
+							app { id name }
+							shop {
+								id
+								myshopifyDomain
+								name
+							}
+							grossAmount { amount currencyCode }
+							netAmount { amount currencyCode }
+							shopifyFee { amount currencyCode }
+						}
 					}
 				}
 				pageInfo {
@@ -713,6 +725,20 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 		tx.ShopifyFeeCents = int64(dollars * 100)
 	}
 
+	// Shopify's netAmount has a payment-processing deduction baked in that the Partner
+	// API does NOT expose as its own field: grossAmount "excludes taxes" and shopifyFee
+	// is only the revenue-share cut, yet net < gross − shopifyFee for real sales. We
+	// recover the remainder so gross = net + shopifyFee + processing holds and the ledger
+	// reconciles (see Ledger Reconciliation report). It is DERIVED, not independently
+	// reported by Shopify — a per-month rate far from the norm signals missing shopifyFee
+	// data rather than a real processing charge. Only positive-gross sales carry it;
+	// refund/credit/adjustment nodes are the signed payout effect as-is (no processing).
+	if chargeType != valueobject.ChargeTypeRefund && grossCents > 0 {
+		if remainder := grossCents - tx.ShopifyFeeCents - netCents; remainder > 0 {
+			tx.ProcessingFeeCents = remainder
+		}
+	}
+
 	// Add shop details and source app GID for per-app filtering
 	tx.ShopifyShopGID = shopGID
 	tx.PartnerAppGID = node.App.ID
@@ -734,13 +760,12 @@ func (c *ShopifyPartnerClient) inferChargeType(node transactionNode) valueobject
 		return valueobject.ChargeTypeUsage
 	case "AppOneTimeSale":
 		return valueobject.ChargeTypeOneTime
-	case "AppSaleAdjustment":
-		// Refund/downgrade/chargeback of an app charge. Its netAmount is NEGATIVE (deducted
-		// from payout) and is stored as-is — the truthful signed effect on the payout, so
-		// any SUM(net) nets it out. Consumers that display refunds as a positive magnitude
-		// negate locally (see revenue_mix / metrics_engine / earnings resolver). NOTE: only
-		// AppSaleAdjustment is fetched (fragment above); AppCredit would need its own
-		// verified fragment before it can be ingested, so it's intentionally not mapped here.
+	case "AppSaleAdjustment", "AppSaleCredit":
+		// Refund/downgrade/chargeback (AppSaleAdjustment) or credit (AppSaleCredit) of an app
+		// charge. Its netAmount is NEGATIVE (deducted from payout) and is stored as-is — the
+		// truthful signed effect on the payout, so any SUM(net) nets it out. Consumers that
+		// display refunds as a positive magnitude negate locally (see revenue_mix /
+		// metrics_engine / earnings resolver). Both fragments are fetched above.
 		return valueobject.ChargeTypeRefund
 	default:
 		return valueobject.ChargeTypeRecurring

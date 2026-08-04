@@ -778,4 +778,95 @@ func TestParseTransaction_ShopifyFee(t *testing.T) {
 	if tx.ShopifyFeeCents != 1500 {
 		t.Errorf("expected ShopifyFeeCents=1500 (from $15.00 shopifyFee), got %d", tx.ShopifyFeeCents)
 	}
+	// net (85) == gross (100) − shopifyFee (15): no residual, so no derived processing fee.
+	if tx.ProcessingFeeCents != 0 {
+		t.Errorf("expected ProcessingFeeCents=0 when net == gross − fee, got %d", tx.ProcessingFeeCents)
+	}
+}
+
+// TestParseTransaction_DerivesProcessingFee: Shopify bakes a payment-processing deduction
+// into netAmount that it does NOT expose as a field. When net < gross − shopifyFee, the
+// remainder is recovered into ProcessingFeeCents so gross = net + shopifyFee + processing.
+func TestParseTransaction_DerivesProcessingFee(t *testing.T) {
+	c := &ShopifyPartnerClient{}
+	node := transactionNode{
+		Typename:  "AppSubscriptionSale",
+		ID:        "gid://partners/AppSubscriptionSale/2",
+		CreatedAt: "2026-02-15T10:00:00Z",
+		App: &struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}{ID: "gid://partners/App/99", Name: "Test App"},
+		Shop: &struct {
+			ID              string `json:"id"`
+			MyshopifyDomain string `json:"myshopifyDomain"`
+			Name            string `json:"name"`
+		}{ID: "gid://shopify/Shop/1", MyshopifyDomain: "s.myshopify.com", Name: "S"},
+		GrossAmount: &struct {
+			Amount       string `json:"amount"`
+			CurrencyCode string `json:"currencyCode"`
+		}{Amount: "100.00", CurrencyCode: "USD"},
+		NetAmount: &struct {
+			Amount       string `json:"amount"`
+			CurrencyCode string `json:"currencyCode"`
+		}{Amount: "82.00", CurrencyCode: "USD"}, // Shopify deposited $82: $15 revenue share + $3 processing
+		ShopifyFee: &struct {
+			Amount       string `json:"amount"`
+			CurrencyCode string `json:"currencyCode"`
+		}{Amount: "15.00", CurrencyCode: "USD"},
+	}
+	tx := c.parseTransaction(node, uuid.New())
+	if tx == nil {
+		t.Fatal("expected a transaction, got nil")
+	}
+	// 10000 − 1500 − 8200 = 300
+	if tx.ProcessingFeeCents != 300 {
+		t.Errorf("expected derived ProcessingFeeCents=300 (gross−fee−net), got %d", tx.ProcessingFeeCents)
+	}
+	// The identity must close: gross == net + shopifyFee + processing.
+	if got := tx.NetAmountCents + tx.ShopifyFeeCents + tx.ProcessingFeeCents; got != tx.GrossAmountCents {
+		t.Errorf("reconciliation identity broken: net+fee+processing=%d, gross=%d", got, tx.GrossAmountCents)
+	}
+}
+
+// TestParseTransaction_AppSaleCredit: AppSaleCredit (a credit against an app charge) is now
+// fetched and maps to REFUND — its negative net is the signed payout effect, and no
+// processing fee is derived for it.
+func TestParseTransaction_AppSaleCredit(t *testing.T) {
+	c := &ShopifyPartnerClient{}
+	node := transactionNode{
+		Typename:  "AppSaleCredit",
+		ID:        "gid://partners/AppSaleCredit/1",
+		CreatedAt: "2026-02-15T10:00:00Z",
+		App: &struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}{ID: "gid://partners/App/99", Name: "Test App"},
+		Shop: &struct {
+			ID              string `json:"id"`
+			MyshopifyDomain string `json:"myshopifyDomain"`
+			Name            string `json:"name"`
+		}{ID: "gid://shopify/Shop/1", MyshopifyDomain: "s.myshopify.com", Name: "S"},
+		GrossAmount: &struct {
+			Amount       string `json:"amount"`
+			CurrencyCode string `json:"currencyCode"`
+		}{Amount: "-10.00", CurrencyCode: "USD"},
+		NetAmount: &struct {
+			Amount       string `json:"amount"`
+			CurrencyCode string `json:"currencyCode"`
+		}{Amount: "-8.50", CurrencyCode: "USD"},
+	}
+	tx := c.parseTransaction(node, uuid.New())
+	if tx == nil {
+		t.Fatal("expected a transaction, got nil")
+	}
+	if tx.ChargeType != valueobject.ChargeTypeRefund {
+		t.Errorf("expected REFUND for AppSaleCredit, got %s", tx.ChargeType)
+	}
+	if tx.NetAmountCents != -850 {
+		t.Errorf("expected natural negative net -850, got %d", tx.NetAmountCents)
+	}
+	if tx.ProcessingFeeCents != 0 {
+		t.Errorf("expected no derived processing fee on a credit, got %d", tx.ProcessingFeeCents)
+	}
 }

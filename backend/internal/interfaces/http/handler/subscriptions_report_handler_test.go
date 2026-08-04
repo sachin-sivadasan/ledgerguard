@@ -296,15 +296,16 @@ func TestSubscriptions_PlanCompositionAndSort(t *testing.T) {
 }
 
 // TestSubscriptions_EmptyPlanNameBucket verifies a sub with an empty plan name forms its
-// own bucket rather than being dropped.
+// own bucket (labeled by its price tier, not dropped) — the Partner API gives no plan
+// name, so the report falls back to a "$40.00/mo" pseudo-label rather than a blank row.
 func TestSubscriptions_EmptyPlanNameBucket(t *testing.T) {
 	appID := uuid.New()
 	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
 	s := safeSub(appID, "noplan.myshopify.com", "", 4000)
 	h := newSubscriptionsHandler(appID, pa, []*entity.Subscription{s}, nil)
 	resp := decodeSubscriptions(t, doSubscriptions(t, h, appID, pa, ""))
-	if len(resp.Plans) != 1 || resp.Plans[0].PlanName != "" || resp.Plans[0].ActiveSubs != 1 {
-		t.Errorf("expected one empty-name plan bucket with 1 sub, got %+v", resp.Plans)
+	if len(resp.Plans) != 1 || resp.Plans[0].PlanName != "$40.00/mo" || resp.Plans[0].ActiveSubs != 1 {
+		t.Errorf("expected one price-tier bucket ($40.00/mo) with 1 sub, got %+v", resp.Plans)
 	}
 }
 

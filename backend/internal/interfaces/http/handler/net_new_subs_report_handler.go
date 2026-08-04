@@ -97,7 +97,7 @@ func (h *NetNewSubsReportHandler) GetNetNewSubs(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	report := buildNetNewSubsReport(subs, from, to)
+	report := buildNetNewSubsReport(subs, from, to, newPlanLabeler(nil))
 	allStores := report.NewStores
 	report.NewStoresTotal = int64(len(allStores))
 
@@ -130,7 +130,7 @@ func writeNetNewSubsRepoError(w http.ResponseWriter, op string, err error) {
 // (newest first); the caller pages that table via parsePaging/pageSlice. Net = new −
 // churned. A sub that both started and churned in the window counts in both (net 0 for
 // it), which is the correct net-growth semantics.
-func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netNewSubsReport {
+func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time, labeler planLabeler) netNewSubsReport {
 	toExclusive := to.AddDate(0, 0, 1)
 	inRange := func(t time.Time) bool { return !t.Before(from) && t.Before(toExclusive) }
 	interval := resolveTrendInterval(from, to)
@@ -219,7 +219,7 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time) netN
 		newStores = append(newStores, newSubRow{
 			Domain:   s.MyshopifyDomain,
 			ShopName: s.ShopName,
-			PlanName: s.PlanName,
+			PlanName: labeler.label(s),
 			MrrCents: s.MRRCents(),
 			Started:  s.StartDate().Format(dateLayout),
 		})

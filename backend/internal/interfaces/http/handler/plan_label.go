@@ -17,13 +17,18 @@ import (
 // planKey is the stable identity of a price tier: billing interval + exact base price.
 // Distinct prices produce distinct keys, so a mid-life price change naturally splits into
 // two plans (e.g. a $19 "Starter (old)" and a $29 "Starter") rather than merging them.
+//
+// The interval half uses the canonical BillingInterval enum string ("MONTHLY"/"ANNUAL");
+// developer plan-label maps (Phase 2) must key on the same canonical values, and an empty
+// interval collapses to a ":<cents>" key (treated as monthly downstream).
 func planKey(interval valueobject.BillingInterval, basePriceCents int64) string {
 	return string(interval) + ":" + strconv.FormatInt(basePriceCents, 10)
 }
 
 // pseudoPlanLabel synthesizes a human label from the price tier when there's no real plan
 // name — e.g. "$139.99/mo" or "$1400.00/yr". A zero/negative price is a free or unknown
-// tier.
+// tier. Only ANNUAL is special-cased; every other interval (including an empty/unknown
+// one) defaults to "/mo", matching Subscription.MRRCents()'s monthly default.
 func pseudoPlanLabel(interval valueobject.BillingInterval, basePriceCents int64) string {
 	if basePriceCents <= 0 {
 		return "Free / unknown"

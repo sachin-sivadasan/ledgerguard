@@ -103,7 +103,7 @@ func (h *ActiveCustomersReportHandler) GetActiveCustomersReport(w http.ResponseW
 	}
 
 	interval := resolveTrendInterval(from, to)
-	plans := buildActiveCustomersPlans(subs)
+	plans := buildActiveCustomersPlans(subs, newPlanLabeler(nil))
 	report := buildActiveCustomersReport(subs, plans, from, to)
 	report.Interval = string(interval)
 	report.Trend = buildActiveCustomersTrend(downsampleSnapshots(snapshots, interval))
@@ -187,7 +187,7 @@ func buildActiveCustomersReport(subs []*entity.Subscription, plans []activeCusto
 // computes, per plan, the active count, MRR (Σ MRR of active subs), and the plan's
 // share of the total active COUNT (matching the wireframe's "% OF ACTIVE"). Result is
 // sorted by MRR descending. Plans with only churned subs don't appear.
-func buildActiveCustomersPlans(subs []*entity.Subscription) []activeCustomersPlan {
+func buildActiveCustomersPlans(subs []*entity.Subscription, labeler planLabeler) []activeCustomersPlan {
 	type agg struct {
 		count int
 		mrr   int64
@@ -199,11 +199,12 @@ func buildActiveCustomersPlans(subs []*entity.Subscription) []activeCustomersPla
 		if s.RiskState == valueobject.RiskStateChurned {
 			continue
 		}
-		a, ok := byPlan[s.PlanName]
+		plan := labeler.label(s)
+		a, ok := byPlan[plan]
 		if !ok {
 			a = &agg{}
-			byPlan[s.PlanName] = a
-			order = append(order, s.PlanName)
+			byPlan[plan] = a
+			order = append(order, plan)
 		}
 		a.count++
 		a.mrr += s.MRRCents()

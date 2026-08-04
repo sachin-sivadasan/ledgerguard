@@ -109,7 +109,8 @@ class ReportsScreen extends StatelessWidget {
         'Active paying merchants',
         route: '/reports/active-customers',
       ),
-      _ReportEntry('Customer Insights', 'Segments and behavior'),
+      _ReportEntry('Customer Insights', 'Segment by revenue, risk and plan',
+          route: '/reports/customer-insights'),
     ]),
     _ReportCategory('Guard', Icons.verified_user_outlined, [
       _ReportEntry('Fee Audit', 'Verify Shopify fee calculations',

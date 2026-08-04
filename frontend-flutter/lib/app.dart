@@ -37,6 +37,7 @@ import 'screens/reports/payout_history_screen.dart';
 import 'screens/reports/payout_history_payouts_screen.dart';
 import 'screens/reports/fee_audit_screen.dart';
 import 'screens/reports/ledger_recon_screen.dart';
+import 'screens/reports/customer_insights_screen.dart';
 import 'screens/reports/installs_screen.dart';
 import 'screens/reports/installs_events_screen.dart';
 import 'screens/reports/net_new_subs_screen.dart';
@@ -308,6 +309,10 @@ class _AppState extends State<App> {
                     GoRoute(
                       path: 'ledger-reconciliation',
                       builder: (c, s) => const LedgerReconScreen(),
+                    ),
+                    GoRoute(
+                      path: 'customer-insights',
+                      builder: (c, s) => const CustomerInsightsScreen(),
                     ),
                     GoRoute(
                       path: 'installs/events',

@@ -245,6 +245,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
               return LgResponsive(
                 mobile: Column(
+                  // Stretch so every card fills the width — without this, short cards
+                  // (Forecast, Activity) shrink to their content and float centered.
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     for (int i = 0; i < row2Widgets.length; i++) ...[
                       row2Widgets[i],
@@ -294,11 +297,12 @@ class _MrrChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Sample every 7 days for performance
-    final sampled = <FlSpot>[];
-    for (int i = 0; i < snapshots.length; i += 7) {
-      sampled.add(FlSpot(i.toDouble(), snapshots[i].mrrDollars));
-    }
+    // The trend endpoint already returns downsampled (weekly) points, so plot them all —
+    // sub-sampling here dropped all but ~4 of the ~27 points and made the line coarse.
+    final sampled = <FlSpot>[
+      for (int i = 0; i < snapshots.length; i++)
+        FlSpot(i.toDouble(), snapshots[i].mrrDollars),
+    ];
 
     return LineChart(
       LineChartData(

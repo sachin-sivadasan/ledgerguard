@@ -107,6 +107,9 @@ class DashboardProvider extends ChangeNotifier {
         _metricsService.fetchMrrTrend(appId, months: 12, cancelToken: token),
         _metricsService.fetchForecast(appId, cancelToken: token),
       ]);
+      // Bail if a newer loadMetrics superseded this one mid-flight (the services swallow
+      // their own cancel errors, so the catch below never fires for a cancel).
+      if (token != _cancelToken) return;
       _liveMrrTrend = results[0] as List<MrrSnapshot>;
       final (forecast, forecastErr) = results[1] as (ForecastResult?, String?);
       _liveForecast = forecast;

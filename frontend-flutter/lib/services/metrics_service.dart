@@ -12,6 +12,12 @@ class DashboardMetrics {
   final RiskDistribution riskDistribution;
   final RevenueMix revenueMix;
   final List<MrrSnapshot> mrrTrend;
+  // Period-over-period % changes (from the backend "delta" block). Null when the backend
+  // returns no delta (e.g. a single-period query) so the UI can omit the badge.
+  final double? mrrDeltaPct;
+  final double? renewalDeltaPct;
+  final double? usageDeltaPct;
+  final double? riskDeltaPct;
 
   DashboardMetrics({
     required this.mrrCents,
@@ -21,6 +27,10 @@ class DashboardMetrics {
     required this.riskDistribution,
     required this.revenueMix,
     required this.mrrTrend,
+    this.mrrDeltaPct,
+    this.renewalDeltaPct,
+    this.usageDeltaPct,
+    this.riskDeltaPct,
   });
 
   /// Parse from backend's period metrics response:
@@ -48,6 +58,9 @@ class DashboardMetrics {
         (current['two_cycles_missed_count'] as num?)?.toInt() ?? 0;
     final churned = (current['churned_count'] as num?)?.toInt() ?? 0;
 
+    final delta = json['delta'] as Map<String, dynamic>?;
+    double? deltaPct(String key) => (delta?[key] as num?)?.toDouble();
+
     return DashboardMetrics(
       mrrCents: mrrCents,
       renewalRate: renewalRate * 100, // Convert 0.92 → 92.0
@@ -68,6 +81,10 @@ class DashboardMetrics {
               ?.map((e) => MrrSnapshot.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      mrrDeltaPct: deltaPct('active_mrr_percent'),
+      renewalDeltaPct: deltaPct('renewal_success_rate_percent'),
+      usageDeltaPct: deltaPct('usage_revenue_percent'),
+      riskDeltaPct: deltaPct('revenue_at_risk_percent'),
     );
   }
 }

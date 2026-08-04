@@ -42,9 +42,12 @@ class LgMetricCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  trendPositive == true
-                      ? Icons.arrow_upward
-                      : Icons.arrow_downward,
+                  // Arrow follows the numeric direction (a leading "-" = down); colour
+                  // follows whether the move is GOOD (trendPositive) — so a metric that
+                  // dropped for the better shows a green down-arrow, not a green up-arrow.
+                  trend!.trimLeft().startsWith('-')
+                      ? Icons.arrow_downward
+                      : Icons.arrow_upward,
                   size: 14,
                   color: trendPositive == true
                       ? LgColors.success

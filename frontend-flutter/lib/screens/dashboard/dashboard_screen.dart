@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/dashboard_registry.dart';
 import '../../core/mixins/data_loading_mixin.dart';
@@ -169,8 +170,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                   LgMetricCard(
                     label: def.label,
                     value: def.valueGetter(dp),
-                    trend: def.trend,
-                    trendPositive: def.trendPositive,
+                    // Real period-over-period delta when live; falls back to the def's
+                    // static trend (demo mode / KPIs without a delta).
+                    trend: dp.kpiTrend(kpiId)?.label ?? def.trend,
+                    trendPositive: dp.kpiTrend(kpiId)?.positive ?? def.trendPositive,
                     icon: def.icon,
                   ),
             ],
@@ -385,26 +388,34 @@ class _ForecastCard extends StatelessWidget {
   final ThemeData theme;
   const _ForecastCard({required this.dp, required this.theme});
 
+  static final _money = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+
   @override
   Widget build(BuildContext context) {
+    final f = dp.nextMonthForecast;
     return LgCard(
       title: 'Forecast (Next Month)',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Expected MRR', style: theme.textTheme.bodySmall),
-          const SizedBox(height: LgSpacing.s100),
-          Text(
-            '\$${dp.nextMonthForecast.expected.toStringAsFixed(0)}',
-            style: theme.textTheme.headlineSmall,
-          ),
-          const SizedBox(height: LgSpacing.s200),
-          Text(
-            'Range: \$${dp.nextMonthForecast.pessimistic.toStringAsFixed(0)} – \$${dp.nextMonthForecast.optimistic.toStringAsFixed(0)}',
-            style: theme.textTheme.bodySmall,
-          ),
-        ],
-      ),
+      child: f == null
+          ? Text(
+              dp.forecastError ??
+                  'Not enough history yet — the forecast appears once more daily snapshots accumulate.',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: LgColors.textSecondary),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Expected MRR', style: theme.textTheme.bodySmall),
+                const SizedBox(height: LgSpacing.s100),
+                Text(_money.format(f.expectedDollars),
+                    style: theme.textTheme.headlineSmall),
+                const SizedBox(height: LgSpacing.s200),
+                Text(
+                  'Range: ${_money.format(f.pessimisticDollars)} – ${_money.format(f.optimisticDollars)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
     );
   }
 }
@@ -439,6 +450,16 @@ class _WeeklyActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (activity.isEmpty) {
+      return LgCard(
+        title: title,
+        child: Text(
+          'No activity data for this period.',
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: LgColors.textSecondary),
+        ),
+      );
+    }
     return LgCard(
       title: title,
       child: Column(

@@ -28,37 +28,31 @@ class WidgetDefinition {
 
 /// All available KPIs (superset — users choose up to 4)
 final List<KpiDefinition> kAllKpis = [
+  // The four KPIs below carry no static trend: the real period-over-period delta comes
+  // from DashboardProvider.kpiTrend(id) at render time (see dashboard_screen).
   KpiDefinition(
     id: 'active_mrr',
     label: 'Monthly Recurring Revenue',
     icon: Icons.attach_money,
     valueGetter: (dp) => dp.mrrFormatted,
-    trend: '+4.2%',
-    trendPositive: true,
   ),
   KpiDefinition(
     id: 'renewal_success_rate',
     label: 'Renewal Rate',
     icon: Icons.autorenew,
     valueGetter: (dp) => '${dp.renewalRate.toStringAsFixed(1)}%',
-    trend: '+1.3%',
-    trendPositive: true,
   ),
   KpiDefinition(
     id: 'revenue_at_risk',
     label: 'Revenue at Risk',
     icon: Icons.warning_amber,
     valueGetter: (dp) => dp.revenueAtRiskFormatted,
-    trend: '-\$120',
-    trendPositive: true,
   ),
   KpiDefinition(
     id: 'usage_revenue',
     label: 'Usage Revenue',
     icon: Icons.trending_up,
     valueGetter: (dp) => dp.usageRevenueFormatted,
-    trend: '+18%',
-    trendPositive: true,
   ),
   KpiDefinition(
     id: 'churned',

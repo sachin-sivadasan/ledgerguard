@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import '../core/dashboard_registry.dart';
 import '../mock_data/mock_analytics.dart';
 import '../mock_data/mock_events.dart';
@@ -34,6 +35,9 @@ class DashboardProvider extends ChangeNotifier {
   CancelToken? _cancelToken;
 
   DashboardMetrics? _metrics;
+  List<MrrSnapshot> _liveMrrTrend = const [];
+  ForecastResult? _liveForecast;
+  String? _forecastError;
 
   List<String> _primaryKpis = List.of(kDefaultKpiIds);
   List<String> _secondaryWidgets = List.of(kDefaultWidgetIds);
@@ -96,6 +100,20 @@ class DashboardProvider extends ChangeNotifier {
     try {
       _metrics = await _metricsService.fetchMetrics(appId,
           cancelToken: _cancelToken);
+      // Trend + forecast come from their own endpoints (the /metrics payload has neither).
+      // Fetch them alongside; a failure in either degrades that widget only, not the KPIs.
+      final token = _cancelToken;
+      final results = await Future.wait([
+        _metricsService.fetchMrrTrend(appId, months: 12, cancelToken: token),
+        _metricsService.fetchForecast(appId, cancelToken: token),
+      ]);
+      // Bail if a newer loadMetrics superseded this one mid-flight (the services swallow
+      // their own cancel errors, so the catch below never fires for a cancel).
+      if (token != _cancelToken) return;
+      _liveMrrTrend = results[0] as List<MrrSnapshot>;
+      final (forecast, forecastErr) = results[1] as (ForecastResult?, String?);
+      _liveForecast = forecast;
+      _forecastError = forecastErr;
       _resetRetry();
       debugPrint('[DashboardProvider] loadMetrics success');
     } on DioException catch (e) {
@@ -161,7 +179,7 @@ class DashboardProvider extends ChangeNotifier {
         .fold<int>(0, (sum, s) => sum + s.priceCents);
   }
 
-  String get mrrFormatted => '\$${(mrrCents / 100).toStringAsFixed(0)}';
+  String get mrrFormatted => _money.format(mrrCents / 100);
 
   double get renewalRate {
     if (!_demoMode) return _metrics?.renewalRate ?? 0;
@@ -179,19 +197,17 @@ class DashboardProvider extends ChangeNotifier {
         .fold<int>(0, (sum, s) => sum + s.priceCents);
   }
 
-  String get revenueAtRiskFormatted =>
-      '\$${(revenueAtRiskCents / 100).toStringAsFixed(0)}';
+  String get revenueAtRiskFormatted => _money.format(revenueAtRiskCents / 100);
 
   int get usageRevenueCents {
     if (!_demoMode) return _metrics?.usageRevenueCents ?? 0;
     return mockRevenueMix.usageCents;
   }
 
-  String get usageRevenueFormatted =>
-      '\$${(usageRevenueCents / 100).toStringAsFixed(0)}';
+  String get usageRevenueFormatted => _money.format(usageRevenueCents / 100);
 
   String get totalRevenueFormatted =>
-      '\$${((mrrCents + usageRevenueCents) / 100).toStringAsFixed(0)}';
+      _money.format((mrrCents + usageRevenueCents) / 100);
 
   Map<String, int> get activity {
     if (!_demoMode) return {};
@@ -223,7 +239,7 @@ class DashboardProvider extends ChangeNotifier {
       };
 
   List<MrrSnapshot> get mrrTrend {
-    if (!_demoMode) return _metrics?.mrrTrend ?? [];
+    if (!_demoMode) return _liveMrrTrend;
     return mockMrrSnapshots;
   }
 
@@ -245,7 +261,39 @@ class DashboardProvider extends ChangeNotifier {
     return mockRevenueMix;
   }
 
-  ForecastPoint get nextMonthForecast => mockForecast.first;
+  /// Next-period forecast: the first real forecast point when live (else the demo mock).
+  /// Null in live mode when the backend can't forecast yet (too few snapshots).
+  ForecastPoint? get nextMonthForecast {
+    if (_demoMode) return mockForecast.first;
+    return _liveForecast?.points.isNotEmpty == true
+        ? _liveForecast!.points.first
+        : null;
+  }
+
+  /// Explains why the forecast is unavailable in live mode (e.g. insufficient snapshots).
+  String? get forecastError => _demoMode ? null : _forecastError;
 
   List<AiInsight> get recentAlerts => mockInsights.take(3).toList();
+
+  /// Real period-over-period trend for a KPI card: a signed "%" label + whether it's a
+  /// GOOD move (green). Null when there's no live delta (demo mode or a KPI without one) —
+  /// the card then shows no badge rather than a stale hardcoded one. Risk is inverted: a
+  /// drop is good.
+  ({String label, bool positive})? kpiTrend(String kpiId) {
+    if (_demoMode || _metrics == null) return null;
+    final m = _metrics!;
+    final (double? pct, bool upIsGood) = switch (kpiId) {
+      'active_mrr' => (m.mrrDeltaPct, true),
+      'renewal_success_rate' => (m.renewalDeltaPct, true),
+      'usage_revenue' => (m.usageDeltaPct, true),
+      'revenue_at_risk' => (m.riskDeltaPct, false),
+      _ => (null, true),
+    };
+    if (pct == null) return null;
+    final label = '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}%';
+    return (label: label, positive: upIsGood ? pct >= 0 : pct <= 0);
+  }
 }
+
+/// Formats whole-dollar currency with thousands separators.
+final _money = NumberFormat.currency(symbol: '\$', decimalDigits: 0);

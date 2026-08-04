@@ -245,7 +245,7 @@ func buildActiveCustomersPlans(subs []*entity.Subscription, labeler planLabeler)
 	other := activeCustomersPlan{PlanName: "Other"}
 	otherTiers := 0
 	for _, p := range plans {
-		if p.ActiveSubs >= threshold {
+		if p.ActiveSubs >= threshold || !isPseudoPlanLabel(p.PlanName) {
 			kept = append(kept, p)
 			continue
 		}

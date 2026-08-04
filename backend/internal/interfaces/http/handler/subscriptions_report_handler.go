@@ -228,7 +228,10 @@ func buildSubscriptionsReport(subs []*entity.Subscription, latest *entity.DailyM
 	}
 }
 
-// foldSubscriptionsTail collapses below-threshold plan tiers into one "Other" row.
+// foldSubscriptionsTail collapses below-threshold plan tiers into one "Other" row. NOTE the
+// significance base here is SAFE-only activeSubs (this report's "active"), whereas Customer
+// Insights / Active Customers use non-churned (SAFE + at-risk); a boundary tier can thus
+// fold in one report and not another — intentional, each uses its own report's base.
 func foldSubscriptionsTail(plans []subscriptionsPlan, activeSubs int, rate float64) []subscriptionsPlan {
 	threshold := tierSignificanceThreshold(activeSubs)
 	kept := make([]subscriptionsPlan, 0, len(plans))
@@ -236,7 +239,7 @@ func foldSubscriptionsTail(plans []subscriptionsPlan, activeSubs int, rate float
 	var otherSubs, otherTiers int
 	var otherPct float64
 	for _, p := range plans {
-		if p.ActiveSubs >= threshold {
+		if p.ActiveSubs >= threshold || !isPseudoPlanLabel(p.PlanName) {
 			kept = append(kept, p)
 			continue
 		}

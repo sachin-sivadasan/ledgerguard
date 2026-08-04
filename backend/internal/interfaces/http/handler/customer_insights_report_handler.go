@@ -274,7 +274,7 @@ func buildPlanRisk(agg map[string]*planRiskRow, order []string, totalActive int)
 	other := planRiskRow{PlanName: "Other"}
 	otherTiers := 0
 	for _, r := range rows {
-		if r.Customers >= threshold {
+		if r.Customers >= threshold || !isPseudoPlanLabel(r.PlanName) {
 			significant = append(significant, r)
 			continue
 		}

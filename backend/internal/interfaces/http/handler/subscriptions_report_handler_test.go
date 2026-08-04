@@ -310,6 +310,45 @@ func TestSubscriptions_EmptyPlanNameBucket(t *testing.T) {
 	}
 }
 
+// TestSubscriptions_CollapsesLongTail: past 12 tiers, minor ones fold into "Other".
+func TestSubscriptions_CollapsesLongTail(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	var subs []*entity.Subscription
+	for i := 0; i < 13; i++ { // real plan: 13 subs at $50
+		subs = append(subs, safeSub(appID, "big.myshopify.com", "", 5000))
+	}
+	for i := 0; i < 12; i++ { // 12 one-off proration tiers
+		subs = append(subs, safeSub(appID, "p.myshopify.com", "", int64(7700+i)))
+	}
+	resp := decodeSubscriptions(t, doSubscriptions(t, newSubscriptionsHandler(appID, pa, subs, nil), appID, pa, ""))
+	if len(resp.Plans) != 2 {
+		t.Fatalf("plans = %d, want 2 (real plan + Other)", len(resp.Plans))
+	}
+	if last := resp.Plans[1]; last.PlanName != "Other (12 tiers)" || last.ActiveSubs != 12 {
+		t.Errorf("last plan = %+v, want Other (12 tiers)/12 subs", last)
+	}
+}
+
+// TestSubscriptions_NoCollapseAtBoundary: exactly 12 tiers → no fold (all shown).
+func TestSubscriptions_NoCollapseAtBoundary(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	var subs []*entity.Subscription
+	for i := 0; i < 12; i++ {
+		subs = append(subs, safeSub(appID, "p.myshopify.com", "", int64(1000+i*100)))
+	}
+	resp := decodeSubscriptions(t, doSubscriptions(t, newSubscriptionsHandler(appID, pa, subs, nil), appID, pa, ""))
+	if len(resp.Plans) != 12 {
+		t.Fatalf("plans = %d, want 12 (no fold at the boundary)", len(resp.Plans))
+	}
+	for _, p := range resp.Plans {
+		if strings.HasPrefix(p.PlanName, "Other") {
+			t.Errorf("unexpected Other row at the boundary: %+v", p)
+		}
+	}
+}
+
 // TestSubscriptions_CurrencyNonUSD verifies a non-USD subscription currency surfaces.
 func TestSubscriptions_CurrencyNonUSD(t *testing.T) {
 	appID := uuid.New()

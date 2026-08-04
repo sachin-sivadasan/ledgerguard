@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -59,6 +60,18 @@ type planLabeler struct {
 // newPlanLabeler builds a labeler over an optional developer plan-label map (may be nil).
 func newPlanLabeler(labels map[string]string) planLabeler {
 	return planLabeler{labels: labels}
+}
+
+// isPseudoPlanLabel reports whether a label is a synthesized price-tier label (rather than
+// a real or developer-assigned name). The tail-collapse never folds a NON-pseudo (named)
+// tier — a developer who named a low-volume plan must still see it in the reports, matching
+// the plan-labels settings which always keep named tiers.
+func isPseudoPlanLabel(label string) bool {
+	if label == "Free / unknown" {
+		return true
+	}
+	return strings.HasPrefix(label, "$") &&
+		(strings.HasSuffix(label, "/mo") || strings.HasSuffix(label, "/yr"))
 }
 
 // minTiersToCollapse is the tier count above which the long-tail collapse kicks in. Below

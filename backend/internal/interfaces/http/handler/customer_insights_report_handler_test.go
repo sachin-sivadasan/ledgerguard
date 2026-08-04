@@ -222,6 +222,52 @@ func TestCustomerInsights_CollapsesLongTail(t *testing.T) {
 	}
 }
 
+// TestCustomerInsights_NamedTierNotFolded: a developer-named low-volume tier stays as its
+// own row past the collapse threshold (matching the settings, which always keep named
+// tiers) — only unnamed pseudo tiers fold into "Other".
+func TestCustomerInsights_NamedTierNotFolded(t *testing.T) {
+	appID := uuid.New()
+	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}
+	mo := func(price int64) *entity.Subscription {
+		s := atRiskSub(appID, "s.myshopify.com", "", price, valueobject.RiskStateSafe)
+		s.BillingInterval = valueobject.BillingIntervalMonthly
+		return s
+	}
+	var subs []*entity.Subscription
+	for i := 0; i < 10; i++ { // big plan
+		subs = append(subs, mo(5000))
+	}
+	for i := 0; i < 11; i++ { // 11 one-off prorations
+		subs = append(subs, mo(int64(7700+i)))
+	}
+	subs = append(subs, mo(9900)) // one low-volume tier we'll name → 13 tiers total
+	repo := &mockPlanLabelRepo{labels: []*entity.PlanLabel{
+		{AppID: appID, BillingInterval: valueobject.BillingIntervalMonthly, PriceCents: 9900, Label: "VIP"},
+	}}
+	h := NewCustomerInsightsReportHandler(
+		&mockSubscriptionRepo{subscriptions: subs},
+		&mockAppRepoForSub{app: &entity.App{ID: appID, PartnerAccountID: pa.ID, Name: "T"}},
+		&mockPartnerRepoForSub{account: pa},
+		repo,
+	)
+	rec := doCustomerInsights(t, h, appID, pa, "", true)
+
+	var resp customerInsightsReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	names := map[string]bool{}
+	for _, r := range resp.PlanRisk {
+		names[r.PlanName] = true
+	}
+	if !names["VIP"] {
+		t.Errorf("named 'VIP' tier was folded into Other; rows=%v", names)
+	}
+	if !names["$50.00/mo"] || !names["Other (11 tiers)"] {
+		t.Errorf("expected the big plan + Other (11 tiers); rows=%v", names)
+	}
+}
+
 func TestCustomerInsights_401WithoutUser(t *testing.T) {
 	appID := uuid.New()
 	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}

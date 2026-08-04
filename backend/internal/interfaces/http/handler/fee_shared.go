@@ -81,20 +81,29 @@ func buildFeeAudit(
 		})
 	}
 
-	// Derive the real rate from the observed cut, snapped to the nearest Shopify tier,
-	// then evaluate each month's guard against it (consistent months pass; only true
-	// anomalies / tier-transition months flag).
-	res.DetectedFeePct = tier.RevenueSharePercent()
-	if res.TotalGrossCents > 0 {
-		res.DetectedFeePct = snapToTierRate(float64(res.TotalCutCents) / float64(res.TotalGrossCents) * 100)
-	}
+	// Evaluate each month against ITS OWN nearest Shopify tier (0/15/20%), not one
+	// window-wide rate. Shopify's reduced-share plan flips 0%→15% at $1M lifetime, so a
+	// window spanning that crossing has a misleading blended rate (e.g. 5% → would snap
+	// to 0% and wrongly flag every paying month). Per-month snapping flags only the
+	// months that DON'T sit cleanly on a tier — a transition month or a real mischarge.
 	for idx := range res.Months {
 		gross := res.Months[idx].GrossCents
-		expected := int64(float64(gross) * res.DetectedFeePct / 100)
+		expectedPct := snapToTierRate(res.Months[idx].EffectiveFeePct)
+		expected := int64(float64(gross) * expectedPct / 100)
 		variance := res.Months[idx].ShopifyCutCents - expected
 		res.Months[idx].ExpectedCutCents = expected
 		res.Months[idx].FeeVarianceCents = variance
 		res.Months[idx].FeeGuardOk = gross <= 0 || abs64(variance) <= gross/100
+	}
+
+	// The app's CURRENT tier = the most recent month with revenue, snapped. Tiers only
+	// ratchet UP with lifetime earnings, so the latest month reflects today's rate.
+	res.DetectedFeePct = tier.RevenueSharePercent()
+	for i := len(res.Months) - 1; i >= 0; i-- {
+		if res.Months[i].GrossCents > 0 {
+			res.DetectedFeePct = snapToTierRate(res.Months[i].EffectiveFeePct)
+			break
+		}
 	}
 	res.TierMatches = abs64Float(tier.RevenueSharePercent()-res.DetectedFeePct) < 1.0
 	return res

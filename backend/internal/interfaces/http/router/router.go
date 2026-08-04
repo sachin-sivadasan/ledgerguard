@@ -54,6 +54,7 @@ type Config struct {
 	InstallsReportHandler          *handler.InstallsReportHandler
 	FeeAuditReportHandler          *handler.FeeAuditReportHandler
 	LedgerReconReportHandler       *handler.LedgerReconciliationReportHandler
+	CustomerInsightsReportHandler  *handler.CustomerInsightsReportHandler
 	ActivationReportHandler        *handler.ActivationReportHandler
 	NetNewSubsReportHandler        *handler.NetNewSubsReportHandler
 	RiskHandler                    *handler.RiskHandler
@@ -341,6 +342,9 @@ func New(cfg Config) *chi.Mux {
 				}
 
 				// Ledger Reconciliation report route (Guard — gross = net + fee integrity)
+				if cfg.CustomerInsightsReportHandler != nil {
+					r.Get("/{appID}/reports/customer-insights", cfg.CustomerInsightsReportHandler.GetCustomerInsights)
+				}
 				if cfg.LedgerReconReportHandler != nil {
 					r.Get("/{appID}/reports/ledger-reconciliation", cfg.LedgerReconReportHandler.GetLedgerReconciliation)
 				}

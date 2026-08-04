@@ -472,6 +472,12 @@ func run() error {
 		log.Println("Ledger reconciliation report handler initialized")
 	}
 
+	var customerInsightsReportHandler *handler.CustomerInsightsReportHandler
+	if subscriptionRepo != nil && appRepo != nil && partnerRepo != nil {
+		customerInsightsReportHandler = handler.NewCustomerInsightsReportHandler(subscriptionRepo, appRepo, partnerRepo)
+		log.Println("Customer insights report handler initialized")
+	}
+
 	// Initialize activation report handler (Growth, Archetype E — install→paid funnel)
 	var activationReportHandler *handler.ActivationReportHandler
 	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -905,6 +911,7 @@ func run() error {
 		InstallsReportHandler:          installsReportHandler,
 		FeeAuditReportHandler:          feeAuditReportHandler,
 		LedgerReconReportHandler:       ledgerReconReportHandler,
+		CustomerInsightsReportHandler:  customerInsightsReportHandler,
 		ActivationReportHandler:        activationReportHandler,
 		NetNewSubsReportHandler:        netNewSubsReportHandler,
 		RiskHandler:                    riskHandler,

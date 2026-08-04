@@ -112,7 +112,8 @@ class ReportsScreen extends StatelessWidget {
       _ReportEntry('Customer Insights', 'Segments and behavior'),
     ]),
     _ReportCategory('Guard', Icons.verified_user_outlined, [
-      _ReportEntry('Fee Audit', 'Verify Shopify fee calculations'),
+      _ReportEntry('Fee Audit', 'Verify Shopify fee calculations',
+          route: '/reports/fee-audit'),
       _ReportEntry('Payout Accuracy', 'Reconcile expected vs actual payouts'),
       _ReportEntry('Ledger Reconciliation', 'Cross-check the rebuilt ledger'),
     ]),

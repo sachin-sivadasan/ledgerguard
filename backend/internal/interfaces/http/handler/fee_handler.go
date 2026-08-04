@@ -223,69 +223,29 @@ func (h *FeeHandler) GetMonthlyProfitBreakdown(w http.ResponseWriter, r *http.Re
 		TaxCents           int64 `json:"tax_cents"`
 	}
 
-	result := make([]monthBreakdown, 0, months)
-
-	// Pass 1: per-month actuals + running totals (to derive the app's real fee rate).
-	var totalGross, totalCut int64
-	for i := months - 1; i >= 0; i-- {
-		monthStart := time.Date(now.Year(), now.Month()-time.Month(i), 1, 0, 0, 0, 0, time.UTC)
-		monthEnd := time.Date(now.Year(), now.Month()-time.Month(i)+1, 0, 23, 59, 59, 0, time.UTC)
-
-		transactions, err := h.transactionRepo.FindByAppID(r.Context(), app.ID, monthStart, monthEnd)
-		if err != nil {
-			continue
-		}
-
-		summary := h.feeService.CalculateFeeSummary(transactions)
-		gross := summary.TotalGrossAmountCents
-		actualCut := summary.TotalRevenueShareCents
-		totalGross += gross
-		totalCut += actualCut
-
-		var margin, effectivePct float64
-		if gross > 0 {
-			margin = float64(summary.TotalNetAmountCents) / float64(gross) * 100
-			effectivePct = float64(actualCut) / float64(gross) * 100
-		}
+	audit := buildFeeAudit(r.Context(), h.transactionRepo, h.feeService, app.ID, tier, months, now)
+	result := make([]monthBreakdown, 0, len(audit.Months))
+	for _, m := range audit.Months {
 		result = append(result, monthBreakdown{
-			Month:           monthStart.Format("Jan"),
-			GrossCents:      gross,
-			ShopifyCutCents: actualCut,
-			NetCents:        summary.TotalNetAmountCents,
-			ProfitMarginPct: margin,
-			EffectiveFeePct: effectivePct,
+			Month:            m.Month,
+			GrossCents:       m.GrossCents,
+			ShopifyCutCents:  m.ShopifyCutCents,
+			NetCents:         m.NetCents,
+			ProfitMarginPct:  m.ProfitMarginPct,
+			EffectiveFeePct:  m.EffectiveFeePct,
+			ExpectedCutCents: m.ExpectedCutCents,
+			FeeVarianceCents: m.FeeVarianceCents,
+			FeeGuardOk:       m.FeeGuardOk,
 		})
 	}
-
-	// Derive the app's actual revenue-share rate from the observed cut, snapped to the
-	// nearest real Shopify tier (0/15/20%). The Fee Guard compares each month against
-	// THIS — not the configured tier, which defaults to 0% and is wrong for apps past
-	// $1M (RPT-FEES-2) — so it flags true anomalies (e.g. a tier-transition month or a
-	// mischarge) rather than every month.
-	detectedPct := tier.RevenueSharePercent()
-	if totalGross > 0 {
-		detectedPct = snapToTierRate(float64(totalCut) / float64(totalGross) * 100)
-	}
-	for idx := range result {
-		gross := result[idx].GrossCents
-		expected := int64(float64(gross) * detectedPct / 100)
-		variance := result[idx].ShopifyCutCents - expected
-		result[idx].ExpectedCutCents = expected
-		result[idx].FeeVarianceCents = variance
-		result[idx].FeeGuardOk = gross <= 0 || abs64(variance) <= gross/100
-	}
-
-	// tierMatches surfaces RPT-FEES-2 directly: is the app's CONFIGURED tier consistent
-	// with what Shopify actually retains?
-	tierMatches := abs64Float(tier.RevenueSharePercent()-detectedPct) < 1.0
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"configured_tier":    tier.String(),
 		"configured_fee_pct": tier.RevenueSharePercent(),
-		"detected_fee_pct":   detectedPct, // derived from actual shopifyFee/gross
-		"tier_matches":       tierMatches,
-		"expected_fee_pct":   detectedPct, // what the Fee Guard compares against
+		"detected_fee_pct":   audit.DetectedFeePct, // derived from actual shopifyFee/gross
+		"tier_matches":       audit.TierMatches,
+		"expected_fee_pct":   audit.DetectedFeePct, // what the Fee Guard compares against
 		"months":             result,
 	})
 }

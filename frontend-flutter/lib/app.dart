@@ -35,6 +35,7 @@ import 'screens/reports/payout_schedule_screen.dart';
 import 'screens/reports/payout_schedule_payouts_screen.dart';
 import 'screens/reports/payout_history_screen.dart';
 import 'screens/reports/payout_history_payouts_screen.dart';
+import 'screens/reports/fee_audit_screen.dart';
 import 'screens/reports/installs_screen.dart';
 import 'screens/reports/installs_events_screen.dart';
 import 'screens/reports/net_new_subs_screen.dart';
@@ -298,6 +299,10 @@ class _AppState extends State<App> {
                     GoRoute(
                       path: 'installs',
                       builder: (c, s) => const InstallsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'fee-audit',
+                      builder: (c, s) => const FeeAuditScreen(),
                     ),
                     GoRoute(
                       path: 'installs/events',

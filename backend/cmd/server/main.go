@@ -459,6 +459,13 @@ func run() error {
 		log.Println("Installs report handler initialized")
 	}
 
+	// Initialize fee audit report handler (Guard — actual vs expected Shopify fees)
+	var feeAuditReportHandler *handler.FeeAuditReportHandler
+	if txRepo != nil && appRepo != nil && partnerRepo != nil {
+		feeAuditReportHandler = handler.NewFeeAuditReportHandler(txRepo, appRepo, partnerRepo, domainservice.NewFeeVerificationService())
+		log.Println("Fee audit report handler initialized")
+	}
+
 	// Initialize activation report handler (Growth, Archetype E — install→paid funnel)
 	var activationReportHandler *handler.ActivationReportHandler
 	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -890,6 +897,7 @@ func run() error {
 		PayoutHistoryReportHandler:     payoutHistoryReportHandler,
 		UninstallContextHandler:        uninstallContextHandler,
 		InstallsReportHandler:          installsReportHandler,
+		FeeAuditReportHandler:          feeAuditReportHandler,
 		ActivationReportHandler:        activationReportHandler,
 		NetNewSubsReportHandler:        netNewSubsReportHandler,
 		RiskHandler:                    riskHandler,

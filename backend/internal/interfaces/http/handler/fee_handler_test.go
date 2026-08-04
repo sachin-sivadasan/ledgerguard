@@ -68,6 +68,15 @@ func TestMonthlyFees_GuardMatches(t *testing.T) {
 	if m["fee_guard_ok"] != true {
 		t.Errorf("fee_guard_ok = %v, want true (consistent 15%%)", m["fee_guard_ok"])
 	}
+	// Compat contract: the P&E frontend still reads these deprecated fields; the
+	// buildFeeAudit refactor must keep emitting them (0, since Shopify doesn't break
+	// out processing/tax).
+	if _, ok := m["processing_fee_cents"]; !ok {
+		t.Error("processing_fee_cents dropped from response (P&E frontend depends on it)")
+	}
+	if _, ok := m["tax_cents"]; !ok {
+		t.Error("tax_cents dropped from response (P&E frontend depends on it)")
+	}
 }
 
 // TestMonthlyFees_DetectsActualTierAndFlagsMismatch is the RPT-FEES-2 guard: when the

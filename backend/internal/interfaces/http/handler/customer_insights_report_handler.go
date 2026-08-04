@@ -252,7 +252,10 @@ func buildPlanRisk(agg map[string]*planRiskRow, order []string) []planRiskRow {
 		rows = append(rows, *agg[name])
 	}
 	sort.SliceStable(rows, func(i, j int) bool {
-		return rows[i].MrrCents > rows[j].MrrCents
+		if rows[i].MrrCents != rows[j].MrrCents {
+			return rows[i].MrrCents > rows[j].MrrCents
+		}
+		return rows[i].PlanName < rows[j].PlanName // stable tie-break across rebuilds
 	})
 	return rows
 }

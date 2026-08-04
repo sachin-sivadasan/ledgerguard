@@ -90,7 +90,7 @@ class CustomerInsightsProvider extends ChangeNotifier {
         riskSegments: [
           RiskSegment(riskState: 'SAFE', customers: 2551, mrrCents: 8328000),
           RiskSegment(riskState: 'AT_RISK', customers: 214, mrrCents: 612000),
-          RiskSegment(riskState: 'CHURNED', customers: 389, mrrCents: 0),
+          RiskSegment(riskState: 'CHURNED', customers: 389, mrrCents: 934000),
         ],
         planRisk: [
           PlanRiskRow(planName: 'Growth', customers: 640, safeCount: 585, atRiskCount: 55, mrrCents: 4480000, atRiskMrrCents: 385000),

@@ -341,10 +341,12 @@ func New(cfg Config) *chi.Mux {
 					r.Get("/{appID}/reports/fee-audit", cfg.FeeAuditReportHandler.GetFeeAudit)
 				}
 
-				// Ledger Reconciliation report route (Guard — gross = net + fee integrity)
+				// Customer Insights report route (Customers — segmentation)
 				if cfg.CustomerInsightsReportHandler != nil {
 					r.Get("/{appID}/reports/customer-insights", cfg.CustomerInsightsReportHandler.GetCustomerInsights)
 				}
+
+				// Ledger Reconciliation report route (Guard — gross = net + revenue share + processing)
 				if cfg.LedgerReconReportHandler != nil {
 					r.Get("/{appID}/reports/ledger-reconciliation", cfg.LedgerReconReportHandler.GetLedgerReconciliation)
 				}

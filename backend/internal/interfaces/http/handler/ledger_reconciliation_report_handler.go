@@ -42,6 +42,14 @@ func NewLedgerReconciliationReportHandler(
 	return &LedgerReconciliationReportHandler{txRepo: txRepo, appRepo: appRepo, partnerRepo: partnerRepo, feeService: feeService}
 }
 
+// processingSuspectPct is the ceiling for a plausible payment-processing rate. Shopify's
+// processing runs ~3% of gross; a derived rate well above that means the revenue-share cut
+// was folded into processing because shopifyFee didn't sync for the month — the buckets
+// still sum to gross (so the residual is ~0) but the decomposition can't be trusted. Set a
+// generous margin above real processing yet far below any revenue-share tier (15/20%), so a
+// legitimately 0%-share, ~3%-processing month never trips while an absorbed tier always does.
+const processingSuspectPct = 6.0
+
 type reconMonthJSON struct {
 	Month             string  `json:"month"`
 	GrossCents        int64   `json:"gross_cents"`
@@ -49,7 +57,11 @@ type reconMonthJSON struct {
 	RevenueShareCents int64   `json:"revenue_share_cents"` // Shopify's cut (shopifyFee)
 	ProcessingCents   int64   `json:"processing_cents"`    // derived payment-processing deduction
 	AccountedCents    int64   `json:"accounted_cents"`     // net + revenue_share + processing
-	ProcessingPct     float64 `json:"processing_pct"`      // processing ÷ gross — an off-norm rate hints at unsynced fee data
+	ProcessingPct     float64 `json:"processing_pct"`      // processing ÷ gross
+	// ProcessingSuspect ⇒ processing_pct exceeds a plausible rate, so revenue-share data
+	// was likely absorbed (unsynced shopifyFee). The month is NOT reconciled even though
+	// its buckets sum to gross — this is what stops a silently-missing fee reading as clean.
+	ProcessingSuspect bool `json:"processing_suspect"`
 	// ResidualCents = gross − accounted. Non-zero ⇒ money the three buckets don't
 	// explain — most often a refund/credit whose fee reversal hasn't synced.
 	ResidualCents int64 `json:"residual_cents"`
@@ -109,14 +121,20 @@ func (h *LedgerReconciliationReportHandler) GetLedgerReconciliation(w http.Respo
 		processing := summary.TotalProcessingFeeCents
 		accounted := net + revShare + processing
 		residual := gross - accounted
-		// A month reconciles when the three buckets account for gross within 1% of it
-		// (absorbs cent-level rounding); an empty month is trivially reconciled.
-		reconciled := gross <= 0 || abs64(residual) <= gross/100
 
 		var processingPct float64
 		if gross > 0 {
 			processingPct = float64(processing) / float64(gross) * 100
 		}
+		// An implausibly high processing rate means shopifyFee didn't sync and its cut got
+		// absorbed into processing — the buckets still sum to gross, so guard on it explicitly
+		// or a silently-missing fee would read as reconciled.
+		processingSuspect := gross > 0 && processingPct > processingSuspectPct
+		// A month reconciles when the three buckets account for gross within 1% of it
+		// (absorbs cent-level rounding) AND the decomposition is trustworthy; an empty month
+		// is trivially reconciled.
+		bucketsClose := abs64(residual) <= gross/100
+		reconciled := gross <= 0 || (bucketsClose && !processingSuspect)
 
 		report.TotalGrossCents += gross
 		report.TotalNetCents += net
@@ -135,6 +153,7 @@ func (h *LedgerReconciliationReportHandler) GetLedgerReconciliation(w http.Respo
 			ProcessingCents:   processing,
 			AccountedCents:    accounted,
 			ProcessingPct:     processingPct,
+			ProcessingSuspect: processingSuspect,
 			ResidualCents:     residual,
 			TxCount:           summary.TransactionCount,
 			Reconciled:        reconciled,
@@ -161,7 +180,7 @@ func writeReconCSV(w http.ResponseWriter, report reconReport) {
 	w.Header().Set("Content-Disposition", `attachment; filename="ledger-reconciliation.csv"`)
 
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"month", "gross_cents", "net_cents", "revenue_share_cents", "processing_cents", "accounted_cents", "residual_cents", "tx_count", "reconciled"})
+	_ = cw.Write([]string{"month", "gross_cents", "net_cents", "revenue_share_cents", "processing_cents", "accounted_cents", "residual_cents", "processing_suspect", "tx_count", "reconciled"})
 	for _, m := range report.Months {
 		_ = cw.Write([]string{
 			m.Month,
@@ -171,6 +190,7 @@ func writeReconCSV(w http.ResponseWriter, report reconReport) {
 			strconv.FormatInt(m.ProcessingCents, 10),
 			strconv.FormatInt(m.AccountedCents, 10),
 			strconv.FormatInt(m.ResidualCents, 10),
+			strconv.FormatBool(m.ProcessingSuspect),
 			strconv.Itoa(m.TxCount),
 			strconv.FormatBool(m.Reconciled),
 		})

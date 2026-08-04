@@ -13,6 +13,7 @@ class ReconMonth {
   final int processingCents;
   final int accountedCents;
   final double processingPct;
+  final bool processingSuspect;
   final int residualCents;
   final int txCount;
   final bool reconciled;
@@ -25,6 +26,7 @@ class ReconMonth {
     required this.processingCents,
     required this.accountedCents,
     required this.processingPct,
+    required this.processingSuspect,
     required this.residualCents,
     required this.txCount,
     required this.reconciled,
@@ -38,6 +40,7 @@ class ReconMonth {
         processingCents: (json['processing_cents'] as num?)?.toInt() ?? 0,
         accountedCents: (json['accounted_cents'] as num?)?.toInt() ?? 0,
         processingPct: (json['processing_pct'] as num?)?.toDouble() ?? 0,
+        processingSuspect: json['processing_suspect'] as bool? ?? false,
         residualCents: (json['residual_cents'] as num?)?.toInt() ?? 0,
         txCount: (json['tx_count'] as num?)?.toInt() ?? 0,
         reconciled: json['reconciled'] as bool? ?? true,

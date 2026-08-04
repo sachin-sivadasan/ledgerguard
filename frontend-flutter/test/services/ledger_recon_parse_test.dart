@@ -16,7 +16,7 @@ void main() {
         'months_flagged': 1,
         'months_audited': 6,
         'months': [
-          {'month': 'Jun', 'gross_cents': 100, 'net_cents': 82, 'revenue_share_cents': 15, 'processing_cents': 0, 'accounted_cents': 97, 'processing_pct': 0.0, 'residual_cents': 3, 'tx_count': 3, 'reconciled': false},
+          {'month': 'Jun', 'gross_cents': 100, 'net_cents': 82, 'revenue_share_cents': 15, 'processing_cents': 0, 'accounted_cents': 97, 'processing_pct': 0.0, 'processing_suspect': false, 'residual_cents': 3, 'tx_count': 3, 'reconciled': false},
         ],
       });
       expect(r.reconciled, isFalse);
@@ -28,6 +28,20 @@ void main() {
       expect(m.processingCents, 0);
       expect(m.accountedCents, 97);
       expect(m.residualCents, 3);
+      expect(m.reconciled, isFalse);
+    });
+
+    test('parses processing_suspect anomaly flag', () {
+      final r = ReconReport.fromJson({
+        'reconciled': false,
+        'months': [
+          {'month': 'Jul', 'gross_cents': 10000, 'net_cents': 8200, 'revenue_share_cents': 0, 'processing_cents': 1800, 'accounted_cents': 10000, 'processing_pct': 18.0, 'processing_suspect': true, 'residual_cents': 0, 'tx_count': 5, 'reconciled': false},
+        ],
+      });
+      final m = r.months.single;
+      expect(m.processingSuspect, isTrue);
+      expect(m.processingPct, 18.0);
+      expect(m.residualCents, 0); // buckets close, yet flagged
       expect(m.reconciled, isFalse);
     });
 

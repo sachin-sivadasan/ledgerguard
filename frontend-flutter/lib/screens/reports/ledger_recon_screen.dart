@@ -318,24 +318,55 @@ class _ReconTable extends StatelessWidget {
                 _cell(_money(m.grossCents)),
                 _cell(_money(m.netCents)),
                 _cell(_money(m.revenueShareCents)),
-                _cell(_money(m.processingCents)),
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: m.reconciled
-                      ? const Icon(Icons.check_circle_outline,
-                          size: 16, color: LgColors.success)
-                      : Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.warning_amber_rounded,
-                              size: 16, color: LgColors.warning),
-                          const SizedBox(width: 4),
-                          Text(_money(m.residualCents),
-                              style: const TextStyle(
-                                  fontSize: 12, color: LgColors.warning)),
-                        ]),
-                ),
+                _processingCell(m),
+                _statusCell(m),
               ],
             )),
       ],
+    );
+  }
+
+  // Processing shows the derived amount with its rate beneath — an off-norm rate (its own
+  // colour when suspect) is the visible tell that revenue-share data didn't sync.
+  Widget _processingCell(ReconMonth m) {
+    final suspect = m.processingSuspect;
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_money(m.processingCents),
+              style: const TextStyle(fontSize: 13)),
+          Text('${m.processingPct.toStringAsFixed(1)}%',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: suspect ? FontWeight.w700 : FontWeight.w400,
+                  color: suspect ? LgColors.warning : LgColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+
+  // Status reflects WHY a month is flagged: a bucket gap (residual) vs an implausible
+  // processing rate (absorbed revenue-share data), so the two never read the same.
+  Widget _statusCell(ReconMonth m) {
+    if (m.reconciled) {
+      return const Padding(
+        padding: EdgeInsets.all(8),
+        child: Icon(Icons.check_circle_outline,
+            size: 16, color: LgColors.success),
+      );
+    }
+    final label = m.processingSuspect ? 'fee unsynced' : _money(m.residualCents);
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.warning_amber_rounded,
+            size: 16, color: LgColors.warning),
+        const SizedBox(width: 4),
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: LgColors.warning)),
+      ]),
     );
   }
 

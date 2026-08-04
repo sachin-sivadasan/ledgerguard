@@ -99,3 +99,36 @@ func TestRecon_UnaccountedResidualFlagged(t *testing.T) {
 		t.Errorf("months_flagged = %v, want 1", resp["months_flagged"])
 	}
 }
+
+// TestRecon_AbsorbedFeeFlagged: when shopifyFee didn't sync, its cut is derived into
+// processing at sync time, so the buckets still sum to gross (residual ~0) — but the
+// processing rate is implausibly high (here 18%). The month must be flagged, not read as
+// clean, so a silently-missing revenue-share fee can't pass reconciliation.
+func TestRecon_AbsorbedFeeFlagged(t *testing.T) {
+	appID := uuid.New()
+	tx := &entity.Transaction{
+		ID: uuid.New(), AppID: appID,
+		GrossAmountCents:   10000,
+		NetAmountCents:     8200,
+		ShopifyFeeCents:    0,    // never synced...
+		ProcessingFeeCents: 1800, // ...so its 15% cut + 3% processing got derived into processing
+		TransactionDate:    time.Now().UTC(),
+		Currency:           "USD",
+	}
+	resp := doRecon(t, []*entity.Transaction{tx})
+
+	m := resp["months"].([]any)[0].(map[string]any)
+	// Buckets close (8200 + 0 + 1800 == 10000) yet the month must NOT reconcile.
+	if m["residual_cents"].(float64) != 0 {
+		t.Errorf("residual_cents = %v, want 0 (buckets sum to gross)", m["residual_cents"])
+	}
+	if m["processing_suspect"] != true {
+		t.Errorf("processing_suspect = %v, want true (18%% is implausible)", m["processing_suspect"])
+	}
+	if resp["reconciled"] != false {
+		t.Errorf("reconciled = %v, want false (absorbed fee must not read as clean)", resp["reconciled"])
+	}
+	if resp["months_flagged"].(float64) != 1 {
+		t.Errorf("months_flagged = %v, want 1", resp["months_flagged"])
+	}
+}

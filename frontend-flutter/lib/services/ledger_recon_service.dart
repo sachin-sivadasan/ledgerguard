@@ -3,13 +3,16 @@ import 'package:flutter/foundation.dart';
 
 import '../core/network/api_client.dart';
 
-/// One month of the ledger reconciliation: does net == gross − fee?
+/// One month of the ledger reconciliation: does gross == net + revenue share +
+/// processing? The residual is whatever those three buckets don't account for.
 class ReconMonth {
   final String month;
   final int grossCents;
-  final int feeCents;
   final int netCents;
-  final int expectedNetCents;
+  final int revenueShareCents;
+  final int processingCents;
+  final int accountedCents;
+  final double processingPct;
   final int residualCents;
   final int txCount;
   final bool reconciled;
@@ -17,9 +20,11 @@ class ReconMonth {
   const ReconMonth({
     required this.month,
     required this.grossCents,
-    required this.feeCents,
     required this.netCents,
-    required this.expectedNetCents,
+    required this.revenueShareCents,
+    required this.processingCents,
+    required this.accountedCents,
+    required this.processingPct,
     required this.residualCents,
     required this.txCount,
     required this.reconciled,
@@ -28,9 +33,11 @@ class ReconMonth {
   factory ReconMonth.fromJson(Map<String, dynamic> json) => ReconMonth(
         month: json['month'] as String? ?? '',
         grossCents: (json['gross_cents'] as num?)?.toInt() ?? 0,
-        feeCents: (json['fee_cents'] as num?)?.toInt() ?? 0,
         netCents: (json['net_cents'] as num?)?.toInt() ?? 0,
-        expectedNetCents: (json['expected_net_cents'] as num?)?.toInt() ?? 0,
+        revenueShareCents: (json['revenue_share_cents'] as num?)?.toInt() ?? 0,
+        processingCents: (json['processing_cents'] as num?)?.toInt() ?? 0,
+        accountedCents: (json['accounted_cents'] as num?)?.toInt() ?? 0,
+        processingPct: (json['processing_pct'] as num?)?.toDouble() ?? 0,
         residualCents: (json['residual_cents'] as num?)?.toInt() ?? 0,
         txCount: (json['tx_count'] as num?)?.toInt() ?? 0,
         reconciled: json['reconciled'] as bool? ?? true,
@@ -40,8 +47,9 @@ class ReconMonth {
 class ReconReport {
   final String currency;
   final int totalGrossCents;
-  final int totalFeeCents;
   final int totalNetCents;
+  final int totalRevenueShareCents;
+  final int totalProcessingCents;
   final int residualCents;
   final bool reconciled;
   final int monthsReconciled;
@@ -52,8 +60,9 @@ class ReconReport {
   const ReconReport({
     required this.currency,
     required this.totalGrossCents,
-    required this.totalFeeCents,
     required this.totalNetCents,
+    required this.totalRevenueShareCents,
+    required this.totalProcessingCents,
     required this.residualCents,
     required this.reconciled,
     required this.monthsReconciled,
@@ -65,8 +74,11 @@ class ReconReport {
   factory ReconReport.fromJson(Map<String, dynamic> json) => ReconReport(
         currency: json['currency'] as String? ?? 'USD',
         totalGrossCents: (json['total_gross_cents'] as num?)?.toInt() ?? 0,
-        totalFeeCents: (json['total_fee_cents'] as num?)?.toInt() ?? 0,
         totalNetCents: (json['total_net_cents'] as num?)?.toInt() ?? 0,
+        totalRevenueShareCents:
+            (json['total_revenue_share_cents'] as num?)?.toInt() ?? 0,
+        totalProcessingCents:
+            (json['total_processing_cents'] as num?)?.toInt() ?? 0,
         residualCents: (json['residual_cents'] as num?)?.toInt() ?? 0,
         reconciled: json['reconciled'] as bool? ?? true,
         monthsReconciled: (json['months_reconciled'] as num?)?.toInt() ?? 0,
@@ -81,8 +93,9 @@ class ReconReport {
   static ReconReport empty() => const ReconReport(
         currency: 'USD',
         totalGrossCents: 0,
-        totalFeeCents: 0,
         totalNetCents: 0,
+        totalRevenueShareCents: 0,
+        totalProcessingCents: 0,
         residualCents: 0,
         reconciled: true,
         monthsReconciled: 0,

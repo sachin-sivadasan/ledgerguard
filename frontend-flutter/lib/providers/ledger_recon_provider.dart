@@ -74,23 +74,26 @@ class LedgerReconProvider extends ChangeNotifier {
     return _service.fetchCsvBytes(appId);
   }
 
+  // Each month closes gross = net + revenue share + processing (~3%). Jun carries a
+  // residual — a refund whose fee reversal never synced — to exercise the flagged path.
   ReconReport _mockReport() => const ReconReport(
         currency: 'USD',
         totalGrossCents: 20890218,
-        totalFeeCents: 2606271,
-        totalNetCents: 18283947,
+        totalNetCents: 17657676,
+        totalRevenueShareCents: 2606271,
+        totalProcessingCents: 626271,
         residualCents: 0,
         reconciled: false,
         monthsReconciled: 5,
         monthsFlagged: 1,
         monthsAudited: 6,
         months: [
-          ReconMonth(month: 'Mar', grossCents: 4100000, feeCents: 615000, netCents: 3485000, expectedNetCents: 3485000, residualCents: 0, txCount: 210, reconciled: true),
-          ReconMonth(month: 'Apr', grossCents: 4300000, feeCents: 645000, netCents: 3655000, expectedNetCents: 3655000, residualCents: 0, txCount: 221, reconciled: true),
-          ReconMonth(month: 'May', grossCents: 3900000, feeCents: 585000, netCents: 3315000, expectedNetCents: 3315000, residualCents: 0, txCount: 198, reconciled: true),
-          ReconMonth(month: 'Jun', grossCents: 3200000, feeCents: 0, netCents: 2720000, expectedNetCents: 3200000, residualCents: -480000, txCount: 176, reconciled: false),
-          ReconMonth(month: 'Jul', grossCents: 4680218, feeCents: 702033, netCents: 3978185, expectedNetCents: 3978185, residualCents: 0, txCount: 240, reconciled: true),
-          ReconMonth(month: 'Aug', grossCents: 710000, feeCents: 106500, netCents: 603500, expectedNetCents: 603500, residualCents: 0, txCount: 33, reconciled: true),
+          ReconMonth(month: 'Mar', grossCents: 4100000, netCents: 3362000, revenueShareCents: 615000, processingCents: 123000, accountedCents: 4100000, processingPct: 3.0, residualCents: 0, txCount: 210, reconciled: true),
+          ReconMonth(month: 'Apr', grossCents: 4300000, netCents: 3526000, revenueShareCents: 645000, processingCents: 129000, accountedCents: 4300000, processingPct: 3.0, residualCents: 0, txCount: 221, reconciled: true),
+          ReconMonth(month: 'May', grossCents: 3900000, netCents: 3198000, revenueShareCents: 585000, processingCents: 117000, accountedCents: 3900000, processingPct: 3.0, residualCents: 0, txCount: 198, reconciled: true),
+          ReconMonth(month: 'Jun', grossCents: 3200000, netCents: 2624000, revenueShareCents: 480000, processingCents: 96000, accountedCents: 3200000, processingPct: 3.0, residualCents: 90000, txCount: 176, reconciled: false),
+          ReconMonth(month: 'Jul', grossCents: 4680218, netCents: 3838779, revenueShareCents: 702033, processingCents: 139406, accountedCents: 4680218, processingPct: 2.98, residualCents: 0, txCount: 240, reconciled: true),
+          ReconMonth(month: 'Aug', grossCents: 710000, netCents: 582300, revenueShareCents: 106500, processingCents: 21300, accountedCents: 710000, processingPct: 3.0, residualCents: 0, txCount: 33, reconciled: true),
         ],
       );
 }

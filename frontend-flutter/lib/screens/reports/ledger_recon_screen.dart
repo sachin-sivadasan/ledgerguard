@@ -102,7 +102,7 @@ class _LedgerReconScreenState extends State<LedgerReconScreen>
     return LgPage(
       title: 'Ledger Reconciliation',
       breadcrumb: 'Reports › Guard',
-      subtitle: 'Does the money add up? Recorded net vs Shopify\'s gross − fee.',
+      subtitle: 'Does the money add up? Gross = net + revenue share + processing.',
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
       secondaryActions: [
@@ -139,7 +139,7 @@ class _LedgerReconScreenState extends State<LedgerReconScreen>
             _ReconTable(report: report),
             const SizedBox(height: LgSpacing.s400),
             Text(
-              'Reconciled when recorded net = gross − fee (within 1% of gross). A residual usually means a month\'s fee data is incomplete.',
+              'Reconciled when net + revenue share + processing accounts for gross (within 1%). Processing (~3%) is Shopify\'s payment fee, derived per sale. A residual is money those buckets don\'t explain — usually a refund whose fee reversal hasn\'t synced.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: LgColors.textSecondary,
                   ),
@@ -172,7 +172,7 @@ class _Verdict extends StatelessWidget {
               children: [
                 Text(
                   ok
-                      ? 'Reconciled — the ledger matches Shopify'
+                      ? 'Reconciled — every dollar accounted for'
                       : '${report.monthsFlagged} of ${report.monthsAudited} months don\'t reconcile',
                   style: theme.textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.w700, color: color),
@@ -180,8 +180,8 @@ class _Verdict extends StatelessWidget {
                 const SizedBox(height: LgSpacing.s100),
                 Text(
                   ok
-                      ? 'Recorded net equals gross − fee for every audited month.'
-                      : 'Some months have a residual (net ≠ gross − fee) — usually incomplete fee data; review the table.',
+                      ? 'Net + revenue share + processing accounts for gross in every audited month.'
+                      : 'Some months leave a residual the buckets don\'t explain — usually an unsynced refund fee; review the table.',
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: LgColors.textSecondary),
                 ),
@@ -202,8 +202,9 @@ class _KpiRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cards = [
       _Kpi(label: 'Gross', value: _money(report.totalGrossCents), color: LgColors.textPrimary, footnote: 'merchants paid'),
-      _Kpi(label: 'Shopify fee', value: _money(report.totalFeeCents), color: LgColors.warning, footnote: 'retained'),
       _Kpi(label: 'Net', value: _money(report.totalNetCents), color: LgColors.success, footnote: 'your payout'),
+      _Kpi(label: 'Revenue share', value: _money(report.totalRevenueShareCents), color: LgColors.warning, footnote: "Shopify's cut"),
+      _Kpi(label: 'Processing', value: _money(report.totalProcessingCents), color: LgColors.warning, footnote: 'derived'),
     ];
     if (LgBreakpoints.isMobile(context)) {
       return Column(
@@ -300,7 +301,7 @@ class _ReconTable extends StatelessWidget {
       children: [
         TableRow(
           decoration: BoxDecoration(color: LgColors.surfaceSecondary),
-          children: ['Month', 'Gross', 'Fee', 'Net', 'Expected net', 'Status']
+          children: ['Month', 'Gross', 'Net', 'Revenue share', 'Processing', 'Status']
               .map((h) => Padding(
                     padding: const EdgeInsets.all(8),
                     child: Text(h,
@@ -315,9 +316,9 @@ class _ReconTable extends StatelessWidget {
               children: [
                 _cell(m.month),
                 _cell(_money(m.grossCents)),
-                _cell(_money(m.feeCents)),
                 _cell(_money(m.netCents)),
-                _cell(_money(m.expectedNetCents)),
+                _cell(_money(m.revenueShareCents)),
+                _cell(_money(m.processingCents)),
                 Padding(
                   padding: const EdgeInsets.all(8),
                   child: m.reconciled

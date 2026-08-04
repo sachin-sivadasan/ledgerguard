@@ -1,10 +1,14 @@
 package handler
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
@@ -54,6 +58,25 @@ type planLabeler struct {
 // newPlanLabeler builds a labeler over an optional developer plan-label map (may be nil).
 func newPlanLabeler(labels map[string]string) planLabeler {
 	return planLabeler{labels: labels}
+}
+
+// planLabelMapFor loads an app's saved plan labels as a planKey→label map for the labeler.
+// A nil repo (feature not wired) or a load error yields nil — plan labels are a display
+// nicety, so the labeler must degrade to pseudo-labels rather than fail the report.
+func planLabelMapFor(ctx context.Context, repo repository.PlanLabelRepository, appID uuid.UUID) map[string]string {
+	if repo == nil {
+		return nil
+	}
+	labels, err := repo.FindByAppID(ctx, appID)
+	if err != nil {
+		log.Printf("plan-labels: load map failed (falling back to pseudo-labels): %v", err)
+		return nil
+	}
+	m := make(map[string]string, len(labels))
+	for _, l := range labels {
+		m[planKey(l.BillingInterval, l.PriceCents)] = l.Label
+	}
+	return m
 }
 
 // label returns the display plan label for a subscription.

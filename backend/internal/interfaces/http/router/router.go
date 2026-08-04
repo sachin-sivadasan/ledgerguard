@@ -55,6 +55,7 @@ type Config struct {
 	FeeAuditReportHandler          *handler.FeeAuditReportHandler
 	LedgerReconReportHandler       *handler.LedgerReconciliationReportHandler
 	CustomerInsightsReportHandler  *handler.CustomerInsightsReportHandler
+	PlanLabelHandler               *handler.PlanLabelHandler
 	ActivationReportHandler        *handler.ActivationReportHandler
 	NetNewSubsReportHandler        *handler.NetNewSubsReportHandler
 	RiskHandler                    *handler.RiskHandler
@@ -344,6 +345,12 @@ func New(cfg Config) *chi.Mux {
 				// Customer Insights report route (Customers — segmentation)
 				if cfg.CustomerInsightsReportHandler != nil {
 					r.Get("/{appID}/reports/customer-insights", cfg.CustomerInsightsReportHandler.GetCustomerInsights)
+				}
+
+				// Plan-label settings: name your price tiers (feeds the plan-based reports)
+				if cfg.PlanLabelHandler != nil {
+					r.Get("/{appID}/plan-labels", cfg.PlanLabelHandler.GetPlanLabels)
+					r.Put("/{appID}/plan-labels", cfg.PlanLabelHandler.PutPlanLabels)
 				}
 
 				// Ledger Reconciliation report route (Guard — gross = net + revenue share + processing)

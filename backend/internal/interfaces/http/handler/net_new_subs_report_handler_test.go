@@ -39,6 +39,7 @@ func nnFixture(subs []*entity.Subscription) (uuid.UUID, *entity.PartnerAccount, 
 		&mockSubscriptionRepo{subscriptions: subs},
 		&mockAppRepoForSub{app: app},
 		&mockPartnerRepoForSub{account: pa},
+		nil,
 	)
 	return appID, pa, h
 }
@@ -348,6 +349,7 @@ func TestNetNewSubs_RepoErrorReturns503(t *testing.T) {
 		&mockSubscriptionRepo{findAllErr: errors.New("db down")},
 		&mockAppRepoForSub{app: app},
 		&mockPartnerRepoForSub{account: pa},
+		nil,
 	)
 	if rec := doNetNew(t, h, appID, pa, ""); rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503, got %d", rec.Code)

@@ -27,18 +27,21 @@ import (
 // The customer base = non-churned subscriptions (SAFE + at-risk), matching Active
 // Customers; churned subs appear only in the risk breakdown for context.
 type CustomerInsightsReportHandler struct {
-	subRepo     repository.SubscriptionRepository
-	appRepo     repository.AppRepository
-	partnerRepo repository.PartnerAccountRepository
+	subRepo       repository.SubscriptionRepository
+	appRepo       repository.AppRepository
+	partnerRepo   repository.PartnerAccountRepository
+	planLabelRepo repository.PlanLabelRepository
 }
 
-// NewCustomerInsightsReportHandler constructs a CustomerInsightsReportHandler.
+// NewCustomerInsightsReportHandler constructs a CustomerInsightsReportHandler. planLabelRepo
+// may be nil (plan labels then fall back to pseudo-labels).
 func NewCustomerInsightsReportHandler(
 	subRepo repository.SubscriptionRepository,
 	appRepo repository.AppRepository,
 	partnerRepo repository.PartnerAccountRepository,
+	planLabelRepo repository.PlanLabelRepository,
 ) *CustomerInsightsReportHandler {
-	return &CustomerInsightsReportHandler{subRepo: subRepo, appRepo: appRepo, partnerRepo: partnerRepo}
+	return &CustomerInsightsReportHandler{subRepo: subRepo, appRepo: appRepo, partnerRepo: partnerRepo, planLabelRepo: planLabelRepo}
 }
 
 // revenueBand is one MRR bucket over the active base: how many customers sit in it and
@@ -127,9 +130,8 @@ func (h *CustomerInsightsReportHandler) GetCustomerInsights(w http.ResponseWrite
 		return
 	}
 
-	// Phase 1: pseudo-labels only (nil map). A developer plan-label map from the app will
-	// be threaded in here when the plan-label settings ship.
-	report := buildCustomerInsights(subs, newPlanLabeler(nil))
+	labeler := newPlanLabeler(planLabelMapFor(r.Context(), h.planLabelRepo, app.ID))
+	report := buildCustomerInsights(subs, labeler)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
 		writeCustomerInsightsCSV(w, report)

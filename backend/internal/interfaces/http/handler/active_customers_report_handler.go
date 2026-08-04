@@ -24,24 +24,28 @@ import (
 // "Active" = non-churned paying subscriptions (SAFE + at-risk), i.e. every risk
 // state except CHURNED — matching the wireframe's "Safe + at-risk".
 type ActiveCustomersReportHandler struct {
-	subRepo      repository.SubscriptionRepository
-	snapshotRepo repository.DailyMetricsSnapshotRepository
-	appRepo      repository.AppRepository
-	partnerRepo  repository.PartnerAccountRepository
+	subRepo       repository.SubscriptionRepository
+	snapshotRepo  repository.DailyMetricsSnapshotRepository
+	appRepo       repository.AppRepository
+	partnerRepo   repository.PartnerAccountRepository
+	planLabelRepo repository.PlanLabelRepository
 }
 
-// NewActiveCustomersReportHandler constructs an ActiveCustomersReportHandler.
+// NewActiveCustomersReportHandler constructs an ActiveCustomersReportHandler. planLabelRepo
+// may be nil (plan labels then fall back to pseudo-labels).
 func NewActiveCustomersReportHandler(
 	subRepo repository.SubscriptionRepository,
 	snapshotRepo repository.DailyMetricsSnapshotRepository,
 	appRepo repository.AppRepository,
 	partnerRepo repository.PartnerAccountRepository,
+	planLabelRepo repository.PlanLabelRepository,
 ) *ActiveCustomersReportHandler {
 	return &ActiveCustomersReportHandler{
-		subRepo:      subRepo,
-		snapshotRepo: snapshotRepo,
-		appRepo:      appRepo,
-		partnerRepo:  partnerRepo,
+		subRepo:       subRepo,
+		snapshotRepo:  snapshotRepo,
+		appRepo:       appRepo,
+		partnerRepo:   partnerRepo,
+		planLabelRepo: planLabelRepo,
 	}
 }
 
@@ -103,7 +107,8 @@ func (h *ActiveCustomersReportHandler) GetActiveCustomersReport(w http.ResponseW
 	}
 
 	interval := resolveTrendInterval(from, to)
-	plans := buildActiveCustomersPlans(subs, newPlanLabeler(nil))
+	labeler := newPlanLabeler(planLabelMapFor(r.Context(), h.planLabelRepo, app.ID))
+	plans := buildActiveCustomersPlans(subs, labeler)
 	report := buildActiveCustomersReport(subs, plans, from, to)
 	report.Interval = string(interval)
 	report.Trend = buildActiveCustomersTrend(downsampleSnapshots(snapshots, interval))

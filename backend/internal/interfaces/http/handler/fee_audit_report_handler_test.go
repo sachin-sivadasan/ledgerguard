@@ -89,6 +89,39 @@ func TestFeeAudit_TierMismatch(t *testing.T) {
 	}
 }
 
+// TestFeeAudit_OffTierMonthFlagged: a month whose rate sits BETWEEN tiers (12% ≈ a
+// transition/mischarge) doesn't match its nearest tier (15%) → flagged. Per-month
+// snapping is what makes this robust to the $1M-crossing window (RPT-FEES-2 nuance).
+func TestFeeAudit_OffTierMonthFlagged(t *testing.T) {
+	appID := uuid.New()
+	resp := doFeeAudit(t, valueobject.RevenueShareTierSmallDev15,
+		[]*entity.Transaction{feeTx(appID, 10000, 1200)}, "months=1") // 12% actual
+
+	m := resp["months"].([]any)[0].(map[string]any)
+	if m["expected_cut_cents"].(float64) != 1500 {
+		t.Errorf("expected_cut_cents = %v, want 1500 (12%% snaps to the 15%% tier)", m["expected_cut_cents"])
+	}
+	if m["fee_guard_ok"] != false {
+		t.Errorf("fee_guard_ok = %v, want false (12%% is off-tier)", m["fee_guard_ok"])
+	}
+}
+
+// TestFeeAudit_ZeroTierMonthClean: a legitimately 0% month (pre-$1M) snaps to the 0%
+// tier and passes — it must NOT be flagged just because later months are 15%.
+func TestFeeAudit_ZeroTierMonthClean(t *testing.T) {
+	appID := uuid.New()
+	resp := doFeeAudit(t, valueobject.RevenueShareTierSmallDev0,
+		[]*entity.Transaction{feeTx(appID, 10000, 0)}, "months=1")
+
+	m := resp["months"].([]any)[0].(map[string]any)
+	if m["fee_guard_ok"] != true {
+		t.Errorf("fee_guard_ok = %v, want true (a clean 0%% month is on-tier)", m["fee_guard_ok"])
+	}
+	if resp["flagged_months"].(float64) != 0 {
+		t.Errorf("flagged_months = %v, want 0", resp["flagged_months"])
+	}
+}
+
 func TestFeeAudit_CSV(t *testing.T) {
 	appID := uuid.New()
 	pa := &entity.PartnerAccount{ID: uuid.New(), UserID: uuid.New()}

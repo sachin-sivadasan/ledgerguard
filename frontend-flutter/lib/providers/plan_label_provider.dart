@@ -16,6 +16,7 @@ class PlanLabelProvider extends ChangeNotifier {
   bool _isServiceUnavailable = false;
   String? _selectedAppId;
   List<PlanTier> _tiers = const [];
+  int _hiddenTiers = 0;
   final Map<String, String> _edits = {}; // tier key → edited label
   bool _saved = false;
 
@@ -25,6 +26,7 @@ class PlanLabelProvider extends ChangeNotifier {
   bool get isServiceUnavailable => _isServiceUnavailable;
   String? get selectedAppId => _selectedAppId;
   List<PlanTier> get tiers => _tiers;
+  int get hiddenTiers => _hiddenTiers;
   bool get justSaved => _saved;
 
   /// The current label for a tier: the developer's unsaved edit if present, else the saved
@@ -65,7 +67,9 @@ class PlanLabelProvider extends ChangeNotifier {
     _saved = false;
     notifyListeners();
     try {
-      _tiers = await _service.fetchTiers(appId);
+      final result = await _service.fetchTiers(appId);
+      _tiers = result.tiers;
+      _hiddenTiers = result.hiddenTiers;
       _edits.clear();
     } on DioException catch (e) {
       if (e.response?.statusCode == 503) {

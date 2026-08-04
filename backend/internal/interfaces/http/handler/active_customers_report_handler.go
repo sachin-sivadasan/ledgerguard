@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sort"
@@ -233,7 +234,31 @@ func buildActiveCustomersPlans(subs []*entity.Subscription, labeler planLabeler)
 	sort.SliceStable(plans, func(i, j int) bool {
 		return plans[i].MrrCents > plans[j].MrrCents
 	})
-	return plans
+
+	// Fold minor tiers (proration/refund noise) into a trailing "Other" row — only when
+	// there are enough tiers for a real long tail.
+	if len(plans) <= minTiersToCollapse {
+		return plans
+	}
+	threshold := tierSignificanceThreshold(totalActive)
+	kept := make([]activeCustomersPlan, 0, len(plans))
+	other := activeCustomersPlan{PlanName: "Other"}
+	otherTiers := 0
+	for _, p := range plans {
+		if p.ActiveSubs >= threshold {
+			kept = append(kept, p)
+			continue
+		}
+		other.ActiveSubs += p.ActiveSubs
+		other.MrrCents += p.MrrCents
+		other.PctOfActive += p.PctOfActive
+		otherTiers++
+	}
+	if otherTiers > 0 {
+		other.PlanName = fmt.Sprintf("Other (%d tiers)", otherTiers)
+		kept = append(kept, other)
+	}
+	return kept
 }
 
 // buildActiveCustomersTrend converts daily snapshots to the active-customers series

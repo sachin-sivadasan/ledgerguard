@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 
 	"github.com/google/uuid"
@@ -58,6 +59,24 @@ type planLabeler struct {
 // newPlanLabeler builds a labeler over an optional developer plan-label map (may be nil).
 func newPlanLabeler(labels map[string]string) planLabeler {
 	return planLabeler{labels: labels}
+}
+
+// minTiersToCollapse is the tier count above which the long-tail collapse kicks in. Below
+// it there's no proration noise worth hiding (a real app has only a handful of plans), so
+// every tier is shown as-is.
+const minTiersToCollapse = 12
+
+// tierSignificanceThreshold is the minimum customer count for a price tier to count as a
+// real plan rather than proration/refund noise. BasePriceCents is the last CHARGED amount,
+// so mid-cycle upgrades (prorated partials) and refund/adjustment subs spawn many 1–2
+// customer phantom tiers; the genuine plans carry far more. Floor of 3, scaled to 0.5% of
+// the active base so it stays meaningful as an app grows.
+func tierSignificanceThreshold(totalActive int) int {
+	t := int(math.Ceil(float64(totalActive) * 0.005))
+	if t < 3 {
+		t = 3
+	}
+	return t
 }
 
 // planLabelMapFor loads an app's saved plan labels as a planKey→label map for the labeler.

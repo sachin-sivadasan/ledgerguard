@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -119,6 +120,38 @@ func TestFeeAudit_ZeroTierMonthClean(t *testing.T) {
 	}
 	if resp["flagged_months"].(float64) != 0 {
 		t.Errorf("flagged_months = %v, want 0", resp["flagged_months"])
+	}
+}
+
+// TestFeeAudit_ProcessingFeeDoesNotShiftTier is the guard for the derived-processing-fee
+// change: tier detection must key off the REVENUE-SHARE rate (shopifyFee ÷ gross), never
+// the total effective fee. A real month is 15% revenue share + ~3% processing = 18%
+// effective; if detection ever snapped on the effective rate it would round 18% → the 20%
+// tier and wrongly report a mismatch. With processing populated, detected must stay 15.
+func TestFeeAudit_ProcessingFeeDoesNotShiftTier(t *testing.T) {
+	appID := uuid.New()
+	tx := &entity.Transaction{
+		ID:                 uuid.New(),
+		AppID:              appID,
+		GrossAmountCents:   10000,
+		ShopifyFeeCents:    1500, // 15% revenue share
+		ProcessingFeeCents: 300,  // 3% processing baked into net (derived at sync)
+		NetAmountCents:     8200, // 10000 − 1500 − 300
+		TransactionDate:    time.Now().UTC(),
+		Currency:           "USD",
+	}
+	resp := doFeeAudit(t, valueobject.RevenueShareTierSmallDev15,
+		[]*entity.Transaction{tx}, "months=1")
+
+	if resp["detected_fee_pct"].(float64) != 15 {
+		t.Errorf("detected_fee_pct = %v, want 15 (must ignore the 3%% processing fee)", resp["detected_fee_pct"])
+	}
+	if resp["tier_matches"] != true {
+		t.Errorf("tier_matches = %v, want true (15%% configured == 15%% detected)", resp["tier_matches"])
+	}
+	m := resp["months"].([]any)[0].(map[string]any)
+	if m["fee_guard_ok"] != true {
+		t.Errorf("fee_guard_ok = %v, want true (15%% cut is on-tier; processing is not a mischarge)", m["fee_guard_ok"])
 	}
 }
 

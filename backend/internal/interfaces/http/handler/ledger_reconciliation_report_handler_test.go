@@ -39,43 +39,94 @@ func doRecon(t *testing.T, txs []*entity.Transaction) map[string]any {
 	return resp
 }
 
-// TestRecon_Balanced: net == gross − fee (the Shopify identity holds) → reconciled.
-func TestRecon_Balanced(t *testing.T) {
+// TestRecon_ItemizedBalanced: a fully-itemized sale (the shape sync now produces) — gross
+// = net + revenue_share + processing — reconciles to a zero residual.
+func TestRecon_ItemizedBalanced(t *testing.T) {
 	appID := uuid.New()
-	resp := doRecon(t, []*entity.Transaction{feeTx(appID, 10000, 1500)}) // net 8500 = 10000 − 1500
+	tx := &entity.Transaction{
+		ID: uuid.New(), AppID: appID,
+		GrossAmountCents:   10000,
+		NetAmountCents:     8200, // 10000 − 1500 revenue share − 300 processing
+		ShopifyFeeCents:    1500,
+		ProcessingFeeCents: 300,
+		TransactionDate:    time.Now().UTC(),
+		Currency:           "USD",
+	}
+	resp := doRecon(t, []*entity.Transaction{tx})
 
 	if resp["reconciled"] != true {
-		t.Errorf("reconciled = %v, want true (identity holds)", resp["reconciled"])
+		t.Errorf("reconciled = %v, want true (buckets close: 8200 + 1500 + 300 = 10000)", resp["reconciled"])
 	}
 	m := resp["months"].([]any)[0].(map[string]any)
-	if m["expected_net_cents"].(float64) != 8500 {
-		t.Errorf("expected_net_cents = %v, want 8500 (gross − fee)", m["expected_net_cents"])
+	if m["revenue_share_cents"].(float64) != 1500 {
+		t.Errorf("revenue_share_cents = %v, want 1500", m["revenue_share_cents"])
+	}
+	if m["processing_cents"].(float64) != 300 {
+		t.Errorf("processing_cents = %v, want 300", m["processing_cents"])
+	}
+	if m["accounted_cents"].(float64) != 10000 {
+		t.Errorf("accounted_cents = %v, want 10000 (net + share + processing)", m["accounted_cents"])
 	}
 	if m["residual_cents"].(float64) != 0 {
 		t.Errorf("residual_cents = %v, want 0", m["residual_cents"])
 	}
 }
 
-// TestRecon_MissingFeeFlagged: a month with no fee recorded but net < gross doesn't
-// satisfy gross = net + fee → flagged (the ledger and Shopify disagree).
-func TestRecon_MissingFeeFlagged(t *testing.T) {
+// TestRecon_UnaccountedResidualFlagged: money the three buckets don't explain (here a row
+// whose processing/fee never synced, so net + share + processing < gross) is flagged — the
+// honest residual signal, e.g. a refund/credit whose fee reversal is missing.
+func TestRecon_UnaccountedResidualFlagged(t *testing.T) {
 	appID := uuid.New()
 	tx := &entity.Transaction{
 		ID: uuid.New(), AppID: appID,
-		GrossAmountCents: 10000,
-		NetAmountCents:   8500, // Shopify kept 1500, but ShopifyFeeCents is 0 (unsynced)
-		ShopifyFeeCents:  0,
-		TransactionDate:  time.Now().UTC(),
-		Currency:         "USD",
+		GrossAmountCents:   10000,
+		NetAmountCents:     8200, // Shopify kept 1800, but only 1500 is itemized...
+		ShopifyFeeCents:    1500,
+		ProcessingFeeCents: 0, // ...and processing never synced → 300 unaccounted
+		TransactionDate:    time.Now().UTC(),
+		Currency:           "USD",
 	}
 	resp := doRecon(t, []*entity.Transaction{tx})
 
 	if resp["reconciled"] != false {
-		t.Errorf("reconciled = %v, want false (net 8500 ≠ gross 10000 − fee 0)", resp["reconciled"])
+		t.Errorf("reconciled = %v, want false (8200 + 1500 + 0 = 9700 ≠ gross 10000)", resp["reconciled"])
 	}
 	m := resp["months"].([]any)[0].(map[string]any)
-	if m["residual_cents"].(float64) != -1500 {
-		t.Errorf("residual_cents = %v, want -1500", m["residual_cents"])
+	if m["residual_cents"].(float64) != 300 {
+		t.Errorf("residual_cents = %v, want 300 (gross − accounted)", m["residual_cents"])
+	}
+	if resp["months_flagged"].(float64) != 1 {
+		t.Errorf("months_flagged = %v, want 1", resp["months_flagged"])
+	}
+}
+
+// TestRecon_AbsorbedFeeFlagged: when shopifyFee didn't sync, its cut is derived into
+// processing at sync time, so the buckets still sum to gross (residual ~0) — but the
+// processing rate is implausibly high (here 18%). The month must be flagged, not read as
+// clean, so a silently-missing revenue-share fee can't pass reconciliation.
+func TestRecon_AbsorbedFeeFlagged(t *testing.T) {
+	appID := uuid.New()
+	tx := &entity.Transaction{
+		ID: uuid.New(), AppID: appID,
+		GrossAmountCents:   10000,
+		NetAmountCents:     8200,
+		ShopifyFeeCents:    0,    // never synced...
+		ProcessingFeeCents: 1800, // ...so its 15% cut + 3% processing got derived into processing
+		TransactionDate:    time.Now().UTC(),
+		Currency:           "USD",
+	}
+	resp := doRecon(t, []*entity.Transaction{tx})
+
+	m := resp["months"].([]any)[0].(map[string]any)
+	// Buckets close (8200 + 0 + 1800 == 10000) yet the month must NOT reconcile.
+	if m["residual_cents"].(float64) != 0 {
+		t.Errorf("residual_cents = %v, want 0 (buckets sum to gross)", m["residual_cents"])
+	}
+	if m["processing_suspect"] != true {
+		t.Errorf("processing_suspect = %v, want true (18%% is implausible)", m["processing_suspect"])
+	}
+	if resp["reconciled"] != false {
+		t.Errorf("reconciled = %v, want false (absorbed fee must not read as clean)", resp["reconciled"])
 	}
 	if resp["months_flagged"].(float64) != 1 {
 		t.Errorf("months_flagged = %v, want 1", resp["months_flagged"])

@@ -52,6 +52,7 @@ type Config struct {
 	PayoutHistoryReportHandler     *handler.PayoutHistoryReportHandler
 	UninstallContextHandler        *handler.UninstallContextHandler
 	InstallsReportHandler          *handler.InstallsReportHandler
+	FeeAuditReportHandler          *handler.FeeAuditReportHandler
 	ActivationReportHandler        *handler.ActivationReportHandler
 	NetNewSubsReportHandler        *handler.NetNewSubsReportHandler
 	RiskHandler                    *handler.RiskHandler
@@ -331,6 +332,11 @@ func New(cfg Config) *chi.Mux {
 				// Activation report route (Growth, Archetype E — install→paid funnel)
 				if cfg.ActivationReportHandler != nil {
 					r.Get("/{appID}/reports/activation", cfg.ActivationReportHandler.GetActivation)
+				}
+
+				// Fee Audit report route (Guard — actual vs expected Shopify fees)
+				if cfg.FeeAuditReportHandler != nil {
+					r.Get("/{appID}/reports/fee-audit", cfg.FeeAuditReportHandler.GetFeeAudit)
 				}
 
 				// Net-New Subscriptions report route (Growth, Archetype A — new vs churned)

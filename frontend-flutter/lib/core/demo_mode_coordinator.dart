@@ -10,6 +10,7 @@ import '../providers/insights_provider.dart';
 import '../providers/mrr_report_provider.dart';
 import '../providers/active_customers_provider.dart';
 import '../providers/activation_provider.dart';
+import '../providers/fee_audit_provider.dart';
 import '../providers/retention_provider.dart';
 import '../providers/usage_provider.dart';
 import '../providers/usage_trends_provider.dart';
@@ -53,6 +54,7 @@ class DemoModeCoordinator {
   final MrrReportProvider _mrrReportProvider;
   final ActiveCustomersProvider _activeCustomersProvider;
   final ActivationProvider _activationProvider;
+  final FeeAuditProvider _feeAuditProvider;
   final UninstallContextProvider _uninstallContextProvider;
   final ReviewsProvider _reviewsProvider;
   final AnalyticsProvider _analyticsProvider;
@@ -84,6 +86,7 @@ class DemoModeCoordinator {
     required MrrReportProvider mrrReportProvider,
     required ActiveCustomersProvider activeCustomersProvider,
     required ActivationProvider activationProvider,
+    required FeeAuditProvider feeAuditProvider,
     required UninstallContextProvider uninstallContextProvider,
     required ReviewsProvider reviewsProvider,
     required AnalyticsProvider analyticsProvider,
@@ -113,6 +116,7 @@ class DemoModeCoordinator {
        _mrrReportProvider = mrrReportProvider,
        _activeCustomersProvider = activeCustomersProvider,
        _activationProvider = activationProvider,
+       _feeAuditProvider = feeAuditProvider,
        _uninstallContextProvider = uninstallContextProvider,
        _reviewsProvider = reviewsProvider,
        _analyticsProvider = analyticsProvider,
@@ -145,6 +149,7 @@ class DemoModeCoordinator {
     _mrrReportProvider.setDemoMode(value);
     _activeCustomersProvider.setDemoMode(value);
     _activationProvider.setDemoMode(value);
+    _feeAuditProvider.setDemoMode(value);
     _uninstallContextProvider.setDemoMode(value);
     _reviewsProvider.setDemoMode(value);
     _analyticsProvider.setDemoMode(value);

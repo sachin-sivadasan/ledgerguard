@@ -87,19 +87,22 @@ class DashboardProvider extends ChangeNotifier {
     if (range == _timeRange) return;
     _timeRange = range;
     notifyListeners();
-    // Live KPIs are period-scoped on the backend, so re-fetch for the new window.
+    // Live KPIs are period-scoped on the backend, so re-fetch just /metrics for the new
+    // window — the 12-month trend and the forecast don't depend on the chip.
     if (!_demoMode && _selectedAppId != null) {
-      loadMetrics(_selectedAppId!);
+      loadMetrics(_selectedAppId!, refreshTrendForecast: false);
     }
   }
 
-  /// The [start, end] window sent to /metrics for the selected chip. The backend derives
-  /// the previous period + deltas from it.
-  ({DateTime from, DateTime to}) _periodRange() {
-    final now = DateTime.now();
-    return switch (_timeRange) {
+  /// The [start, end] window sent to /metrics for the selected chip (backend derives the
+  /// previous period + deltas from it). Uses calendar-day arithmetic (DateTime(y, m, d) with
+  /// out-of-range fields normalized), which is DST-safe and rolls over years correctly.
+  @visibleForTesting
+  static ({DateTime from, DateTime to}) periodRangeFor(
+      DashboardTimeRange range, DateTime now) {
+    return switch (range) {
       DashboardTimeRange.thisWeek => (
-          from: now.subtract(const Duration(days: 6)),
+          from: DateTime(now.year, now.month, now.day - 6), // trailing 7 days incl. today
           to: now,
         ),
       DashboardTimeRange.thisMonth => (
@@ -117,7 +120,8 @@ class DashboardProvider extends ChangeNotifier {
     };
   }
 
-  Future<void> loadMetrics(String appId) async {
+  Future<void> loadMetrics(String appId,
+      {bool refreshTrendForecast = true}) async {
     debugPrint('[DashboardProvider] loadMetrics called – appId=$appId demoMode=$_demoMode isLoading=$_isLoading');
     if (_demoMode) return;
     _cancelToken?.cancel('Superseded');
@@ -127,23 +131,28 @@ class DashboardProvider extends ChangeNotifier {
     _isServiceUnavailable = false;
     notifyListeners();
     try {
-      final range = _periodRange();
+      final range = periodRangeFor(_timeRange, DateTime.now());
       _metrics = await _metricsService.fetchMetrics(appId,
           from: range.from, to: range.to, cancelToken: _cancelToken);
-      // Trend + forecast come from their own endpoints (the /metrics payload has neither).
-      // Fetch them alongside; a failure in either degrades that widget only, not the KPIs.
+      // Trend + forecast come from their own endpoints (the /metrics payload has neither)
+      // and are period-independent, so only fetch them on a full load (initial / app switch),
+      // not on a chip toggle. A failure in either degrades that widget only, not the KPIs.
       final token = _cancelToken;
-      final results = await Future.wait([
-        _metricsService.fetchMrrTrend(appId, months: 12, cancelToken: token),
-        _metricsService.fetchForecast(appId, cancelToken: token),
-      ]);
-      // Bail if a newer loadMetrics superseded this one mid-flight (the services swallow
-      // their own cancel errors, so the catch below never fires for a cancel).
+      final results = refreshTrendForecast
+          ? await Future.wait([
+              _metricsService.fetchMrrTrend(appId, months: 12, cancelToken: token),
+              _metricsService.fetchForecast(appId, cancelToken: token),
+            ])
+          : null;
+      // Bail if a newer loadMetrics superseded this one mid-flight (the trend/forecast
+      // services swallow their own cancel errors; fetchMetrics now rethrows cancel).
       if (token != _cancelToken) return;
-      _liveMrrTrend = results[0] as List<MrrSnapshot>;
-      final (forecast, forecastErr) = results[1] as (ForecastResult?, String?);
-      _liveForecast = forecast;
-      _forecastError = forecastErr;
+      if (results != null) {
+        _liveMrrTrend = results[0] as List<MrrSnapshot>;
+        final (forecast, forecastErr) = results[1] as (ForecastResult?, String?);
+        _liveForecast = forecast;
+        _forecastError = forecastErr;
+      }
       _resetRetry();
       debugPrint('[DashboardProvider] loadMetrics success');
     } on DioException catch (e) {

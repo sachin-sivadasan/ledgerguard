@@ -109,6 +109,9 @@ class MetricsService {
       return DashboardMetrics.fromJson(
           response.data as Map<String, dynamic>);
     } on DioException catch (e) {
+      // Let a cancellation propagate so the provider's staleness guard drops this
+      // superseded load instead of overwriting fresh KPIs with a zeroed placeholder.
+      if (e.type == DioExceptionType.cancel) rethrow;
       debugPrint('[MetricsService] error: ${e.response?.statusCode}');
       return DashboardMetrics(
         mrrCents: 0,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/mixins/data_loading_mixin.dart';
 import '../../providers/apps_provider.dart';
 import '../../providers/plan_label_provider.dart';
 import '../../services/plan_label_service.dart';
@@ -21,20 +22,14 @@ class PlanLabelsScreen extends StatefulWidget {
   State<PlanLabelsScreen> createState() => _PlanLabelsScreenState();
 }
 
-class _PlanLabelsScreenState extends State<PlanLabelsScreen> {
+class _PlanLabelsScreenState extends State<PlanLabelsScreen>
+    with DataLoadingMixin {
   final Map<String, TextEditingController> _controllers = {};
   String? _controllersAppId; // the app the current controllers were seeded for
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final apps = context.read<AppsProvider>().apps;
-      final provider = context.read<PlanLabelProvider>();
-      if (apps.isNotEmpty && provider.selectedAppId == null) {
-        provider.setSelectedApp(apps.first.id);
-      }
-    });
+  void loadData(String appId) {
+    context.read<PlanLabelProvider>().setSelectedApp(appId);
   }
 
   @override

@@ -37,7 +37,16 @@ type AppRepository interface {
 	FindAllByPartnerAppID(ctx context.Context, partnerAppID string) ([]*entity.App, error)
 
 	// Update updates an existing app. Returns error if app doesn't exist.
+	// NOTE: this is a FULL-ROW overwrite — a caller holding a stale app object (e.g.
+	// a long-running sync) will clobber fields changed concurrently by others. For a
+	// single owned field, prefer a targeted updater (e.g. UpdateInstallCount).
 	Update(ctx context.Context, app *entity.App) error
+
+	// UpdateInstallCount sets ONLY install_count (+ updated_at) for an app, without
+	// touching user-owned fields like app_store_slug or revenue_share_tier. Used by the
+	// sync pipeline so a periodic install-count refresh can't wipe a slug/tier a user
+	// set mid-sync (the read-modify-write race that full-row Update is prone to).
+	UpdateInstallCount(ctx context.Context, appID uuid.UUID, count int) error
 
 	// Delete removes an app by ID. Returns error if app doesn't exist.
 	Delete(ctx context.Context, id uuid.UUID) error

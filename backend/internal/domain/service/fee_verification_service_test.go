@@ -74,7 +74,7 @@ func TestFeeVerificationService_VerifyTransaction_Discrepancy(t *testing.T) {
 	tx := &entity.Transaction{
 		ID:                 uuid.New(),
 		GrossAmountCents:   4900,
-		ShopifyFeeCents:    0,   // Should be 980 for DEFAULT_20
+		ShopifyFeeCents:    0, // Should be 980 for DEFAULT_20
 		ProcessingFeeCents: 142,
 		TaxOnFeesCents:     0,
 		NetAmountCents:     4758,

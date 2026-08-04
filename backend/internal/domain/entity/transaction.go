@@ -17,15 +17,15 @@ const (
 )
 
 type Transaction struct {
-	ID              uuid.UUID
-	AppID           uuid.UUID
-	ShopifyGID      string // Unique Shopify transaction GID
-	MyshopifyDomain string
-	ShopName        string // Human-readable shop name from Shopify
-	ShopifyShopGID  string // Shopify shop GID (gid://shopify/Shop/xxx)
-	PartnerAppGID   string // Shopify partner app GID from API response (gid://partners/App/xxx)
-	ShopPlan        string // Shop's Shopify plan (Basic, Shopify, Advanced, Plus)
-	ChargeType      valueobject.ChargeType
+	ID                 uuid.UUID
+	AppID              uuid.UUID
+	ShopifyGID         string // Unique Shopify transaction GID
+	MyshopifyDomain    string
+	ShopName           string // Human-readable shop name from Shopify
+	ShopifyShopGID     string // Shopify shop GID (gid://shopify/Shop/xxx)
+	PartnerAppGID      string // Shopify partner app GID from API response (gid://partners/App/xxx)
+	ShopPlan           string // Shop's Shopify plan (Basic, Shopify, Advanced, Plus)
+	ChargeType         valueobject.ChargeType
 	GrossAmountCents   int64 // What the merchant paid (from Shopify Partner API)
 	ShopifyFeeCents    int64 // Revenue share deducted (0%, 15%, or 20%)
 	ProcessingFeeCents int64 // Processing fee (2.9%)
@@ -35,14 +35,14 @@ type Transaction struct {
 	TransactionDate    time.Time
 	CreatedAt          time.Time
 	// Subscription reference (for AppSubscriptionSale)
-	SubscriptionGID       string // Shopify subscription GID
-	SubscriptionStatus    string // Subscription status (ACTIVE, CANCELLED, FROZEN, etc.)
+	SubscriptionGID       string     // Shopify subscription GID
+	SubscriptionStatus    string     // Subscription status (ACTIVE, CANCELLED, FROZEN, etc.)
 	SubscriptionPeriodEnd *time.Time // Current period end date from subscription
-	BillingInterval       string // MONTHLY, ANNUAL
+	BillingInterval       string     // MONTHLY, ANNUAL
 	// Earnings tracking
-	CreatedDate     time.Time      // When the charge was created in Shopify
-	AvailableDate   time.Time      // When earnings become available for payout
-	EarningsStatus  EarningsStatus // PENDING, AVAILABLE, or PAID_OUT
+	CreatedDate    time.Time      // When the charge was created in Shopify
+	AvailableDate  time.Time      // When earnings become available for payout
+	EarningsStatus EarningsStatus // PENDING, AVAILABLE, or PAID_OUT
 }
 
 // AmountCents returns the net amount for revenue calculations (backwards compatible)

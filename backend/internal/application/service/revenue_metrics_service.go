@@ -181,11 +181,11 @@ func (s *RevenueMetricsService) GetMonthlyEarnings(
 
 // EarningsStatusResponse represents earnings availability status
 type EarningsStatusResponse struct {
-	TotalPendingCents      int64                     `json:"total_pending_cents"`
-	TotalAvailableCents    int64                     `json:"total_available_cents"`
-	TotalPaidOutCents      int64                     `json:"total_paid_out_cents"`
-	PendingByDate          []EarningsDateEntry       `json:"pending_by_date"`
-	UpcomingAvailability   []EarningsDateEntry       `json:"upcoming_availability"`
+	TotalPendingCents    int64               `json:"total_pending_cents"`
+	TotalAvailableCents  int64               `json:"total_available_cents"`
+	TotalPaidOutCents    int64               `json:"total_paid_out_cents"`
+	PendingByDate        []EarningsDateEntry `json:"pending_by_date"`
+	UpcomingAvailability []EarningsDateEntry `json:"upcoming_availability"`
 }
 
 // EarningsDateEntry represents earnings for a specific date
@@ -220,10 +220,10 @@ func (s *RevenueMetricsService) GetEarningsStatus(ctx context.Context, appID uui
 
 	// Build response
 	response := &EarningsStatusResponse{
-		TotalPendingCents:   summary.PendingCents,
-		TotalAvailableCents: summary.AvailableCents,
-		TotalPaidOutCents:   summary.PaidOutCents,
-		PendingByDate:       make([]EarningsDateEntry, 0, len(pendingByDate)),
+		TotalPendingCents:    summary.PendingCents,
+		TotalAvailableCents:  summary.AvailableCents,
+		TotalPaidOutCents:    summary.PaidOutCents,
+		PendingByDate:        make([]EarningsDateEntry, 0, len(pendingByDate)),
 		UpcomingAvailability: make([]EarningsDateEntry, 0, len(upcoming)),
 	}
 
@@ -340,7 +340,7 @@ func (s *RevenueMetricsService) GetRevenueConcentration(
 
 // Errors
 var (
-	ErrInvalidDateRange       = &RevenueError{Message: "invalid date range: start date must be before end date"}
+	ErrInvalidDateRange        = &RevenueError{Message: "invalid date range: start date must be before end date"}
 	ErrTransactionRepoRequired = &RevenueError{Message: "transaction repository required for earnings status"}
 )
 

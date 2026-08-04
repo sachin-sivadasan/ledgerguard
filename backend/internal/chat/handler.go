@@ -46,14 +46,14 @@ type toolResultEvent struct {
 }
 
 type responseEvent struct {
-	Message           string           `json:"message"`
-	SubscriptionState json.RawMessage  `json:"subscription_state,omitempty"`
-	MetricsState      json.RawMessage  `json:"metrics_state,omitempty"`
-	RiskState         json.RawMessage  `json:"risk_state,omitempty"`
-	StoreHealthState  json.RawMessage  `json:"store_health_state,omitempty"`
-	EarningsState     json.RawMessage  `json:"earnings_state,omitempty"`
-	Suggestions       []string         `json:"suggestions,omitempty"`
-	Usage             TokenUsage       `json:"usage"`
+	Message           string          `json:"message"`
+	SubscriptionState json.RawMessage `json:"subscription_state,omitempty"`
+	MetricsState      json.RawMessage `json:"metrics_state,omitempty"`
+	RiskState         json.RawMessage `json:"risk_state,omitempty"`
+	StoreHealthState  json.RawMessage `json:"store_health_state,omitempty"`
+	EarningsState     json.RawMessage `json:"earnings_state,omitempty"`
+	Suggestions       []string        `json:"suggestions,omitempty"`
+	Usage             TokenUsage      `json:"usage"`
 }
 
 // --- Request / Response ---

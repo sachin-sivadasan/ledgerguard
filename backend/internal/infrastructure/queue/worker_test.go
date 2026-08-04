@@ -14,9 +14,9 @@ import (
 // --- Worker-specific mock processor ---
 
 type mockProcessor struct {
-	jobType    string
-	processErr error
-	called     int32
+	jobType     string
+	processErr  error
+	called      int32
 	processFunc func(ctx context.Context, payload *SyncJobPayload) error
 }
 

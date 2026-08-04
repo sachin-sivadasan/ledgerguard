@@ -18,16 +18,16 @@ const (
 
 // SyncJobPayload is the JSON payload pushed into Redis queues
 type SyncJobPayload struct {
-	JobID            uuid.UUID `json:"job_id"`
-	AppID            uuid.UUID `json:"app_id"`
-	UserID           uuid.UUID `json:"user_id"`
-	PartnerAccountID uuid.UUID `json:"partner_account_id"`
-	JobType          string    `json:"job_type"`
+	JobID            uuid.UUID  `json:"job_id"`
+	AppID            uuid.UUID  `json:"app_id"`
+	UserID           uuid.UUID  `json:"user_id"`
+	PartnerAccountID uuid.UUID  `json:"partner_account_id"`
+	JobType          string     `json:"job_type"`
 	ParentJobID      *uuid.UUID `json:"parent_job_id,omitempty"`
-	Priority         int       `json:"priority"`
-	EntityType       string    `json:"entity_type,omitempty"`
-	LookbackDays     int       `json:"lookback_days,omitempty"` // 0 = default window
-	EnqueuedAt       time.Time `json:"enqueued_at"`
+	Priority         int        `json:"priority"`
+	EntityType       string     `json:"entity_type,omitempty"`
+	LookbackDays     int        `json:"lookback_days,omitempty"` // 0 = default window
+	EnqueuedAt       time.Time  `json:"enqueued_at"`
 }
 
 // QueueKeyForJobType returns the appropriate queue key for the given job type

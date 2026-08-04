@@ -12,14 +12,14 @@ import (
 type SubscriptionEvent struct {
 	ID             uuid.UUID
 	SubscriptionID uuid.UUID
-	FromStatus     string                  // Previous status (ACTIVE, CANCELLED, FROZEN, etc.)
-	ToStatus       string                  // New status
-	FromRiskState  valueobject.RiskState   // Previous risk state
-	ToRiskState    valueobject.RiskState   // New risk state
-	EventType      string                  // webhook, sync, manual, billing_failure, app_uninstalled
-	Reason         string                  // Human-readable reason for the change
-	OccurredAt     time.Time               // When the event occurred
-	CreatedAt      time.Time               // When we recorded the event
+	FromStatus     string                // Previous status (ACTIVE, CANCELLED, FROZEN, etc.)
+	ToStatus       string                // New status
+	FromRiskState  valueobject.RiskState // Previous risk state
+	ToRiskState    valueobject.RiskState // New risk state
+	EventType      string                // webhook, sync, manual, billing_failure, app_uninstalled
+	Reason         string                // Human-readable reason for the change
+	OccurredAt     time.Time             // When the event occurred
+	CreatedAt      time.Time             // When we recorded the event
 }
 
 // NewSubscriptionEvent creates a new subscription lifecycle event

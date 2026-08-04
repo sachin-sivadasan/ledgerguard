@@ -10,20 +10,20 @@ import (
 // BillingSubscription represents a LedgerSpear B2B subscription managed via Razorpay.
 // This is separate from the Shopify Subscription entity which tracks monitored app subscriptions.
 type BillingSubscription struct {
-	ID                       uuid.UUID
-	UserID                   uuid.UUID
-	RazorpaySubscriptionID   string
-	RazorpayPlanID           string
-	RazorpayCustomerID       string
-	Plan                     valueobject.BillingPlan
-	Status                   valueobject.BillingSubscriptionStatus
-	AmountCents              int
-	Currency                 string
-	CurrentPeriodStart       *time.Time
-	CurrentPeriodEnd         *time.Time
-	ShortURL                 string
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
+	ID                     uuid.UUID
+	UserID                 uuid.UUID
+	RazorpaySubscriptionID string
+	RazorpayPlanID         string
+	RazorpayCustomerID     string
+	Plan                   valueobject.BillingPlan
+	Status                 valueobject.BillingSubscriptionStatus
+	AmountCents            int
+	Currency               string
+	CurrentPeriodStart     *time.Time
+	CurrentPeriodEnd       *time.Time
+	ShortURL               string
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
 }
 
 // NewBillingSubscription creates a new billing subscription in CREATED status.

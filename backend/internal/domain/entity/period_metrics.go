@@ -24,12 +24,12 @@ type MetricsSummary struct {
 // MetricsDelta contains percentage changes between periods
 // Nil values indicate no previous data available for comparison
 type MetricsDelta struct {
-	ActiveMRRPercent       *float64 `json:"active_mrr_percent,omitempty"`
-	RevenueAtRiskPercent   *float64 `json:"revenue_at_risk_percent,omitempty"`
-	UsageRevenuePercent    *float64 `json:"usage_revenue_percent,omitempty"`
-	TotalRevenuePercent    *float64 `json:"total_revenue_percent,omitempty"`
-	RenewalSuccessPercent  *float64 `json:"renewal_success_rate_percent,omitempty"`
-	ChurnCountPercent      *float64 `json:"churn_count_percent,omitempty"`
+	ActiveMRRPercent      *float64 `json:"active_mrr_percent,omitempty"`
+	RevenueAtRiskPercent  *float64 `json:"revenue_at_risk_percent,omitempty"`
+	UsageRevenuePercent   *float64 `json:"usage_revenue_percent,omitempty"`
+	TotalRevenuePercent   *float64 `json:"total_revenue_percent,omitempty"`
+	RenewalSuccessPercent *float64 `json:"renewal_success_rate_percent,omitempty"`
+	ChurnCountPercent     *float64 `json:"churn_count_percent,omitempty"`
 }
 
 // DeltaSemantic indicates whether a positive delta is good or bad

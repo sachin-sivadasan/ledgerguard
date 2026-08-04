@@ -75,16 +75,16 @@ func TestAIInsightService_GenerateInsight_Success(t *testing.T) {
 	now := time.Date(2026, 2, 26, 12, 0, 0, 0, time.UTC)
 
 	snapshot := &entity.DailyMetricsSnapshot{
-		AppID:              appID,
-		Date:               now,
-		ActiveMRRCents:     500000, // $5,000
-		RevenueAtRiskCents: 50000,  // $500
-		RenewalSuccessRate: 0.85,
-		SafeCount:          85,
-		OneCycleMissedCount: 10,
+		AppID:                appID,
+		Date:                 now,
+		ActiveMRRCents:       500000, // $5,000
+		RevenueAtRiskCents:   50000,  // $500
+		RenewalSuccessRate:   0.85,
+		SafeCount:            85,
+		OneCycleMissedCount:  10,
 		TwoCyclesMissedCount: 3,
-		ChurnedCount:       2,
-		TotalSubscriptions: 100,
+		ChurnedCount:         2,
+		TotalSubscriptions:   100,
 	}
 
 	user := &entity.User{
@@ -212,18 +212,18 @@ func TestAIInsightService_BuildPrompt(t *testing.T) {
 	service := NewAIInsightService(nil, nil, nil)
 
 	snapshot := &entity.DailyMetricsSnapshot{
-		AppID:              uuid.New(),
-		Date:               time.Date(2026, 2, 26, 0, 0, 0, 0, time.UTC),
-		ActiveMRRCents:     500000,
-		RevenueAtRiskCents: 50000,
-		UsageRevenueCents:  10000,
-		TotalRevenueCents:  560000,
-		RenewalSuccessRate: 0.85,
-		SafeCount:          85,
-		OneCycleMissedCount: 10,
+		AppID:                uuid.New(),
+		Date:                 time.Date(2026, 2, 26, 0, 0, 0, 0, time.UTC),
+		ActiveMRRCents:       500000,
+		RevenueAtRiskCents:   50000,
+		UsageRevenueCents:    10000,
+		TotalRevenueCents:    560000,
+		RenewalSuccessRate:   0.85,
+		SafeCount:            85,
+		OneCycleMissedCount:  10,
 		TwoCyclesMissedCount: 3,
-		ChurnedCount:       2,
-		TotalSubscriptions: 100,
+		ChurnedCount:         2,
+		TotalSubscriptions:   100,
 	}
 
 	prompt := service.BuildPrompt(snapshot)

@@ -215,7 +215,7 @@ func TestSyncService_SyncApp_Success(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/1",
 			MyshopifyDomain: "store1.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeRecurring,
-			NetAmountCents:     2999,
+			NetAmountCents:  2999,
 			Currency:        "USD",
 			TransactionDate: time.Now(),
 		},
@@ -226,7 +226,7 @@ func TestSyncService_SyncApp_Success(t *testing.T) {
 			ShopifyGID:      "gid://shopify/Transaction/2",
 			MyshopifyDomain: "store2.myshopify.com",
 			ChargeType:      valueobject.ChargeTypeUsage,
-			NetAmountCents:     500,
+			NetAmountCents:  500,
 			Currency:        "USD",
 			TransactionDate: time.Now(),
 		},
@@ -370,4 +370,8 @@ func TestSyncService_SyncAllApps(t *testing.T) {
 
 func (m *mockTransactionRepo) GetTransactionSummary(_ context.Context, _ uuid.UUID, _ repository.TransactionFilters) (*repository.TransactionSummary, error) {
 	return &repository.TransactionSummary{}, nil
+}
+
+func (m *mockAppRepoForSync) UpdateInstallCount(ctx context.Context, appID uuid.UUID, count int) error {
+	return nil
 }

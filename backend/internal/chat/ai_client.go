@@ -19,7 +19,7 @@ type ChatCompletionRequest struct {
 
 // ChatCompletionResponse is the provider-agnostic response from a chat completion.
 type ChatCompletionResponse struct {
-	Content   string           `json:"content"`    // text response (empty if tool calls only)
+	Content   string            `json:"content"`    // text response (empty if tool calls only)
 	ToolCalls []ToolCallRequest `json:"tool_calls"` // tool calls to execute (empty if text response)
 	Usage     TokenUsage        `json:"usage"`
 }

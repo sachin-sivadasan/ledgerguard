@@ -81,8 +81,10 @@ func (r *PostgresRevenueRepository) GetRevenueByDateRange(
 
 // GetMonthlyEarnings rolls transactions up by calendar month with per-status
 // counts (for deriving one month status), newest month first.
-//   net   = SUM(COALESCE(net_amount_cents, amount_cents, 0))
-//   gross = SUM(COALESCE(gross_amount_cents, net_amount_cents, amount_cents, 0))
+//
+//	net   = SUM(COALESCE(net_amount_cents, amount_cents, 0))
+//	gross = SUM(COALESCE(gross_amount_cents, net_amount_cents, amount_cents, 0))
+//
 // Gross falls back to NET (not 0) when the split column is null so the derived
 // Shopify cut (gross − net) is never spuriously negative for legacy rows — this
 // deliberately differs from the transactions-list query, which shows gross as an

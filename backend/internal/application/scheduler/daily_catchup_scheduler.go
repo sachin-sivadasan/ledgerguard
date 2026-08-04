@@ -13,15 +13,15 @@ import (
 // DailyCatchupScheduler syncs the last N days of transactions and events
 // to fill gaps caused by missed webhooks or downtime.
 type DailyCatchupScheduler struct {
-	queueSyncSvc *service.QueueSyncService
-	appRepo      repository.AppRepository
-	partnerRepo  repository.PartnerAccountRepository
-	targetHour   int // UTC hour to run (default 3)
-	lookbackDays int // days to look back (default 2)
+	queueSyncSvc  *service.QueueSyncService
+	appRepo       repository.AppRepository
+	partnerRepo   repository.PartnerAccountRepository
+	targetHour    int // UTC hour to run (default 3)
+	lookbackDays  int // days to look back (default 2)
 	checkInterval time.Duration
-	lastRunDate  string // YYYY-MM-DD to avoid double-runs
-	stopCh       chan struct{}
-	doneCh       chan struct{}
+	lastRunDate   string // YYYY-MM-DD to avoid double-runs
+	stopCh        chan struct{}
+	doneCh        chan struct{}
 }
 
 // NewDailyCatchupScheduler creates a new DailyCatchupScheduler.

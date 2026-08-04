@@ -32,15 +32,15 @@ type LedgerRebuildResult struct {
 	RiskSummary          RiskSummary
 	RebuildAt            time.Time
 	// Snapshot contains the daily metrics snapshot (if snapshotRepo is configured)
-	Snapshot             *entity.DailyMetricsSnapshot
+	Snapshot *entity.DailyMetricsSnapshot
 }
 
 // RiskSummary contains counts of subscriptions by risk state
 type RiskSummary struct {
-	SafeCount             int
-	OneCycleMissedCount   int
-	TwoCyclesMissedCount  int
-	ChurnedCount          int
+	SafeCount            int
+	OneCycleMissedCount  int
+	TwoCyclesMissedCount int
+	ChurnedCount         int
 }
 
 // LedgerService handles deterministic ledger rebuilds

@@ -8,15 +8,15 @@ import (
 
 // UsageStatus represents the billing status of a usage record (CQRS read model)
 type UsageStatus struct {
-	ID                    uuid.UUID
-	ShopifyGID            string // e.g., gid://shopify/AppUsageRecord/456
+	ID                     uuid.UUID
+	ShopifyGID             string // e.g., gid://shopify/AppUsageRecord/456
 	SubscriptionShopifyGID string // Parent subscription GID
-	SubscriptionID        uuid.UUID
-	Billed                bool
-	BillingDate           *time.Time
-	AmountCents           int
-	Description           string
-	LastSyncedAt          time.Time
+	SubscriptionID         uuid.UUID
+	Billed                 bool
+	BillingDate            *time.Time
+	AmountCents            int
+	Description            string
+	LastSyncedAt           time.Time
 }
 
 // NewUsageStatus creates a new usage status
@@ -30,26 +30,26 @@ func NewUsageStatus(
 	description string,
 ) *UsageStatus {
 	return &UsageStatus{
-		ID:                    uuid.New(),
-		ShopifyGID:            shopifyGID,
+		ID:                     uuid.New(),
+		ShopifyGID:             shopifyGID,
 		SubscriptionShopifyGID: subscriptionShopifyGID,
-		SubscriptionID:        subscriptionID,
-		Billed:                billed,
-		BillingDate:           billingDate,
-		AmountCents:           amountCents,
-		Description:           description,
-		LastSyncedAt:          time.Now().UTC(),
+		SubscriptionID:         subscriptionID,
+		Billed:                 billed,
+		BillingDate:            billingDate,
+		AmountCents:            amountCents,
+		Description:            description,
+		LastSyncedAt:           time.Now().UTC(),
 	}
 }
 
 // UsageStatusResponse is the API response format
 type UsageStatusResponse struct {
-	UsageID      string                              `json:"usage_id"`
-	Billed       bool                                `json:"billed"`
-	BillingDate  *time.Time                          `json:"billing_date,omitempty"`
-	AmountCents  int                                 `json:"amount_cents"`
-	Description  string                              `json:"description,omitempty"`
-	Subscription *UsageSubscriptionStatusResponse    `json:"subscription,omitempty"`
+	UsageID      string                           `json:"usage_id"`
+	Billed       bool                             `json:"billed"`
+	BillingDate  *time.Time                       `json:"billing_date,omitempty"`
+	AmountCents  int                              `json:"amount_cents"`
+	Description  string                           `json:"description,omitempty"`
+	Subscription *UsageSubscriptionStatusResponse `json:"subscription,omitempty"`
 }
 
 // UsageSubscriptionStatusResponse is the nested subscription info in usage response

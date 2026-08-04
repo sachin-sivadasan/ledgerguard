@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	ErrSyncJobNotFound    = errors.New("sync job not found")
-	ErrStatusConflict     = errors.New("job status conflict: concurrent modification")
+	ErrSyncJobNotFound = errors.New("sync job not found")
+	ErrStatusConflict  = errors.New("job status conflict: concurrent modification")
 )
 
 type PostgresSyncJobRepository struct {

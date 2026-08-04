@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -116,9 +115,10 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 	// install count (APPS-1: the Apps card's "installs" = currently-installed shops).
 	activeInstalls, totalInstalls := external.CountInstalls(events)
 	if pCtx.App.InstallCount != activeInstalls {
-		pCtx.App.InstallCount = activeInstalls
-		pCtx.App.UpdatedAt = time.Now().UTC()
-		if err := p.appRepo.Update(ctx, pCtx.App); err != nil {
+		// Targeted install-count write — NOT a full-row Update. pCtx.App was loaded at
+		// the start of this (minutes-long) job, so writing the whole row back would
+		// clobber an app_store_slug / revenue_share_tier a user set mid-sync.
+		if err := p.appRepo.UpdateInstallCount(ctx, pCtx.App.ID, activeInstalls); err != nil {
 			log.Printf("[queue] EventProcessor: failed to persist install count (%d) for app %s: %v", activeInstalls, payload.AppID, err)
 		}
 	}

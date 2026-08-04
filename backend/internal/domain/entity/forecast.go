@@ -8,9 +8,9 @@ import (
 
 // ForecastPoint represents a single projected data point.
 type ForecastPoint struct {
-	Date            time.Time
-	ExpectedCents   int64
-	OptimisticCents int64
+	Date             time.Time
+	ExpectedCents    int64
+	OptimisticCents  int64
 	PessimisticCents int64
 }
 

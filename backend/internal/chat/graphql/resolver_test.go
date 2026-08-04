@@ -629,3 +629,7 @@ func TestApp_SingleByID(t *testing.T) {
 func (m *mockTransactionRepo) GetTransactionSummary(_ context.Context, _ uuid.UUID, _ repository.TransactionFilters) (*repository.TransactionSummary, error) {
 	return &repository.TransactionSummary{}, nil
 }
+
+func (m *mockAppRepo) UpdateInstallCount(ctx context.Context, appID uuid.UUID, count int) error {
+	return nil
+}

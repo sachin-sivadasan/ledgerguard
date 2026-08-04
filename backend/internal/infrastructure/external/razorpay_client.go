@@ -54,17 +54,17 @@ type RazorpayCustomer struct {
 
 // RazorpaySubscription represents a Razorpay subscription response.
 type RazorpaySubscription struct {
-	ID               string `json:"id"`
-	PlanID           string `json:"plan_id"`
-	CustomerID       string `json:"customer_id"`
-	Status           string `json:"status"`
-	ShortURL         string `json:"short_url"`
-	CurrentStart     *int64 `json:"current_start"`
-	CurrentEnd       *int64 `json:"current_end"`
-	TotalCount       int    `json:"total_count"`
-	PaidCount        int    `json:"paid_count"`
-	RemainingCount   int    `json:"remaining_count"`
-	ChargeAt         *int64 `json:"charge_at"`
+	ID             string `json:"id"`
+	PlanID         string `json:"plan_id"`
+	CustomerID     string `json:"customer_id"`
+	Status         string `json:"status"`
+	ShortURL       string `json:"short_url"`
+	CurrentStart   *int64 `json:"current_start"`
+	CurrentEnd     *int64 `json:"current_end"`
+	TotalCount     int    `json:"total_count"`
+	PaidCount      int    `json:"paid_count"`
+	RemainingCount int    `json:"remaining_count"`
+	ChargeAt       *int64 `json:"charge_at"`
 }
 
 // CreateCustomerRequest is the payload for creating a Razorpay customer.

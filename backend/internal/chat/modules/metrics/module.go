@@ -14,8 +14,10 @@ func New(gql *chat.GraphQLExecutor) *Module {
 	return &Module{exec: &executor{gql: gql}}
 }
 
-func (m *Module) Name() string        { return "metrics" }
-func (m *Module) Description() string { return "Revenue metrics — MRR, trends, renewal rates, and aggregates" }
+func (m *Module) Name() string { return "metrics" }
+func (m *Module) Description() string {
+	return "Revenue metrics — MRR, trends, renewal rates, and aggregates"
+}
 
 func (m *Module) PromptFragment() string {
 	return `## Metrics Module

@@ -539,3 +539,7 @@ func TestQueueSync_EnqueueSync_TypeMapping(t *testing.T) {
 
 // Suppress unused import warning
 var _ repository.SyncJobRepository = (*mockSyncJobRepoForHandler)(nil)
+
+func (m *mockAppRepoForQueueSync) UpdateInstallCount(ctx context.Context, appID uuid.UUID, count int) error {
+	return nil
+}

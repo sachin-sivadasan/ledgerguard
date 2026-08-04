@@ -532,3 +532,7 @@ func TestAppHandler_UpdateStoreSlug(t *testing.T) {
 		t.Errorf("empty slug: expected 400, got %d", rec.Code)
 	}
 }
+
+func (m *mockAppRepo) UpdateInstallCount(ctx context.Context, appID uuid.UUID, count int) error {
+	return nil
+}

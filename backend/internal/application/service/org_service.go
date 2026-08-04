@@ -15,14 +15,14 @@ import (
 )
 
 var (
-	ErrMemberLimitReached  = errors.New("organization member limit reached for current plan")
-	ErrAlreadyMember       = errors.New("user is already a member of this organization")
-	ErrCannotRemoveOwner   = errors.New("cannot remove the organization owner")
-	ErrCannotSuspendOwner  = errors.New("cannot suspend the organization owner")
-	ErrInsufficientRole    = errors.New("insufficient role for this action")
-	ErrInvitationExpired   = errors.New("invitation has expired")
+	ErrMemberLimitReached   = errors.New("organization member limit reached for current plan")
+	ErrAlreadyMember        = errors.New("user is already a member of this organization")
+	ErrCannotRemoveOwner    = errors.New("cannot remove the organization owner")
+	ErrCannotSuspendOwner   = errors.New("cannot suspend the organization owner")
+	ErrInsufficientRole     = errors.New("insufficient role for this action")
+	ErrInvitationExpired    = errors.New("invitation has expired")
 	ErrInvitationNotPending = errors.New("invitation is not in pending state")
-	ErrMemberSuspended     = errors.New("member account is suspended")
+	ErrMemberSuspended      = errors.New("member account is suspended")
 )
 
 // OrgService handles organization management: create, invite, accept, suspend, remove.

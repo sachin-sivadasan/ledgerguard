@@ -21,12 +21,12 @@ import (
 // --- Mock BillingSubscriptionRepository ---
 
 type mockBillingSubRepo struct {
-	created    *entity.BillingSubscription
-	updated    *entity.BillingSubscription
-	byID       *entity.BillingSubscription
-	byRzpID    *entity.BillingSubscription
+	created      *entity.BillingSubscription
+	updated      *entity.BillingSubscription
+	byID         *entity.BillingSubscription
+	byRzpID      *entity.BillingSubscription
 	activeByUser *entity.BillingSubscription
-	findErr    error
+	findErr      error
 }
 
 func (m *mockBillingSubRepo) Create(ctx context.Context, bs *entity.BillingSubscription) error {
@@ -67,9 +67,9 @@ func (m *mockBillingSubRepo) FindActiveByUserID(ctx context.Context, userID uuid
 // --- Mock UserRepository ---
 
 type mockUserRepoForBilling struct {
-	user      *entity.User
-	updated   *entity.User
-	findErr   error
+	user    *entity.User
+	updated *entity.User
+	findErr error
 }
 
 func (m *mockUserRepoForBilling) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {

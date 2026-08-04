@@ -17,13 +17,13 @@ import (
 
 // BillingService handles B2B subscription billing via Razorpay.
 type BillingService struct {
-	razorpayClient  *external.RazorpayClient
-	billingRepo     repository.BillingSubscriptionRepository
-	userRepo        repository.UserRepository
-	webhookSecret   string
-	starterPlanID   string
-	proPlanID       string
-	tracker         domainservice.EventTracker
+	razorpayClient *external.RazorpayClient
+	billingRepo    repository.BillingSubscriptionRepository
+	userRepo       repository.UserRepository
+	webhookSecret  string
+	starterPlanID  string
+	proPlanID      string
+	tracker        domainservice.EventTracker
 }
 
 // SetTracker sets the event tracker for billing lifecycle events.

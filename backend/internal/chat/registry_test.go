@@ -31,8 +31,8 @@ func TestRegistry_ListAllTools_PrefixesNames(t *testing.T) {
 
 	expected := map[string]bool{
 		"risk__get_risk_summary": false,
-		"risk__list_at_risk":    false,
-		"metrics__get_latest":   false,
+		"risk__list_at_risk":     false,
+		"metrics__get_latest":    false,
 	}
 	for _, tool := range tools {
 		if _, ok := expected[tool.Name]; !ok {

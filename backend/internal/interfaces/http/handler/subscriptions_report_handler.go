@@ -107,7 +107,7 @@ func (h *SubscriptionsReportHandler) GetSubscriptions(w http.ResponseWriter, r *
 		log.Printf("subscriptions: no snapshot in 90d window for app %s — churn denominator unavailable, LTV undefined", app.ID)
 	}
 
-	report := buildSubscriptionsReport(subs, latest)
+	report := buildSubscriptionsReport(subs, latest, newPlanLabeler(nil))
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
 		writeSubscriptionsPlansCSV(w, report.Plans)
@@ -138,7 +138,7 @@ func writeSubscriptionsRepoError(w http.ResponseWriter, op string, err error) {
 //     churn rate (we don't have reliable per-plan churn), documented as an approximation.
 //
 // Plans are sorted by active-sub count descending (the composition axis).
-func buildSubscriptionsReport(subs []*entity.Subscription, latest *entity.DailyMetricsSnapshot) subscriptionsReport {
+func buildSubscriptionsReport(subs []*entity.Subscription, latest *entity.DailyMetricsSnapshot, labeler planLabeler) subscriptionsReport {
 	type agg struct {
 		activeSubs int
 		mrr        int64
@@ -159,11 +159,12 @@ func buildSubscriptionsReport(subs []*entity.Subscription, latest *entity.DailyM
 			churnedCount++
 		}
 
-		a, ok := byPlan[s.PlanName]
+		plan := labeler.label(s)
+		a, ok := byPlan[plan]
 		if !ok {
 			a = &agg{}
-			byPlan[s.PlanName] = a
-			order = append(order, s.PlanName)
+			byPlan[plan] = a
+			order = append(order, plan)
 		}
 		if s.RiskState == valueobject.RiskStateSafe {
 			a.activeSubs++

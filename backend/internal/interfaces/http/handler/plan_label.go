@@ -1,0 +1,70 @@
+package handler
+
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+)
+
+// The Partner API's app-subscription transactions carry no plan NAME (only a chargeId GID
+// + billing interval), so the ledger rebuild leaves Subscription.PlanName empty for most
+// apps (see ledger_service.go). These helpers give plan-based reports a usable plan
+// dimension anyway: a stable price-tier KEY plus a display LABEL that a developer can
+// optionally override with a friendly name.
+
+// planKey is the stable identity of a price tier: billing interval + exact base price.
+// Distinct prices produce distinct keys, so a mid-life price change naturally splits into
+// two plans (e.g. a $19 "Starter (old)" and a $29 "Starter") rather than merging them.
+//
+// The interval half uses the canonical BillingInterval enum string ("MONTHLY"/"ANNUAL");
+// developer plan-label maps (Phase 2) must key on the same canonical values, and an empty
+// interval collapses to a ":<cents>" key (treated as monthly downstream).
+func planKey(interval valueobject.BillingInterval, basePriceCents int64) string {
+	return string(interval) + ":" + strconv.FormatInt(basePriceCents, 10)
+}
+
+// pseudoPlanLabel synthesizes a human label from the price tier when there's no real plan
+// name — e.g. "$139.99/mo" or "$1400.00/yr". A zero/negative price is a free or unknown
+// tier. Only ANNUAL is special-cased; every other interval (including an empty/unknown
+// one) defaults to "/mo", matching Subscription.MRRCents()'s monthly default.
+func pseudoPlanLabel(interval valueobject.BillingInterval, basePriceCents int64) string {
+	if basePriceCents <= 0 {
+		return "Free / unknown"
+	}
+	amount := fmt.Sprintf("$%.2f", float64(basePriceCents)/100)
+	if interval == valueobject.BillingIntervalAnnual {
+		return amount + "/yr"
+	}
+	return amount + "/mo"
+}
+
+// planLabeler resolves a subscription to its display plan label, in priority order:
+//  1. the real PlanName, when the sync captured one;
+//  2. a developer-assigned name for the price tier (from the app's plan-label map);
+//  3. a synthesized price-tier pseudo-label ("$139.99/mo").
+//
+// The map is keyed by planKey. A nil/empty map simply falls through to the pseudo-label,
+// so the zero value is a valid pseudo-only labeler.
+type planLabeler struct {
+	labels map[string]string
+}
+
+// newPlanLabeler builds a labeler over an optional developer plan-label map (may be nil).
+func newPlanLabeler(labels map[string]string) planLabeler {
+	return planLabeler{labels: labels}
+}
+
+// label returns the display plan label for a subscription.
+func (l planLabeler) label(s *entity.Subscription) string {
+	if s.PlanName != "" {
+		return s.PlanName
+	}
+	if l.labels != nil {
+		if name, ok := l.labels[planKey(s.BillingInterval, s.BasePriceCents)]; ok && name != "" {
+			return name
+		}
+	}
+	return pseudoPlanLabel(s.BillingInterval, s.BasePriceCents)
+}

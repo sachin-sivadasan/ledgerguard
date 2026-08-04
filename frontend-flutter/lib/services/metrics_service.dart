@@ -94,11 +94,17 @@ class MetricsService {
 
   MetricsService(this._client);
 
+  static String _fmtDate(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
   Future<DashboardMetrics> fetchMetrics(String appId,
-      {CancelToken? cancelToken}) async {
+      {DateTime? from, DateTime? to, CancelToken? cancelToken}) async {
     try {
+      final query = (from != null && to != null)
+          ? {'start': _fmtDate(from), 'end': _fmtDate(to)}
+          : null;
       final response = await _client.get('/api/v1/apps/$appId/metrics',
-          cancelToken: cancelToken);
+          queryParameters: query, cancelToken: cancelToken);
       debugPrint('[MetricsService] response: ${response.data}');
       return DashboardMetrics.fromJson(
           response.data as Map<String, dynamic>);

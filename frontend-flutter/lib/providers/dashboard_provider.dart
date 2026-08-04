@@ -84,8 +84,37 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   void setTimeRange(DashboardTimeRange range) {
+    if (range == _timeRange) return;
     _timeRange = range;
     notifyListeners();
+    // Live KPIs are period-scoped on the backend, so re-fetch for the new window.
+    if (!_demoMode && _selectedAppId != null) {
+      loadMetrics(_selectedAppId!);
+    }
+  }
+
+  /// The [start, end] window sent to /metrics for the selected chip. The backend derives
+  /// the previous period + deltas from it.
+  ({DateTime from, DateTime to}) _periodRange() {
+    final now = DateTime.now();
+    return switch (_timeRange) {
+      DashboardTimeRange.thisWeek => (
+          from: now.subtract(const Duration(days: 6)),
+          to: now,
+        ),
+      DashboardTimeRange.thisMonth => (
+          from: DateTime(now.year, now.month, 1),
+          to: now,
+        ),
+      DashboardTimeRange.lastMonth => (
+          from: DateTime(now.year, now.month - 1, 1),
+          to: DateTime(now.year, now.month, 0), // last day of the previous month
+        ),
+      DashboardTimeRange.threeMonths => (
+          from: DateTime(now.year, now.month - 2, 1),
+          to: now,
+        ),
+    };
   }
 
   Future<void> loadMetrics(String appId) async {
@@ -98,8 +127,9 @@ class DashboardProvider extends ChangeNotifier {
     _isServiceUnavailable = false;
     notifyListeners();
     try {
+      final range = _periodRange();
       _metrics = await _metricsService.fetchMetrics(appId,
-          cancelToken: _cancelToken);
+          from: range.from, to: range.to, cancelToken: _cancelToken);
       // Trend + forecast come from their own endpoints (the /metrics payload has neither).
       // Fetch them alongside; a failure in either degrades that widget only, not the KPIs.
       final token = _cancelToken;

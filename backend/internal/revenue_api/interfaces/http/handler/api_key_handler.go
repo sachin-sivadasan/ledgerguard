@@ -28,10 +28,10 @@ type CreateRequest struct {
 
 // APIKeyResponse is the response format for an API key
 type APIKeyResponse struct {
-	ID        string  `json:"id"`
-	Name      string  `json:"name"`
-	KeyPrefix string  `json:"key_prefix"`
-	CreatedAt string  `json:"created_at"`
+	ID         string  `json:"id"`
+	Name       string  `json:"name"`
+	KeyPrefix  string  `json:"key_prefix"`
+	CreatedAt  string  `json:"created_at"`
 	LastUsedAt *string `json:"last_used_at"`
 }
 
@@ -205,4 +205,3 @@ func writeJSONError(w http.ResponseWriter, status int, message string) {
 		},
 	})
 }
-

@@ -505,3 +505,7 @@ func TestRevenueHandler_GetEarningPeriods_StartAfterEnd(t *testing.T) {
 		t.Errorf("start>end: expected 400, got %d", rr.Code)
 	}
 }
+
+func (m *mockAppRepoForRevenue) UpdateInstallCount(ctx context.Context, appID uuid.UUID, count int) error {
+	return nil
+}

@@ -15,8 +15,10 @@ func New(gql *chat.GraphQLExecutor) *Module {
 	return &Module{exec: &executor{gql: gql}}
 }
 
-func (m *Module) Name() string        { return "subscriptions" }
-func (m *Module) Description() string { return "Subscription management — list, search, detail, and summary" }
+func (m *Module) Name() string { return "subscriptions" }
+func (m *Module) Description() string {
+	return "Subscription management — list, search, detail, and summary"
+}
 
 func (m *Module) PromptFragment() string {
 	return `## Subscriptions Module
@@ -33,7 +35,7 @@ Use list_subscriptions to browse with filters, search_subscriptions for domain/n
 get_subscription_detail for full info including event history, and get_subscription_summary for aggregate stats.`
 }
 
-func (m *Module) Tools() []chat.ToolDefinition           { return toolDefinitions() }
+func (m *Module) Tools() []chat.ToolDefinition { return toolDefinitions() }
 func (m *Module) ExecuteTool(ctx context.Context, call chat.ToolCall) chat.ToolResult {
 	return m.exec.execute(ctx, call)
 }

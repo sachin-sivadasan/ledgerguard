@@ -12,46 +12,46 @@ import (
 
 // SubscriptionDetail contains full subscription information with computed fields
 type SubscriptionDetail struct {
-	ID                      uuid.UUID                  `json:"id"`
-	ShopifyGID              string                     `json:"shopify_gid"`
-	ShopDomain              string                     `json:"shop_domain"`
-	ShopName                string                     `json:"shop_name"`
-	PlanName                string                     `json:"plan_name"`
-	BasePriceCents          int64                      `json:"base_price_cents"`
-	MRRCents                int64                      `json:"mrr_cents"`
-	Currency                string                     `json:"currency"`
+	ID                      uuid.UUID                   `json:"id"`
+	ShopifyGID              string                      `json:"shopify_gid"`
+	ShopDomain              string                      `json:"shop_domain"`
+	ShopName                string                      `json:"shop_name"`
+	PlanName                string                      `json:"plan_name"`
+	BasePriceCents          int64                       `json:"base_price_cents"`
+	MRRCents                int64                       `json:"mrr_cents"`
+	Currency                string                      `json:"currency"`
 	BillingInterval         valueobject.BillingInterval `json:"billing_interval"`
-	Status                  string                     `json:"status"`
-	RiskState               valueobject.RiskState      `json:"risk_state"`
-	LastRecurringChargeDate *time.Time                 `json:"last_recurring_charge_date,omitempty"`
-	ExpectedNextChargeDate  *time.Time                 `json:"expected_next_charge_date,omitempty"`
-	DaysSinceLastPayment    *int                       `json:"days_since_last_payment,omitempty"`
-	DaysUntilNextPayment    *int                       `json:"days_until_next_payment,omitempty"`
-	CreatedAt               time.Time                  `json:"created_at"`
-	UpdatedAt               time.Time                  `json:"updated_at"`
+	Status                  string                      `json:"status"`
+	RiskState               valueobject.RiskState       `json:"risk_state"`
+	LastRecurringChargeDate *time.Time                  `json:"last_recurring_charge_date,omitempty"`
+	ExpectedNextChargeDate  *time.Time                  `json:"expected_next_charge_date,omitempty"`
+	DaysSinceLastPayment    *int                        `json:"days_since_last_payment,omitempty"`
+	DaysUntilNextPayment    *int                        `json:"days_until_next_payment,omitempty"`
+	CreatedAt               time.Time                   `json:"created_at"`
+	UpdatedAt               time.Time                   `json:"updated_at"`
 }
 
 // PaymentHistoryEntry represents a payment in the subscription history
 type PaymentHistoryEntry struct {
-	ID              uuid.UUID                `json:"id"`
-	TransactionDate time.Time                `json:"transaction_date"`
-	ChargeType      valueobject.ChargeType   `json:"charge_type"`
-	GrossAmountCents int64                   `json:"gross_amount_cents"`
-	NetAmountCents  int64                    `json:"net_amount_cents"`
-	Currency        string                   `json:"currency"`
-	EarningsStatus  entity.EarningsStatus    `json:"earnings_status"`
+	ID               uuid.UUID              `json:"id"`
+	TransactionDate  time.Time              `json:"transaction_date"`
+	ChargeType       valueobject.ChargeType `json:"charge_type"`
+	GrossAmountCents int64                  `json:"gross_amount_cents"`
+	NetAmountCents   int64                  `json:"net_amount_cents"`
+	Currency         string                 `json:"currency"`
+	EarningsStatus   entity.EarningsStatus  `json:"earnings_status"`
 }
 
 // RiskTimelineEntry represents a risk state change
 type RiskTimelineEntry struct {
-	ID            uuid.UUID             `json:"id"`
-	FromRiskState string                `json:"from_risk_state"`
-	ToRiskState   string                `json:"to_risk_state"`
-	FromStatus    string                `json:"from_status"`
-	ToStatus      string                `json:"to_status"`
-	EventType     string                `json:"event_type"`
-	Reason        string                `json:"reason,omitempty"`
-	OccurredAt    time.Time             `json:"occurred_at"`
+	ID            uuid.UUID `json:"id"`
+	FromRiskState string    `json:"from_risk_state"`
+	ToRiskState   string    `json:"to_risk_state"`
+	FromStatus    string    `json:"from_status"`
+	ToStatus      string    `json:"to_status"`
+	EventType     string    `json:"event_type"`
+	Reason        string    `json:"reason,omitempty"`
+	OccurredAt    time.Time `json:"occurred_at"`
 }
 
 // SubscriptionDetailService provides subscription detail operations

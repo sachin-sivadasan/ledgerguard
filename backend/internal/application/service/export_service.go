@@ -360,20 +360,20 @@ func (s *ExportService) subscriptionsToCSV(subscriptions []*entity.Subscription)
 
 // subscriptionExportRow represents a subscription for JSON export
 type subscriptionExportRow struct {
-	ID              string   `json:"id"`
-	ShopifyGID      string   `json:"shopify_gid"`
-	ShopDomain      string   `json:"shop_domain"`
-	ShopName        string   `json:"shop_name"`
-	PlanName        string   `json:"plan_name"`
-	BasePrice       float64  `json:"base_price"`
-	Currency        string   `json:"currency"`
-	BillingInterval string   `json:"billing_interval"`
-	Status          string   `json:"status"`
-	RiskState       string   `json:"risk_state"`
-	MRR             float64  `json:"mrr"`
-	LastChargeDate  *string  `json:"last_charge_date"`
-	NextChargeDate  *string  `json:"next_charge_date"`
-	CreatedAt       string   `json:"created_at"`
+	ID              string  `json:"id"`
+	ShopifyGID      string  `json:"shopify_gid"`
+	ShopDomain      string  `json:"shop_domain"`
+	ShopName        string  `json:"shop_name"`
+	PlanName        string  `json:"plan_name"`
+	BasePrice       float64 `json:"base_price"`
+	Currency        string  `json:"currency"`
+	BillingInterval string  `json:"billing_interval"`
+	Status          string  `json:"status"`
+	RiskState       string  `json:"risk_state"`
+	MRR             float64 `json:"mrr"`
+	LastChargeDate  *string `json:"last_charge_date"`
+	NextChargeDate  *string `json:"next_charge_date"`
+	CreatedAt       string  `json:"created_at"`
 }
 
 // subscriptionsToJSON converts subscriptions to JSON format
@@ -467,16 +467,16 @@ func (s *ExportService) metricsToCSV(metrics []*entity.DailyMetricsSnapshot) ([]
 
 // metricsExportRow represents a daily metrics snapshot for JSON export
 type metricsExportRow struct {
-	Date             string  `json:"date"`
-	MRR              float64 `json:"mrr"`
-	TotalRevenue     float64 `json:"total_revenue"`
-	UsageRevenue     float64 `json:"usage_revenue"`
-	RevenueAtRisk    float64 `json:"revenue_at_risk"`
-	RenewalRate      float64 `json:"renewal_rate"`
-	SafeCount        int     `json:"safe_count"`
-	OneCycleMissed   int     `json:"one_cycle_missed"`
-	TwoCycleMissed   int     `json:"two_cycle_missed"`
-	ChurnedCount     int     `json:"churned_count"`
+	Date           string  `json:"date"`
+	MRR            float64 `json:"mrr"`
+	TotalRevenue   float64 `json:"total_revenue"`
+	UsageRevenue   float64 `json:"usage_revenue"`
+	RevenueAtRisk  float64 `json:"revenue_at_risk"`
+	RenewalRate    float64 `json:"renewal_rate"`
+	SafeCount      int     `json:"safe_count"`
+	OneCycleMissed int     `json:"one_cycle_missed"`
+	TwoCycleMissed int     `json:"two_cycle_missed"`
+	ChurnedCount   int     `json:"churned_count"`
 }
 
 // metricsToJSON converts daily metrics to JSON format

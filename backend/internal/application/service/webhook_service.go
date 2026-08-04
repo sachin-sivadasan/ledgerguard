@@ -26,18 +26,18 @@ type WebhookEvent struct {
 
 // SubscriptionUpdatePayload represents the payload for subscription update webhooks
 type SubscriptionUpdatePayload struct {
-	ID                string  `json:"admin_graphql_api_id"`
-	Name              string  `json:"name"`
-	Status            string  `json:"status"` // ACTIVE, CANCELLED, FROZEN, EXPIRED
-	CreatedAt         string  `json:"created_at"`
-	BillingOn         *string `json:"billing_on"`
-	TrialDays         int     `json:"trial_days"`
-	Test              bool    `json:"test"`
-	CappedAmount      string  `json:"capped_amount"`
-	BalanceUsed       float64 `json:"balance_used"`
-	BalanceRemaining  float64 `json:"balance_remaining"`
-	RiskLevel         float64 `json:"risk_level"`
-	LineItems         []struct {
+	ID               string  `json:"admin_graphql_api_id"`
+	Name             string  `json:"name"`
+	Status           string  `json:"status"` // ACTIVE, CANCELLED, FROZEN, EXPIRED
+	CreatedAt        string  `json:"created_at"`
+	BillingOn        *string `json:"billing_on"`
+	TrialDays        int     `json:"trial_days"`
+	Test             bool    `json:"test"`
+	CappedAmount     string  `json:"capped_amount"`
+	BalanceUsed      float64 `json:"balance_used"`
+	BalanceRemaining float64 `json:"balance_remaining"`
+	RiskLevel        float64 `json:"risk_level"`
+	LineItems        []struct {
 		Plan struct {
 			PricingDetails struct {
 				Interval string `json:"interval"`
@@ -331,12 +331,12 @@ func (s *WebhookService) ProcessAppUninstalled(ctx context.Context, event Webhoo
 func (s *WebhookService) ProcessBillingFailure(ctx context.Context, event WebhookEvent) error {
 	// Parse billing failure payload
 	var payload struct {
-		ID                string `json:"admin_graphql_api_id"`
-		SubscriptionID    string `json:"subscription_contract_id"`
-		ErrorCode         string `json:"error_code"`
-		ErrorMessage      string `json:"error_message"`
-		Ready             bool   `json:"ready"`
-		CompletedAt       string `json:"completed_at"`
+		ID             string `json:"admin_graphql_api_id"`
+		SubscriptionID string `json:"subscription_contract_id"`
+		ErrorCode      string `json:"error_code"`
+		ErrorMessage   string `json:"error_message"`
+		Ready          bool   `json:"ready"`
+		CompletedAt    string `json:"completed_at"`
 	}
 
 	if err := json.Unmarshal(event.Payload, &payload); err != nil {

@@ -14,8 +14,10 @@ func New(gql *chat.GraphQLExecutor) *Module {
 	return &Module{exec: &executor{gql: gql}}
 }
 
-func (m *Module) Name() string        { return "apps" }
-func (m *Module) Description() string { return "App discovery — list and inspect tracked Shopify apps" }
+func (m *Module) Name() string { return "apps" }
+func (m *Module) Description() string {
+	return "App discovery — list and inspect tracked Shopify apps"
+}
 
 func (m *Module) PromptFragment() string {
 	return `## Apps Module

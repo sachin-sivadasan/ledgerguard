@@ -32,12 +32,12 @@ type RedisConfig struct {
 }
 
 type QueueConfig struct {
-	Enabled              bool   `yaml:"enabled"`
-	NumWorkers           int    `yaml:"num_workers"`
-	FullSyncWorkers      int    `yaml:"full_sync_workers"`
-	RecoveryInterval     string `yaml:"recovery_interval"`      // e.g. "10m"
+	Enabled               bool   `yaml:"enabled"`
+	NumWorkers            int    `yaml:"num_workers"`
+	FullSyncWorkers       int    `yaml:"full_sync_workers"`
+	RecoveryInterval      string `yaml:"recovery_interval"`       // e.g. "10m"
 	ProgressRedisInterval string `yaml:"progress_redis_interval"` // e.g. "2s"
-	ProgressDBInterval   string `yaml:"progress_db_interval"`    // e.g. "30s"
+	ProgressDBInterval    string `yaml:"progress_db_interval"`    // e.g. "30s"
 }
 
 type RazorpayConfig struct {

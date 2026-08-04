@@ -16,8 +16,10 @@ func New(gql *chat.GraphQLExecutor) *Module {
 	return &Module{exec: &executor{gql: gql}}
 }
 
-func (m *Module) Name() string        { return "risk" }
-func (m *Module) Description() string { return "Risk analysis — payment risk states, at-risk stores, and risk trends" }
+func (m *Module) Name() string { return "risk" }
+func (m *Module) Description() string {
+	return "Risk analysis — payment risk states, at-risk stores, and risk trends"
+}
 
 func (m *Module) PromptFragment() string {
 	return `## Risk Module

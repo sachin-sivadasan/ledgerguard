@@ -91,16 +91,16 @@ func (s *FeeVerificationService) VerifyTransaction(
 
 // FeeSummary contains aggregated fee information
 type FeeSummary struct {
-	TotalGrossAmountCents     int64
-	TotalRevenueShareCents    int64
-	TotalProcessingFeeCents   int64
-	TotalTaxOnFeesCents       int64
-	TotalFeesCents            int64
-	TotalNetAmountCents       int64
-	TransactionCount          int
-	AverageRevenueSharePct    float64
-	AverageProcessingFeePct   float64
-	EffectiveFeePercent       float64 // Total fees as % of gross
+	TotalGrossAmountCents   int64
+	TotalRevenueShareCents  int64
+	TotalProcessingFeeCents int64
+	TotalTaxOnFeesCents     int64
+	TotalFeesCents          int64
+	TotalNetAmountCents     int64
+	TransactionCount        int
+	AverageRevenueSharePct  float64
+	AverageProcessingFeePct float64
+	EffectiveFeePercent     float64 // Total fees as % of gross
 }
 
 // CalculateFeeSummary calculates aggregated fee information for a list of transactions

@@ -14,8 +14,10 @@ func New(gql *chat.GraphQLExecutor) *Module {
 	return &Module{exec: &executor{gql: gql}}
 }
 
-func (m *Module) Name() string        { return "earnings" }
-func (m *Module) Description() string { return "Earnings data — revenue breakdown and transaction history" }
+func (m *Module) Name() string { return "earnings" }
+func (m *Module) Description() string {
+	return "Earnings data — revenue breakdown and transaction history"
+}
 
 func (m *Module) PromptFragment() string {
 	return `## Earnings Module

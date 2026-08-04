@@ -15,8 +15,10 @@ func New(gql *chat.GraphQLExecutor, trigger SyncTrigger) *Module {
 	return &Module{exec: &executor{gql: gql, trigger: trigger}}
 }
 
-func (m *Module) Name() string        { return "sync" }
-func (m *Module) Description() string { return "Data sync — trigger Shopify data refresh and check status" }
+func (m *Module) Name() string { return "sync" }
+func (m *Module) Description() string {
+	return "Data sync — trigger Shopify data refresh and check status"
+}
 
 func (m *Module) PromptFragment() string {
 	return `## Sync Module

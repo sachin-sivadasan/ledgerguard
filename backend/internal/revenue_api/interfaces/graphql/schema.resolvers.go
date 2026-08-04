@@ -10,15 +10,15 @@ import (
 
 // SubscriptionStatus represents a subscription in GraphQL
 type SubscriptionStatus struct {
-	SubscriptionID           string     `json:"subscriptionId"`
-	MyshopifyDomain          string     `json:"myshopifyDomain"`
-	ShopName                 *string    `json:"shopName"`
-	PlanName                 *string    `json:"planName"`
-	RiskState                RiskState  `json:"riskState"`
-	IsPaidCurrentCycle       bool       `json:"isPaidCurrentCycle"`
-	MonthsOverdue            int        `json:"monthsOverdue"`
-	LastSuccessfulChargeDate *time.Time `json:"lastSuccessfulChargeDate"`
-	ExpectedNextChargeDate   *time.Time `json:"expectedNextChargeDate"`
+	SubscriptionID           string                 `json:"subscriptionId"`
+	MyshopifyDomain          string                 `json:"myshopifyDomain"`
+	ShopName                 *string                `json:"shopName"`
+	PlanName                 *string                `json:"planName"`
+	RiskState                RiskState              `json:"riskState"`
+	IsPaidCurrentCycle       bool                   `json:"isPaidCurrentCycle"`
+	MonthsOverdue            int                    `json:"monthsOverdue"`
+	LastSuccessfulChargeDate *time.Time             `json:"lastSuccessfulChargeDate"`
+	ExpectedNextChargeDate   *time.Time             `json:"expectedNextChargeDate"`
 	Status                   SubscriptionStatusEnum `json:"status"`
 }
 

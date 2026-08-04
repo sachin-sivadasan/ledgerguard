@@ -116,12 +116,16 @@ func (m *mockSyncJobRepo) MarkPendingIfProcessing(_ context.Context, id uuid.UUI
 // --- AppRepo ---
 
 type mockAppRepo struct {
-	apps map[uuid.UUID]*entity.App
+	apps           map[uuid.UUID]*entity.App
+	fullRowUpdated bool // set when the full-row Update is called (a sync must NOT use it)
 }
 
 func (m *mockAppRepo) Create(_ context.Context, _ *entity.App) error { return nil }
-func (m *mockAppRepo) Update(_ context.Context, _ *entity.App) error { return nil }
-func (m *mockAppRepo) Delete(_ context.Context, _ uuid.UUID) error           { return nil }
+func (m *mockAppRepo) Update(_ context.Context, _ *entity.App) error {
+	m.fullRowUpdated = true
+	return nil
+}
+func (m *mockAppRepo) Delete(_ context.Context, _ uuid.UUID) error { return nil }
 func (m *mockAppRepo) FindByPartnerAccountID(_ context.Context, _ uuid.UUID) ([]*entity.App, error) {
 	return nil, nil
 }
@@ -144,10 +148,10 @@ type mockPartnerRepo struct {
 	accounts map[uuid.UUID]*entity.PartnerAccount // keyed by ID
 }
 
-func (m *mockPartnerRepo) Create(_ context.Context, _ *entity.PartnerAccount) error   { return nil }
-func (m *mockPartnerRepo) Update(_ context.Context, _ *entity.PartnerAccount) error   { return nil }
-func (m *mockPartnerRepo) Delete(_ context.Context, _ uuid.UUID) error                { return nil }
-func (m *mockPartnerRepo) GetAllIDs(_ context.Context) ([]uuid.UUID, error)           { return nil, nil }
+func (m *mockPartnerRepo) Create(_ context.Context, _ *entity.PartnerAccount) error { return nil }
+func (m *mockPartnerRepo) Update(_ context.Context, _ *entity.PartnerAccount) error { return nil }
+func (m *mockPartnerRepo) Delete(_ context.Context, _ uuid.UUID) error              { return nil }
+func (m *mockPartnerRepo) GetAllIDs(_ context.Context) ([]uuid.UUID, error)         { return nil, nil }
 func (m *mockPartnerRepo) FindByUserID(_ context.Context, _ uuid.UUID) (*entity.PartnerAccount, error) {
 	return nil, fmt.Errorf("not found")
 }
@@ -281,7 +285,7 @@ func (m *mockAppEventRepo) FindByAppIDPaginated(_ context.Context, _ uuid.UUID, 
 // --- SubscriptionRepo ---
 
 type mockSubRepo struct {
-	subs    []*entity.Subscription
+	subs     []*entity.Subscription
 	upserted []*entity.Subscription
 }
 
@@ -323,7 +327,7 @@ func (m *mockSubRepo) GetPriceStats(_ context.Context, _ uuid.UUID) (*repository
 // --- ShopRepo ---
 
 type mockShopRepo struct {
-	shops   map[string]*entity.Shop
+	shops    map[string]*entity.Shop
 	upserted []*entity.Shop
 }
 
@@ -709,6 +713,9 @@ func TestEventProcessor_PersistsActiveInstallCount(t *testing.T) {
 		{Type: "RELATIONSHIP_REACTIVATED", ShopID: "s3", OccurredAt: now.Add(-1 * time.Hour)},
 	}}
 
+	// A user-set field that the sync must NOT touch when it writes the install count.
+	appRepo.apps[appID].AppStoreSlug = "zoko"
+
 	payload := makePayload(appID, userID, partnerID, entity.SyncJobTypeEventSync)
 	syncJobRepo.jobs[payload.JobID] = entity.NewSyncJob(appID, userID, partnerID, entity.SyncJobTypeEventSync, 0)
 	syncJobRepo.jobs[payload.JobID].ID = payload.JobID
@@ -719,6 +726,15 @@ func TestEventProcessor_PersistsActiveInstallCount(t *testing.T) {
 	}
 	if got := appRepo.apps[appID].InstallCount; got != 2 {
 		t.Errorf("active install count: expected 2, got %d", got)
+	}
+	if got := appRepo.apps[appID].AppStoreSlug; got != "zoko" {
+		t.Errorf("app_store_slug = %q, want zoko (sync must not clobber user-set fields)", got)
+	}
+	// The true regression guard: the sync must persist the count via the targeted
+	// UpdateInstallCount, NEVER the full-row Update (which clobbers slug/tier from a
+	// stale in-memory app). Reverting to Update flips this and fails the test.
+	if appRepo.fullRowUpdated {
+		t.Error("EventProcessor used the full-row Update — it must use UpdateInstallCount")
 	}
 }
 
@@ -806,7 +822,6 @@ func TestStoreProcessor_FetchesNewDomains(t *testing.T) {
 		t.Errorf("Expected 2 shops upserted, got %d", len(shopRepo.upserted))
 	}
 }
-
 
 func TestStoreProcessor_SkipsExistingDomains(t *testing.T) {
 	_, lm, pt := setupRedis(t)
@@ -1015,4 +1030,11 @@ func TestFullSyncProcessor_CreatesChildJobs(t *testing.T) {
 
 func (m *mockTransactionRepo) GetTransactionSummary(_ context.Context, _ uuid.UUID, _ repository.TransactionFilters) (*repository.TransactionSummary, error) {
 	return &repository.TransactionSummary{}, nil
+}
+
+func (m *mockAppRepo) UpdateInstallCount(ctx context.Context, appID uuid.UUID, count int) error {
+	if a := m.apps[appID]; a != nil {
+		a.InstallCount = count // targeted install-count write (mirrors the Postgres impl)
+	}
+	return nil
 }

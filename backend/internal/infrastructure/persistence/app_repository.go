@@ -185,6 +185,23 @@ func (r *PostgresAppRepository) Update(ctx context.Context, app *entity.App) err
 	return nil
 }
 
+// UpdateInstallCount sets only install_count (+ updated_at), leaving every other
+// column untouched — so a sync's install-count refresh can't clobber a user-set
+// app_store_slug / revenue_share_tier via a stale full-row Update.
+func (r *PostgresAppRepository) UpdateInstallCount(ctx context.Context, appID uuid.UUID, count int) error {
+	result, err := r.pool.Exec(ctx,
+		`UPDATE apps SET install_count = $2, updated_at = NOW() WHERE id = $1`,
+		appID, count,
+	)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return ErrAppNotFound
+	}
+	return nil
+}
+
 func (r *PostgresAppRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM apps WHERE id = $1`
 

@@ -1261,3 +1261,7 @@ func TestSubscriptionHandler_List_CombinedFilters(t *testing.T) {
 		t.Errorf("expected total 1 (combined filters), got %d", total)
 	}
 }
+
+func (m *mockAppRepoForSub) UpdateInstallCount(ctx context.Context, appID uuid.UUID, count int) error {
+	return nil
+}

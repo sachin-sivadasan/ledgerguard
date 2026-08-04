@@ -15,9 +15,9 @@ type stubModule struct {
 	result   ToolResult
 }
 
-func (m *stubModule) Name() string           { return m.name }
-func (m *stubModule) Description() string    { return m.desc }
-func (m *stubModule) PromptFragment() string { return m.prompt }
+func (m *stubModule) Name() string            { return m.name }
+func (m *stubModule) Description() string     { return m.desc }
+func (m *stubModule) PromptFragment() string  { return m.prompt }
 func (m *stubModule) Tools() []ToolDefinition { return m.tools }
 func (m *stubModule) ExecuteTool(ctx context.Context, call ToolCall) ToolResult {
 	m.lastCall = &call

@@ -32,20 +32,20 @@ const (
 	AuditActionSyncFailed   AuditAction = "SYNC_FAILED"
 
 	// Export actions
-	AuditActionExportRequest AuditAction = "EXPORT_REQUEST"
+	AuditActionExportRequest  AuditAction = "EXPORT_REQUEST"
 	AuditActionExportComplete AuditAction = "EXPORT_COMPLETE"
 
 	// Settings actions
-	AuditActionSettingsUpdate      AuditAction = "SETTINGS_UPDATE"
-	AuditActionPreferencesUpdate   AuditAction = "PREFERENCES_UPDATE"
-	AuditActionNotificationUpdate  AuditAction = "NOTIFICATION_UPDATE"
+	AuditActionSettingsUpdate     AuditAction = "SETTINGS_UPDATE"
+	AuditActionPreferencesUpdate  AuditAction = "PREFERENCES_UPDATE"
+	AuditActionNotificationUpdate AuditAction = "NOTIFICATION_UPDATE"
 
 	// API key actions
 	AuditActionAPIKeyCreate AuditAction = "API_KEY_CREATE"
 	AuditActionAPIKeyRevoke AuditAction = "API_KEY_REVOKE"
 
 	// Webhook actions
-	AuditActionWebhookReceived AuditAction = "WEBHOOK_RECEIVED"
+	AuditActionWebhookReceived  AuditAction = "WEBHOOK_RECEIVED"
 	AuditActionWebhookProcessed AuditAction = "WEBHOOK_PROCESSED"
 )
 

@@ -440,3 +440,7 @@ func TestSyncHandler_SyncApp_AppNotFound(t *testing.T) {
 func (m *mockSyncTransactionRepo) GetTransactionSummary(_ context.Context, _ uuid.UUID, _ repository.TransactionFilters) (*repository.TransactionSummary, error) {
 	return &repository.TransactionSummary{}, nil
 }
+
+func (m *mockSyncAppRepo) UpdateInstallCount(ctx context.Context, appID uuid.UUID, count int) error {
+	return nil
+}

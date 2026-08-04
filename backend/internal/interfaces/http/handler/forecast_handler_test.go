@@ -199,3 +199,7 @@ func TestForecastHandler_InvalidModel(t *testing.T) {
 		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }
+
+func (m *mockAppRepoForForecast) UpdateInstallCount(ctx context.Context, appID uuid.UUID, count int) error {
+	return nil
+}

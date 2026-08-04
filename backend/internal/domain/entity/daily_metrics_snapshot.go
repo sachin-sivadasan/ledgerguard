@@ -9,21 +9,21 @@ import (
 // DailyMetricsSnapshot represents a daily snapshot of app metrics
 // These are immutable audit records - never deleted
 type DailyMetricsSnapshot struct {
-	ID                 uuid.UUID
-	AppID              uuid.UUID
-	Date               time.Time // Date of snapshot (truncated to day)
-	ActiveMRRCents     int64     // MRR from SAFE subscriptions
-	RevenueAtRiskCents int64     // MRR from ONE_CYCLE_MISSED + TWO_CYCLES_MISSED
-	UsageRevenueCents  int64     // Sum of USAGE transactions (12-month window)
-	TotalRevenueCents  int64     // RECURRING + USAGE + ONE_TIME - REFUNDS
-	RenewalSuccessRate float64   // SAFE / (SAFE + at-risk + churned) as decimal
-	SafeCount          int       // Subscriptions in SAFE state
-	OneCycleMissedCount int      // Subscriptions in ONE_CYCLE_MISSED state
-	TwoCyclesMissedCount int     // Subscriptions in TWO_CYCLES_MISSED state
-	ChurnedCount       int       // Subscriptions in CHURNED state
-	TotalSubscriptions int       // Total subscription count
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
+	ID                   uuid.UUID
+	AppID                uuid.UUID
+	Date                 time.Time // Date of snapshot (truncated to day)
+	ActiveMRRCents       int64     // MRR from SAFE subscriptions
+	RevenueAtRiskCents   int64     // MRR from ONE_CYCLE_MISSED + TWO_CYCLES_MISSED
+	UsageRevenueCents    int64     // Sum of USAGE transactions (12-month window)
+	TotalRevenueCents    int64     // RECURRING + USAGE + ONE_TIME - REFUNDS
+	RenewalSuccessRate   float64   // SAFE / (SAFE + at-risk + churned) as decimal
+	SafeCount            int       // Subscriptions in SAFE state
+	OneCycleMissedCount  int       // Subscriptions in ONE_CYCLE_MISSED state
+	TwoCyclesMissedCount int       // Subscriptions in TWO_CYCLES_MISSED state
+	ChurnedCount         int       // Subscriptions in CHURNED state
+	TotalSubscriptions   int       // Total subscription count
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 // NewDailyMetricsSnapshot creates a new daily metrics snapshot

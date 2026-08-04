@@ -19,11 +19,11 @@ var ErrDuplicateJob = errors.New("an active sync job already exists for this app
 
 // JobProgress contains progress info merged from DB + Redis
 type JobProgress struct {
-	Job      *entity.SyncJob  `json:"job"`
-	Total    int              `json:"total"`
+	Job       *entity.SyncJob `json:"job"`
+	Total     int             `json:"total"`
 	Completed int             `json:"completed"`
-	Message  string           `json:"message"`
-	Children []*JobProgress   `json:"children,omitempty"`
+	Message   string          `json:"message"`
+	Children  []*JobProgress  `json:"children,omitempty"`
 }
 
 // QueueSyncService manages async sync job lifecycle

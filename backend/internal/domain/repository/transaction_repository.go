@@ -35,7 +35,7 @@ type EarningsSummary struct {
 
 // EarningsByDate represents earnings for a specific date
 type EarningsByDate struct {
-	Date       time.Time
+	Date        time.Time
 	AmountCents int64
 }
 

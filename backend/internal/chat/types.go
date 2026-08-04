@@ -27,8 +27,8 @@ type ToolResult struct {
 
 // ChatMessage represents a single message in a conversation.
 type ChatMessage struct {
-	Role       string       `json:"role"`                  // "system", "user", "assistant", "tool"
-	Content    string       `json:"content"`               // text content
-	ToolCalls  []ToolCall   `json:"tool_calls,omitempty"`  // assistant requesting tool calls
-	ToolResult *ToolResult  `json:"tool_result,omitempty"` // tool response
+	Role       string      `json:"role"`                  // "system", "user", "assistant", "tool"
+	Content    string      `json:"content"`               // text content
+	ToolCalls  []ToolCall  `json:"tool_calls,omitempty"`  // assistant requesting tool calls
+	ToolResult *ToolResult `json:"tool_result,omitempty"` // tool response
 }

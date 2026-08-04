@@ -48,6 +48,7 @@ import 'screens/reports/uninstall_context_screen.dart';
 import 'screens/risk/risk_screen.dart';
 import 'screens/settings/connect_shopify_screen.dart';
 import 'screens/settings/dashboard_settings_screen.dart';
+import 'screens/settings/plan_labels_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/stores/store_detail_screen.dart';
 import 'screens/team/audit_log_screen.dart';
@@ -226,6 +227,10 @@ class _AppState extends State<App> {
                     GoRoute(
                       path: 'connect-shopify',
                       builder: (c, s) => const ConnectShopifyScreen(),
+                    ),
+                    GoRoute(
+                      path: 'plan-labels',
+                      builder: (c, s) => const PlanLabelsScreen(),
                     ),
                     GoRoute(
                       path: 'team',

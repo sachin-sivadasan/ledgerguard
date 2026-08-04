@@ -136,6 +136,9 @@ class _CustomerInsightsScreenState extends State<CustomerInsightsScreen>
       backAction: () => context.go('/reports'),
       onRefresh: refreshData,
       secondaryActions: [
+        LgPageAction(
+            label: 'Edit plan names',
+            onPressed: () => context.go('/settings/plan-labels')),
         LgPageAction(label: 'Export CSV', onPressed: _exportCsv),
       ],
       child: Column(

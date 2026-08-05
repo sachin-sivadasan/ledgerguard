@@ -13,6 +13,7 @@ import '../providers/activation_provider.dart';
 import '../providers/fee_audit_provider.dart';
 import '../providers/ledger_recon_provider.dart';
 import '../providers/customer_insights_provider.dart';
+import '../providers/mobile_reviews_provider.dart';
 import '../providers/retention_provider.dart';
 import '../providers/usage_provider.dart';
 import '../providers/usage_trends_provider.dart';
@@ -59,6 +60,7 @@ class DemoModeCoordinator {
   final FeeAuditProvider _feeAuditProvider;
   final LedgerReconProvider _ledgerReconProvider;
   final CustomerInsightsProvider _customerInsightsProvider;
+  final MobileReviewsProvider _mobileReviewsProvider;
   final UninstallContextProvider _uninstallContextProvider;
   final ReviewsProvider _reviewsProvider;
   final AnalyticsProvider _analyticsProvider;
@@ -93,6 +95,7 @@ class DemoModeCoordinator {
     required FeeAuditProvider feeAuditProvider,
     required LedgerReconProvider ledgerReconProvider,
     required CustomerInsightsProvider customerInsightsProvider,
+    required MobileReviewsProvider mobileReviewsProvider,
     required UninstallContextProvider uninstallContextProvider,
     required ReviewsProvider reviewsProvider,
     required AnalyticsProvider analyticsProvider,
@@ -125,6 +128,7 @@ class DemoModeCoordinator {
        _feeAuditProvider = feeAuditProvider,
        _ledgerReconProvider = ledgerReconProvider,
        _customerInsightsProvider = customerInsightsProvider,
+       _mobileReviewsProvider = mobileReviewsProvider,
        _uninstallContextProvider = uninstallContextProvider,
        _reviewsProvider = reviewsProvider,
        _analyticsProvider = analyticsProvider,
@@ -160,6 +164,7 @@ class DemoModeCoordinator {
     _feeAuditProvider.setDemoMode(value);
     _ledgerReconProvider.setDemoMode(value);
     _customerInsightsProvider.setDemoMode(value);
+    _mobileReviewsProvider.setDemoMode(value);
     _uninstallContextProvider.setDemoMode(value);
     _reviewsProvider.setDemoMode(value);
     _analyticsProvider.setDemoMode(value);

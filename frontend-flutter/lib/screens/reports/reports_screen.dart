@@ -119,6 +119,11 @@ class ReportsScreen extends StatelessWidget {
       _ReportEntry('Ledger Reconciliation', 'Cross-check the rebuilt ledger',
           route: '/reports/ledger-reconciliation'),
     ]),
+    _ReportCategory('Mobile', Icons.smartphone_outlined, [
+      _ReportEntry('Mobile Ratings & Reviews',
+          'App Store + Google Play ratings',
+          route: '/reports/mobile-reviews'),
+    ]),
   ];
 
   @override

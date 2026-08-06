@@ -26,6 +26,7 @@ import 'providers/fee_audit_provider.dart';
 import 'providers/ledger_recon_provider.dart';
 import 'providers/customer_insights_provider.dart';
 import 'providers/plan_label_provider.dart';
+import 'providers/mobile_reviews_provider.dart';
 import 'providers/retention_provider.dart';
 import 'providers/usage_provider.dart';
 import 'providers/usage_trends_provider.dart';
@@ -61,6 +62,7 @@ import 'services/fee_audit_service.dart';
 import 'services/ledger_recon_service.dart';
 import 'services/customer_insights_service.dart';
 import 'services/plan_label_service.dart';
+import 'services/mobile_reviews_service.dart';
 import 'services/retention_service.dart';
 import 'services/usage_service.dart';
 import 'services/usage_trends_service.dart';
@@ -118,6 +120,7 @@ void main() async {
   final ledgerReconService = LedgerReconService(apiClient);
   final customerInsightsService = CustomerInsightsService(apiClient);
   final planLabelService = PlanLabelService(apiClient);
+  final mobileReviewsService = MobileReviewsService(apiClient);
   final uninstallContextService = UninstallContextService(apiClient);
   final reviewsService = ReviewsService(apiClient);
   final eventsService = EventsService(apiClient);
@@ -160,6 +163,7 @@ void main() async {
   final customerInsightsProvider =
       CustomerInsightsProvider(customerInsightsService);
   final planLabelProvider = PlanLabelProvider(planLabelService);
+  final mobileReviewsProvider = MobileReviewsProvider(mobileReviewsService);
   final uninstallContextProvider = UninstallContextProvider(
     uninstallContextService,
   );
@@ -196,6 +200,7 @@ void main() async {
     feeAuditProvider: feeAuditProvider,
     ledgerReconProvider: ledgerReconProvider,
     customerInsightsProvider: customerInsightsProvider,
+    mobileReviewsProvider: mobileReviewsProvider,
     uninstallContextProvider: uninstallContextProvider,
     reviewsProvider: reviewsProvider,
     analyticsProvider: analyticsProvider,
@@ -239,6 +244,7 @@ void main() async {
         ChangeNotifierProvider.value(value: ledgerReconProvider),
         ChangeNotifierProvider.value(value: customerInsightsProvider),
         ChangeNotifierProvider.value(value: planLabelProvider),
+        ChangeNotifierProvider.value(value: mobileReviewsProvider),
         ChangeNotifierProvider.value(value: uninstallContextProvider),
         ChangeNotifierProvider.value(value: reviewsProvider),
         ChangeNotifierProvider.value(value: analyticsProvider),

@@ -56,6 +56,7 @@ type Config struct {
 	LedgerReconReportHandler       *handler.LedgerReconciliationReportHandler
 	CustomerInsightsReportHandler  *handler.CustomerInsightsReportHandler
 	PlanLabelHandler               *handler.PlanLabelHandler
+	MobileReviewsHandler           *handler.MobileReviewsHandler
 	ActivationReportHandler        *handler.ActivationReportHandler
 	NetNewSubsReportHandler        *handler.NetNewSubsReportHandler
 	RiskHandler                    *handler.RiskHandler
@@ -351,6 +352,12 @@ func New(cfg Config) *chi.Mux {
 				if cfg.PlanLabelHandler != nil {
 					r.Get("/{appID}/plan-labels", cfg.PlanLabelHandler.GetPlanLabels)
 					r.Put("/{appID}/plan-labels", cfg.PlanLabelHandler.PutPlanLabels)
+				}
+
+				// Mobile ratings & reviews (public App Store / Google Play — no creds)
+				if cfg.MobileReviewsHandler != nil {
+					r.Get("/{appID}/mobile/reviews", cfg.MobileReviewsHandler.GetMobileReviews)
+					r.Put("/{appID}/mobile/links", cfg.MobileReviewsHandler.PutMobileLinks)
 				}
 
 				// Ledger Reconciliation report route (Guard — gross = net + revenue share + processing)

@@ -486,6 +486,14 @@ func run() error {
 		log.Println("Plan label handler initialized")
 	}
 
+	var mobileReviewsHandler *handler.MobileReviewsHandler
+	if db != nil && appRepo != nil && partnerRepo != nil {
+		mobileLinksRepo := persistence.NewPostgresMobileLinksRepository(db.Pool)
+		mobileReviewsHandler = handler.NewMobileReviewsHandler(
+			mobileLinksRepo, external.NewMobileStoreClient(), appRepo, partnerRepo)
+		log.Println("Mobile reviews handler initialized")
+	}
+
 	// Initialize activation report handler (Growth, Archetype E — install→paid funnel)
 	var activationReportHandler *handler.ActivationReportHandler
 	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -921,6 +929,7 @@ func run() error {
 		LedgerReconReportHandler:       ledgerReconReportHandler,
 		CustomerInsightsReportHandler:  customerInsightsReportHandler,
 		PlanLabelHandler:               planLabelHandler,
+		MobileReviewsHandler:           mobileReviewsHandler,
 		ActivationReportHandler:        activationReportHandler,
 		NetNewSubsReportHandler:        netNewSubsReportHandler,
 		RiskHandler:                    riskHandler,

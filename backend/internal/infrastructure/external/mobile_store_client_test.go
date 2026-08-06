@@ -56,6 +56,23 @@ func TestParseGooglePlayLD(t *testing.T) {
 	}
 }
 
+func TestParseGooglePlayInstalls(t *testing.T) {
+	// Mirrors the real listing: the coarse range precedes the single "Downloads" stat label.
+	html := []byte(`<div aria-label="More info">info</div><div><span>10B+</span></div><div class="g1rdde">Downloads</div>`)
+	if got := parseGooglePlayInstalls(html); got != "10B+" {
+		t.Errorf("installs = %q, want 10B+", got)
+	}
+	// Long form + a nearer package example.
+	html2 := []byte(`<span>500K+</span></div><div>Downloads</div>`)
+	if got := parseGooglePlayInstalls(html2); got != "500K+" {
+		t.Errorf("installs = %q, want 500K+", got)
+	}
+	// Best-effort: no "Downloads" label → empty (never errors).
+	if got := parseGooglePlayInstalls([]byte(`<html>no stat</html>`)); got != "" {
+		t.Errorf("installs = %q, want empty", got)
+	}
+}
+
 func TestParseGooglePlayLD_NoRating(t *testing.T) {
 	if _, err := parseGooglePlayLD([]byte(`<html>no ld json</html>`)); err == nil {
 		t.Error("expected an error when the listing has no rating block")

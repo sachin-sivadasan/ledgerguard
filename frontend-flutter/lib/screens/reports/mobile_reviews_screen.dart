@@ -273,6 +273,16 @@ class _StoreCard extends StatelessWidget {
             ]),
             Text('${_count(block.ratingCount)} ratings',
                 style: theme.textTheme.bodySmall?.copyWith(color: LgColors.textSecondary)),
+            if (block.installs.isNotEmpty) ...[
+              const SizedBox(height: LgSpacing.s100),
+              Row(children: [
+                Icon(Icons.download_outlined, size: 14, color: LgColors.textSecondary),
+                const SizedBox(width: 4),
+                Text('${block.installs} installs (approx)',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: LgColors.textSecondary)),
+              ]),
+            ],
             const SizedBox(height: LgSpacing.s400),
             if (block.reviewsAvailable) ...[
               if (block.positive + block.neutral + block.negative > 0)

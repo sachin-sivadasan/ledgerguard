@@ -32,6 +32,11 @@ type MobileRatingSummary struct {
 	RatingValue float64 `json:"ratingValue"`
 	RatingCount int64   `json:"ratingCount"`
 	StoreURL    string  `json:"storeUrl"`
+	// Installs is Google Play's PUBLIC coarse install range (e.g. "10B+", "500K+"), empty
+	// when unavailable. Apple exposes no download data publicly, so it's Google-only and
+	// best-effort — scraped from the listing (not structured data), so it may go blank if
+	// Google changes their markup. Never exact; Google buckets it deliberately.
+	Installs string `json:"installs,omitempty"`
 }
 
 // MobileReview is a single public review (Apple only).
@@ -183,7 +188,20 @@ func (c *MobileStoreClient) GooglePlayListing(ctx context.Context, packageName, 
 		return nil, err
 	}
 	summary.StoreURL = url
+	summary.Installs = parseGooglePlayInstalls(body) // best-effort; "" when unavailable
 	return summary, nil
+}
+
+// installsNearDownloads anchors on the single "Downloads" stat label and grabs the coarse
+// install range (short "10B+" or long "10,000,000,000+") that precedes it.
+var installsNearDownloads = regexp.MustCompile(`(?s)([0-9][0-9.,]*\s?[KMB]?\+)(?:</?[^>]*>|\s|&nbsp;)*Downloads`)
+
+func parseGooglePlayInstalls(html []byte) string {
+	m := installsNearDownloads.FindSubmatch(html)
+	if m == nil {
+		return ""
+	}
+	return strings.TrimSpace(string(m[1]))
 }
 
 func parseGooglePlayLD(html []byte) (*MobileRatingSummary, error) {

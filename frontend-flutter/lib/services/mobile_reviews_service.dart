@@ -33,6 +33,7 @@ class StoreBlock {
   final String iconUrl;
   final double ratingValue;
   final int ratingCount;
+  final String installs; // Google-only coarse range ("10B+"); empty otherwise
   final String storeUrl;
   final bool reviewsAvailable;
   final List<MobileReview> reviews;
@@ -47,6 +48,7 @@ class StoreBlock {
     required this.iconUrl,
     required this.ratingValue,
     required this.ratingCount,
+    required this.installs,
     required this.storeUrl,
     required this.reviewsAvailable,
     required this.reviews,
@@ -62,6 +64,7 @@ class StoreBlock {
         iconUrl: j['iconUrl'] as String? ?? '',
         ratingValue: (j['ratingValue'] as num?)?.toDouble() ?? 0,
         ratingCount: (j['ratingCount'] as num?)?.toInt() ?? 0,
+        installs: j['installs'] as String? ?? '',
         storeUrl: j['storeUrl'] as String? ?? '',
         reviewsAvailable: j['reviewsAvailable'] as bool? ?? false,
         reviews: (j['reviews'] as List<dynamic>?)

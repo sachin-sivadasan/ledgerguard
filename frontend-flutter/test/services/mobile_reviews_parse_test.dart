@@ -25,6 +25,7 @@ void main() {
           'appName': 'WhatsApp',
           'ratingValue': 4.63,
           'ratingCount': 240297698,
+          'installs': '10B+',
           'reviewsAvailable': false,
           'reviews': [],
         },
@@ -34,8 +35,10 @@ void main() {
       expect(d.appStore!.ratingCount, 18368633);
       expect(d.appStore!.reviewsAvailable, isTrue);
       expect(d.appStore!.reviews.single.rating, 5);
+      expect(d.appStore!.installs, ''); // Apple has no install data
       expect(d.googlePlay!.reviewsAvailable, isFalse);
       expect(d.googlePlay!.ratingValue, 4.63);
+      expect(d.googlePlay!.installs, '10B+');
     });
 
     test('omitted stores are null and hasAnyLink is false', () {

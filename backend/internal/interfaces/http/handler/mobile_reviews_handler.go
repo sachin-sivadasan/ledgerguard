@@ -47,6 +47,7 @@ type storeBlock struct {
 	IconURL          string                  `json:"iconUrl"`
 	RatingValue      float64                 `json:"ratingValue"`
 	RatingCount      int64                   `json:"ratingCount"`
+	Installs         string                  `json:"installs,omitempty"` // Google-only coarse range
 	StoreURL         string                  `json:"storeUrl"`
 	ReviewsAvailable bool                    `json:"reviewsAvailable"`
 	Reviews          []external.MobileReview `json:"reviews"`
@@ -150,6 +151,7 @@ func (h *MobileReviewsHandler) googleBlock(ctx context.Context, pkg string) *sto
 	}
 	b.AppName, b.IconURL, b.RatingValue, b.RatingCount, b.StoreURL =
 		sum.AppName, sum.IconURL, sum.RatingValue, sum.RatingCount, sum.StoreURL
+	b.Installs = sum.Installs
 	return b
 }
 

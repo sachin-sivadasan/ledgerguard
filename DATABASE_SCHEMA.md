@@ -771,3 +771,19 @@ Add sync schedule and workspace settings to user_preferences.
 | workspace_name | VARCHAR(100) | 'My Shopify Apps' | Display name for workspace |
 | currency | VARCHAR(3) | 'USD' | Revenue display currency |
 | timezone | VARCHAR(50) | 'America/New_York' | Schedule-based features TZ |
+
+---
+
+## Migration 000047 — `create_app_mobile_links`
+
+### app_mobile_links — new table
+Per-app public mobile store identifiers, so LedgerGuard can pull the developer's iOS/Android app **ratings + reviews** from the PUBLIC store endpoints (no credentials). Downloads / revenue / crashes are private and intentionally out of scope.
+
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| app_id | UUID | — | PK, FK → apps(id) ON DELETE CASCADE |
+| ios_app_id | VARCHAR(32) | '' | Apple numeric app id (e.g. `310633997`) |
+| play_package | VARCHAR(255) | '' | Android package (e.g. `com.whatsapp`) |
+| updated_at | TIMESTAMPTZ | NOW() | |
+
+Set via `PUT /api/v1/apps/{appID}/mobile/links`; read (on-demand fetch) via `GET /api/v1/apps/{appID}/mobile/reviews`.

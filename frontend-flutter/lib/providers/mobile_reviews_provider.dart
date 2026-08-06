@@ -79,8 +79,10 @@ class MobileReviewsProvider extends ChangeNotifier {
       await _service.saveLinks(appId, appStore: appStore, googlePlay: googlePlay);
       ok = true;
     } on DioException catch (e) {
-      _error = e.response?.data is Map
-          ? (e.response!.data['message']?.toString() ?? e.message)
+      // Backend error envelope is {"error": {"message": ...}}.
+      final data = e.response?.data;
+      _error = data is Map && data['error'] is Map
+          ? (data['error']['message']?.toString() ?? e.message)
           : e.message;
     } catch (e) {
       _error = e.toString();

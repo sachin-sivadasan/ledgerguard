@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
@@ -82,13 +83,20 @@ func (h *MobileReviewsHandler) GetMobileReviews(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// Re-validate at the trust boundary (the outbound HTTP client) so a value written by
+	// any path other than PutMobileLinks can never become an SSRF vector, and fetch the two
+	// stores concurrently (they're independent) to halve worst-case latency.
 	resp := mobileReviewsResponse{IosAppID: links.IosAppID, PlayPackage: links.PlayPackage}
-	if links.IosAppID != "" {
-		resp.AppStore = h.appleBlock(r.Context(), links.IosAppID)
+	var wg sync.WaitGroup
+	if digitsOnly.MatchString(links.IosAppID) {
+		wg.Add(1)
+		go func() { defer wg.Done(); resp.AppStore = h.appleBlock(r.Context(), links.IosAppID) }()
 	}
-	if links.PlayPackage != "" {
-		resp.GooglePlay = h.googleBlock(r.Context(), links.PlayPackage)
+	if packageFormat.MatchString(links.PlayPackage) {
+		wg.Add(1)
+		go func() { defer wg.Done(); resp.GooglePlay = h.googleBlock(r.Context(), links.PlayPackage) }()
 	}
+	wg.Wait()
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -100,18 +108,30 @@ func (h *MobileReviewsHandler) GetMobileReviews(w http.ResponseWriter, r *http.R
 // failing the whole response (the other store may still render).
 func (h *MobileReviewsHandler) appleBlock(ctx context.Context, iosAppID string) *storeBlock {
 	b := &storeBlock{Linked: true, ReviewsAvailable: true}
-	sum, err := h.store.AppleLookup(ctx, iosAppID, "us")
-	if err != nil {
-		log.Printf("mobile-reviews: apple lookup %s: %v", iosAppID, err)
+
+	// Lookup (rating) and reviews are independent — fetch in parallel.
+	var (
+		sum     *external.MobileRatingSummary
+		sumErr  error
+		reviews []external.MobileReview
+		revErr  error
+		wg      sync.WaitGroup
+	)
+	wg.Add(2)
+	go func() { defer wg.Done(); sum, sumErr = h.store.AppleLookup(ctx, iosAppID, "us") }()
+	go func() { defer wg.Done(); reviews, revErr = h.store.AppleReviews(ctx, iosAppID, "us") }()
+	wg.Wait()
+
+	if sumErr != nil {
+		log.Printf("mobile-reviews: apple lookup %s: %v", iosAppID, sumErr)
 		b.Error = "Couldn't reach the App Store."
 		return b
 	}
 	b.AppName, b.IconURL, b.RatingValue, b.RatingCount, b.StoreURL =
 		sum.AppName, sum.IconURL, sum.RatingValue, sum.RatingCount, sum.StoreURL
 
-	reviews, err := h.store.AppleReviews(ctx, iosAppID, "us")
-	if err != nil {
-		log.Printf("mobile-reviews: apple reviews %s: %v", iosAppID, err)
+	if revErr != nil {
+		log.Printf("mobile-reviews: apple reviews %s: %v", iosAppID, revErr)
 		return b // keep the rating; reviews just absent
 	}
 	b.Reviews = reviews

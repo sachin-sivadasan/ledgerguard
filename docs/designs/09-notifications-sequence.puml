@@ -1,0 +1,36 @@
+@startuml
+title Notifications — as-built: daily-summary scheduler + critical alert + AI insight
+
+participant "NotificationScheduler\n(every 15 min)" as Sched
+participant "PrefsRepo" as Prefs
+participant "NotificationService" as Svc
+participant "FCM\n(firebase_messaging.go)" as FCM
+participant "Slack\n(slack_provider.go)" as Slack
+database "snapshots / devices / prefs" as DB
+
+== Daily summary (scheduled, UTC) ==
+Sched -> Sched : checkAndSend: if hour == lastCheckedHour -> return (in-memory only, D1)
+Sched -> Prefs : FindUsersWithDailySummaryAtHour(currentHourUTC)
+loop each user -> each app
+  Sched -> DB : FindLatestByAppID(snapshot)
+  Sched -> Svc : SendDailySummary(user, appName, snapshot)  [snapshot metrics, NOT AI insight, D2]
+  Svc -> DB : load devices + prefs (DailySummaryEnabled)
+  Svc -> FCM : SendPush(title, body) to ALL devices  (no dead-token prune, D3)
+  Svc -> Slack : SendSlack(...) if SlackWebhookURL set
+  note right of Svc : email flag exists but NO provider -> silently skipped (D4)
+end
+
+== Critical risk alert (event-driven, on risk-state change) ==
+participant "risk/sync flow" as Risk
+Risk -> Svc : SendCriticalAlert(user, app, fromState->toState)
+Svc -> FCM : push to all devices (if CriticalAlertsEnabled)
+Svc -> Slack : slack if webhook set
+note right of Svc : if Slack fails, push still succeeds (resilient, tested)
+
+== AI daily insight (SEPARATE, on-demand only) ==
+actor Partner as U
+participant "AIInsightService\n(Pro tier)" as AI
+U -> AI : GenerateInsight(app)  [no background job schedules this, D2]
+AI -> DB : upsert daily_insight (ON CONFLICT app_id,date)
+U -> DB : view latest insight in-app
+@enduml

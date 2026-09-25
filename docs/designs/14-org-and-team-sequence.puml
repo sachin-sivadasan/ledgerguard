@@ -1,0 +1,43 @@
+@startuml
+title Org & Team — as-built: request authz + invitation flow
+
+actor User as U
+participant "AuthMW\n(Firebase)" as Auth
+participant "OrgContextMW\n(org_context.go)" as Org
+participant "handler\n(org/audit)" as H
+participant "OrgService" as Svc
+database "orgs / members / invitations /\norg_audit_log" as DB
+
+== Every org-scoped request ==
+U -> Auth : Firebase token (+ X-Org-Id / :orgId)
+Auth -> Auth : verify JWT ; provision personal org on first login (OWNER)
+Auth -> Org : user in context
+Org -> DB : FindByID(org) ; FindByOrgAndUser(org, user)
+alt not a member
+  Org --> U : 403 "not a member" (MEMBERSHIP ISOLATION — solid)
+else suspended
+  Org --> U : 403 account_suspended
+end
+Org -> H : org + member in context
+note right of H : RequireOrgRole middleware EXISTS but is UNUSED in router (D1)\n-> privileged ops (UpdateOrg/DeleteOrg/ChangeRole/RevokeInvitation/\nListAuditLog/UpdateNotificationPrefs) rely on service checks or nothing
+H -> Svc : action (role checks partial at service layer)
+Svc -> DB : mutate + audit (org.*/member.*/role.changed)
+H --> U : result
+
+== Invitation ==
+U -> H : POST /orgs/{id}/invitations {email, role}  (member-limit enforced)
+H -> Svc : InviteMember
+Svc -> DB : token = 256-bit crypto/rand ; 7-day expiry ; status PENDING ; audit member.invited
+Svc --> H : {token}  -> returned in RESPONSE (no backend email delivery, D3)
+U -> H : POST /invitations/{token}/accept  (any logged-in user)
+H -> Svc : AcceptInvitation(token)
+Svc -> DB : check PENDING + not expired + not already member
+note right of Svc : does NOT verify accepting user's email == invite email (D2, invite-hijack)
+Svc -> DB : create member(role) ; mark ACCEPTED ; audit member.joined
+
+note over Org,DB
+  Residual: OrgContextMW proves org membership, but app-scoped endpoints
+  (reports/forecast/etc.) resolve appID WITHOUT cross-checking it belongs to
+  the caller's org (systemic finding, refined — D4)
+end note
+@enduml

@@ -249,7 +249,7 @@ backend/internal/chat/
 ├── module.go                         → Module interface
 ├── registry.go                       → Module registry (register, route, build prompt)
 ├── types.go                          → ToolDefinition, ToolCall, ToolResult, ChatMessage
-├── handler.go                        → Chat WebSocket handler + /chat/modules endpoint
+├── handler.go                        → Chat SSE handler (POST, text/event-stream) + /chat/modules endpoint
 ├── ai_client.go                      → AIClient interface (provider-agnostic)
 ├── ai_provider_registry.go           → AIProviderRegistry (OpenAI, Claude, etc.)
 ├── graphql_executor.go               → Thread-safe gqlgen executor wrapper
@@ -281,30 +281,53 @@ backend/internal/chat/
 |----------|------|-------------|
 | `/graphql` (GET) | Firebase | GraphQL Playground |
 | `/graphql` (POST) | Firebase | Execute GraphQL query |
-| `/api/v1/chat` | Firebase (WebSocket) | AI chat via WebSocket |
+| `/api/v1/chat` (POST) | Firebase | AI chat via **SSE** (`text/event-stream`); streams `tool_call`/`tool_result`/`response`/`error` events; tool-call loop max 5 iterations |
 | `/api/v1/chat/modules` | Firebase | List available modules + tools |
 
 **Module Tool Naming:** `module__tool_name` (double underscore, OpenAI-compliant)
 
 ### 13. Risk Engine (Authoritative)
+Mirrors `internal/domain/service/risk_engine.go` (`ClassifyRisk`). Status is checked
+**before** the days-past-due math; the order below is significant.
 ```go
-func ClassifyRisk(status string, expectedNextCharge time.Time, now time.Time) RiskState {
-    if status == "ACTIVE" {
+func ClassifyRisk(sub *Subscription, now time.Time) RiskState {
+    status := ParseSubscriptionStatus(sub.Status)
+
+    // 1. Status short-circuits (checked before timing)
+    if status.IsTerminal() {           // CANCELLED, EXPIRED
+        return RiskChurned
+    }
+    if status.IsFrozen() {             // payment failure
+        return RiskOneCycleMissed
+    }
+    if status.IsPending() {            // not yet active
         return RiskSafe
     }
-    daysLate := int(now.Sub(expectedNextCharge).Hours() / 24)
-    switch {
-    case daysLate <= 30:
+    // ACTIVE with a future/today charge date is safe
+    if status.IsActive() && sub.ExpectedNextChargeDate != nil &&
+        !now.After(*sub.ExpectedNextChargeDate) {
         return RiskSafe
-    case daysLate <= 60:
-        return RiskOneCycleMissed
-    case daysLate <= 90:
-        return RiskTwoCycleMissed
-    default:
-        return RiskChurned
+    }
+    // No charge date → can't classify → default safe (defensive)
+    if sub.ExpectedNextChargeDate == nil {
+        return RiskSafe
+    }
+
+    // 2. Days-past-due mapping (UTC; int(hours/24), 0 if future)
+    daysPastDue := int(now.Sub(*sub.ExpectedNextChargeDate).Hours() / 24)
+    switch {
+    case daysPastDue <= 30: return RiskSafe            // grace period
+    case daysPastDue <= 60: return RiskOneCycleMissed
+    case daysPastDue <= 90: return RiskTwoCycleMissed
+    default:                return RiskChurned
     }
 }
 ```
+> Notes: computed **once per sync** (ledger rebuild) and **persisted** on the
+> subscription; read handlers use the persisted value, never re-run the engine
+> (RISK-1b) so surfaces stay convergent. Time math is UTC (no DST). PAUSED and any
+> non-enumerated status fall through to the days-past-due path. See
+> `docs/designs/05-risk-and-churn.md`.
 
 ---
 

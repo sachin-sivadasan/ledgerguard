@@ -1,0 +1,29 @@
+@startuml
+title Data Export — as-built: fully-written but UNWIRED (dead code)
+
+actor "Partner (hypothetical)" as U
+participant "frontend\n(NO export UI — absent)" as App
+participant "router.go\n(NO export routes — absent)" as R
+participant "ExportHandler\n(export_handler.go — exists)" as H
+participant "ExportService\n(export_service.go — exists)" as Svc
+database "transactions / subscriptions /\ndaily_metrics_snapshot" as DB
+
+U -[#red]x App : no button/screen exists (D-UI)
+App -[#red]x R : GET /apps/{appID}/export/{transactions|subscriptions|metrics}
+note over R : routes NOT registered ; handler NOT instantiated in main.go\n-> endpoint returns 404, unreachable (dead code)
+
+== The would-be flow if wired (code that exists today) ==
+R --> H : (if routed) ExportTransactions/Subscriptions/Metrics
+H -> H : resolveAppFromRequest (auth + app scope) ; parse start/end
+H -> Svc : Export<Entity>(appID, range, format)
+Svc -> DB : load ALL rows for app/range
+Svc -> Svc : write to bytes.Buffer (CSV or JSON)  -- IN-MEMORY, no streaming (OOM risk, D1)
+Svc --> H : full payload (buf.Bytes())
+H -> H : LogExportRequest (audit)
+H --> App : 200 file download (Content-Disposition, X-Record-Count)
+
+note over H,Svc
+  Decision this doc forces: WIRE (route + main + UI + tests + streaming/size-cap)
+  or DELETE as dead code. No tests exist. Not a GDPR/compliance export.
+end note
+@enduml

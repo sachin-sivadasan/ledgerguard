@@ -49,8 +49,10 @@ func resolvePartnerAccount(r *http.Request, partnerRepo repository.PartnerAccoun
 	return account, nil
 }
 
-// resolveAppFromRequest extracts the UUID app ID from the URL parameter "appID"
-// and returns the resolved app entity via primary key lookup.
+// resolveAppFromRequest extracts the UUID app ID from the URL parameter "appID",
+// resolves the app, and verifies it belongs to the caller's partner account
+// (tenant isolation). Without this ownership check a member of one org could read
+// another org's app data by passing its appID (broken object-level authorization).
 func resolveAppFromRequest(r *http.Request, partnerRepo repository.PartnerAccountRepository, appRepo repository.AppRepository) (*entity.App, *appLookupError) {
 	appIDStr := chi.URLParam(r, "appID")
 	if appIDStr == "" {
@@ -73,6 +75,20 @@ func resolveAppFromRequest(r *http.Request, partnerRepo repository.PartnerAccoun
 	if app == nil {
 		return nil, &appLookupError{http.StatusNotFound, "app not found"}
 	}
+
+	// Ownership check: the app must belong to the caller's partner account.
+	account, lookupErr := resolvePartnerAccount(r, partnerRepo)
+	if lookupErr != nil {
+		return nil, lookupErr
+	}
+	if app.PartnerAccountID != account.ID {
+		// Return 404 (not 403) so we don't confirm the existence of another
+		// org's app to an unauthorized caller.
+		log.Printf("app_lookup: cross-org access denied: app %s (account %s) requested under account %s",
+			appID, app.PartnerAccountID, account.ID)
+		return nil, &appLookupError{http.StatusNotFound, "app not found"}
+	}
+
 	return app, nil
 }
 

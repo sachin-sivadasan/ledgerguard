@@ -1,0 +1,44 @@
+@startuml
+title Reports Platform — happy path (as-built): GET /api/v1/apps/{appID}/reports/{report}
+
+actor Partner as U
+participant "ReportScreen\n(frontend-flutter/lib/screens/reports)" as Screen
+participant "ReportProvider\n(ChangeNotifier)" as Prov
+participant "ReportService\n(Dio + Firebase Bearer)" as Svc
+participant "Router\n(chi + Firebase/Org MW)" as Router
+participant "ReportHandler\n(*_report_handler.go)" as H
+participant "app_lookup.go" as Lookup
+database "Repos\n(subs / snapshot / txn)" as Repo
+participant "Domain services\n(metrics/earnings/fee/risk)" as Dom
+
+U -> Screen : open report / pick date range
+Screen -> Prov : load(appId, from, to)
+Prov -> Svc : GET reports/{report}?from&to&segment[&format=csv][&limit&offset]
+Svc -> Router : HTTPS + Firebase ID token + X-Org-Id
+Router -> Router : verify Firebase JWT + resolve Org context
+Router -> H : dispatch (appID in path)
+H -> Lookup : resolveAppFromRequest(appID)
+Lookup -> Repo : FindByID(appID) / partner by org
+Repo --> Lookup : app
+Lookup --> H : *entity.App
+H -> H : parseDateRange(from,to) ; resolveTrendInterval
+H -> Repo : FindByAppID(subs) ; FindByAppIDRange(snapshots)
+Repo --> H : rows (full dataset)
+H -> Dom : aggregate KPIs / trend / fee-verify (over FULL data)
+Dom --> H : computed report
+H -> H : parsePaging -> pageSlice(rows) [preview 8 / detail <=200]
+alt format=csv
+  H --> Svc : 200 text/csv (all rows)
+else json
+  H --> Svc : 200 application/json {kpis, trend, pagedRows}
+end
+Svc --> Prov : decoded model
+Prov -> Screen : notifyListeners()
+Screen --> U : KPIs + trend chart + preview table
+
+note over H,Repo
+  Error paths (as-built):
+  401 no auth · 400 bad appID · 404 app/partner not found
+  503 on ANY repo error (no not-found sentinel, ADR-042)
+end note
+@enduml

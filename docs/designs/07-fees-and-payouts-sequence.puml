@@ -1,0 +1,35 @@
+@startuml
+title Fees, Payouts & Reconciliation — as-built read paths (all deterministic, over synced txns)
+
+actor Partner as U
+participant "report screens\n(fee_audit / payout_* / earnings / ledger_recon)" as Screen
+participant "report handlers\n(*_report_handler.go)" as H
+participant "app_lookup" as Lookup
+database "TransactionRepo\n(gross/fee/net/processing)" as Repo
+participant "FeeVerification /\nEarningsCalculator" as Svc
+
+U -> Screen : open a Guard/earnings report (date range)
+Screen -> H : GET /reports/{fee-audit|payout-schedule|payout-history|earnings|ledger-reconciliation}
+H -> Lookup : resolveAppFromRequest (no org check, systemic D4)
+H -> Repo : FindByAppID(range)  -> transactions
+
+alt Fee Audit
+  H -> H : buildFeeAudit: detected rate = shopifyFee/gross\nsnapToTierRate per-month (0/15/20) -> robust to $1M crossing
+  H -> H : FeeGuardOk = |actual-expected| <= 1% gross ; savings vs 20% default
+else Earnings / Payout Schedule / History
+  H -> Svc : availableDate = chargeDate + 7d (refund immediate)\nstatus PENDING/AVAILABLE/PAID_OUT ; sum NetAmountCents per bucket
+  note right of Svc : payout dates are ESTIMATES (7d), not real disbursement (D3)
+else Ledger Reconciliation
+  H -> H : per-month gross =? net + revenue_share + processing\n|residual| <= gross/100 (1% tol)
+  H -> H : processing_suspect if derived processing% > 6.0% (heuristic, D2)
+  H -> H : reconciled = bucketsClose AND !suspect (or gross<=0)
+end
+
+H --> Screen : JSON (+ optional CSV)
+
+note over H,Svc
+  Hardcoded assumptions (D1): tier 0/15/20 + default 20 ; processing 2.9% ; 7-day delay
+  VerifyTransaction (per-tx) uses CONFIGURED tier -> unknown tier defaults to 0% (D5)
+  Report path detects tier from DATA instead (robust)
+end note
+@enduml

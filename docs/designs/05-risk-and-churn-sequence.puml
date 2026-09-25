@@ -1,0 +1,37 @@
+@startuml
+title Risk & Churn — as-built lifecycle: classify-at-sync (write) + read paths
+
+participant "SyncService /\nLedgerRebuilder" as Sync
+participant "RiskEngine\n(risk_engine.go)" as Eng
+database "SubscriptionRepo\n(risk_state column)" as SubRepo
+participant "SnapshotProcessor" as Snap
+database "daily_metrics_snapshot" as SnapDB
+
+== Write path (once per sync, deterministic) ==
+Sync -> Eng : ClassifyAll(subs, now)
+Eng -> Eng : per sub -> ClassifyRisk\nterminal->CHURNED · FROZEN->1cycle · PENDING->SAFE\nACTIVE+future/nil->SAFE · else daysPastDue 30/60/90
+Eng --> Sync : subs[].RiskState set (in place)
+Sync -> SubRepo : UpsertBatch (persist risk_state)
+Sync -> Snap : BackfillHistoricalSnapshots + RefreshTodaySnapshot
+Snap -> SubRepo : read persisted states
+Snap -> SnapDB : counts (Safe/1c/2c/Churned) + RevenueAtRiskCents + RenewalSuccessRate
+
+== Read paths (NEVER re-run the engine — RISK-1b) ==
+actor Partner as U
+participant "risk/churn/retention\nhandlers" as H
+U -> H : GET /risk/summary | /reports/churn | /reports/retention
+H -> SubRepo : FindByAppID / FindByRiskState (persisted states)
+H -> SnapDB : trend series (+ renewal rate headline)
+note right of H
+  Risk Summary: distribution + ranked at-risk stores (persisted)
+  Churn: LIVE count of CHURNED subs (may drift vs snapshot)
+  Retention: renewal rate from SNAPSHOT ; reactivations from events
+  Revenue at Risk: recoverable = 1c*0.60 + 2c*0.25 (hardcoded)
+end note
+H --> U : JSON (+ optional CSV)
+
+note over Eng
+  DIVERGENCES: PAUSED falls through to ACTIVE-days logic
+  UTC-only days math (no DST) · recovery constants unvalidated
+end note
+@enduml

@@ -1,0 +1,39 @@
+@startuml
+title Earnings & Revenue Timeline — as-built read paths (deterministic, over synced txns/aggregates)
+
+actor Partner as U
+participant "earnings_screen /\nrevenue_tab / earnings_report_screen" as Screen
+participant "RevenueHandler / EarningsReportHandler" as H
+participant "RevenueMetricsService" as Svc
+database "RevenueRepo (aggregates) /\nTransactionRepo (raw)" as DB
+
+== Monthly cards (live) ==
+U -> Screen : open Earnings (calendar)
+Screen -> H : GET /apps/{appID}/earnings/periods?start&end
+H -> Svc : GetMonthlyEarnings (400 on invalid range)
+Svc -> DB : monthly aggregates (gross, net, per-status counts)
+Svc -> Svc : shopify_cut = gross - net ; month status (pending->available->paid precedence)
+H --> Screen : {Earnings:[{Month, GrossCents, ShopifyCutCents, NetEarningsCents, Status}]}
+
+== Customer concentration (live) ==
+U -> Screen : open Analytics > Revenue tab
+Screen -> H : GET /apps/{appID}/revenue/concentration?top=N (90d default)
+H -> Svc : GetRevenueConcentration
+Svc -> DB : TransactionRepo.FindByAppID(range) -> raw txns
+Svc -> Svc : group by MyshopifyDomain (empty->"unknown"), sum NetAmountCents\nskip net<=0 (refund-heavy store invisible, D1) ; pct=rev/total ; bubble-sort desc (O(n^2), D2)
+H --> Screen : {TotalRevenueCents, Stores:[{Domain, RevenueCents, PctOfTotal, ...}]}  "Top Stores by Revenue"
+
+== Net-by-status + charges (live; detail in PRD #7) ==
+U -> Screen : open Earnings report
+Screen -> H : GET /apps/{appID}/reports/earnings
+H --> Screen : {pending/available/paidOut, charges[]}
+
+== Provisioned but UNWIRED ==
+H -> H : GET /earnings (daily, combined|split) — no frontend route (D3)
+H -> H : GET /earnings/status (pending-by-date + 30d upcoming, hardcoded) — no screen (D3)
+
+note over Svc,DB
+  All views single-app, single-currency assumed (D4). 7-day payout delay + 30-day
+  lookahead hardcoded (shared w/ #7). Concentration + status endpoints untested (D5).
+end note
+@enduml

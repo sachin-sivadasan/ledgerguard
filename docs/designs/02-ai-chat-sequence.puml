@@ -1,0 +1,44 @@
+@startuml
+title AI Chat — happy path (as-built): POST /api/v1/chat (SSE, tool-call loop)
+
+actor Partner as U
+participant "InsightsScreen\n(frontend-flutter)" as Screen
+participant "insights_provider\n(⚠ MOCK today)" as Prov
+participant "Router\n(chi + AuthMW)" as Router
+participant "chat.Handler\n(handler.go)" as H
+participant "AIProviderRegistry\n(OpenAI gpt-4o)" as AI
+participant "Registry\n(module__tool)" as Reg
+participant "GraphQLExecutor\n(graphql_executor.go)" as GQL
+participant "Resolvers\n(schema.resolvers.go)" as Res
+database "Repos\n(subs/snapshot/txn)" as Repo
+
+U -> Screen : ask "which stores are at risk?"
+note over Prov : TODAY: sendMessage() returns\ncanned _generateResponse() — backend NOT called
+Prov -> Router : POST /api/v1/chat  (Firebase token)  [intended path]
+Router -> H : HandleChat (auth ctx: user+org)
+H -> H : buildSystemPrompt(base + module fragments)
+loop up to maxToolIterations = 5
+  H -> AI : ChatCompletion(messages + tool defs)
+  AI --> H : text and/or tool_calls
+  alt tool_calls present
+    H -> Reg : route module__tool
+    Reg -> GQL : execute GraphQL query(appID, args)
+    GQL -> Res : resolve(appID)
+    note right of Res : parses appID from ARGS\nno org-ownership check here (DIVERGENCE)
+    Res -> Repo : FindByAppID(ctx, appUUID)
+    Repo --> Res : rows
+    Res --> GQL : data
+    GQL --> H : tool_result
+    H --> Prov : SSE event {tool_call}, {tool_result}
+  else final answer
+    H --> Prov : SSE {response} = text + state bundle + suggestions
+  end
+end
+Prov -> Screen : notifyListeners()
+Screen --> U : streamed answer
+
+note over H
+  Error paths: 405 non-POST · 400 bad body / no messages
+  503 AI provider not configured · tool error -> {error,isError} appended, loop continues
+end note
+@enduml

@@ -1,0 +1,43 @@
+@startuml
+title Revenue API (external) — happy path (as-built): GET /v1/subscriptions/{gid}
+
+actor "Partner system\n(API client)" as C
+participant "api_key_auth MW\n(api_key_auth.go)" as Auth
+participant "rate_limiter MW\n(rate_limiter.go)" as RL
+participant "audit_logger MW\n(async)" as Aud
+participant "status handler\n(subscription_status_handler.go)" as H
+participant "StatusService\n(verifyAppAccess)" as Svc
+database "read models\n(api_subscription_status)" as RM
+database "api_audit_log" as AL
+
+C -> Auth : X-API-Key: lgk_<hex>
+Auth -> Auth : SHA-256(raw) -> GetByHash ; check revoked_at
+alt invalid / revoked
+  Auth --> C : 401 {error}
+end
+Auth -> RL : (apiKey in context)
+RL -> RL : Increment(key window) ; set X-RateLimit-* headers
+alt over limit
+  RL --> C : 429 + Retry-After
+else store error
+  note right of RL : FAILS OPEN — request allowed (D2)
+end
+RL -> H : dispatch
+H -> Svc : GetSubscriptionStatus(gid, userID from key)
+Svc -> Svc : verifyAppAccess: app.PartnerAccountID == owner's  (REAL ownership check)
+alt not owned
+  Svc --> H : ErrAppAccessDenied -> 403 (single) / not_found[] (batch)
+end
+Svc -> RM : lookup by shopify_gid (stale between syncs; last_synced_at)
+RM --> Svc : status row
+Svc --> H : response {risk_state, is_paid_current_cycle, months_overdue, ...}
+H --> C : 200 JSON
+H -> Aud : (deferred) key, endpoint, status, latency, IP, UA
+Aud -> AL : async write (1000 buffer, 5s timeout)
+
+note over Svc
+  getUserApps: SINGLE partner account per user (comment) -> keys are
+  per-USER not per-KEY scoped (D1). Read models rebuilt post-sync (D3).
+  No _test.go anywhere in revenue_api (D4).
+end note
+@enduml

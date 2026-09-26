@@ -124,6 +124,46 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	}
 }
 
+// runAuthWith runs the middleware with a valid Bearer token and the given verifier
+// claims + require-email-verified setting, returning the response and whether the
+// wrapped handler was reached.
+func runAuthWith(claims *service.TokenClaims, requireVerified bool) (*httptest.ResponseRecorder, bool) {
+	verifier := &mockTokenVerifier{claims: claims}
+	userRepo := &mockUserRepository{user: &entity.User{FirebaseUID: claims.UID, Email: claims.Email}}
+	m := NewAuthMiddleware(verifier, userRepo)
+	m.SetRequireEmailVerified(requireVerified)
+
+	reached := false
+	handler := m.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reached = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	return rec, reached
+}
+
+// TestAuthMiddleware_EmailVerificationGate is the S5 guard.
+func TestAuthMiddleware_EmailVerificationGate(t *testing.T) {
+	unverified := &service.TokenClaims{UID: "uid-1", Email: "u@example.com", EmailVerified: false}
+	verified := &service.TokenClaims{UID: "uid-2", Email: "v@example.com", EmailVerified: true}
+
+	// Gate ON + unverified → 403, handler not reached.
+	if rec, reached := runAuthWith(unverified, true); rec.Code != http.StatusForbidden || reached {
+		t.Errorf("gate on + unverified: expected 403 and handler NOT reached, got %d reached=%v", rec.Code, reached)
+	}
+	// Gate ON + verified → passes.
+	if rec, reached := runAuthWith(verified, true); rec.Code != http.StatusOK || !reached {
+		t.Errorf("gate on + verified: expected 200 and handler reached, got %d reached=%v", rec.Code, reached)
+	}
+	// Gate OFF + unverified → passes (default behavior, no lockout).
+	if rec, reached := runAuthWith(unverified, false); rec.Code != http.StatusOK || !reached {
+		t.Errorf("gate off + unverified: expected 200 and handler reached, got %d reached=%v", rec.Code, reached)
+	}
+}
+
 func TestAuthMiddleware_ExistingUser(t *testing.T) {
 	existingUser := &entity.User{
 		FirebaseUID: "firebase-123",

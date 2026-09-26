@@ -856,12 +856,13 @@ func run() error {
 	if firebaseAuth != nil && userRepo != nil {
 		authMiddleware := middleware.NewAuthMiddleware(firebaseAuth, userRepo)
 		authMiddleware.SetTracker(tracker)
+		authMiddleware.SetRequireEmailVerified(cfg.Firebase.RequireEmailVerified)
 		if orgService != nil {
 			// Provision a default org for each new user on first login.
 			authMiddleware.SetOrgProvisioner(orgService)
 		}
 		authMW = authMiddleware.Authenticate
-		log.Println("Auth middleware initialized")
+		log.Printf("Auth middleware initialized (require email verified: %v)", cfg.Firebase.RequireEmailVerified)
 	}
 
 	// Initialize admin middleware (requires ADMIN or OWNER role)

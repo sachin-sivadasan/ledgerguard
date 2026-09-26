@@ -5,12 +5,14 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
 
@@ -32,6 +34,14 @@ type OrgService struct {
 	memberRepo     repository.MemberRepository
 	invitationRepo repository.InvitationRepository
 	auditService   *OrgAuditService
+	emailSender    domainservice.EmailSender // optional; nil = no delivery (token still returned in the API response)
+}
+
+// SetEmailSender wires an email provider for invitation delivery. Until a real
+// provider is configured this stays nil and the invite token is delivered via the
+// API response (the frontend sends it); once set, InviteMember also emails the invite.
+func (s *OrgService) SetEmailSender(sender domainservice.EmailSender) {
+	s.emailSender = sender
 }
 
 func NewOrgService(
@@ -147,6 +157,21 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, email st
 		"email": email,
 		"role":  string(role),
 	})
+
+	// Best-effort delivery: with a real EmailSender wired this emails the invite;
+	// with the default nil/no-op it's skipped and the token is delivered via the API
+	// response (the frontend sends it). Failure to email must not fail the invite.
+	if s.emailSender != nil {
+		msg := domainservice.EmailMessage{
+			To:      email,
+			Subject: "You've been invited to " + org.Name + " on LedgerGuard",
+			Body: "You've been invited to join " + org.Name + " as " + string(role) +
+				".\n\nAccept your invitation with this token: " + invitation.Token,
+		}
+		if err := s.emailSender.Send(ctx, msg); err != nil {
+			log.Printf("org: failed to send invitation email to %s: %v", email, err)
+		}
+	}
 
 	return invitation, nil
 }

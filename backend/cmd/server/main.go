@@ -694,6 +694,10 @@ func run() error {
 
 		orgAuditService := appservice.NewOrgAuditService(orgAuditRepo)
 		orgService = appservice.NewOrgService(orgRepo, memberRepo, invitationRepo, orgAuditService)
+		// Email delivery seam: no-op by default (logs; token still returned in the API
+		// response). Swap NewNoopEmailSender for a real SMTP/SendGrid sender to enable
+		// invitation emails — no call sites change.
+		orgService.SetEmailSender(external.NewNoopEmailSender())
 
 		orgHandler = handler.NewOrgHandler(orgService)
 		orgAuditHandler = handler.NewOrgAuditHandler(orgAuditService)

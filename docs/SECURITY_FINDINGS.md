@@ -14,7 +14,9 @@ fixes, not a rearchitecture.
 
 ---
 
-## S1 — App-scoped endpoints don't verify `appID` belongs to the caller's org  ✅ **[High — confirmed authenticated cross-tenant IDOR]**
+## S1 — App-scoped endpoints don't verify `appID` belongs to the caller's org  ✅ **[High — confirmed authenticated cross-tenant IDOR] — ✅ FIXED**
+**Status:** **FIXED** — `resolveAppFromRequest` now resolves the caller's partner account and returns 404 when `app.PartnerAccountID != account.ID`, closing the leak for all callers (reports/forecast/dashboard/subscriptions/stores) at one chokepoint. Regression tests added: `TestResolveAppFromRequest_CrossOrg_Returns404` (leak guard) + `TestResolveAppFromRequest_SameOrg_Succeeds` (legit-flow guard), `app_lookup_test.go`. Branch `fix/s1-app-org-ownership`.
+
 **Component:** `internal/interfaces/http/handler/app_lookup.go:54` (`resolveAppFromRequest`) — used by reports, forecast, dashboard, subscriptions, stores.
 
 **Confirmed evidence chain (all verified):**
@@ -49,10 +51,7 @@ curl -H "Authorization: Bearer <orgA_token>" -H "X-Org-Id: <orgA_id>" \
 **Impact:** anyone who obtains the invite token can join the org **as the invited role** (invite-hijack), regardless of their email.
 **Fix:** on accept, require the authenticated user's (verified) email == `invitation.email`; deliver the token via server-side email rather than returning it.
 
-## S4 — No Firebase token-revocation check; no server-side logout  ✅ **[Medium] — ✅ FIXED (revocation check)**
-**Status:** **FIXED (revocation check)** — `FirebaseAuthService.VerifyIDToken` now calls `VerifyIDTokenAndCheckRevoked` when enabled, rejecting revoked/disabled sessions instead of trusting a token to ~1h expiry. Configurable via `Firebase.CheckRevoked` / `FIREBASE_CHECK_REVOKED`, **default true** (secure-by-default); disable to trade the per-request Firebase `GetUser` call for lower latency. Tests: `TestLoad_FirebaseCheckRevoked` (default-on + env toggle). Branch `fix/s4-token-revocation`.
-**Note:** revocation *behavior* is Firebase SDK logic — verified by the SDK + manual integration (sign out, reuse the old token within the hour → now rejected); not unit-testable without a Firebase project. A dedicated **server-side logout / revoke endpoint** remains an optional follow-up (revocation still requires the client to call Firebase `revokeRefreshTokens`).
-
+## S4 — No Firebase token-revocation check; no server-side logout  ✅ **[Medium]**
 **Component:** `infrastructure/external/firebase_auth.go:41`.
 **Evidence:** uses `client.VerifyIDToken`, **not** `VerifyIDTokenAndCheckRevoked`; no revocation endpoint.
 **Impact:** a signed-out / compromised session's token stays valid until natural expiry (~1h); no immediate session kill.

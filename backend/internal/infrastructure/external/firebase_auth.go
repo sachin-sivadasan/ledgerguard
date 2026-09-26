@@ -41,6 +41,16 @@ func NewFirebaseAuthService(ctx context.Context, credentialsFile string, checkRe
 	return &FirebaseAuthService{client: client, checkRevoked: checkRevoked}, nil
 }
 
+// RevokeRefreshTokens revokes all refresh tokens for the user, so their sessions must
+// re-authenticate. With CheckRevoked verification enabled, existing ID tokens are
+// rejected within their (~1h) TTL.
+func (s *FirebaseAuthService) RevokeRefreshTokens(ctx context.Context, uid string) error {
+	if err := s.client.RevokeRefreshTokens(ctx, uid); err != nil {
+		return fmt.Errorf("failed to revoke refresh tokens: %w", err)
+	}
+	return nil
+}
+
 func (s *FirebaseAuthService) VerifyIDToken(ctx context.Context, idToken string) (*service.TokenClaims, error) {
 	var token *auth.Token
 	var err error

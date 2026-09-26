@@ -14,6 +14,7 @@ import (
 type Config struct {
 	HealthHandler                  *handler.HealthHandler
 	MeHandler                      *handler.MeHandler
+	LogoutHandler                  *handler.LogoutHandler
 	ManualTokenHandler             *handler.ManualTokenHandler
 	IntegrationStatusHandler       *handler.IntegrationStatusHandler
 	AppHandler                     *handler.AppHandler
@@ -129,6 +130,11 @@ func New(cfg Config) *chi.Mux {
 		// Me endpoint (current user profile)
 		if cfg.MeHandler != nil && cfg.AuthMW != nil {
 			r.With(cfg.AuthMW).Get("/me", cfg.MeHandler.GetMe)
+		}
+
+		// Logout: server-side revoke of the caller's refresh tokens (force-logout)
+		if cfg.LogoutHandler != nil && cfg.AuthMW != nil {
+			r.With(cfg.AuthMW).Post("/auth/logout", cfg.LogoutHandler.Logout)
 		}
 
 		// User preferences routes

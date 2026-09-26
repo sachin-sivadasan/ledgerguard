@@ -67,13 +67,13 @@ func (h *ReviewHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	reviews, err := h.reviewRepo.FindByAppID(r.Context(), app.ID, perPage, offset)
 	if err != nil {
-		writeReviewRepoError(w, "FindByAppID", err)
+		writeReviewRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	total, err := h.reviewRepo.CountByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeReviewRepoError(w, "CountByAppID", err)
+		writeReviewRepoError(r.Context(), w, "CountByAppID", err)
 		return
 	}
 

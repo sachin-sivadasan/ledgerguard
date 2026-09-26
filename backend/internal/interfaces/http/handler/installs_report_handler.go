@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
@@ -113,13 +114,13 @@ func (h *InstallsReportHandler) GetInstalls(w http.ResponseWriter, r *http.Reque
 
 	subs, err := h.subRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeInstallsRepoError(w, "FindByAppID", err)
+		writeInstallsRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	events, err := h.eventRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeInstallsRepoError(w, "FindByAppID(events)", err)
+		writeInstallsRepoError(r.Context(), w, "FindByAppID(events)", err)
 		return
 	}
 
@@ -132,7 +133,7 @@ func (h *InstallsReportHandler) GetInstalls(w http.ResponseWriter, r *http.Reque
 
 	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeInstallEventsCSV(w, allEvents)
+		writeInstallEventsCSV(r.Context(), w, allEvents)
 		return
 	}
 
@@ -148,8 +149,8 @@ func (h *InstallsReportHandler) GetInstalls(w http.ResponseWriter, r *http.Reque
 
 // writeInstallsRepoError logs a repository failure and responds 503. These repos have
 // no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeInstallsRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
+func writeInstallsRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -329,7 +330,7 @@ func computeLifecycleAndConversion(events []*entity.AppEvent, subs []*entity.Sub
 }
 
 // writeInstallEventsCSV writes the recent install/uninstall events as a CSV attachment.
-func writeInstallEventsCSV(w http.ResponseWriter, events []installEvent) {
+func writeInstallEventsCSV(ctx context.Context, w http.ResponseWriter, events []installEvent) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="installs.csv"`)
 
@@ -340,6 +341,6 @@ func writeInstallEventsCSV(w http.ResponseWriter, events []installEvent) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

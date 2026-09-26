@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
@@ -82,20 +83,20 @@ func (h *ActivationReportHandler) GetActivation(w http.ResponseWriter, r *http.R
 
 	subs, err := h.subRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeActivationRepoError(w, "FindByAppID", err)
+		writeActivationRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	events, err := h.eventRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeActivationRepoError(w, "FindByAppID(events)", err)
+		writeActivationRepoError(r.Context(), w, "FindByAppID(events)", err)
 		return
 	}
 
 	report := buildActivationReport(events, subs)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeActivationCSV(w, report)
+		writeActivationCSV(r.Context(), w, report)
 		return
 	}
 
@@ -107,8 +108,8 @@ func (h *ActivationReportHandler) GetActivation(w http.ResponseWriter, r *http.R
 
 // writeActivationRepoError logs a repository failure and responds 503. These repos have
 // no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeActivationRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
+func writeActivationRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -140,7 +141,7 @@ func ratio(num, den int) float64 {
 }
 
 // writeActivationCSV writes the funnel stages as a CSV attachment.
-func writeActivationCSV(w http.ResponseWriter, report activationReport) {
+func writeActivationCSV(ctx context.Context, w http.ResponseWriter, report activationReport) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="activation.csv"`)
 
@@ -156,6 +157,6 @@ func writeActivationCSV(w http.ResponseWriter, report activationReport) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

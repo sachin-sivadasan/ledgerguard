@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
@@ -85,17 +86,17 @@ func (h *PayoutScheduleReportHandler) GetPayoutSchedule(w http.ResponseWriter, r
 
 	txs, err := h.txRepo.FindByAppID(r.Context(), app.ID, from, to)
 	if err != nil {
-		writePayoutScheduleRepoError(w, "FindByAppID", err)
+		writePayoutScheduleRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
-	report := buildPayoutScheduleReport(txs)
+	report := buildPayoutScheduleReport(r.Context(), txs)
 	allRows := report.Rows
 	report.RowsTotal = int64(len(allRows))
 
 	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writePayoutScheduleCSV(w, allRows)
+		writePayoutScheduleCSV(r.Context(), w, allRows)
 		return
 	}
 
@@ -112,8 +113,8 @@ func (h *PayoutScheduleReportHandler) GetPayoutSchedule(w http.ResponseWriter, r
 // writePayoutScheduleRepoError logs a repository failure and responds 503. The
 // transaction repo has no not-found sentinel — every error is an infrastructure
 // failure (ADR-042).
-func writePayoutScheduleRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
+func writePayoutScheduleRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -124,7 +125,7 @@ func writePayoutScheduleRepoError(w http.ResponseWriter, op string, err error) {
 // KPIs (upcomingPayoutCents + pendingCents == Σ row amounts). Amounts are net
 // (AmountCents = NetAmountCents). NextPayoutDate is the earliest scheduled date across
 // the rows (rows are sorted so scheduled dates come first, ascending).
-func buildPayoutScheduleReport(txs []*entity.Transaction) payoutScheduleReport {
+func buildPayoutScheduleReport(ctx context.Context, txs []*entity.Transaction) payoutScheduleReport {
 	type agg struct {
 		amount int64
 		count  int
@@ -162,7 +163,7 @@ func buildPayoutScheduleReport(txs []*entity.Transaction) payoutScheduleReport {
 	}
 
 	if unknown > 0 {
-		zap.L().Warn("excluded transactions with unrecognized EarningsStatus (would not reconcile with KPIs)", zap.Int("count", unknown))
+		logging.FromContext(ctx).Warn("excluded transactions with unrecognized EarningsStatus (would not reconcile with KPIs)", zap.Int("count", unknown))
 	}
 
 	rows := make([]payoutScheduleRow, 0, len(byKey))
@@ -212,7 +213,7 @@ func sortPayoutScheduleRows(rows []payoutScheduleRow) {
 }
 
 // writePayoutScheduleCSV writes the timeline as a CSV attachment.
-func writePayoutScheduleCSV(w http.ResponseWriter, rows []payoutScheduleRow) {
+func writePayoutScheduleCSV(ctx context.Context, w http.ResponseWriter, rows []payoutScheduleRow) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="payout-schedule.csv"`)
 
@@ -228,6 +229,6 @@ func writePayoutScheduleCSV(w http.ResponseWriter, rows []payoutScheduleRow) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
@@ -85,7 +86,7 @@ func (h *EarningsReportHandler) GetEarningsReport(w http.ResponseWriter, r *http
 
 	txs, err := h.txRepo.FindByAppID(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeEarningsRepoError(w, "FindByAppID", err)
+		writeEarningsRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
@@ -114,7 +115,7 @@ func (h *EarningsReportHandler) GetEarningsReport(w http.ResponseWriter, r *http
 
 	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeEarningsChargesCSV(w, allCharges)
+		writeEarningsChargesCSV(r.Context(), w, allCharges)
 		return
 	}
 
@@ -130,8 +131,8 @@ func (h *EarningsReportHandler) GetEarningsReport(w http.ResponseWriter, r *http
 
 // writeEarningsRepoError logs a repository failure and responds 503. The transaction
 // repo has no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeEarningsRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
+func writeEarningsRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -223,7 +224,7 @@ func earningsStatusLabel(status entity.EarningsStatus) string {
 
 // writeEarningsChargesCSV writes the per-charge table as a CSV attachment. Uses
 // encoding/csv so free-text shop names/domains with commas/quotes stay one column.
-func writeEarningsChargesCSV(w http.ResponseWriter, charges []earningsCharge) {
+func writeEarningsChargesCSV(ctx context.Context, w http.ResponseWriter, charges []earningsCharge) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="earnings.csv"`)
 
@@ -242,6 +243,6 @@ func writeEarningsChargesCSV(w http.ResponseWriter, charges []earningsCharge) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

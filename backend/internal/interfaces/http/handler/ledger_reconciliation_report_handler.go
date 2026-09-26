@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
@@ -166,7 +167,7 @@ func (h *LedgerReconciliationReportHandler) GetLedgerReconciliation(w http.Respo
 	report.Reconciled = report.MonthsFlagged == 0
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeReconCSV(w, report)
+		writeReconCSV(r.Context(), w, report)
 		return
 	}
 
@@ -176,7 +177,7 @@ func (h *LedgerReconciliationReportHandler) GetLedgerReconciliation(w http.Respo
 	}
 }
 
-func writeReconCSV(w http.ResponseWriter, report reconReport) {
+func writeReconCSV(ctx context.Context, w http.ResponseWriter, report reconReport) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="ledger-reconciliation.csv"`)
 
@@ -198,6 +199,6 @@ func writeReconCSV(w http.ResponseWriter, report reconReport) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

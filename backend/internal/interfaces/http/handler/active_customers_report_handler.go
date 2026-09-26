@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -98,13 +99,13 @@ func (h *ActiveCustomersReportHandler) GetActiveCustomersReport(w http.ResponseW
 
 	subs, err := h.subRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeActiveCustomersRepoError(w, "FindByAppID", err)
+		writeActiveCustomersRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	snapshots, err := h.snapshotRepo.FindByAppIDRange(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeActiveCustomersRepoError(w, "FindByAppIDRange", err)
+		writeActiveCustomersRepoError(r.Context(), w, "FindByAppIDRange", err)
 		return
 	}
 
@@ -116,7 +117,7 @@ func (h *ActiveCustomersReportHandler) GetActiveCustomersReport(w http.ResponseW
 	report.Trend = buildActiveCustomersTrend(downsampleSnapshots(snapshots, interval))
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeActiveCustomersPlansCSV(w, plans)
+		writeActiveCustomersPlansCSV(r.Context(), w, plans)
 		return
 	}
 
@@ -128,8 +129,8 @@ func (h *ActiveCustomersReportHandler) GetActiveCustomersReport(w http.ResponseW
 
 // writeActiveCustomersRepoError logs a repository failure and responds 503. These
 // repos have no not-found sentinel — every error is an infra failure (ADR-042).
-func writeActiveCustomersRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
+func writeActiveCustomersRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -277,7 +278,7 @@ func buildActiveCustomersTrend(snapshots []*entity.DailyMetricsSnapshot) []activ
 
 // writeActiveCustomersPlansCSV writes the per-plan active-customers table as a CSV
 // attachment. Uses encoding/csv so free-text plan names stay one column.
-func writeActiveCustomersPlansCSV(w http.ResponseWriter, plans []activeCustomersPlan) {
+func writeActiveCustomersPlansCSV(ctx context.Context, w http.ResponseWriter, plans []activeCustomersPlan) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="active-customers.csv"`)
 
@@ -293,6 +294,6 @@ func writeActiveCustomersPlansCSV(w http.ResponseWriter, plans []activeCustomers
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

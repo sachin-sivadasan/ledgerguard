@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
@@ -124,7 +125,7 @@ func (h *FeeAuditReportHandler) GetFeeAudit(w http.ResponseWriter, r *http.Reque
 	}
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeFeeAuditCSV(w, report)
+		writeFeeAuditCSV(r.Context(), w, report)
 		return
 	}
 
@@ -135,7 +136,7 @@ func (h *FeeAuditReportHandler) GetFeeAudit(w http.ResponseWriter, r *http.Reque
 }
 
 // writeFeeAuditCSV writes the per-month audit as a CSV attachment.
-func writeFeeAuditCSV(w http.ResponseWriter, report feeAuditReport) {
+func writeFeeAuditCSV(ctx context.Context, w http.ResponseWriter, report feeAuditReport) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="fee-audit.csv"`)
 
@@ -154,6 +155,6 @@ func writeFeeAuditCSV(w http.ResponseWriter, report feeAuditReport) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

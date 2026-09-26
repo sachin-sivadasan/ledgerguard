@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -136,7 +137,7 @@ func (h *CustomerInsightsReportHandler) GetCustomerInsights(w http.ResponseWrite
 	report := buildCustomerInsights(subs, labeler)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeCustomerInsightsCSV(w, report)
+		writeCustomerInsightsCSV(r.Context(), w, report)
 		return
 	}
 
@@ -322,7 +323,7 @@ func buildTopCustomers(actives []*entity.Subscription, labeler planLabeler) []to
 
 // writeCustomerInsightsCSV writes the plan × risk crosstab (the report's richest table) as
 // a CSV attachment.
-func writeCustomerInsightsCSV(w http.ResponseWriter, report customerInsightsReport) {
+func writeCustomerInsightsCSV(ctx context.Context, w http.ResponseWriter, report customerInsightsReport) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="customer-insights.csv"`)
 
@@ -340,6 +341,6 @@ func writeCustomerInsightsCSV(w http.ResponseWriter, report customerInsightsRepo
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

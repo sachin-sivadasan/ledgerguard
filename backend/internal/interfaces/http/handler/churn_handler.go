@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
@@ -93,26 +94,26 @@ func (h *ChurnHandler) GetChurn(w http.ResponseWriter, r *http.Request) {
 
 	churned, err := h.subRepo.FindByRiskState(r.Context(), app.ID, valueobject.RiskStateChurned)
 	if err != nil {
-		writeChurnRepoError(w, "FindByRiskState(churned)", err)
+		writeChurnRepoError(r.Context(), w, "FindByRiskState(churned)", err)
 		return
 	}
 
 	snapshots, err := h.snapshotRepo.FindByAppIDRange(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeChurnRepoError(w, "FindByAppIDRange", err)
+		writeChurnRepoError(r.Context(), w, "FindByAppIDRange", err)
 		return
 	}
 
 	interval := resolveTrendInterval(from, to)
 	stores := buildChurnStores(churned, now)
-	report := buildChurnReport(churned, stores, latestSnapshot(snapshots))
+	report := buildChurnReport(r.Context(), churned, stores, latestSnapshot(snapshots))
 	report.Interval = string(interval)
 	report.Trend = buildChurnTrend(downsampleSnapshots(snapshots, interval))
 	report.StoresTotal = int64(len(stores))
 
 	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeChurnStoresCSV(w, stores)
+		writeChurnStoresCSV(r.Context(), w, stores)
 		return
 	}
 
@@ -128,8 +129,8 @@ func (h *ChurnHandler) GetChurn(w http.ResponseWriter, r *http.Request) {
 
 // writeChurnRepoError logs a repository failure and responds 503. These repos have
 // no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeChurnRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
+func writeChurnRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -209,7 +210,7 @@ func churnRate(churnedCount, totalSubscriptions int) float64 {
 }
 
 // buildChurnReport aggregates churned count, MRR lost, churn rate and currency.
-func buildChurnReport(subs []*entity.Subscription, stores []churnStore, latest *entity.DailyMetricsSnapshot) churnReport {
+func buildChurnReport(ctx context.Context, subs []*entity.Subscription, stores []churnStore, latest *entity.DailyMetricsSnapshot) churnReport {
 	var mrrLostCents int64
 	currency := "USD"
 	for _, s := range subs {
@@ -229,7 +230,7 @@ func buildChurnReport(subs []*entity.Subscription, stores []churnStore, latest *
 	// churnRate clamps this to 1.0 for the UI — log it so the data drift stays
 	// diagnosable rather than silently capped.
 	if total > 0 && len(subs) > total {
-		zap.L().Warn("live churned count exceeds latest snapshot total — clamping rate to 1.0 (stale snapshot?)", zap.Int("churned_count", len(subs)), zap.Int("snapshot_total", total))
+		logging.FromContext(ctx).Warn("live churned count exceeds latest snapshot total — clamping rate to 1.0 (stale snapshot?)", zap.Int("churned_count", len(subs)), zap.Int("snapshot_total", total))
 	}
 
 	return churnReport{
@@ -257,7 +258,7 @@ func buildChurnTrend(snapshots []*entity.DailyMetricsSnapshot) []churnTrendPoint
 // writeChurnStoresCSV writes the ranked churned stores as a CSV attachment. Uses
 // encoding/csv so free-text fields (shopName, planName) with commas/quotes/newlines
 // are quoted.
-func writeChurnStoresCSV(w http.ResponseWriter, stores []churnStore) {
+func writeChurnStoresCSV(ctx context.Context, w http.ResponseWriter, stores []churnStore) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="churn.csv"`)
 
@@ -277,6 +278,6 @@ func writeChurnStoresCSV(w http.ResponseWriter, stores []churnStore) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

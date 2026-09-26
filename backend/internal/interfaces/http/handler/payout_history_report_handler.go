@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
@@ -89,17 +90,17 @@ func (h *PayoutHistoryReportHandler) GetPayoutHistory(w http.ResponseWriter, r *
 
 	txs, err := h.txRepo.FindByAppID(r.Context(), app.ID, from, to)
 	if err != nil {
-		writePayoutHistoryRepoError(w, "FindByAppID", err)
+		writePayoutHistoryRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
-	report := buildPayoutHistoryReport(txs)
+	report := buildPayoutHistoryReport(r.Context(), txs)
 	allRows := report.Rows
 	report.RowsTotal = int64(len(allRows))
 
 	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writePayoutHistoryCSV(w, allRows)
+		writePayoutHistoryCSV(r.Context(), w, allRows)
 		return
 	}
 
@@ -116,8 +117,8 @@ func (h *PayoutHistoryReportHandler) GetPayoutHistory(w http.ResponseWriter, r *
 // writePayoutHistoryRepoError logs a repository failure and responds 503. The
 // transaction repo has no not-found sentinel — every error is an infrastructure
 // failure (ADR-042).
-func writePayoutHistoryRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
+func writePayoutHistoryRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -140,7 +141,7 @@ func chargeDate(tx *entity.Transaction) time.Time {
 // ~7-day estimate, not Shopify's actual disbursement date). Rows are sorted by period
 // descending (most recent first). TotalPaid is the sum of all periods; PayoutCount is the
 // number of periods; AvgPayout = TotalPaid ÷ PayoutCount (0 when none).
-func buildPayoutHistoryReport(txs []*entity.Transaction) payoutHistoryReport {
+func buildPayoutHistoryReport(ctx context.Context, txs []*entity.Transaction) payoutHistoryReport {
 	type agg struct {
 		amount           int64
 		count            int
@@ -180,7 +181,7 @@ func buildPayoutHistoryReport(txs []*entity.Transaction) payoutHistoryReport {
 	}
 
 	if noChargeDate > 0 {
-		zap.L().Warn("PAID_OUT transactions had no charge date (CreatedDate/TransactionDate) — bucketed under 0001-01", zap.Int("count", noChargeDate))
+		logging.FromContext(ctx).Warn("PAID_OUT transactions had no charge date (CreatedDate/TransactionDate) — bucketed under 0001-01", zap.Int("count", noChargeDate))
 	}
 
 	rows := make([]payoutHistoryRow, 0, len(byPeriod))
@@ -217,7 +218,7 @@ func buildPayoutHistoryReport(txs []*entity.Transaction) payoutHistoryReport {
 }
 
 // writePayoutHistoryCSV writes the payout log as a CSV attachment.
-func writePayoutHistoryCSV(w http.ResponseWriter, rows []payoutHistoryRow) {
+func writePayoutHistoryCSV(ctx context.Context, w http.ResponseWriter, rows []payoutHistoryRow) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="payout-history.csv"`)
 
@@ -233,6 +234,6 @@ func writePayoutHistoryCSV(w http.ResponseWriter, rows []payoutHistoryRow) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

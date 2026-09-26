@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
@@ -81,14 +82,14 @@ func (h *RevenueMixReportHandler) GetRevenueMix(w http.ResponseWriter, r *http.R
 
 	txs, err := h.txRepo.FindByAppID(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeRevenueMixRepoError(w, "FindByAppID", err)
+		writeRevenueMixRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
-	report := buildRevenueMixReport(txs)
+	report := buildRevenueMixReport(r.Context(), txs)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeRevenueMixCSV(w, report)
+		writeRevenueMixCSV(r.Context(), w, report)
 		return
 	}
 
@@ -102,7 +103,7 @@ func (h *RevenueMixReportHandler) GetRevenueMix(w http.ResponseWriter, r *http.R
 // per-ChargeType summing mirrors the GraphQL earnings resolver (RECURRING, USAGE, and
 // ONE_TIME are the three positive streams, REFUND a separate negative adjustment); the
 // gross-vs-net split and the composition segments are additions specific to this report.
-func buildRevenueMixReport(txs []*entity.Transaction) revenueMixReport {
+func buildRevenueMixReport(ctx context.Context, txs []*entity.Transaction) revenueMixReport {
 	var recurringCents, usageCents, oneTimeCents, refundCents, unknownCents int64
 	var unknownCount int
 	for _, tx := range txs {
@@ -126,7 +127,7 @@ func buildRevenueMixReport(txs []*entity.Transaction) revenueMixReport {
 		}
 	}
 	if unknownCount > 0 {
-		zap.L().Warn("revenue-mix transactions with unrecognized ChargeType excluded from gross — total under-reports true revenue", zap.Int("count", unknownCount), zap.Int64("cents", unknownCents))
+		logging.FromContext(ctx).Warn("revenue-mix transactions with unrecognized ChargeType excluded from gross — total under-reports true revenue", zap.Int("count", unknownCount), zap.Int64("cents", unknownCents))
 	}
 
 	// Gross is the sum of the three positive streams; net subtracts refunds.
@@ -182,8 +183,8 @@ func revenueMixCurrency(txs []*entity.Transaction) string {
 
 // writeRevenueMixRepoError logs a repository failure and responds 503. The transaction
 // repo has no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeRevenueMixRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("revenue-mix repo error", zap.String("op", op), zap.Error(err))
+func writeRevenueMixRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("revenue-mix repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -191,7 +192,7 @@ func writeRevenueMixRepoError(w http.ResponseWriter, op string, err error) {
 // then a Refund row (only when refunds exist) and a Net row. Uses encoding/csv so any
 // future free-text stays safely quoted. pct is formatted to 4 decimal places; the
 // Refund/Net rows leave pct blank (they are adjustments/totals, not composition slices).
-func writeRevenueMixCSV(w http.ResponseWriter, report revenueMixReport) {
+func writeRevenueMixCSV(ctx context.Context, w http.ResponseWriter, report revenueMixReport) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="revenue-mix.csv"`)
 
@@ -210,6 +211,6 @@ func writeRevenueMixCSV(w http.ResponseWriter, report revenueMixReport) {
 	_ = cw.Write([]string{"Net", strconv.FormatInt(report.NetCents, 10), ""})
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("revenue-mix write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("revenue-mix write CSV failed", zap.Error(err))
 	}
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"math"
@@ -115,12 +116,12 @@ func (h *RevenueAtRiskHandler) GetRevenueAtRisk(w http.ResponseWriter, r *http.R
 	// Fetch at-risk subscriptions (1-cycle + 2-cycle missed).
 	oneCycle, err := h.subRepo.FindByRiskState(r.Context(), app.ID, valueobject.RiskStateOneCycleMissed)
 	if err != nil {
-		writeRepoError(w, "FindByRiskState(one-cycle)", err)
+		writeRepoError(r.Context(), w, "FindByRiskState(one-cycle)", err)
 		return
 	}
 	twoCycle, err := h.subRepo.FindByRiskState(r.Context(), app.ID, valueobject.RiskStateTwoCyclesMissed)
 	if err != nil {
-		writeRepoError(w, "FindByRiskState(two-cycle)", err)
+		writeRepoError(r.Context(), w, "FindByRiskState(two-cycle)", err)
 		return
 	}
 
@@ -137,7 +138,7 @@ func (h *RevenueAtRiskHandler) GetRevenueAtRisk(w http.ResponseWriter, r *http.R
 	// Trend from daily snapshots.
 	snapshots, err := h.snapshotRepo.FindByAppIDRange(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeRepoError(w, "FindByAppIDRange", err)
+		writeRepoError(r.Context(), w, "FindByAppIDRange", err)
 		return
 	}
 	report.Trend = buildTrend(snapshots)
@@ -145,7 +146,7 @@ func (h *RevenueAtRiskHandler) GetRevenueAtRisk(w http.ResponseWriter, r *http.R
 
 	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeStoresCSV(w, stores)
+		writeStoresCSV(r.Context(), w, stores)
 		return
 	}
 
@@ -161,8 +162,8 @@ func (h *RevenueAtRiskHandler) GetRevenueAtRisk(w http.ResponseWriter, r *http.R
 
 // writeRepoError logs a repository failure and responds 503. These repos have no
 // not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
+func writeRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -304,7 +305,7 @@ func buildTrend(snapshots []*entity.DailyMetricsSnapshot) []revenueAtRiskTrendPo
 
 // writeStoresCSV writes the ranked stores as a CSV attachment. Uses encoding/csv
 // so free-text fields (shopName, planName) with commas/quotes/newlines are quoted.
-func writeStoresCSV(w http.ResponseWriter, stores []revenueAtRiskStore) {
+func writeStoresCSV(ctx context.Context, w http.ResponseWriter, stores []revenueAtRiskStore) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="revenue-at-risk.csv"`)
 
@@ -327,6 +328,6 @@ func writeStoresCSV(w http.ResponseWriter, stores []revenueAtRiskStore) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
@@ -97,18 +98,18 @@ func (h *NetNewSubsReportHandler) GetNetNewSubs(w http.ResponseWriter, r *http.R
 
 	subs, err := h.subRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeNetNewSubsRepoError(w, "FindByAppID", err)
+		writeNetNewSubsRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	labeler := newPlanLabeler(planLabelMapFor(r.Context(), h.planLabelRepo, app.ID))
-	report := buildNetNewSubsReport(subs, from, to, labeler)
+	report := buildNetNewSubsReport(r.Context(), subs, from, to, labeler)
 	allStores := report.NewStores
 	report.NewStoresTotal = int64(len(allStores))
 
 	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeNewSubsCSV(w, allStores)
+		writeNewSubsCSV(r.Context(), w, allStores)
 		return
 	}
 
@@ -124,8 +125,8 @@ func (h *NetNewSubsReportHandler) GetNetNewSubs(w http.ResponseWriter, r *http.R
 
 // writeNetNewSubsRepoError logs a repository failure and responds 503. The subscription
 // repo has no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeNetNewSubsRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("net-new-subs repo error", zap.String("op", op), zap.Error(err))
+func writeNetNewSubsRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("net-new-subs repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -135,7 +136,7 @@ func writeNetNewSubsRepoError(w http.ResponseWriter, op string, err error) {
 // (newest first); the caller pages that table via parsePaging/pageSlice. Net = new −
 // churned. A sub that both started and churned in the window counts in both (net 0 for
 // it), which is the correct net-growth semantics.
-func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time, labeler planLabeler) netNewSubsReport {
+func buildNetNewSubsReport(ctx context.Context, subs []*entity.Subscription, from, to time.Time, labeler planLabeler) netNewSubsReport {
 	toExclusive := to.AddDate(0, 0, 1)
 	inRange := func(t time.Time) bool { return !t.Before(from) && t.Before(toExclusive) }
 	interval := resolveTrendInterval(from, to)
@@ -191,10 +192,10 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time, labe
 		}
 	}
 	if noChurnDate > 0 {
-		zap.L().Warn("net-new-subs churned subscriptions had no charge date — used UpdatedAt as the churn date (cancelled before first charge?)", zap.Int("count", noChurnDate))
+		logging.FromContext(ctx).Warn("net-new-subs churned subscriptions had no charge date — used UpdatedAt as the churn date (cancelled before first charge?)", zap.Int("count", noChurnDate))
 	}
 	if noStartDate > 0 {
-		zap.L().Warn("net-new-subs new subscriptions had no activated_at — dated by the CreatedAt (ingestion) fallback, may be misdated", zap.Int("count", noStartDate))
+		logging.FromContext(ctx).Warn("net-new-subs new subscriptions had no activated_at — dated by the CreatedAt (ingestion) fallback, may be misdated", zap.Int("count", noStartDate))
 	}
 
 	// Trend: only days with activity, ascending (YYYY-MM-DD keys sort chronologically).
@@ -243,7 +244,7 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time, labe
 
 // writeNewSubsCSV writes the recent-new-subscriptions table as a CSV attachment. Uses
 // encoding/csv so free-text domains/shop/plan names with commas/quotes stay one column.
-func writeNewSubsCSV(w http.ResponseWriter, rows []newSubRow) {
+func writeNewSubsCSV(ctx context.Context, w http.ResponseWriter, rows []newSubRow) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="net-new-subscriptions.csv"`)
 
@@ -260,6 +261,6 @@ func writeNewSubsCSV(w http.ResponseWriter, rows []newSubRow) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("net-new-subs write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("net-new-subs write CSV failed", zap.Error(err))
 	}
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -90,7 +91,7 @@ func (h *SubscriptionsReportHandler) GetSubscriptions(w http.ResponseWriter, r *
 
 	subs, err := h.subRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeSubscriptionsRepoError(w, "FindByAppID", err)
+		writeSubscriptionsRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
@@ -103,7 +104,7 @@ func (h *SubscriptionsReportHandler) GetSubscriptions(w http.ResponseWriter, r *
 	from := now.AddDate(0, 0, -90)
 	snapshots, err := h.snapshotRepo.FindByAppIDRange(r.Context(), app.ID, from, now)
 	if err != nil {
-		writeSubscriptionsRepoError(w, "FindByAppIDRange", err)
+		writeSubscriptionsRepoError(r.Context(), w, "FindByAppIDRange", err)
 		return
 	}
 	latest := latestSnapshot(snapshots)
@@ -115,10 +116,10 @@ func (h *SubscriptionsReportHandler) GetSubscriptions(w http.ResponseWriter, r *
 	}
 
 	labeler := newPlanLabeler(planLabelMapFor(r.Context(), h.planLabelRepo, app.ID))
-	report := buildSubscriptionsReport(subs, latest, labeler)
+	report := buildSubscriptionsReport(r.Context(), subs, latest, labeler)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeSubscriptionsPlansCSV(w, report.Plans)
+		writeSubscriptionsPlansCSV(r.Context(), w, report.Plans)
 		return
 	}
 
@@ -131,8 +132,8 @@ func (h *SubscriptionsReportHandler) GetSubscriptions(w http.ResponseWriter, r *
 // writeSubscriptionsRepoError logs a repository failure and responds 503. Neither the
 // subscription nor the snapshot repo has a not-found sentinel — every error is an
 // infrastructure failure (ADR-042).
-func writeSubscriptionsRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
+func writeSubscriptionsRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -146,7 +147,7 @@ func writeSubscriptionsRepoError(w http.ResponseWriter, op string, err error) {
 //     churn rate (we don't have reliable per-plan churn), documented as an approximation.
 //
 // Plans are sorted by active-sub count descending (the composition axis).
-func buildSubscriptionsReport(subs []*entity.Subscription, latest *entity.DailyMetricsSnapshot, labeler planLabeler) subscriptionsReport {
+func buildSubscriptionsReport(ctx context.Context, subs []*entity.Subscription, latest *entity.DailyMetricsSnapshot, labeler planLabeler) subscriptionsReport {
 	type agg struct {
 		activeSubs int
 		mrr        int64
@@ -191,7 +192,7 @@ func buildSubscriptionsReport(subs []*entity.Subscription, latest *entity.DailyM
 	// snapshot total the snapshot is stale/behind, and churnRate silently clamps to 1.0
 	// (collapsing LTV to ARPU). Log so the clamp never hides the drift.
 	if total > 0 && churnedCount > total {
-		zap.L().Warn("live churned count exceeds latest snapshot total — clamping churn to 1.0 (stale snapshot?)", zap.Int("churned_count", churnedCount), zap.Int("snapshot_total", total))
+		logging.FromContext(ctx).Warn("live churned count exceeds latest snapshot total — clamping churn to 1.0 (stale snapshot?)", zap.Int("churned_count", churnedCount), zap.Int("snapshot_total", total))
 	}
 	rate := churnRate(churnedCount, total)
 
@@ -296,7 +297,7 @@ func subsShare(planActiveSubs, totalActiveSubs int) float64 {
 
 // writeSubscriptionsPlansCSV writes the per-plan breakdown as a CSV attachment. Uses
 // encoding/csv so free-text plan names with commas/quotes stay one column.
-func writeSubscriptionsPlansCSV(w http.ResponseWriter, plans []subscriptionsPlan) {
+func writeSubscriptionsPlansCSV(ctx context.Context, w http.ResponseWriter, plans []subscriptionsPlan) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="subscriptions.csv"`)
 
@@ -314,6 +315,6 @@ func writeSubscriptionsPlansCSV(w http.ResponseWriter, plans []subscriptionsPlan
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV", zap.Error(err))
 	}
 }

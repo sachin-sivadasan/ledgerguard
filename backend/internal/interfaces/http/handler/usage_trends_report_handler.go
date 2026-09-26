@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
@@ -88,14 +89,14 @@ func (h *UsageTrendsReportHandler) GetUsageTrends(w http.ResponseWriter, r *http
 
 	txs, err := h.txRepo.FindByAppID(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeUsageTrendsRepoError(w, "FindByAppID", err)
+		writeUsageTrendsRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	report := buildUsageTrendsReport(txs)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeUsageTrendsStoresCSV(w, report.Stores)
+		writeUsageTrendsStoresCSV(r.Context(), w, report.Stores)
 		return
 	}
 
@@ -107,8 +108,8 @@ func (h *UsageTrendsReportHandler) GetUsageTrends(w http.ResponseWriter, r *http
 
 // writeUsageTrendsRepoError logs a repository failure and responds 503. The transaction
 // repo has no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeUsageTrendsRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
+func writeUsageTrendsRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -255,7 +256,7 @@ func buildUsageTrendsReport(txs []*entity.Transaction) usageTrendsReport {
 
 // writeUsageTrendsStoresCSV writes the per-store table as a CSV attachment. Uses
 // encoding/csv so free-text domains/shop names with commas/quotes stay one column.
-func writeUsageTrendsStoresCSV(w http.ResponseWriter, stores []usageTrendsStore) {
+func writeUsageTrendsStoresCSV(ctx context.Context, w http.ResponseWriter, stores []usageTrendsStore) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="usage-trends.csv"`)
 
@@ -271,6 +272,6 @@ func writeUsageTrendsStoresCSV(w http.ResponseWriter, stores []usageTrendsStore)
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

@@ -160,12 +160,18 @@ on upgrades). Implemented:
      logger down). The `RedirectStdLog` bridge is now a safety net for third-party libs, not
      a crutch for our own code.
 
-   Remaining enrichment (not blocking):
-   - ⏳ **`request_id` into the job payload:** processors correlate by `app_id`/`job_id`
-     (no HTTP request behind an async worker). To tie a sync back to the request that
-     enqueued it, carry `request_id` in `SyncJobPayload` and add it in `jobLogger`.
-   - ⏳ **`org_id`/`app_id` on HTTP lines:** add to the context logger in `OrgContextMW`.
-   - ⏳ **ctx into the report-handler shared helpers** so their `zap.L()` lines regain `request_id`.
+   Enrichment follow-ups — all ✅ DONE:
+   - ✅ **`request_id` into the job payload:** `SyncJobPayload.RequestID` is populated at
+     enqueue time (`chimw.GetReqID(ctx)` in `QueueSyncService`), inherited by child/snapshot
+     jobs in `FullSyncProcessor`, and emitted by `jobLogger` — so a sync ties back to the
+     HTTP request that triggered it. Empty for background/recovery-enqueued jobs.
+   - ✅ **`org_id`/`user_id` on HTTP lines:** `OrgContextMW.RequireOrg` wraps the request
+     logger with `org_id` + `user_id` after resolving the tenant, so every downstream
+     handler line carries them ("one org's story").
+   - ✅ **ctx into the report-handler shared helpers:** every `writeXRepoError` / `writeXCSV`
+     / logging `buildX` helper now takes `ctx` and logs via `logging.FromContext(ctx)`; the
+     handler package has **zero** `zap.L()` calls left — all handler-layer logs carry
+     `request_id` (+ `org_id`/`user_id` for org-scoped routes).
 
 **Verify:** `logging` unit tests assert ECS field names + `request_id`; end-to-end, one
 API request produces N log lines sharing one `request_id` in ES.

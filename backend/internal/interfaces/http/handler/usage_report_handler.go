@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
@@ -95,13 +96,13 @@ func (h *UsageReportHandler) GetUsageReport(w http.ResponseWriter, r *http.Reque
 
 	txs, err := h.txRepo.FindByAppID(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeUsageRepoError(w, "FindByAppID", err)
+		writeUsageRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	snapshots, err := h.snapshotRepo.FindByAppIDRange(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeUsageRepoError(w, "FindByAppIDRange", err)
+		writeUsageRepoError(r.Context(), w, "FindByAppIDRange", err)
 		return
 	}
 
@@ -117,7 +118,7 @@ func (h *UsageReportHandler) GetUsageReport(w http.ResponseWriter, r *http.Reque
 
 	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeUsageStoresCSV(w, allStores)
+		writeUsageStoresCSV(r.Context(), w, allStores)
 		return
 	}
 
@@ -134,8 +135,8 @@ func (h *UsageReportHandler) GetUsageReport(w http.ResponseWriter, r *http.Reque
 // writeUsageRepoError logs a repository failure and responds 503. Neither the
 // transaction nor the snapshot repo has a not-found sentinel — every error is an
 // infrastructure failure (ADR-042).
-func writeUsageRepoError(w http.ResponseWriter, op string, err error) {
-	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
+func writeUsageRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -243,7 +244,7 @@ func buildUsageTrend(snapshots []*entity.DailyMetricsSnapshot) []usageTrendPoint
 
 // writeUsageStoresCSV writes the per-store ranked table as a CSV attachment. Uses
 // encoding/csv so free-text domains/shop names with commas/quotes stay one column.
-func writeUsageStoresCSV(w http.ResponseWriter, stores []usageStore) {
+func writeUsageStoresCSV(ctx context.Context, w http.ResponseWriter, stores []usageStore) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="usage.csv"`)
 
@@ -260,6 +261,6 @@ func writeUsageStoresCSV(w http.ResponseWriter, stores []usageStore) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		zap.L().Error("write CSV failed", zap.Error(err))
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

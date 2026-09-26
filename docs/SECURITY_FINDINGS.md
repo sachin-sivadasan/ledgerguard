@@ -14,7 +14,9 @@ fixes, not a rearchitecture.
 
 ---
 
-## S1 — App-scoped endpoints don't verify `appID` belongs to the caller's org  ✅ **[High — confirmed authenticated cross-tenant IDOR]**
+## S1 — App-scoped endpoints don't verify `appID` belongs to the caller's org  ✅ **[High — confirmed authenticated cross-tenant IDOR] — ✅ FIXED**
+**Status:** **FIXED** — `resolveAppFromRequest` now resolves the caller's partner account and returns 404 when `app.PartnerAccountID != account.ID`, closing the leak for all callers (reports/forecast/dashboard/subscriptions/stores) at one chokepoint. Regression tests added: `TestResolveAppFromRequest_CrossOrg_Returns404` (leak guard) + `TestResolveAppFromRequest_SameOrg_Succeeds` (legit-flow guard), `app_lookup_test.go`. Branch `fix/s1-app-org-ownership`.
+
 **Component:** `internal/interfaces/http/handler/app_lookup.go:54` (`resolveAppFromRequest`) — used by reports, forecast, dashboard, subscriptions, stores.
 
 **Confirmed evidence chain (all verified):**
@@ -67,12 +69,9 @@ curl -H "Authorization: Bearer <orgA_token>" -H "X-Org-Id: <orgA_id>" \
 **Impact:** auth/isolation/limit behavior on a public, credentialed API is unverified by CI; a store error disables rate limiting. (Isolation itself *is* implemented via `verifyAppAccess` — this is about verification + limiter robustness.)
 **Fix:** add an isolation-first test suite (cross-org key → `not_found`/403); move the limiter to the shared Redis store; decide fail-closed.
 
-## S7 — Audit logs unbounded + store IP (PII)  ✅ **[Low] — ✅ FIXED (opt-in retention) + documented**
-**Status:** **FIXED** — added `DeleteOlderThan(cutoff)` to the org- and api-audit repositories, an `AuditRetentionService.PruneOnce` (skips when disabled; one store's failure doesn't stop others), and a daily `AuditRetentionScheduler`. Configurable via `Audit.RetentionDays` / `AUDIT_RETENTION_DAYS`, **default 0 = keep forever** — audit logs are compliance records, so pruning is strictly opt-in (nothing auto-deleted). Tests: `TestAuditRetention_*` (disabled no-op, correct cutoff, error-isolation) + `TestLoad_AuditRetentionDays`. Branch `fix/s7-audit-retention`.
-
-**IP capture / DPA-GDPR note (documented, per the finding):** both `org_audit_log` and `api_audit_log` store the request **IP address**, which is personal data under GDPR. When enabling retention, set `AUDIT_RETENTION_DAYS` to your DPA-committed audit-retention period (e.g. 365 or 730). Record IP capture in the privacy notice / RoPA and cover it under the audit-log lawful basis (security/legitimate interest). The retention prune is the technical control that bounds how long this PII is held.
-
+## S7 — Audit logs unbounded + store IP (PII)  ✅ **[Low]**
 **Component:** `org_audit_log`, `api_audit_log` (no TTL); IP captured.
+**Fix:** retention/rollup policy; document IP capture for DPA/GDPR.
 
 ---
 

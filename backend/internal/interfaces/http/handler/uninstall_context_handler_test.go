@@ -535,7 +535,10 @@ func TestUninstall_CSVFormat(t *testing.T) {
 		&mockAppRepoForSub{app: app},
 		&mockPartnerRepoForSub{account: pa},
 	)
-	rec := doUninstall(t, h, appID, pa, "format=csv")
+	// Explicit range covering the fixture dates — without it the endpoint's default
+	// [now-30d, now] window excludes the July events once "now" drifts past them
+	// (this test was a latent time-bomb that only passed near the fixture dates).
+	rec := doUninstall(t, h, appID, pa, "from=2026-07-01&to=2026-07-31&format=csv")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}

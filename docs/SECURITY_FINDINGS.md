@@ -14,7 +14,9 @@ fixes, not a rearchitecture.
 
 ---
 
-## S1 — App-scoped endpoints don't verify `appID` belongs to the caller's org  ✅ **[High — confirmed authenticated cross-tenant IDOR]**
+## S1 — App-scoped endpoints don't verify `appID` belongs to the caller's org  ✅ **[High — confirmed authenticated cross-tenant IDOR] — ✅ FIXED**
+**Status:** **FIXED** — `resolveAppFromRequest` now resolves the caller's partner account and returns 404 when `app.PartnerAccountID != account.ID`, closing the leak for all callers (reports/forecast/dashboard/subscriptions/stores) at one chokepoint. Regression tests added: `TestResolveAppFromRequest_CrossOrg_Returns404` (leak guard) + `TestResolveAppFromRequest_SameOrg_Succeeds` (legit-flow guard), `app_lookup_test.go`. Branch `fix/s1-app-org-ownership`.
+
 **Component:** `internal/interfaces/http/handler/app_lookup.go:54` (`resolveAppFromRequest`) — used by reports, forecast, dashboard, subscriptions, stores.
 
 **Confirmed evidence chain (all verified):**
@@ -61,12 +63,7 @@ curl -H "Authorization: Bearer <orgA_token>" -H "X-Org-Id: <orgA_id>" \
 **Impact:** spam/abuse signups; **compounds S3** (unverified emails can accept invites).
 **Fix:** require `email_verified` before granting access (or before privileged actions).
 
-## S6 — External Revenue API: no tests + in-memory, fail-open rate limiter  ✅ **[Medium] — ✅ FIXED**
-**Status:** **FIXED (both parts).**
-**(a) Test suite** — isolation-first: `TestGetByShopifyGID_CrossOrg_Denied` (cross-org read → `ErrAppAccessDenied`, no leak), `TestGetByShopifyGIDs_Batch_ExcludesOtherOrg` (other-org GID → `not_found`, never in results), `TestGetByDomain_OnlyUsersApps`, own-app happy path; rate-limiter suite (`TestRateLimiter_PerKeyWindow` 429+headers, `_NoKey_Skips`).
-**(b) Redis-backed limiter** — `RedisRateLimitStore` (INCR+EXPIRE pipeline) replaces the placeholder; `main` uses it whenever Redis is configured (falls back to in-memory single-instance when not), so per-key limits hold **across instances**. Tested with **miniredis** (`TestRedisRateLimitStore_Increment`).
-**Fail-open/closed decision:** store errors are now **logged**, and the behavior is **configurable via `SetFailOpen`** — **default fail-open** (a store blip shouldn't 503 the whole API), with fail-closed available (503) for stricter deployments. Both pinned by tests (`_StoreError_FailsOpen`, `_StoreError_FailClosed`). Branch `fix/s6-revenue-api-tests`.
-
+## S6 — External Revenue API: no tests + in-memory, fail-open rate limiter  ✅ **[Medium]**
 **Component:** `internal/revenue_api/...` (no `_test.go`); `revenue_api/.../middleware/rate_limiter.go:59-63`.
 **Evidence:** the entire external subtree is untested; the limiter **allows the request on store error** (fail-open) and is in-memory (per-instance on scale).
 **Impact:** auth/isolation/limit behavior on a public, credentialed API is unverified by CI; a store error disables rate limiting. (Isolation itself *is* implemented via `verifyAppAccess` — this is about verification + limiter robustness.)

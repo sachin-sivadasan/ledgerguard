@@ -61,7 +61,10 @@ curl -H "Authorization: Bearer <orgA_token>" -H "X-Org-Id: <orgA_id>" \
 **Impact:** spam/abuse signups; **compounds S3** (unverified emails can accept invites).
 **Fix:** require `email_verified` before granting access (or before privileged actions).
 
-## S6 — External Revenue API: no tests + in-memory, fail-open rate limiter  ✅ **[Medium]**
+## S6 — External Revenue API: no tests + in-memory, fail-open rate limiter  ✅ **[Medium] — 🟡 PARTIAL (test suite added; Redis limiter deferred)**
+**Status:** **PARTIAL** — the "no tests on a security-sensitive external API" gap is closed with an **isolation-first suite**: `TestGetByShopifyGID_CrossOrg_Denied` (cross-org read → `ErrAppAccessDenied`, no leak), `TestGetByShopifyGIDs_Batch_ExcludesOtherOrg` (other-org GID → `not_found`, never in results), `TestGetByDomain_OnlyUsersApps`, plus own-app happy path — and a rate-limiter suite (`TestRateLimiter_PerKeyWindow` 429+headers, `_NoKey_Skips`, `_StoreError_FailsOpen` pinning today's fail-open). Branch `fix/s6-revenue-api-tests`.
+**Remaining follow-up (NOT done — own PR):** move the rate limiter to the shared **Redis** store (in-memory is per-instance; only matters at horizontal scale, which the current single-box deploy isn't) and decide **fail-closed** vs the current fail-open. The `_StoreError_FailsOpen` test pins current behavior so that change is deliberate.
+
 **Component:** `internal/revenue_api/...` (no `_test.go`); `revenue_api/.../middleware/rate_limiter.go:59-63`.
 **Evidence:** the entire external subtree is untested; the limiter **allows the request on store error** (fail-open) and is in-memory (per-instance on scale).
 **Impact:** auth/isolation/limit behavior on a public, credentialed API is unverified by CI; a store error disables rate limiting. (Isolation itself *is* implemented via `verifyAppAccess` — this is about verification + limiter robustness.)

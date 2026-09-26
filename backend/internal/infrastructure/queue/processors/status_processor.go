@@ -3,8 +3,9 @@ package processors
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -50,6 +51,8 @@ func NewStatusProcessor(
 func (p *StatusProcessor) Type() string { return entity.SyncJobTypeStatusSync }
 
 func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPayload) error {
+	ctx, lg := jobLogger(ctx, "StatusProcessor", payload)
+
 	pCtx, err := queue.PrepareProcessorContext(ctx, payload, p.appRepo, p.partnerRepo, p.decryptor)
 	if err != nil {
 		return err
@@ -60,7 +63,7 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 		return fmt.Errorf("failed to find subscriptions: %w", err)
 	}
 
-	log.Printf("[queue] StatusProcessor: processing %d subscriptions for app %s (job %s)", len(subscriptions), payload.AppID, payload.JobID)
+	lg.Info("processing subscriptions", zap.Int("count", len(subscriptions)))
 
 	fetchCtx := external.WithOrganizationID(ctx, pCtx.OrganizationID)
 
@@ -73,7 +76,7 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 	failed := 0 // shops whose status could not be refreshed (fetch or upsert error)
 	for i, sub := range subscriptions {
 		if sub.ShopifyShopGID == "" {
-			log.Printf("[queue] StatusProcessor: skipping subscription %s — no ShopifyShopGID (job %s)", sub.ID, payload.JobID)
+			lg.Warn("skipping subscription — no ShopifyShopGID", zap.String("subscription_id", sub.ID.String()))
 			continue
 		}
 
@@ -83,7 +86,7 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 
 		events, err := p.eventFetcher.FetchAppEvents(fetchCtx, pCtx.OrganizationID, pCtx.AccessToken, pCtx.App.PartnerAppID, sub.ShopifyShopGID)
 		if err != nil {
-			log.Printf("[queue] StatusProcessor: error fetching events for shop %s: %v (job %s)", sub.ShopifyShopGID, err, payload.JobID)
+			lg.Warn("error fetching events for shop", zap.String("shop_gid", sub.ShopifyShopGID), zap.Error(err))
 			failed++
 			continue
 		}
@@ -95,7 +98,7 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 		newStatus, statusAt := external.GetLatestSubscriptionStatusWithTime(events)
 		if sub.ApplyEventStatus(newStatus, statusAt, time.Now().UTC()) {
 			if err := p.subRepo.Upsert(ctx, sub); err != nil {
-				log.Printf("[queue] StatusProcessor: error persisting status for shop %s: %v (job %s)", sub.ShopifyShopGID, err, payload.JobID)
+				lg.Warn("error persisting status for shop", zap.String("shop_gid", sub.ShopifyShopGID), zap.Error(err))
 				failed++
 				continue
 			}
@@ -111,7 +114,11 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 		// Periodic stdout heartbeat — the per-shop loop is the slow part of Wave 2
 		// (one Partner-API fetch per shop) and would otherwise be silent for minutes.
 		if (i+1)%500 == 0 {
-			log.Printf("[queue] StatusProcessor: reconciled %d/%d shops (%d updated, %d failed) for app %s (job %s)", i+1, len(subscriptions), updated, failed, payload.AppID, payload.JobID)
+			lg.Info("reconcile progress",
+				zap.Int("processed", i+1),
+				zap.Int("total", len(subscriptions)),
+				zap.Int("updated", updated),
+				zap.Int("failed", failed))
 		}
 	}
 
@@ -121,7 +128,9 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 	doneMsg := fmt.Sprintf("Updated %d subscription statuses", updated)
 	if failed > 0 {
 		doneMsg = fmt.Sprintf("Updated %d statuses, %d shops failed (see logs)", updated, failed)
-		log.Printf("[queue] StatusProcessor: WARNING %d/%d shops failed to refresh for app %s (job %s)", failed, len(subscriptions), payload.AppID, payload.JobID)
+		lg.Warn("some shops failed to refresh",
+			zap.Int("failed", failed),
+			zap.Int("total", len(subscriptions)))
 	}
 	p.progress.ForceUpdate(ctx, payload.JobID, queue.Progress{
 		Total:     len(subscriptions),
@@ -129,6 +138,8 @@ func (p *StatusProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 		Message:   doneMsg,
 	})
 
-	log.Printf("[queue] StatusProcessor: updated %d subscriptions (%d failed) for app %s (job %s)", updated, failed, payload.AppID, payload.JobID)
+	lg.Info("updated subscription statuses",
+		zap.Int("updated", updated),
+		zap.Int("failed", failed))
 	return nil
 }

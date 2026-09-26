@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
-	"log"
 	"time"
+
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 // NamedAuditPruner pairs an audit store's name with its prune function
@@ -42,11 +44,11 @@ func (s *AuditRetentionService) PruneOnce(ctx context.Context, now time.Time) {
 	for _, p := range s.pruners {
 		n, err := p.Prune(ctx, cutoff)
 		if err != nil {
-			log.Printf("audit retention: prune %s failed: %v", p.Name, err)
+			logging.FromContext(ctx).Warn("Audit retention prune failed", zap.String("store", p.Name), zap.Error(err))
 			continue
 		}
 		if n > 0 {
-			log.Printf("audit retention: pruned %d rows from %s (older than %s)", n, p.Name, cutoff.Format("2006-01-02"))
+			logging.FromContext(ctx).Info("Audit retention pruned rows", zap.Int64("rows", n), zap.String("store", p.Name), zap.String("cutoff", cutoff.Format("2006-01-02")))
 		}
 	}
 }

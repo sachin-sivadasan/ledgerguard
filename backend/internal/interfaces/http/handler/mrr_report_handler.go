@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -13,7 +13,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // MRRReportHandler serves the "MRR" report (REPORTS.md — monthly recurring
@@ -88,13 +90,13 @@ func (h *MRRReportHandler) GetMRRReport(w http.ResponseWriter, r *http.Request) 
 
 	subs, err := h.subRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeMRRRepoError(w, "FindByAppID", err)
+		writeMRRRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	snapshots, err := h.snapshotRepo.FindByAppIDRange(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeMRRRepoError(w, "FindByAppIDRange", err)
+		writeMRRRepoError(r.Context(), w, "FindByAppIDRange", err)
 		return
 	}
 
@@ -105,20 +107,20 @@ func (h *MRRReportHandler) GetMRRReport(w http.ResponseWriter, r *http.Request) 
 	report.Trend = buildMRRTrend(downsampleSnapshots(snapshots, interval))
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeMRRPlansCSV(w, plans)
+		writeMRRPlansCSV(r.Context(), w, plans)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("mrr: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
 // writeMRRRepoError logs a repository failure and responds 503. These repos have
 // no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeMRRRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("mrr: repo error in %s: %v", op, err)
+func writeMRRRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -251,7 +253,7 @@ func buildMRRTrend(snapshots []*entity.DailyMetricsSnapshot) []mrrTrendPoint {
 
 // writeMRRPlansCSV writes the per-plan MRR table as a CSV attachment. Uses
 // encoding/csv so free-text plan names with commas/quotes stay one column.
-func writeMRRPlansCSV(w http.ResponseWriter, plans []mrrPlan) {
+func writeMRRPlansCSV(ctx context.Context, w http.ResponseWriter, plans []mrrPlan) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="mrr.csv"`)
 
@@ -267,6 +269,6 @@ func writeMRRPlansCSV(w http.ResponseWriter, plans []mrrPlan) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("mrr: write CSV: %v", err)
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

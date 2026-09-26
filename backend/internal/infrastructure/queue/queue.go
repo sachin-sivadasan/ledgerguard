@@ -28,6 +28,10 @@ type SyncJobPayload struct {
 	EntityType       string     `json:"entity_type,omitempty"`
 	LookbackDays     int        `json:"lookback_days,omitempty"` // 0 = default window
 	EnqueuedAt       time.Time  `json:"enqueued_at"`
+	// RequestID is the HTTP request id (chi) of the request that enqueued this job,
+	// carried through Redis so a sync's processor logs can be tied back to the request
+	// that triggered it. Empty for background/recovery-enqueued jobs. See jobLogger.
+	RequestID string `json:"request_id,omitempty"`
 }
 
 // QueueKeyForJobType returns the appropriate queue key for the given job type

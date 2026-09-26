@@ -4,18 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
@@ -97,7 +99,7 @@ func (h *AppHandler) GetAvailableApps(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Log the underlying cause (e.g. Partner API status / GraphQL error) — the 502
 		// response is intentionally generic, but the reason must stay diagnosable.
-		log.Printf("apps: FetchApps failed for partner %s: %v", partnerAccount.PartnerID, err)
+		logging.FromContext(r.Context()).Error("FetchApps failed", zap.String("partner_id", partnerAccount.PartnerID), zap.Error(err))
 		writeJSONError(w, http.StatusBadGateway, "failed to fetch apps from Partner API")
 		return
 	}
@@ -199,7 +201,7 @@ func (h *AppHandler) SelectApp(w http.ResponseWriter, r *http.Request) {
 	syncTriggered := false
 	if h.syncTrigger != nil {
 		if err := h.syncTrigger.TriggerSync(r.Context(), app.ID, user.ID, partnerAccount.ID); err != nil {
-			log.Printf("WARNING: auto-sync trigger failed for app %s: %v", app.ID, err)
+			logging.FromContext(r.Context()).Warn("auto-sync trigger failed", zap.String("app_id", app.ID.String()), zap.Error(err))
 		} else {
 			syncTriggered = true
 		}
@@ -239,7 +241,7 @@ func (h *AppHandler) ListApps(w http.ResponseWriter, r *http.Request) {
 	// Get apps
 	apps, err := h.appRepo.FindByPartnerAccountID(r.Context(), partnerAccount.ID)
 	if err != nil {
-		log.Printf("ListApps: failed to fetch apps for partner %s: %v", partnerAccount.ID, err)
+		logging.FromContext(r.Context()).Error("failed to fetch apps", zap.String("partner_account_id", partnerAccount.ID.String()), zap.Error(err))
 		writeJSONError(w, http.StatusInternalServerError, "failed to fetch apps")
 		return
 	}

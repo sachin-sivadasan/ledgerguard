@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -13,7 +13,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // UsageReportHandler serves the "Usage & One-Time Charges" report (REPORTS.md —
@@ -94,13 +96,13 @@ func (h *UsageReportHandler) GetUsageReport(w http.ResponseWriter, r *http.Reque
 
 	txs, err := h.txRepo.FindByAppID(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeUsageRepoError(w, "FindByAppID", err)
+		writeUsageRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	snapshots, err := h.snapshotRepo.FindByAppIDRange(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeUsageRepoError(w, "FindByAppIDRange", err)
+		writeUsageRepoError(r.Context(), w, "FindByAppIDRange", err)
 		return
 	}
 
@@ -116,7 +118,7 @@ func (h *UsageReportHandler) GetUsageReport(w http.ResponseWriter, r *http.Reque
 
 	// CSV exports the full table (all rows), regardless of paging.
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeUsageStoresCSV(w, allStores)
+		writeUsageStoresCSV(r.Context(), w, allStores)
 		return
 	}
 
@@ -126,15 +128,15 @@ func (h *UsageReportHandler) GetUsageReport(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("usage: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
 // writeUsageRepoError logs a repository failure and responds 503. Neither the
 // transaction nor the snapshot repo has a not-found sentinel — every error is an
 // infrastructure failure (ADR-042).
-func writeUsageRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("usage: repo error in %s: %v", op, err)
+func writeUsageRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -242,7 +244,7 @@ func buildUsageTrend(snapshots []*entity.DailyMetricsSnapshot) []usageTrendPoint
 
 // writeUsageStoresCSV writes the per-store ranked table as a CSV attachment. Uses
 // encoding/csv so free-text domains/shop names with commas/quotes stay one column.
-func writeUsageStoresCSV(w http.ResponseWriter, stores []usageStore) {
+func writeUsageStoresCSV(ctx context.Context, w http.ResponseWriter, stores []usageStore) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="usage.csv"`)
 
@@ -259,6 +261,6 @@ func writeUsageStoresCSV(w http.ResponseWriter, stores []usageStore) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("usage: write CSV: %v", err)
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

@@ -246,6 +246,30 @@ func TestLoad_AuditRetentionDays(t *testing.T) {
 	}
 }
 
+func TestLoad_LogLevel(t *testing.T) {
+	// Default: info (structured logging on, but not debug-noisy).
+	os.Clearenv()
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Log.Level != "info" {
+		t.Errorf("expected Log.Level to default to \"info\", got %q", cfg.Log.Level)
+	}
+
+	// Env overrides the level.
+	os.Clearenv()
+	os.Setenv("LOG_LEVEL", "debug")
+	defer os.Clearenv()
+	cfg, err = Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Log.Level != "debug" {
+		t.Errorf("expected LOG_LEVEL=debug to override to \"debug\", got %q", cfg.Log.Level)
+	}
+}
+
 func TestDatabaseConfig_DSN(t *testing.T) {
 	cfg := DatabaseConfig{
 		Host:     "localhost",

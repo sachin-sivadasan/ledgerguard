@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -13,7 +13,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // UsageTrendsReportHandler serves the "Usage Trends" report (REPORTS.md — Archetype A,
@@ -87,27 +89,27 @@ func (h *UsageTrendsReportHandler) GetUsageTrends(w http.ResponseWriter, r *http
 
 	txs, err := h.txRepo.FindByAppID(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeUsageTrendsRepoError(w, "FindByAppID", err)
+		writeUsageTrendsRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	report := buildUsageTrendsReport(txs)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeUsageTrendsStoresCSV(w, report.Stores)
+		writeUsageTrendsStoresCSV(r.Context(), w, report.Stores)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("usage-trends: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
 // writeUsageTrendsRepoError logs a repository failure and responds 503. The transaction
 // repo has no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeUsageTrendsRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("usage-trends: repo error in %s: %v", op, err)
+func writeUsageTrendsRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -254,7 +256,7 @@ func buildUsageTrendsReport(txs []*entity.Transaction) usageTrendsReport {
 
 // writeUsageTrendsStoresCSV writes the per-store table as a CSV attachment. Uses
 // encoding/csv so free-text domains/shop names with commas/quotes stay one column.
-func writeUsageTrendsStoresCSV(w http.ResponseWriter, stores []usageTrendsStore) {
+func writeUsageTrendsStoresCSV(ctx context.Context, w http.ResponseWriter, stores []usageTrendsStore) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="usage-trends.csv"`)
 
@@ -270,6 +272,6 @@ func writeUsageTrendsStoresCSV(w http.ResponseWriter, stores []usageTrendsStore)
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("usage-trends: write CSV: %v", err)
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

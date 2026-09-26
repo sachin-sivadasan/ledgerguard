@@ -11,6 +11,7 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue"
 )
 
@@ -87,6 +88,7 @@ func (s *QueueSyncService) EnqueueSync(ctx context.Context, appID, userID, partn
 		JobType:          job.JobType,
 		Priority:         job.Priority,
 		EnqueuedAt:       time.Now().UTC(),
+		RequestID:        logging.RequestIDFromContext(ctx), // "" when not enqueued from an HTTP request
 	}
 
 	if err := queue.Enqueue(ctx, s.redisClient, payload); err != nil {
@@ -134,6 +136,7 @@ func (s *QueueSyncService) EnqueueCatchupSync(ctx context.Context, appID, userID
 		LookbackDays:     lookbackDays,
 		Priority:         job.Priority,
 		EnqueuedAt:       time.Now().UTC(),
+		RequestID:        logging.RequestIDFromContext(ctx), // "" when enqueued from a background scheduler
 	}
 
 	if err := queue.Enqueue(ctx, s.redisClient, payload); err != nil {

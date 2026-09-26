@@ -8,10 +8,15 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
+
+// NOTE: the domain layer keeps ZERO infrastructure/third-party deps (CLAUDE.md §3), so
+// these breadcrumbs use the stdlib logger — zap.RedirectStdLog (installed in main) still
+// renders them as structured ECS JSON at runtime, without a domain→infra import.
 
 // SyncHistoryStart is the floor date for a FULL sync/rebuild — an arbitrary early date
 // comfortably before any real app transaction (no monetized data exists before an app's

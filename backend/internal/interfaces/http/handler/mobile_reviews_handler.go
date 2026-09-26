@@ -3,15 +3,17 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
 
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
@@ -79,7 +81,7 @@ func (h *MobileReviewsHandler) GetMobileReviews(w http.ResponseWriter, r *http.R
 
 	links, err := h.linksRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		log.Printf("mobile-reviews: repo error: %v", err)
+		logging.FromContext(r.Context()).Error("repo error", zap.Error(err))
 		writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 		return
 	}
@@ -101,7 +103,7 @@ func (h *MobileReviewsHandler) GetMobileReviews(w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("mobile-reviews: encode: %v", err)
+		logging.FromContext(r.Context()).Error("encode response", zap.Error(err))
 	}
 }
 
@@ -124,7 +126,7 @@ func (h *MobileReviewsHandler) appleBlock(ctx context.Context, iosAppID string) 
 	wg.Wait()
 
 	if sumErr != nil {
-		log.Printf("mobile-reviews: apple lookup %s: %v", iosAppID, sumErr)
+		logging.FromContext(ctx).Warn("apple lookup failed", zap.String("ios_app_id", iosAppID), zap.Error(sumErr))
 		b.Error = "Couldn't reach the App Store."
 		return b
 	}
@@ -132,7 +134,7 @@ func (h *MobileReviewsHandler) appleBlock(ctx context.Context, iosAppID string) 
 		sum.AppName, sum.IconURL, sum.RatingValue, sum.RatingCount, sum.StoreURL
 
 	if revErr != nil {
-		log.Printf("mobile-reviews: apple reviews %s: %v", iosAppID, revErr)
+		logging.FromContext(ctx).Warn("apple reviews failed", zap.String("ios_app_id", iosAppID), zap.Error(revErr))
 		return b // keep the rating; reviews just absent
 	}
 	b.Reviews = reviews
@@ -145,7 +147,7 @@ func (h *MobileReviewsHandler) googleBlock(ctx context.Context, pkg string) *sto
 	b := &storeBlock{Linked: true, ReviewsAvailable: false}
 	sum, err := h.store.GooglePlayListing(ctx, pkg, "US")
 	if err != nil {
-		log.Printf("mobile-reviews: google listing %s: %v", pkg, err)
+		logging.FromContext(ctx).Warn("google listing failed", zap.String("play_package", pkg), zap.Error(err))
 		b.Error = "Couldn't read the Google Play listing."
 		return b
 	}
@@ -244,7 +246,7 @@ func (h *MobileReviewsHandler) PutMobileLinks(w http.ResponseWriter, r *http.Req
 	if err := h.linksRepo.Upsert(r.Context(), &entity.MobileLinks{
 		AppID: app.ID, IosAppID: iosAppID, PlayPackage: playPackage,
 	}); err != nil {
-		log.Printf("mobile-reviews: upsert links: %v", err)
+		logging.FromContext(r.Context()).Error("upsert links failed", zap.Error(err))
 		writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 		return
 	}

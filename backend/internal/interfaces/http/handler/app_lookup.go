@@ -2,13 +2,15 @@ package handler
 
 import (
 	"errors"
-	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
@@ -28,7 +30,7 @@ func resolvePartnerAccount(r *http.Request, partnerRepo repository.PartnerAccoun
 			if isNotFoundError(err) {
 				return nil, &appLookupError{http.StatusNotFound, "no partner account for organization"}
 			}
-			log.Printf("app_lookup: DB error resolving partner account by org %s: %v", org.ID, err)
+			logging.FromContext(r.Context()).Error("DB error resolving partner account by org", zap.String("org_id", org.ID.String()), zap.Error(err))
 			return nil, &appLookupError{http.StatusServiceUnavailable, "service temporarily unavailable"}
 		}
 		return account, nil
@@ -43,7 +45,7 @@ func resolvePartnerAccount(r *http.Request, partnerRepo repository.PartnerAccoun
 		if isNotFoundError(err) {
 			return nil, &appLookupError{http.StatusNotFound, "no partner account found"}
 		}
-		log.Printf("app_lookup: DB error resolving partner account by user %s: %v", user.ID, err)
+		logging.FromContext(r.Context()).Error("DB error resolving partner account by user", zap.String("user_id", user.ID.String()), zap.Error(err))
 		return nil, &appLookupError{http.StatusServiceUnavailable, "service temporarily unavailable"}
 	}
 	return account, nil
@@ -69,7 +71,7 @@ func resolveAppFromRequest(r *http.Request, partnerRepo repository.PartnerAccoun
 		if isNotFoundError(err) {
 			return nil, &appLookupError{http.StatusNotFound, "app not found"}
 		}
-		log.Printf("app_lookup: DB error resolving app %s: %v", appID, err)
+		logging.FromContext(r.Context()).Error("DB error resolving app", zap.String("app_id", appID.String()), zap.Error(err))
 		return nil, &appLookupError{http.StatusServiceUnavailable, "service temporarily unavailable"}
 	}
 	if app == nil {
@@ -84,8 +86,10 @@ func resolveAppFromRequest(r *http.Request, partnerRepo repository.PartnerAccoun
 	if app.PartnerAccountID != account.ID {
 		// Return 404 (not 403) so we don't confirm the existence of another
 		// org's app to an unauthorized caller.
-		log.Printf("app_lookup: cross-org access denied: app %s (account %s) requested under account %s",
-			appID, app.PartnerAccountID, account.ID)
+		logging.FromContext(r.Context()).Warn("cross-org access denied",
+			zap.String("app_id", appID.String()),
+			zap.String("partner_account_id", app.PartnerAccountID.String()),
+			zap.String("requesting_partner_account_id", account.ID.String()))
 		return nil, &appLookupError{http.StatusNotFound, "app not found"}
 	}
 

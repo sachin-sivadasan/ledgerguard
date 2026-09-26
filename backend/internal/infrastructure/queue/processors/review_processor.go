@@ -3,7 +3,6 @@ package processors
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +10,7 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue"
+	"go.uber.org/zap"
 )
 
 // ReviewProcessor handles review_sync jobs (scrape app store reviews)
@@ -44,6 +44,8 @@ func NewReviewProcessor(
 func (p *ReviewProcessor) Type() string { return entity.SyncJobTypeReviewSync }
 
 func (p *ReviewProcessor) Process(ctx context.Context, payload *queue.SyncJobPayload) error {
+	ctx, lg := jobLogger(ctx, "ReviewProcessor", payload)
+
 	app, err := p.appRepo.FindByID(ctx, payload.AppID)
 	if err != nil {
 		return fmt.Errorf("failed to find app: %w", err)
@@ -105,6 +107,6 @@ func (p *ReviewProcessor) Process(ctx context.Context, payload *queue.SyncJobPay
 		Message:   fmt.Sprintf("Stored %d reviews", len(reviews)),
 	})
 
-	log.Printf("[queue] ReviewProcessor: stored %d reviews for app %s (job %s)", len(reviews), payload.AppID, payload.JobID)
+	lg.Info("stored reviews", zap.Int("count", len(reviews)))
 	return nil
 }

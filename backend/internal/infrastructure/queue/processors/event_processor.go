@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+
+	"go.uber.org/zap"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -53,6 +54,8 @@ func NewEventProcessor(
 func (p *EventProcessor) Type() string { return entity.SyncJobTypeEventSync }
 
 func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayload) error {
+	ctx, lg := jobLogger(ctx, "EventProcessor", payload)
+
 	pCtx, err := queue.PrepareProcessorContext(ctx, payload, p.appRepo, p.partnerRepo, p.decryptor)
 	if err != nil {
 		return err
@@ -75,7 +78,7 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 	p.progress.Update(ctx, payload.JobID, queue.Progress{
 		Message: "Fetching app-wide lifecycle events...",
 	})
-	log.Printf("[queue] EventProcessor: fetching app-wide event stream for app %s (job %s)", payload.AppID, payload.JobID)
+	lg.Info("fetching app-wide event stream")
 
 	// Fetch the ENTIRE app event stream (all shops, all lifecycle types) in one
 	// paginated call — not per-shop. This captures every shop, including the free /
@@ -86,7 +89,7 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 	if err != nil {
 		return fmt.Errorf("failed to fetch app events: %w", err)
 	}
-	log.Printf("[queue] EventProcessor: fetched %d app-wide events for app %s — storing + computing installs (job %s)", len(events), payload.AppID, payload.JobID)
+	lg.Info("fetched app-wide events — storing + computing installs", zap.Int("count", len(events)))
 
 	if cancelled, _ := p.lockManager.IsCancelled(ctx, payload.JobID); cancelled {
 		return fmt.Errorf("job cancelled")
@@ -119,7 +122,7 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 		// the start of this (minutes-long) job, so writing the whole row back would
 		// clobber an app_store_slug / revenue_share_tier a user set mid-sync.
 		if err := p.appRepo.UpdateInstallCount(ctx, pCtx.App.ID, activeInstalls); err != nil {
-			log.Printf("[queue] EventProcessor: failed to persist install count (%d) for app %s: %v", activeInstalls, payload.AppID, err)
+			lg.Warn("failed to persist install count", zap.Int("active_installs", activeInstalls), zap.Error(err))
 		}
 	}
 
@@ -129,6 +132,9 @@ func (p *EventProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 		Message:   fmt.Sprintf("Stored %d events; %d active installs (%d total)", len(allEvents), activeInstalls, totalInstalls),
 	})
 
-	log.Printf("[queue] EventProcessor: stored %d app-wide events, %d active / %d total installs for app %s (job %s)", len(allEvents), activeInstalls, totalInstalls, payload.AppID, payload.JobID)
+	lg.Info("stored app-wide events",
+		zap.Int("count", len(allEvents)),
+		zap.Int("active_installs", activeInstalls),
+		zap.Int("total_installs", totalInstalls))
 	return nil
 }

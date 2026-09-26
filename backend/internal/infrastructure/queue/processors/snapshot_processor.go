@@ -3,8 +3,9 @@ package processors
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -50,6 +51,8 @@ func NewSnapshotProcessor(
 func (p *SnapshotProcessor) Type() string { return entity.SyncJobTypeSnapshotSync }
 
 func (p *SnapshotProcessor) Process(ctx context.Context, payload *queue.SyncJobPayload) error {
+	ctx, lg := jobLogger(ctx, "SnapshotProcessor", payload)
+
 	p.progress.Update(ctx, payload.JobID, queue.Progress{Message: "Loading transactions for snapshots..."})
 
 	now := time.Now().UTC()
@@ -92,6 +95,6 @@ func (p *SnapshotProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 		Message:   fmt.Sprintf("Backfilled %d snapshots", snapshotCount),
 	})
 
-	log.Printf("[queue] SnapshotProcessor: backfilled %d snapshots for app %s (job %s)", snapshotCount, payload.AppID, payload.JobID)
+	lg.Info("backfilled snapshots", zap.Int("count", snapshotCount))
 	return nil
 }

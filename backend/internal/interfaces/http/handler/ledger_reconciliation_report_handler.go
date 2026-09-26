@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,7 +11,9 @@ import (
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // LedgerReconciliationReportHandler serves the "Ledger Reconciliation" report
@@ -165,17 +167,17 @@ func (h *LedgerReconciliationReportHandler) GetLedgerReconciliation(w http.Respo
 	report.Reconciled = report.MonthsFlagged == 0
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeReconCSV(w, report)
+		writeReconCSV(r.Context(), w, report)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("ledger-reconciliation: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
-func writeReconCSV(w http.ResponseWriter, report reconReport) {
+func writeReconCSV(ctx context.Context, w http.ResponseWriter, report reconReport) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="ledger-reconciliation.csv"`)
 
@@ -197,6 +199,6 @@ func writeReconCSV(w http.ResponseWriter, report reconReport) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("ledger-reconciliation: write CSV: %v", err)
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

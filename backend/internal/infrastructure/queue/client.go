@@ -3,10 +3,11 @@ package queue
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/config"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 // NewRedisClient creates a Redis client from configuration.
@@ -27,6 +28,6 @@ func NewRedisClient(ctx context.Context, cfg config.RedisConfig) (*redis.Client,
 		return nil, fmt.Errorf("failed to connect to Redis at %s: %w", cfg.Addr, err)
 	}
 
-	log.Printf("Connected to Redis at %s", cfg.Addr)
+	logging.FromContext(ctx).Info("connected to Redis", zap.String("addr", cfg.Addr))
 	return client, nil
 }

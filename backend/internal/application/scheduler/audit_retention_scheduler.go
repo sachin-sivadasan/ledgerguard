@@ -2,10 +2,10 @@ package scheduler
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 )
 
 // AuditRetentionScheduler prunes old audit-log rows once per day.
@@ -26,7 +26,7 @@ func NewAuditRetentionScheduler(svc *service.AuditRetentionService) *AuditRetent
 
 // Start runs an initial prune, then prunes every interval until Stop or ctx is done.
 func (s *AuditRetentionScheduler) Start(ctx context.Context) {
-	log.Println("Audit retention scheduler started (daily)")
+	logging.FromContext(ctx).Info("audit retention scheduler started (daily)")
 	go func() {
 		s.svc.PruneOnce(ctx, time.Now().UTC())
 		ticker := time.NewTicker(s.interval)

@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -13,7 +13,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // RetentionHandler serves the "Retention/Renewal" report (REPORTS.md — renewal
@@ -90,44 +92,44 @@ func (h *RetentionHandler) GetRetention(w http.ResponseWriter, r *http.Request) 
 
 	subs, err := h.subRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeRetentionRepoError(w, "FindByAppID", err)
+		writeRetentionRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	snapshots, err := h.snapshotRepo.FindByAppIDRange(r.Context(), app.ID, from, to)
 	if err != nil {
-		writeRetentionRepoError(w, "FindByAppIDRange", err)
+		writeRetentionRepoError(r.Context(), w, "FindByAppIDRange", err)
 		return
 	}
 
 	events, err := h.eventRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeRetentionRepoError(w, "FindByAppID(events)", err)
+		writeRetentionRepoError(r.Context(), w, "FindByAppID(events)", err)
 		return
 	}
 
 	interval := resolveTrendInterval(from, to)
 	plans := buildRetentionPlans(subs)
-	report := buildRetentionReport(subs, plans, latestSnapshot(snapshots))
+	report := buildRetentionReport(r.Context(), subs, plans, latestSnapshot(snapshots))
 	report.Reactivations = countReactivations(events, from, to)
 	report.Interval = string(interval)
 	report.Trend = buildRetentionTrend(downsampleSnapshots(snapshots, interval))
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeRetentionPlansCSV(w, plans)
+		writeRetentionPlansCSV(r.Context(), w, plans)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("retention: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("retention encode report failed", zap.Error(err))
 	}
 }
 
 // writeRetentionRepoError logs a repository failure and responds 503. These repos
 // have no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeRetentionRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("retention: repo error in %s: %v", op, err)
+func writeRetentionRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("retention repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -155,7 +157,7 @@ func planRenewalRate(safeCount, total int) float64 {
 // buildRetentionReport aggregates renewal rate, retained MRR and currency. The
 // headline renewalRate is the latest snapshot's RenewalSuccessRate (clamped),
 // making it equal the last trend point; 0 when there is no snapshot in range.
-func buildRetentionReport(subs []*entity.Subscription, plans []retentionPlan, latest *entity.DailyMetricsSnapshot) retentionReport {
+func buildRetentionReport(ctx context.Context, subs []*entity.Subscription, plans []retentionPlan, latest *entity.DailyMetricsSnapshot) retentionReport {
 	var retainedMrrCents int64
 	currency := "USD"
 	for _, s := range subs {
@@ -173,7 +175,7 @@ func buildRetentionReport(subs []*entity.Subscription, plans []retentionPlan, la
 		// corrupt/stale snapshot value stays diagnosable rather than silently capped
 		// (parity with the churn drift log).
 		if latest.RenewalSuccessRate < 0 || latest.RenewalSuccessRate > 1 {
-			log.Printf("retention: snapshot RenewalSuccessRate %.4f outside [0,1] — clamping (stale/corrupt snapshot?)", latest.RenewalSuccessRate)
+			logging.FromContext(ctx).Warn("retention snapshot RenewalSuccessRate outside [0,1] — clamping (stale/corrupt snapshot?)", zap.Float64("renewal_success_rate", latest.RenewalSuccessRate))
 		}
 		rate = renewalRate(latest.RenewalSuccessRate)
 	}
@@ -268,7 +270,7 @@ func buildRetentionTrend(snapshots []*entity.DailyMetricsSnapshot) []retentionTr
 
 // writeRetentionPlansCSV writes the per-plan renewal table as a CSV attachment.
 // Uses encoding/csv so free-text plan names with commas/quotes stay one column.
-func writeRetentionPlansCSV(w http.ResponseWriter, plans []retentionPlan) {
+func writeRetentionPlansCSV(ctx context.Context, w http.ResponseWriter, plans []retentionPlan) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="retention.csv"`)
 
@@ -284,6 +286,6 @@ func writeRetentionPlansCSV(w http.ResponseWriter, plans []retentionPlan) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("retention: write CSV: %v", err)
+		logging.FromContext(ctx).Error("retention write CSV failed", zap.Error(err))
 	}
 }

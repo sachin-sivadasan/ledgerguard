@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +10,8 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 // TransactionFetcher interface for fetching transactions from external API
@@ -212,10 +213,10 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 		// logged rather than swallowed: over full history a silent failure would corrupt a
 		// large span of the permanent snapshot audit trail (CLAUDE.md §9).
 		if allTransactions, findErr := s.txRepo.FindByAppID(ctx, appID, domainservice.SyncHistoryStart, now); findErr != nil {
-			log.Printf("SyncService: snapshot backfill skipped — failed to load transactions for app %s: %v", appID, findErr)
+			logging.FromContext(ctx).Warn("Snapshot backfill skipped — failed to load transactions", zap.String("app_id", appID.String()), zap.Error(findErr))
 		} else if len(allTransactions) > 0 {
 			if _, bfErr := s.ledger.BackfillHistoricalSnapshots(ctx, appID, allTransactions); bfErr != nil {
-				log.Printf("SyncService: snapshot backfill failed for app %s: %v", appID, bfErr)
+				logging.FromContext(ctx).Warn("Snapshot backfill failed", zap.String("app_id", appID.String()), zap.Error(bfErr))
 			}
 		}
 
@@ -228,7 +229,7 @@ func (s *SyncService) SyncApp(ctx context.Context, appID uuid.UUID) (*SyncResult
 			// now from the reconciled subscriptions so the Dashboard KPIs match the
 			// Subscriptions/Risk pages (RISK-1). Best-effort, non-fatal.
 			if bfErr := s.ledger.RefreshTodaySnapshot(ctx, appID); bfErr != nil {
-				log.Printf("SyncService: refresh today snapshot failed for app %s: %v", appID, bfErr)
+				logging.FromContext(ctx).Warn("Refresh today snapshot failed", zap.String("app_id", appID.String()), zap.Error(bfErr))
 			}
 		}
 

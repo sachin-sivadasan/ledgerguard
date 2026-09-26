@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -10,7 +9,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // planLabelMaxLen caps a label to the DB column width; planLabelsMax caps the tier count in
@@ -79,13 +80,13 @@ func (h *PlanLabelHandler) GetPlanLabels(w http.ResponseWriter, r *http.Request)
 
 	subs, err := h.subRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		log.Printf("plan-labels: repo error in FindByAppID(subs): %v", err)
+		logging.FromContext(r.Context()).Error("plan-labels repo error in FindByAppID(subs)", zap.Error(err))
 		writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 		return
 	}
 	saved, err := h.planLabelRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		log.Printf("plan-labels: repo error in FindByAppID(labels): %v", err)
+		logging.FromContext(r.Context()).Error("plan-labels repo error in FindByAppID(labels)", zap.Error(err))
 		writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 		return
 	}
@@ -152,7 +153,7 @@ func (h *PlanLabelHandler) GetPlanLabels(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(planLabelsResponse{Tiers: tiers, HiddenTiers: hidden}); err != nil {
-		log.Printf("plan-labels: encode: %v", err)
+		logging.FromContext(r.Context()).Error("plan-labels encode failed", zap.Error(err))
 	}
 }
 
@@ -219,13 +220,13 @@ func (h *PlanLabelHandler) PutPlanLabels(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := h.planLabelRepo.ReplaceAll(r.Context(), app.ID, labels); err != nil {
-		log.Printf("plan-labels: repo error in ReplaceAll: %v", err)
+		logging.FromContext(r.Context()).Error("plan-labels repo error in ReplaceAll", zap.Error(err))
 		writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]int{"saved": len(labels)}); err != nil {
-		log.Printf("plan-labels: encode save result: %v", err)
+		logging.FromContext(r.Context()).Error("plan-labels encode save result failed", zap.Error(err))
 	}
 }

@@ -6,9 +6,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 )
 
 const orgMemberContextKey contextKey = "orgMember"
@@ -87,6 +90,12 @@ func (m *OrgContextMiddleware) RequireOrg(next http.Handler) http.Handler {
 
 		ctx := context.WithValue(r.Context(), orgContextKey, org)
 		ctx = context.WithValue(ctx, orgMemberContextKey, member)
+		// Enrich the request-scoped logger so every downstream handler line carries the
+		// tenant identity (on top of request_id from RequestLogger) — "one org's story".
+		ctx = logging.ContextWithLogger(ctx, logging.FromContext(ctx).With(
+			zap.String("org_id", orgID.String()),
+			zap.String("user_id", user.ID.String()),
+		))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

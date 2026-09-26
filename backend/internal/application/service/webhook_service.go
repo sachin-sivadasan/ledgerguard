@@ -7,12 +7,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 // WebhookEvent represents a parsed webhook event from Shopify
@@ -109,7 +110,7 @@ func (s *WebhookService) RegisterWebhookSecret(appID, secret string) {
 func (s *WebhookService) ValidateHMAC(appID string, body []byte, signature string) bool {
 	secret, ok := s.webhookSecrets[appID]
 	if !ok {
-		log.Printf("No webhook secret registered for app %s", appID)
+		zap.L().Warn("No webhook secret registered for app", zap.String("app_id", appID))
 		return false
 	}
 
@@ -129,12 +130,12 @@ func (s *WebhookService) ProcessAppInstalled(ctx context.Context, event WebhookE
 	}
 
 	domain := payload.MyshopifyDomain
-	log.Printf("Processing app installed: shop=%s", domain)
+	logging.FromContext(ctx).Info("Processing app installed", zap.String("shop", domain))
 
 	// Find apps matching this webhook's app ID
 	apps, err := s.appRepo.FindAllByPartnerAppID(ctx, event.AppID)
 	if err != nil || len(apps) == 0 {
-		log.Printf("App installed webhook: no matching app found for %s (shop=%s)", event.AppID, domain)
+		logging.FromContext(ctx).Warn("App installed webhook: no matching app found", zap.String("app_id", event.AppID), zap.String("shop", domain))
 		return nil
 	}
 
@@ -143,14 +144,14 @@ func (s *WebhookService) ProcessAppInstalled(ctx context.Context, event WebhookE
 		if s.appEventRepo != nil {
 			appEvent := entity.NewAppEvent(app.ID, event.ShopID, "RELATIONSHIP_INSTALLED", event.Timestamp, event.Payload)
 			if err := s.appEventRepo.UpsertBatch(ctx, []*entity.AppEvent{appEvent}); err != nil {
-				log.Printf("Failed to record app install event: %v", err)
+				logging.FromContext(ctx).Warn("Failed to record app install event", zap.Error(err))
 			}
 		}
 
 		// Check if a subscription already exists (reinstall case)
 		sub, err := s.subRepo.FindByAppIDAndDomain(ctx, app.ID, domain)
 		if err != nil {
-			log.Printf("App installed (new): shop=%s, app=%s — subscription will be created on first sync", domain, app.ID)
+			logging.FromContext(ctx).Info("App installed (new) — subscription will be created on first sync", zap.String("shop", domain), zap.String("app_id", app.ID.String()))
 			continue
 		}
 
@@ -166,7 +167,7 @@ func (s *WebhookService) ProcessAppInstalled(ctx context.Context, event WebhookE
 			sub.Restore()
 
 			if err := s.subRepo.Upsert(ctx, sub); err != nil {
-				log.Printf("Failed to reactivate subscription for %s: %v", domain, err)
+				logging.FromContext(ctx).Error("Failed to reactivate subscription", zap.String("shop", domain), zap.Error(err))
 				continue
 			}
 		}
@@ -183,11 +184,11 @@ func (s *WebhookService) ProcessAppInstalled(ctx context.Context, event WebhookE
 				"Shop installed the app",
 			)
 			if err := s.subEventRepo.Create(ctx, subEvent); err != nil {
-				log.Printf("Failed to record install event: %v", err)
+				logging.FromContext(ctx).Warn("Failed to record install event", zap.Error(err))
 			}
 		}
 
-		log.Printf("App installed (reinstall): shop=%s, previous_status=%s, new_status=%s", domain, oldStatus, sub.Status)
+		logging.FromContext(ctx).Info("App installed (reinstall)", zap.String("shop", domain), zap.String("previous_status", oldStatus), zap.String("new_status", sub.Status))
 	}
 
 	return nil
@@ -200,13 +201,13 @@ func (s *WebhookService) ProcessSubscriptionUpdate(ctx context.Context, event We
 		return fmt.Errorf("failed to parse subscription update payload: %w", err)
 	}
 
-	log.Printf("Processing subscription update: %s -> status=%s", payload.ID, payload.Status)
+	logging.FromContext(ctx).Info("Processing subscription update", zap.String("subscription_id", payload.ID), zap.String("status", payload.Status))
 
 	// Find subscription by Shopify GID
 	sub, err := s.subRepo.FindByShopifyGID(ctx, payload.ID)
 	if err != nil {
 		// Subscription might not exist yet (new subscription)
-		log.Printf("Subscription %s not found: %v", payload.ID, err)
+		logging.FromContext(ctx).Warn("Subscription not found", zap.String("subscription_id", payload.ID), zap.Error(err))
 		return nil
 	}
 
@@ -244,7 +245,7 @@ func (s *WebhookService) ProcessSubscriptionUpdate(ctx context.Context, event We
 			"",
 		)
 		if err := s.subEventRepo.Create(ctx, subEvent); err != nil {
-			log.Printf("Failed to record subscription event: %v", err)
+			logging.FromContext(ctx).Warn("Failed to record subscription event", zap.Error(err))
 			// Don't fail the webhook processing for event recording failures
 		}
 	}
@@ -257,7 +258,7 @@ func (s *WebhookService) ProcessSubscriptionUpdate(ctx context.Context, event We
 		}
 	}
 
-	log.Printf("Subscription %s updated: %s -> %s", payload.ID, oldStatus, payload.Status)
+	logging.FromContext(ctx).Info("Subscription updated", zap.String("subscription_id", payload.ID), zap.String("previous_status", oldStatus), zap.String("new_status", payload.Status))
 	return nil
 }
 
@@ -268,12 +269,12 @@ func (s *WebhookService) ProcessAppUninstalled(ctx context.Context, event Webhoo
 		return fmt.Errorf("failed to parse app uninstalled payload: %w", err)
 	}
 
-	log.Printf("Processing app uninstalled: shop=%s", payload.MyshopifyDomain)
+	logging.FromContext(ctx).Info("Processing app uninstalled", zap.String("shop", payload.MyshopifyDomain))
 
 	// Find all apps matching this Shopify app GID (across all accounts)
 	apps, err := s.appRepo.FindAllByPartnerAppID(ctx, event.AppID)
 	if err != nil {
-		log.Printf("Failed to find app for %s: %v", event.AppID, err)
+		logging.FromContext(ctx).Error("Failed to find app", zap.String("app_id", event.AppID), zap.Error(err))
 		return nil
 	}
 
@@ -296,7 +297,7 @@ func (s *WebhookService) ProcessAppUninstalled(ctx context.Context, event Webhoo
 		sub.SoftDelete()
 
 		if err := s.subRepo.Upsert(ctx, sub); err != nil {
-			log.Printf("Failed to update subscription for %s: %v", payload.MyshopifyDomain, err)
+			logging.FromContext(ctx).Error("Failed to update subscription", zap.String("shop", payload.MyshopifyDomain), zap.Error(err))
 			continue
 		}
 
@@ -312,7 +313,7 @@ func (s *WebhookService) ProcessAppUninstalled(ctx context.Context, event Webhoo
 				"Shop uninstalled the app",
 			)
 			if err := s.subEventRepo.Create(ctx, subEvent); err != nil {
-				log.Printf("Failed to record subscription event: %v", err)
+				logging.FromContext(ctx).Warn("Failed to record subscription event", zap.Error(err))
 			}
 		}
 
@@ -321,7 +322,7 @@ func (s *WebhookService) ProcessAppUninstalled(ctx context.Context, event Webhoo
 			s.sendRiskChangeNotification(ctx, sub, app, oldRiskState, valueobject.RiskStateChurned)
 		}
 
-		log.Printf("Subscription soft-deleted for shop %s", payload.MyshopifyDomain)
+		logging.FromContext(ctx).Info("Subscription soft-deleted", zap.String("shop", payload.MyshopifyDomain))
 	}
 
 	return nil
@@ -343,12 +344,12 @@ func (s *WebhookService) ProcessBillingFailure(ctx context.Context, event Webhoo
 		return fmt.Errorf("failed to parse billing failure payload: %w", err)
 	}
 
-	log.Printf("Processing billing failure: subscription=%s, error=%s", payload.SubscriptionID, payload.ErrorCode)
+	logging.FromContext(ctx).Info("Processing billing failure", zap.String("subscription_id", payload.SubscriptionID), zap.String("error_code", payload.ErrorCode))
 
 	// Find subscription
 	sub, err := s.subRepo.FindByShopifyGID(ctx, payload.SubscriptionID)
 	if err != nil {
-		log.Printf("Subscription %s not found: %v", payload.SubscriptionID, err)
+		logging.FromContext(ctx).Warn("Subscription not found", zap.String("subscription_id", payload.SubscriptionID), zap.Error(err))
 		return nil
 	}
 
@@ -384,7 +385,7 @@ func (s *WebhookService) ProcessBillingFailure(ctx context.Context, event Webhoo
 			reason,
 		)
 		if err := s.subEventRepo.Create(ctx, subEvent); err != nil {
-			log.Printf("Failed to record billing failure event: %v", err)
+			logging.FromContext(ctx).Warn("Failed to record billing failure event", zap.Error(err))
 		}
 	}
 
@@ -396,8 +397,8 @@ func (s *WebhookService) ProcessBillingFailure(ctx context.Context, event Webhoo
 		}
 	}
 
-	log.Printf("Subscription %s risk escalated: %s -> %s due to billing failure",
-		payload.SubscriptionID, oldRiskState, sub.RiskState)
+	logging.FromContext(ctx).Info("Subscription risk escalated due to billing failure",
+		zap.String("subscription_id", payload.SubscriptionID), zap.String("previous_risk", oldRiskState.String()), zap.String("new_risk", sub.RiskState.String()))
 	return nil
 }
 
@@ -413,7 +414,7 @@ func (s *WebhookService) ProcessEvent(ctx context.Context, event WebhookEvent) e
 	case "subscription_billing_attempts/failure":
 		return s.ProcessBillingFailure(ctx, event)
 	default:
-		log.Printf("Unhandled webhook topic: %s", event.Topic)
+		logging.FromContext(ctx).Warn("Unhandled webhook topic", zap.String("topic", event.Topic))
 		return nil
 	}
 }
@@ -448,7 +449,7 @@ func (s *WebhookService) sendRiskChangeNotification(
 	// Resolve user ID: Subscription -> App -> PartnerAccount -> UserID
 	partnerAccount, err := s.partnerAccountRepo.FindByID(ctx, app.PartnerAccountID)
 	if err != nil {
-		log.Printf("Failed to find partner account for notification: %v", err)
+		logging.FromContext(ctx).Error("Failed to find partner account for notification", zap.Error(err))
 		return
 	}
 
@@ -461,6 +462,6 @@ func (s *WebhookService) sendRiskChangeNotification(
 		oldRiskState,
 		newRiskState,
 	); err != nil {
-		log.Printf("Failed to send risk change notification: %v", err)
+		logging.FromContext(ctx).Error("Failed to send risk change notification", zap.Error(err))
 	}
 }

@@ -3,9 +3,10 @@ package chat
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 const maxToolIterations = 5
@@ -346,7 +347,7 @@ func generateSuggestions(records []toolRecord) []string {
 func writeSSE(w http.ResponseWriter, flusher http.Flusher, event SSEEvent) {
 	data, err := json.Marshal(event)
 	if err != nil {
-		log.Printf("SSE marshal error: %v", err)
+		zap.L().Error("SSE marshal error", zap.Error(err))
 		return
 	}
 	fmt.Fprintf(w, "data: %s\n\n", data)

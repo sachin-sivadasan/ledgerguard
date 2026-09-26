@@ -2,13 +2,14 @@ package queue
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 const recoveryGracePeriod = 2 * time.Minute
@@ -43,12 +44,14 @@ func (rs *RecoveryService) RecoverOnStartup(ctx context.Context) {
 	// Check Redis queue depths
 	regularLen, _ := rs.client.LLen(ctx, RegularQueueKey).Result()
 	fullLen, _ := rs.client.LLen(ctx, FullSyncQueueKey).Result()
-	log.Printf("[queue] Recovery: queue depths — regular: %d, full_sync: %d", regularLen, fullLen)
+	logging.FromContext(ctx).Info("recovery: queue depths",
+		zap.Int64("regular", regularLen),
+		zap.Int64("full_sync", fullLen))
 
 	// Re-enqueue processing jobs without heartbeat
 	processingJobs, err := rs.syncJobRepo.FindByStatus(ctx, entity.SyncJobStatusProcessing)
 	if err != nil {
-		log.Printf("[queue] Recovery: failed to find processing jobs: %v", err)
+		logging.FromContext(ctx).Error("recovery: failed to find processing jobs", zap.Error(err))
 		return
 	}
 
@@ -73,7 +76,10 @@ func (rs *RecoveryService) RecoverOnStartup(ctx context.Context) {
 	// Skip child jobs whose parent is also being recovered — the parent will recreate them.
 	for _, job := range staleJobs {
 		if job.ParentJobID != nil && recoveredIDs[*job.ParentJobID] {
-			log.Printf("[queue] Recovery: skipping child job %s (type=%s) — parent %s will recreate it", job.ID, job.JobType, *job.ParentJobID)
+			logging.FromContext(ctx).Warn("recovery: skipping child job, parent will recreate it",
+				zap.String("job_id", job.ID.String()),
+				zap.String("job_type", job.JobType),
+				zap.String("parent_job_id", job.ParentJobID.String()))
 			// Mark back to failed so it doesn't get re-enqueued again
 			_ = rs.syncJobRepo.MarkFailed(ctx, job.ID, "parent recovered — will be recreated")
 			_ = rs.lockManager.ForceReleaseLock(ctx, job.AppID, job.JobType)
@@ -83,21 +89,30 @@ func (rs *RecoveryService) RecoverOnStartup(ctx context.Context) {
 
 		_ = rs.lockManager.ForceReleaseLock(ctx, job.AppID, job.JobType)
 		_ = rs.lockManager.DeleteHeartbeat(ctx, job.ID)
-		log.Printf("[queue] Recovery: re-enqueuing stale job %s (type=%s, app=%s) — no heartbeat", job.ID, job.JobType, job.AppID)
+		logging.FromContext(ctx).Info("recovery: re-enqueuing stale job, no heartbeat",
+			zap.String("job_id", job.ID.String()),
+			zap.String("job_type", job.JobType),
+			zap.String("app_id", job.AppID.String()))
 		if err := rs.reEnqueueJob(ctx, job); err != nil {
-			log.Printf("[queue] Recovery: failed to re-enqueue job %s: %v", job.ID, err)
+			logging.FromContext(ctx).Error("recovery: failed to re-enqueue job",
+				zap.String("job_id", job.ID.String()),
+				zap.Error(err))
 			continue
 		}
 		recovered++
 	}
-	log.Printf("[queue] Recovery: processing jobs — %d total, %d alive (heartbeat ok), %d stale (no heartbeat), %d recovered", len(processingJobs), aliveCount, staleCount, recovered)
+	logging.FromContext(ctx).Info("recovery: processing jobs summary",
+		zap.Int("total", len(processingJobs)),
+		zap.Int("alive", aliveCount),
+		zap.Int("stale", staleCount),
+		zap.Int("recovered", recovered))
 
 	// Re-enqueue pending jobs (handles Redis flush scenarios)
 	// Bug 14 fix: Do NOT release locks for pending jobs — they shouldn't hold locks.
 	// If a lock exists for the same app+type, it belongs to an active worker.
 	pendingJobs, err := rs.syncJobRepo.FindByStatus(ctx, entity.SyncJobStatusPending)
 	if err != nil {
-		log.Printf("[queue] Recovery: failed to find pending jobs: %v", err)
+		logging.FromContext(ctx).Error("recovery: failed to find pending jobs", zap.Error(err))
 		return
 	}
 
@@ -108,7 +123,10 @@ func (rs *RecoveryService) RecoverOnStartup(ctx context.Context) {
 		}
 		// Skip pending child jobs whose parent is being recovered
 		if job.ParentJobID != nil && recoveredIDs[*job.ParentJobID] {
-			log.Printf("[queue] Recovery: skipping pending child job %s (type=%s) — parent %s will recreate it", job.ID, job.JobType, *job.ParentJobID)
+			logging.FromContext(ctx).Warn("recovery: skipping pending child job, parent will recreate it",
+				zap.String("job_id", job.ID.String()),
+				zap.String("job_type", job.JobType),
+				zap.String("parent_job_id", job.ParentJobID.String()))
 			_ = rs.syncJobRepo.MarkFailed(ctx, job.ID, "parent recovered — will be recreated")
 			continue
 		}
@@ -125,16 +143,21 @@ func (rs *RecoveryService) RecoverOnStartup(ctx context.Context) {
 			EnqueuedAt:       time.Now().UTC(),
 		}
 		if err := Enqueue(ctx, rs.client, payload); err != nil {
-			log.Printf("[queue] Recovery: failed to re-enqueue pending job %s: %v", job.ID, err)
+			logging.FromContext(ctx).Error("recovery: failed to re-enqueue pending job",
+				zap.String("job_id", job.ID.String()),
+				zap.Error(err))
 			continue
 		}
 		pendingRecovered++
 	}
 	if pendingRecovered > 0 {
-		log.Printf("[queue] Recovery: re-enqueued %d orphaned pending jobs", pendingRecovered)
+		logging.FromContext(ctx).Info("recovery: re-enqueued orphaned pending jobs",
+			zap.Int("count", pendingRecovered))
 	}
 
-	log.Printf("[queue] Recovery: startup complete — %d processing + %d pending jobs recovered", recovered, pendingRecovered)
+	logging.FromContext(ctx).Info("recovery: startup complete",
+		zap.Int("processing_recovered", recovered),
+		zap.Int("pending_recovered", pendingRecovered))
 }
 
 // StartPeriodicRecovery runs periodic recovery checks
@@ -164,7 +187,7 @@ func (rs *RecoveryService) Stop() {
 func (rs *RecoveryService) recoverStuckJobs(ctx context.Context) {
 	processingJobs, err := rs.syncJobRepo.FindByStatus(ctx, entity.SyncJobStatusProcessing)
 	if err != nil {
-		log.Printf("[queue] Recovery: periodic check failed: %v", err)
+		logging.FromContext(ctx).Error("recovery: periodic check failed", zap.Error(err))
 		return
 	}
 
@@ -185,10 +208,15 @@ func (rs *RecoveryService) recoverStuckJobs(ctx context.Context) {
 
 			_ = rs.lockManager.ForceReleaseLock(ctx, job.AppID, job.JobType)
 			_ = rs.lockManager.DeleteHeartbeat(ctx, job.ID)
-			log.Printf("[queue] Recovery: periodic — re-enqueuing dead job %s (type=%s, app=%s, started=%s)",
-				job.ID, job.JobType, job.AppID, job.StartedAt.Format(time.RFC3339))
+			logging.FromContext(ctx).Info("recovery: periodic re-enqueuing dead job",
+				zap.String("job_id", job.ID.String()),
+				zap.String("job_type", job.JobType),
+				zap.String("app_id", job.AppID.String()),
+				zap.String("started", job.StartedAt.Format(time.RFC3339)))
 			if err := rs.reEnqueueJob(ctx, job); err != nil {
-				log.Printf("[queue] Recovery: failed to re-enqueue stuck job %s: %v", job.ID, err)
+				logging.FromContext(ctx).Error("recovery: failed to re-enqueue stuck job",
+					zap.String("job_id", job.ID.String()),
+					zap.Error(err))
 				continue
 			}
 			recovered++
@@ -196,7 +224,8 @@ func (rs *RecoveryService) recoverStuckJobs(ctx context.Context) {
 	}
 
 	if recovered > 0 {
-		log.Printf("[queue] Recovery: periodic — re-enqueued %d stuck jobs", recovered)
+		logging.FromContext(ctx).Info("recovery: periodic re-enqueued stuck jobs",
+			zap.Int("count", recovered))
 	}
 }
 

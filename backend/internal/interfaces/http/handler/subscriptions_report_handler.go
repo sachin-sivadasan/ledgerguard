@@ -1,10 +1,10 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"net/http"
 	"sort"
@@ -12,9 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
@@ -88,7 +91,7 @@ func (h *SubscriptionsReportHandler) GetSubscriptions(w http.ResponseWriter, r *
 
 	subs, err := h.subRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeSubscriptionsRepoError(w, "FindByAppID", err)
+		writeSubscriptionsRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
@@ -101,7 +104,7 @@ func (h *SubscriptionsReportHandler) GetSubscriptions(w http.ResponseWriter, r *
 	from := now.AddDate(0, 0, -90)
 	snapshots, err := h.snapshotRepo.FindByAppIDRange(r.Context(), app.ID, from, now)
 	if err != nil {
-		writeSubscriptionsRepoError(w, "FindByAppIDRange", err)
+		writeSubscriptionsRepoError(r.Context(), w, "FindByAppIDRange", err)
 		return
 	}
 	latest := latestSnapshot(snapshots)
@@ -109,28 +112,28 @@ func (h *SubscriptionsReportHandler) GetSubscriptions(w http.ResponseWriter, r *
 		// No snapshot in the trailing window → the churn denominator is unavailable, so
 		// LTV will be undefined (rendered "—"). Log so this data-freshness gap stays
 		// distinguishable from a genuine zero churn rate.
-		log.Printf("subscriptions: no snapshot in 90d window for app %s — churn denominator unavailable, LTV undefined", app.ID)
+		logging.FromContext(r.Context()).Warn("no snapshot in 90d window — churn denominator unavailable, LTV undefined", zap.String("app_id", app.ID.String()))
 	}
 
 	labeler := newPlanLabeler(planLabelMapFor(r.Context(), h.planLabelRepo, app.ID))
-	report := buildSubscriptionsReport(subs, latest, labeler)
+	report := buildSubscriptionsReport(r.Context(), subs, latest, labeler)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeSubscriptionsPlansCSV(w, report.Plans)
+		writeSubscriptionsPlansCSV(r.Context(), w, report.Plans)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("subscriptions: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report", zap.Error(err))
 	}
 }
 
 // writeSubscriptionsRepoError logs a repository failure and responds 503. Neither the
 // subscription nor the snapshot repo has a not-found sentinel — every error is an
 // infrastructure failure (ADR-042).
-func writeSubscriptionsRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("subscriptions: repo error in %s: %v", op, err)
+func writeSubscriptionsRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -144,7 +147,7 @@ func writeSubscriptionsRepoError(w http.ResponseWriter, op string, err error) {
 //     churn rate (we don't have reliable per-plan churn), documented as an approximation.
 //
 // Plans are sorted by active-sub count descending (the composition axis).
-func buildSubscriptionsReport(subs []*entity.Subscription, latest *entity.DailyMetricsSnapshot, labeler planLabeler) subscriptionsReport {
+func buildSubscriptionsReport(ctx context.Context, subs []*entity.Subscription, latest *entity.DailyMetricsSnapshot, labeler planLabeler) subscriptionsReport {
 	type agg struct {
 		activeSubs int
 		mrr        int64
@@ -189,7 +192,7 @@ func buildSubscriptionsReport(subs []*entity.Subscription, latest *entity.DailyM
 	// snapshot total the snapshot is stale/behind, and churnRate silently clamps to 1.0
 	// (collapsing LTV to ARPU). Log so the clamp never hides the drift.
 	if total > 0 && churnedCount > total {
-		log.Printf("subscriptions: live churned count %d exceeds latest snapshot total %d — clamping churn to 1.0 (stale snapshot?)", churnedCount, total)
+		logging.FromContext(ctx).Warn("live churned count exceeds latest snapshot total — clamping churn to 1.0 (stale snapshot?)", zap.Int("churned_count", churnedCount), zap.Int("snapshot_total", total))
 	}
 	rate := churnRate(churnedCount, total)
 
@@ -294,7 +297,7 @@ func subsShare(planActiveSubs, totalActiveSubs int) float64 {
 
 // writeSubscriptionsPlansCSV writes the per-plan breakdown as a CSV attachment. Uses
 // encoding/csv so free-text plan names with commas/quotes stay one column.
-func writeSubscriptionsPlansCSV(w http.ResponseWriter, plans []subscriptionsPlan) {
+func writeSubscriptionsPlansCSV(ctx context.Context, w http.ResponseWriter, plans []subscriptionsPlan) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="subscriptions.csv"`)
 
@@ -312,6 +315,6 @@ func writeSubscriptionsPlansCSV(w http.ResponseWriter, plans []subscriptionsPlan
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("subscriptions: write CSV: %v", err)
+		logging.FromContext(ctx).Error("write CSV", zap.Error(err))
 	}
 }

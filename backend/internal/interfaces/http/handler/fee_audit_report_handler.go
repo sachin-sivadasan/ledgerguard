@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,7 +12,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // FeeAuditReportHandler serves the "Fee Audit" report (REPORTS.md — Guard): does what
@@ -123,18 +125,18 @@ func (h *FeeAuditReportHandler) GetFeeAudit(w http.ResponseWriter, r *http.Reque
 	}
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeFeeAuditCSV(w, report)
+		writeFeeAuditCSV(r.Context(), w, report)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("fee-audit: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
 // writeFeeAuditCSV writes the per-month audit as a CSV attachment.
-func writeFeeAuditCSV(w http.ResponseWriter, report feeAuditReport) {
+func writeFeeAuditCSV(ctx context.Context, w http.ResponseWriter, report feeAuditReport) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="fee-audit.csv"`)
 
@@ -153,6 +155,6 @@ func writeFeeAuditCSV(w http.ResponseWriter, report feeAuditReport) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("fee-audit: write CSV: %v", err)
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

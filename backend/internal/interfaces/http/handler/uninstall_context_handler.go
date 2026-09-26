@@ -1,18 +1,21 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
@@ -80,13 +83,13 @@ func (h *UninstallContextHandler) GetUninstallContext(w http.ResponseWriter, r *
 
 	subs, err := h.subRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeUninstallRepoError(w, "FindByAppID", err)
+		writeUninstallRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	events, err := h.eventRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeUninstallRepoError(w, "FindByAppID(events)", err)
+		writeUninstallRepoError(r.Context(), w, "FindByAppID(events)", err)
 		return
 	}
 
@@ -94,23 +97,23 @@ func (h *UninstallContextHandler) GetUninstallContext(w http.ResponseWriter, r *
 	// the myshopify domain for charged shops (not the GID indexSubsByShop keys on), so
 	// a GID-only index misses every paying shop → all "Unknown" (RPT-UNINSTALL-1).
 	subsByShop := indexSubsByAnyIdentifier(subs)
-	report := buildUninstallReport(events, subsByShop, from, to)
+	report := buildUninstallReport(r.Context(), events, subsByShop, from, to)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeUninstallStoresCSV(w, report.Stores)
+		writeUninstallStoresCSV(r.Context(), w, report.Stores)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("uninstall_context: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report", zap.Error(err))
 	}
 }
 
 // writeUninstallRepoError logs a repository failure and responds 503. These repos
 // have no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeUninstallRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("uninstall_context: repo error in %s: %v", op, err)
+func writeUninstallRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -177,13 +180,13 @@ func stateBeforeUninstall(sub *entity.Subscription) string {
 // correlated sub can still resolve to state "Unknown" (empty/unrecognized RiskState) —
 // those remain in the denominator but not the numerator. Logs if it clamps (parity
 // with retention's renewalRate diagnostics).
-func wereAtRiskRate(atRisk, correlated int) float64 {
+func wereAtRiskRate(ctx context.Context, atRisk, correlated int) float64 {
 	if correlated <= 0 {
 		return 0
 	}
 	rate := float64(atRisk) / float64(correlated)
 	if rate < 0 || rate > 1 {
-		log.Printf("uninstall_context: wereAtRiskPct %.4f outside [0,1] — clamping (unexpected counts atRisk=%d correlated=%d)", rate, atRisk, correlated)
+		logging.FromContext(ctx).Warn("wereAtRiskPct outside [0,1] — clamping (unexpected counts)", zap.Float64("rate", rate), zap.Int("at_risk", atRisk), zap.Int("correlated", correlated))
 	}
 	if rate < 0 {
 		return 0
@@ -221,7 +224,7 @@ func round1(v float64) float64 {
 // `to` day inclusive, matching countReactivations' boundary), dedupes to the LATEST
 // uninstall event per shop, correlates each to a subscription, and aggregates the
 // KPIs. Stores are sorted by uninstalledDate descending (newest first).
-func buildUninstallReport(events []*entity.AppEvent, subsByShop map[string]*entity.Subscription, from, to time.Time) uninstallReport {
+func buildUninstallReport(ctx context.Context, events []*entity.AppEvent, subsByShop map[string]*entity.Subscription, from, to time.Time) uninstallReport {
 	toExclusive := to.AddDate(0, 0, 1)
 
 	// Dedup to the latest uninstall event per shop within range.
@@ -249,7 +252,7 @@ func buildUninstallReport(events []*entity.AppEvent, subsByShop map[string]*enti
 	if skippedEmptyGID > 0 {
 		// One aggregate line so a GID-less ingestion regression stays diagnosable
 		// rather than silently under-counting uninstalls.
-		log.Printf("uninstall_context: skipped %d uninstall event(s) with empty ShopifyShopGID (uncorrelatable)", skippedEmptyGID)
+		logging.FromContext(ctx).Warn("skipped uninstall event(s) with empty ShopifyShopGID (uncorrelatable)", zap.Int("skipped", skippedEmptyGID))
 	}
 
 	stores := make([]uninstallStore, 0, len(latestByShop))
@@ -290,7 +293,7 @@ func buildUninstallReport(events []*entity.AppEvent, subsByShop map[string]*enti
 
 	return uninstallReport{
 		Uninstalls:         len(stores),
-		WereAtRiskPct:      wereAtRiskRate(atRisk, correlated),
+		WereAtRiskPct:      wereAtRiskRate(ctx, atRisk, correlated),
 		MedianTenureMonths: medianTenure(tenures),
 		Stores:             stores,
 	}
@@ -316,7 +319,7 @@ func medianTenure(tenures []float64) float64 {
 // writeUninstallStoresCSV writes the per-shop uninstall table as a CSV attachment.
 // Uses encoding/csv so free-text domains/plan names with commas/quotes stay one
 // column. A 0 tenure (uncorrelated sub, or a floored negative) is rendered as a blank cell.
-func writeUninstallStoresCSV(w http.ResponseWriter, stores []uninstallStore) {
+func writeUninstallStoresCSV(ctx context.Context, w http.ResponseWriter, stores []uninstallStore) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="uninstall-context.csv"`)
 
@@ -337,6 +340,6 @@ func writeUninstallStoresCSV(w http.ResponseWriter, stores []uninstallStore) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("uninstall_context: write CSV: %v", err)
+		logging.FromContext(ctx).Error("write CSV", zap.Error(err))
 	}
 }

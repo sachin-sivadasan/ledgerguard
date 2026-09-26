@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
+
+	"go.uber.org/zap"
 
 	appservice "github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
@@ -46,7 +48,7 @@ func (h *BillingHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) 
 
 	result, err := h.billingService.CreateCheckout(r.Context(), user.ID, plan)
 	if err != nil {
-		log.Printf("billing: checkout error for user %s: %v", user.ID, err)
+		logging.FromContext(r.Context()).Error("checkout failed", zap.String("user_id", user.ID.String()), zap.Error(err))
 		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("failed to create checkout: %v", err))
 		return
 	}
@@ -65,7 +67,7 @@ func (h *BillingHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 
 	status, err := h.billingService.GetBillingStatus(r.Context(), user.ID)
 	if err != nil {
-		log.Printf("billing: status error for user %s: %v", user.ID, err)
+		logging.FromContext(r.Context()).Error("get billing status failed", zap.String("user_id", user.ID.String()), zap.Error(err))
 		writeJSONError(w, http.StatusInternalServerError, "failed to get billing status")
 		return
 	}
@@ -78,7 +80,7 @@ func (h *BillingHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 func (h *BillingHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("billing webhook: failed to read body: %v", err)
+		logging.FromContext(r.Context()).Error("webhook failed to read body", zap.Error(err))
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -86,7 +88,7 @@ func (h *BillingHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	signature := r.Header.Get("X-Razorpay-Signature")
 
 	if err := h.billingService.HandleWebhookEvent(r.Context(), body, signature); err != nil {
-		log.Printf("billing webhook: processing failed: %v", err)
+		logging.FromContext(r.Context()).Error("webhook processing failed", zap.Error(err))
 	}
 
 	// Always return 200 to prevent Razorpay retries

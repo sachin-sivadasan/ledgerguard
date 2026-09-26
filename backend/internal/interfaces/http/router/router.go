@@ -95,6 +95,7 @@ func New(cfg Config) *chi.Mux {
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.RequestID)
+	r.Use(lgmw.RequestLogger) // attach a request-scoped zap logger (request_id) to context
 	r.Use(lgmw.ResponseLogger)
 
 	// Public routes

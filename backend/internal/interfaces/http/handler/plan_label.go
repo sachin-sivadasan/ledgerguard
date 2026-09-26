@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -12,6 +11,8 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 // The Partner API's app-subscription transactions carry no plan NAME (only a chargeId GID
@@ -101,7 +102,7 @@ func planLabelMapFor(ctx context.Context, repo repository.PlanLabelRepository, a
 	}
 	labels, err := repo.FindByAppID(ctx, appID)
 	if err != nil {
-		log.Printf("plan-labels: load map failed (falling back to pseudo-labels): %v", err)
+		logging.FromContext(ctx).Warn("plan-labels load map failed, falling back to pseudo-labels", zap.Error(err))
 		return nil
 	}
 	m := make(map[string]string, len(labels))

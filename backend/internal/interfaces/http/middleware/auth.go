@@ -4,14 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 )
 
 var ErrUserNotFound = errors.New("user not found")
@@ -69,7 +71,9 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 
 		claims, err := m.tokenVerifier.VerifyIDToken(r.Context(), token)
 		if err != nil {
-			log.Printf("Token verification failed: %v", err)
+			// Structured + request-scoped (carries request_id via RequestLogger) — the
+			// migration pattern for the remaining stdlib log.Printf call sites.
+			logging.FromContext(r.Context()).Warn("token verification failed", zap.Error(err))
 			writeError(w, http.StatusUnauthorized, "invalid token")
 			return
 		}
@@ -84,7 +88,7 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 			if errors.Is(err, ErrUserNotFound) {
 				user = entity.NewUser(claims.UID, claims.Email)
 				if err := m.userRepo.Create(r.Context(), user); err != nil {
-					log.Printf("auth: failed to create user for UID %s: %v", claims.UID, err)
+					logging.FromContext(r.Context()).Error("failed to create user", zap.String("firebase_uid", claims.UID), zap.Error(err))
 					writeError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 					return
 				}
@@ -108,11 +112,11 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 						// This runs once (new-user branch only), so a failure leaves the user
 						// org-less until the backfill (000042) is re-applied for them. Log with
 						// identity so it's actionable without a table scan.
-						log.Printf("auth: failed to provision default org for user id=%s email=%s uid=%s: %v", user.ID, user.Email, claims.UID, perr)
+						logging.FromContext(r.Context()).Error("failed to provision default org", zap.String("user_id", user.ID.String()), zap.String("email", user.Email), zap.String("firebase_uid", claims.UID), zap.Error(perr))
 					}
 				}
 			} else {
-				log.Printf("auth: DB error looking up user for UID %s: %v", claims.UID, err)
+				logging.FromContext(r.Context()).Error("failed to look up user", zap.String("firebase_uid", claims.UID), zap.Error(err))
 				writeError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 				return
 			}

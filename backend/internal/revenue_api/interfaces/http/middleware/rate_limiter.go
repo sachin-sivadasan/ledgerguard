@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strconv"
 	"sync"
@@ -10,6 +9,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 )
 
 // RateLimitStore is an interface for rate limit storage
@@ -67,11 +69,16 @@ func (m *RateLimiter) Middleware(next http.Handler) http.Handler {
 		// Increment the counter
 		count, err := m.store.Increment(r.Context(), windowKey, window)
 		if err != nil {
-			log.Printf("rate limiter: store error for key %s: %v (failOpen=%v)", windowKey, err, m.failOpen)
+			lg := logging.FromContext(r.Context())
+			fields := []zap.Field{zap.String("window_key", windowKey), zap.Error(err), zap.Bool("fail_open", m.failOpen)}
 			if m.failOpen {
+				// Degraded but serving — the request proceeds, so Warn.
+				lg.Warn("rate limiter store error", fields...)
 				next.ServeHTTP(w, r)
 				return
 			}
+			// Fail-closed: the store being down 503s every request — a real outage, so Error.
+			lg.Error("rate limiter store error", fields...)
 			writeJSONError(w, http.StatusServiceUnavailable, "rate limiter unavailable")
 			return
 		}

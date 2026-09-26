@@ -1,16 +1,18 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // ActivationReportHandler serves the "Activation" report (REPORTS.md — Growth):
@@ -81,33 +83,33 @@ func (h *ActivationReportHandler) GetActivation(w http.ResponseWriter, r *http.R
 
 	subs, err := h.subRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeActivationRepoError(w, "FindByAppID", err)
+		writeActivationRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
 	events, err := h.eventRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeActivationRepoError(w, "FindByAppID(events)", err)
+		writeActivationRepoError(r.Context(), w, "FindByAppID(events)", err)
 		return
 	}
 
 	report := buildActivationReport(events, subs)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeActivationCSV(w, report)
+		writeActivationCSV(r.Context(), w, report)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("activation: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
 // writeActivationRepoError logs a repository failure and responds 503. These repos have
 // no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeActivationRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("activation: repo error in %s: %v", op, err)
+func writeActivationRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -139,7 +141,7 @@ func ratio(num, den int) float64 {
 }
 
 // writeActivationCSV writes the funnel stages as a CSV attachment.
-func writeActivationCSV(w http.ResponseWriter, report activationReport) {
+func writeActivationCSV(ctx context.Context, w http.ResponseWriter, report activationReport) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="activation.csv"`)
 
@@ -155,6 +157,6 @@ func writeActivationCSV(w http.ResponseWriter, report activationReport) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("activation: write CSV: %v", err)
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }

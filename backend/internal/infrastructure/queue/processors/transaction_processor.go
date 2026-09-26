@@ -3,7 +3,6 @@ package processors
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +12,7 @@ import (
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue"
+	"go.uber.org/zap"
 )
 
 // ReadModelRebuilder rebuilds the Revenue API read model after sync
@@ -68,6 +68,8 @@ func (p *TransactionProcessor) WithReadModelBuilder(builder ReadModelRebuilder) 
 func (p *TransactionProcessor) Type() string { return entity.SyncJobTypeTransactionSync }
 
 func (p *TransactionProcessor) Process(ctx context.Context, payload *queue.SyncJobPayload) error {
+	ctx, lg := jobLogger(ctx, "TransactionProcessor", payload)
+
 	// Common preamble
 	pCtx, err := queue.PrepareProcessorContext(ctx, payload, p.appRepo, p.partnerRepo, p.decryptor)
 	if err != nil {
@@ -134,7 +136,7 @@ func (p *TransactionProcessor) Process(ctx context.Context, payload *queue.SyncJ
 	// Rebuild Revenue API read model
 	if p.readModelBuilder != nil {
 		if err := p.readModelBuilder.RebuildForApp(ctx, payload.AppID); err != nil {
-			log.Printf("[queue] TransactionProcessor: failed to rebuild read model: %v", err)
+			lg.Warn("failed to rebuild read model", zap.Error(err))
 			// Non-fatal — don't fail the sync for read model issues
 		}
 	}
@@ -145,6 +147,6 @@ func (p *TransactionProcessor) Process(ctx context.Context, payload *queue.SyncJ
 		Message:   "Transaction sync complete",
 	})
 
-	log.Printf("[queue] TransactionProcessor: synced %d transactions for app %s (job %s)", len(transactions), payload.AppID, payload.JobID)
+	lg.Info("synced transactions", zap.Int("count", len(transactions)))
 	return nil
 }

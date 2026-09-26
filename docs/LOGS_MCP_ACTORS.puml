@@ -1,0 +1,41 @@
+@startuml
+title LedgerGuard — logs over MCP (component skeleton)
+
+' monochrome
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam componentStyle rectangle
+
+actor "Developer\n(Claude Code)" as Dev
+
+node "Local machine" {
+  component "logs MCP wrapper\n(chmod-600 ES API key)" as Wrapper
+  component "@elastic/mcp-server-\nelasticsearch@0.1.1" as MCP
+  Dev --> MCP : list_indices / query by request_id
+  MCP <-- Wrapper : launches, injects read-only key
+}
+
+cloud "SSH tunnel\n(-L 19200 -> 127.0.0.1:9200)\nno open port" as Tunnel
+
+node "Hetzner VPS (Docker Compose, lg-internal)" {
+  component "ledgerguard-api\n(Go + zap/ecszap -> stdout JSON)" as API
+  component "ledgerguard-db\n(postgres)" as DB
+  component "ledgerguard-redis" as Redis
+  component "Vector\n(docker_logs -> parse -> ES)\nwrite-only user" as Vector
+  database "Elasticsearch 8.x\n127.0.0.1:9200 only\nILM delete @15d" as ES
+
+  API ..> DB
+  API ..> Redis
+  API --> Vector : container stdout (docker.sock ro)
+  Vector --> ES : bulk -> logs-ledgerguard-YYYY.MM.DD
+}
+
+MCP --> Tunnel
+Tunnel --> ES : read-only (logs-ledgerguard-*)
+
+note bottom of ES
+  Read-only API key: read + view_index_metadata on logs-ledgerguard-*
+  Secrets live only in the chmod-600 file, never in Claude config
+end note
+@enduml

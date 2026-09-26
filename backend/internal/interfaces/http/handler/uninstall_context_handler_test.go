@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -366,13 +367,13 @@ func TestUninstall_MedianTenureEven(t *testing.T) {
 
 // TestUninstall_WereAtRiskRateClamp pins the defensive [0,1] clamp on the helper.
 func TestUninstall_WereAtRiskRateClamp(t *testing.T) {
-	if got := wereAtRiskRate(3, 2); got != 1 {
+	if got := wereAtRiskRate(context.Background(), 3, 2); got != 1 {
 		t.Errorf("wereAtRiskRate(3,2): expected 1 (clamped), got %v", got)
 	}
-	if got := wereAtRiskRate(-1, 2); got != 0 {
+	if got := wereAtRiskRate(context.Background(), -1, 2); got != 0 {
 		t.Errorf("wereAtRiskRate(-1,2): expected 0 (clamped), got %v", got)
 	}
-	if got := wereAtRiskRate(1, 0); got != 0 {
+	if got := wereAtRiskRate(context.Background(), 1, 0); got != 0 {
 		t.Errorf("wereAtRiskRate(1,0): expected 0 (divide-by-zero guard), got %v", got)
 	}
 }

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"net/http"
 	"sort"
@@ -16,8 +15,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 )
 
 // Rate limiting errors
@@ -134,7 +136,7 @@ func WithRateLimiterConfig(config RateLimiterConfig) ShopifyPartnerClientOption 
 func WithBaseURL(url string) ShopifyPartnerClientOption {
 	return func(c *ShopifyPartnerClient) {
 		c.baseURL = url
-		log.Printf("Shopify Partner API base URL overridden: %s", url)
+		zap.L().Info("shopify partner base URL overridden", zap.String("url", url))
 	}
 }
 
@@ -150,7 +152,7 @@ func WithRequestsPerSecond(rps float64) ShopifyPartnerClientOption {
 			}
 			// Update global limiter for backward compatibility
 			c.rateLimiter = newTokenBucket(rps, c.config.BurstSize)
-			log.Printf("Shopify Partner API rate limit configured: %.1f RPS", rps)
+			zap.L().Info("shopify partner rate limit configured", zap.Float64("requests_per_second", rps))
 		}
 	}
 }
@@ -196,7 +198,10 @@ func (c *ShopifyPartnerClient) getLimiterForPartner(orgID string) *tokenBucket {
 	// Create new limiter for this partner
 	limiter := newTokenBucket(c.config.RequestsPerSecond, c.config.BurstSize)
 	c.limiters[orgID] = limiter
-	log.Printf("Created rate limiter for partner %s: %.1f RPS, burst %d", orgID, c.config.RequestsPerSecond, c.config.BurstSize)
+	zap.L().Info("created rate limiter for partner",
+		zap.String("org_id", orgID),
+		zap.Float64("requests_per_second", c.config.RequestsPerSecond),
+		zap.Int("burst", c.config.BurstSize))
 	return limiter
 }
 
@@ -242,7 +247,10 @@ func (c *ShopifyPartnerClient) executeWithRetry(ctx context.Context, req *http.R
 		resp, err := c.httpClient.Do(attemptReq)
 		if err != nil {
 			lastErr = err
-			log.Printf("Shopify API request failed (attempt %d/%d): %v", attempt+1, c.config.MaxRetries+1, err)
+			logging.FromContext(ctx).Warn("shopify API request failed",
+				zap.Int("attempt", attempt+1),
+				zap.Int("max_attempts", c.config.MaxRetries+1),
+				zap.Error(err))
 			if attempt < c.config.MaxRetries {
 				c.backoff(ctx, attempt)
 				continue
@@ -260,7 +268,9 @@ func (c *ShopifyPartnerClient) executeWithRetry(ctx context.Context, req *http.R
 
 		// Check for rate limiting (429) or server errors (5xx)
 		if resp.StatusCode == http.StatusTooManyRequests {
-			log.Printf("Shopify API rate limited (attempt %d/%d), backing off", attempt+1, c.config.MaxRetries+1)
+			logging.FromContext(ctx).Warn("shopify API rate limited, backing off",
+				zap.Int("attempt", attempt+1),
+				zap.Int("max_attempts", c.config.MaxRetries+1))
 			lastErr = ErrRateLimited
 			if attempt < c.config.MaxRetries {
 				// Check for Retry-After header
@@ -277,7 +287,10 @@ func (c *ShopifyPartnerClient) executeWithRetry(ctx context.Context, req *http.R
 		}
 
 		if resp.StatusCode >= 500 {
-			log.Printf("Shopify API server error %d (attempt %d/%d)", resp.StatusCode, attempt+1, c.config.MaxRetries+1)
+			logging.FromContext(ctx).Warn("shopify API server error",
+				zap.Int("status_code", resp.StatusCode),
+				zap.Int("attempt", attempt+1),
+				zap.Int("max_attempts", c.config.MaxRetries+1))
 			lastErr = fmt.Errorf("server error: %d", resp.StatusCode)
 			if attempt < c.config.MaxRetries {
 				c.backoff(ctx, attempt)
@@ -308,7 +321,7 @@ func (c *ShopifyPartnerClient) backoff(ctx context.Context, attempt int) {
 	jitter := time.Duration(float64(backoff) * 0.25 * (0.5 - float64(time.Now().UnixNano()%100)/100))
 	backoff += jitter
 
-	log.Printf("Backing off for %v before retry", backoff)
+	logging.FromContext(ctx).Warn("backing off before retry", zap.Duration("backoff", backoff))
 
 	select {
 	case <-ctx.Done():
@@ -358,7 +371,10 @@ func (c *ShopifyPartnerClient) FetchApps(ctx context.Context, organizationID, ac
 	_ = organizationID
 
 	url := fmt.Sprintf("%s/%s/api/%s/graphql.json", c.baseURL, organizationID, partnerAPIVersion)
-	log.Printf("Fetching apps from: %s (org: %s, token length: %d)", url, organizationID, len(accessToken))
+	logging.FromContext(ctx).Info("fetching apps",
+		zap.String("url", url),
+		zap.String("org_id", organizationID),
+		zap.Int("token_length", len(accessToken)))
 
 	reqBody, err := json.Marshal(map[string]string{
 		"query": query,
@@ -378,11 +394,13 @@ func (c *ShopifyPartnerClient) FetchApps(ctx context.Context, organizationID, ac
 	// Use rate-limited execution with retry
 	resp, body, err := c.executeWithRetry(ctx, req)
 	if err != nil {
-		log.Printf("Partner API request failed: %v", err)
+		logging.FromContext(ctx).Error("partner API request failed", zap.Error(err))
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 
-	log.Printf("Partner API response - Status: %d, Body length: %d", resp.StatusCode, len(body))
+	logging.FromContext(ctx).Info("partner API response",
+		zap.Int("status_code", resp.StatusCode),
+		zap.Int("body_length", len(body)))
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))
@@ -431,7 +449,7 @@ func (c *ShopifyPartnerClient) FetchApps(ctx context.Context, organizationID, ac
 		apps = append(apps, app)
 	}
 
-	log.Printf("Found %d unique apps from transactions", len(apps))
+	logging.FromContext(ctx).Info("found unique apps from transactions", zap.Int("count", len(apps)))
 	return apps, nil
 }
 
@@ -466,11 +484,15 @@ func (c *ShopifyPartnerClient) FetchTransactions(
 		cursor = nextCursor
 		hasNextPage = more
 
-		log.Printf("Fetched %d transactions (total: %d, hasMore: %v)",
-			len(transactions), len(allTransactions), hasNextPage)
+		logging.FromContext(ctx).Info("fetched transactions page",
+			zap.Int("count", len(transactions)),
+			zap.Int("total", len(allTransactions)),
+			zap.Bool("has_more", hasNextPage))
 	}
 
-	log.Printf("Total transactions fetched: %d for app %s", len(allTransactions), appID)
+	logging.FromContext(ctx).Info("total transactions fetched",
+		zap.Int("count", len(allTransactions)),
+		zap.String("app_id", appID.String()))
 	return allTransactions, nil
 }
 
@@ -701,7 +723,9 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 	// Parse transaction date
 	transactionDate, err := time.Parse(time.RFC3339, node.CreatedAt)
 	if err != nil {
-		log.Printf("Failed to parse transaction date %s: %v", node.CreatedAt, err)
+		zap.L().Warn("failed to parse transaction date",
+			zap.String("created_at", node.CreatedAt),
+			zap.Error(err))
 		transactionDate = time.Now()
 	}
 
@@ -979,7 +1003,10 @@ func (c *ShopifyPartnerClient) FetchAppEvents(
 		// isn't silent. Only for the app-wide path (shopGID == "") to avoid spamming
 		// the per-shop status_sync calls.
 		if shopGID == "" && (page+1)%50 == 0 {
-			log.Printf("[partner] app-wide events: %d fetched so far (page %d) for app %s", len(events), page+1, appGID)
+			logging.FromContext(ctx).Info("app-wide events progress",
+				zap.Int("count", len(events)),
+				zap.Int("page", page+1),
+				zap.String("partner_app_gid", appGID))
 		}
 
 		// Next cursor is the last edge's cursor (Partner API has no pageInfo.endCursor).
@@ -1216,8 +1243,11 @@ func (c *ShopifyPartnerClient) FetchInstallCount(
 		cursor = nextCursor
 		hasNextPage = more
 
-		log.Printf("Fetched %d install events (total installs: %d, uninstalls: %d, hasMore: %v)",
-			count, len(installedShops), len(uninstalledShops), hasNextPage)
+		logging.FromContext(ctx).Info("fetched install events page",
+			zap.Int("count", count),
+			zap.Int("installs", len(installedShops)),
+			zap.Int("uninstalls", len(uninstalledShops)),
+			zap.Bool("has_more", hasNextPage))
 	}
 
 	// Calculate current installs = installed - uninstalled
@@ -1228,8 +1258,10 @@ func (c *ShopifyPartnerClient) FetchInstallCount(
 		}
 	}
 
-	log.Printf("Total current installs: %d (installed: %d, uninstalled: %d)",
-		currentInstalls, len(installedShops), len(uninstalledShops))
+	logging.FromContext(ctx).Info("total current installs",
+		zap.Int("current_installs", currentInstalls),
+		zap.Int("installed", len(installedShops)),
+		zap.Int("uninstalled", len(uninstalledShops)))
 
 	return currentInstalls, nil
 }

@@ -1,10 +1,10 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -14,7 +14,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 type CohortHandler struct {
@@ -60,7 +62,7 @@ func (h *CohortHandler) GetCohorts(w http.ResponseWriter, r *http.Request) {
 	// Fetch all subscriptions for this app
 	subscriptions, err := h.subscriptionRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeCohortRepoError(w, "FindByAppID", err)
+		writeCohortRepoError(r.Context(), w, "FindByAppID", err)
 		return
 	}
 
@@ -68,7 +70,7 @@ func (h *CohortHandler) GetCohorts(w http.ResponseWriter, r *http.Request) {
 	cohorts := buildCohorts(subscriptions, months, now)
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeCohortsCSV(w, cohorts)
+		writeCohortsCSV(r.Context(), w, cohorts)
 		return
 	}
 
@@ -76,15 +78,15 @@ func (h *CohortHandler) GetCohorts(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(map[string]any{
 		"cohorts": cohorts,
 	}); err != nil {
-		log.Printf("cohorts: encode response: %v", err)
+		logging.FromContext(r.Context()).Error("encode response failed", zap.Error(err))
 	}
 }
 
 // writeCohortRepoError logs a repository failure and responds 503. This repo has no
 // not-found sentinel — every error is an infrastructure failure (ADR-042), matching
 // writeRetentionRepoError.
-func writeCohortRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("cohorts: repo error in %s: %v", op, err)
+func writeCohortRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -92,7 +94,7 @@ func writeCohortRepoError(w http.ResponseWriter, op string, err error) {
 // is cohort,initialStores,M0..M(maxMonths-1) — one month column per month of the
 // longest-lived cohort. Ragged rows (a cohort with fewer months) are padded with empty
 // strings so every row has the same column count. Uses encoding/csv for correct escaping.
-func writeCohortsCSV(w http.ResponseWriter, cohorts []entity.CohortData) {
+func writeCohortsCSV(ctx context.Context, w http.ResponseWriter, cohorts []entity.CohortData) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="cohorts.csv"`)
 
@@ -125,7 +127,7 @@ func writeCohortsCSV(w http.ResponseWriter, cohorts []entity.CohortData) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("cohorts: write CSV: %v", err)
+		logging.FromContext(ctx).Error("write CSV failed", zap.Error(err))
 	}
 }
 

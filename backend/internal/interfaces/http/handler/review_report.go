@@ -1,15 +1,17 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // reviewDistributionBucket is the count of reviews at a single star rating.
@@ -68,27 +70,27 @@ func (h *ReviewHandler) GetReviewsReport(w http.ResponseWriter, r *http.Request)
 
 	reviews, err := h.reviewRepo.FindAllByAppID(r.Context(), app.ID)
 	if err != nil {
-		writeReviewRepoError(w, "FindAllByAppID", err)
+		writeReviewRepoError(r.Context(), w, "FindAllByAppID", err)
 		return
 	}
 
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
-		writeReviewsCSV(w, reviews)
+		writeReviewsCSV(r.Context(), w, reviews)
 		return
 	}
 
-	report := buildReviewsReport(reviews)
+	report := buildReviewsReport(r.Context(), reviews)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("reviews: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("reviews encode report failed", zap.Error(err))
 	}
 }
 
 // writeReviewRepoError logs a repository failure and responds 503. The review repo
 // has no not-found sentinel — every error is an infrastructure failure (ADR-042).
-func writeReviewRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("reviews: repo error in %s: %v", op, err)
+func writeReviewRepoError(ctx context.Context, w http.ResponseWriter, op string, err error) {
+	logging.FromContext(ctx).Error("reviews repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -101,14 +103,14 @@ func validRating(rating int) bool { return rating >= 1 && rating <= 5 }
 // out-of-range rating (malformed scrape) are excluded from every aggregate and
 // logged, so a corrupt value can't silently skew the numbers or make the bucket
 // counts disagree with totalReviews.
-func buildReviewsReport(reviews []*entity.AppReview) reviewsReport {
+func buildReviewsReport(ctx context.Context, reviews []*entity.AppReview) reviewsReport {
 	distByRating := map[int]int{}
 	sentiment := reviewSentimentBreakdown{}
 	var ratingSum, validCount int
 
 	for _, rev := range reviews {
 		if !validRating(rev.Rating) {
-			log.Printf("reviews: skipping out-of-range rating %d (review %s)", rev.Rating, rev.ID)
+			logging.FromContext(ctx).Warn("reviews skipping out-of-range rating", zap.Int("rating", rev.Rating), zap.String("review_id", rev.ID.String()))
 			continue
 		}
 		validCount++
@@ -170,7 +172,7 @@ func buildReviewsReport(reviews []*entity.AppReview) reviewsReport {
 
 // writeReviewsCSV writes ALL reviews as a CSV attachment. Uses encoding/csv so
 // free-text bodies with commas/quotes/newlines stay a single column.
-func writeReviewsCSV(w http.ResponseWriter, reviews []*entity.AppReview) {
+func writeReviewsCSV(ctx context.Context, w http.ResponseWriter, reviews []*entity.AppReview) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="reviews.csv"`)
 
@@ -190,6 +192,6 @@ func writeReviewsCSV(w http.ResponseWriter, reviews []*entity.AppReview) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("reviews: write CSV: %v", err)
+		logging.FromContext(ctx).Error("reviews write CSV failed", zap.Error(err))
 	}
 }

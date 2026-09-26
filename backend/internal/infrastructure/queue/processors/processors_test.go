@@ -3,6 +3,7 @@ package processors
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,6 +23,11 @@ import (
 // --- SyncJobRepo ---
 
 type mockSyncJobRepo struct {
+	// mu guards all fields below. FullSyncProcessor drives Create/FindByParentJobID from
+	// its wave goroutines while tests concurrently complete children, so every accessor
+	// locks and the Find* readers return copies (callers read a snapshot, never a pointer
+	// another goroutine is mutating). Run under -race.
+	mu       sync.Mutex
 	jobs     map[uuid.UUID]*entity.SyncJob
 	created  []*entity.SyncJob
 	failedID uuid.UUID
@@ -32,22 +38,32 @@ func newMockSyncJobRepo() *mockSyncJobRepo {
 	return &mockSyncJobRepo{jobs: make(map[uuid.UUID]*entity.SyncJob)}
 }
 
+// copyJob returns a shallow copy so callers read a stable snapshot of the value fields
+// (Status, timestamps) without racing a concurrent writer holding the original.
+func copyJob(j *entity.SyncJob) *entity.SyncJob { cp := *j; return &cp }
+
 func (m *mockSyncJobRepo) Create(_ context.Context, job *entity.SyncJob) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.jobs[job.ID] = job
 	m.created = append(m.created, job)
 	return nil
 }
 func (m *mockSyncJobRepo) FindByID(_ context.Context, id uuid.UUID) (*entity.SyncJob, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if j, ok := m.jobs[id]; ok {
-		return j, nil
+		return copyJob(j), nil
 	}
 	return nil, fmt.Errorf("not found")
 }
 func (m *mockSyncJobRepo) FindByStatus(_ context.Context, status entity.SyncJobStatus) ([]*entity.SyncJob, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	var result []*entity.SyncJob
 	for _, j := range m.jobs {
 		if j.Status == status {
-			result = append(result, j)
+			result = append(result, copyJob(j))
 		}
 	}
 	return result, nil
@@ -56,10 +72,12 @@ func (m *mockSyncJobRepo) FindActiveByAppIDAndType(_ context.Context, _ uuid.UUI
 	return nil, nil
 }
 func (m *mockSyncJobRepo) FindByParentJobID(_ context.Context, parentID uuid.UUID) ([]*entity.SyncJob, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	var result []*entity.SyncJob
 	for _, j := range m.jobs {
 		if j.ParentJobID != nil && *j.ParentJobID == parentID {
-			result = append(result, j)
+			result = append(result, copyJob(j))
 		}
 	}
 	return result, nil
@@ -68,12 +86,16 @@ func (m *mockSyncJobRepo) ListByAppID(_ context.Context, _ uuid.UUID, _ string, 
 	return nil, 0, nil
 }
 func (m *mockSyncJobRepo) UpdateStatus(_ context.Context, id uuid.UUID, status entity.SyncJobStatus) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if j, ok := m.jobs[id]; ok {
 		j.Status = status
 	}
 	return nil
 }
 func (m *mockSyncJobRepo) UpdateProgress(_ context.Context, id uuid.UUID, total, completed int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if j, ok := m.jobs[id]; ok {
 		j.TotalItems = total
 		j.CompletedItems = completed
@@ -81,6 +103,8 @@ func (m *mockSyncJobRepo) UpdateProgress(_ context.Context, id uuid.UUID, total,
 	return nil
 }
 func (m *mockSyncJobRepo) MarkStarted(_ context.Context, id uuid.UUID, workerID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if j, ok := m.jobs[id]; ok {
 		j.Status = entity.SyncJobStatusProcessing
 		j.WorkerID = workerID
@@ -88,6 +112,8 @@ func (m *mockSyncJobRepo) MarkStarted(_ context.Context, id uuid.UUID, workerID 
 	return nil
 }
 func (m *mockSyncJobRepo) MarkCompleted(_ context.Context, id uuid.UUID) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if j, ok := m.jobs[id]; ok {
 		j.Status = entity.SyncJobStatusCompleted
 		now := time.Now().UTC()
@@ -96,6 +122,8 @@ func (m *mockSyncJobRepo) MarkCompleted(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 func (m *mockSyncJobRepo) MarkFailed(_ context.Context, id uuid.UUID, errMsg string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.failedID = id
 	m.failMsg = errMsg
 	if j, ok := m.jobs[id]; ok {
@@ -105,12 +133,28 @@ func (m *mockSyncJobRepo) MarkFailed(_ context.Context, id uuid.UUID, errMsg str
 	return nil
 }
 func (m *mockSyncJobRepo) MarkPendingIfProcessing(_ context.Context, id uuid.UUID) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if j, ok := m.jobs[id]; ok {
 		if j.Status == entity.SyncJobStatusProcessing {
 			j.Status = entity.SyncJobStatusPending
 		}
 	}
 	return nil
+}
+
+// completeChildren marks every child job (those with a parent) completed, under the lock —
+// the thread-safe way for a test to simulate children finishing while Process runs.
+func (m *mockSyncJobRepo) completeChildren() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	now := time.Now().UTC()
+	for _, j := range m.jobs {
+		if j.ParentJobID != nil {
+			j.Status = entity.SyncJobStatusCompleted
+			j.CompletedAt = &now
+		}
+	}
 }
 
 // --- AppRepo ---
@@ -998,15 +1042,10 @@ func TestFullSyncProcessor_CreatesChildJobs(t *testing.T) {
 
 	// Simulate children completing immediately (we complete them as they're created)
 	go func() {
-		// Give it time to create children
+		// Give it time to create children, then complete them under the repo lock
+		// (direct map mutation here would race with Process's concurrent Create).
 		time.Sleep(200 * time.Millisecond)
-		for _, j := range syncJobRepo.jobs {
-			if j.ParentJobID != nil {
-				j.Status = entity.SyncJobStatusCompleted
-				now := time.Now().UTC()
-				j.CompletedAt = &now
-			}
-		}
+		syncJobRepo.completeChildren()
 	}()
 
 	err := p.Process(ctx, payload)

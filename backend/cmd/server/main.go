@@ -552,7 +552,15 @@ func run() error {
 		revenueAPIGraphQLHandler = revenueGraphQL.NewHandler(revenueGraphQL.NewResolver(subStatusSvc, usageStatusSvc))
 
 		apiKeyAuthMW = revenueMiddleware.NewAPIKeyAuth(apiKeySvc)
-		rateLimitStore := revenueMiddleware.NewInMemoryRateLimitStore()
+		// Prefer the shared Redis store so per-key limits hold across instances;
+		// fall back to in-memory (single-instance only) when Redis isn't configured.
+		var rateLimitStore revenueMiddleware.RateLimitStore = revenueMiddleware.NewInMemoryRateLimitStore()
+		if redisClient != nil {
+			rateLimitStore = revenueMiddleware.NewRedisRateLimitStore(redisClient)
+			log.Println("Revenue API rate limiter using Redis (multi-instance safe)")
+		} else {
+			log.Println("Revenue API rate limiter using in-memory store (single-instance only)")
+		}
 		rateLimiterMW = revenueMiddleware.NewRateLimiter(rateLimitStore, 60, 60)
 		auditLoggerMW = revenueMiddleware.NewAuditLogger(auditLogRepo)
 

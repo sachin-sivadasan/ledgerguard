@@ -148,11 +148,24 @@ on upgrades). Implemented:
      `topic`, `zap.Error(err)`, …). Ctx-less shared helpers (repo-error / CSV writers that
      take only `(w, …)`) log via `zap.L()` — still structured JSON, but **no `request_id`**;
      threading `ctx` into those helper signatures to recover correlation is a follow-up.
-   - ⏳ **`request_id` into the job payload:** processors currently correlate by
-     `app_id`/`job_id` (there's no HTTP request behind an async worker). To tie a sync
-     back to the request that enqueued it, carry `request_id` in `SyncJobPayload` and add
-     it in `jobLogger`.
+   - ✅ **Everything else** — DONE. `cmd/server/main.go` (startup → `zap.L()`),
+     `application/service`, `application/scheduler`, `infrastructure/queue` core (worker /
+     recovery / client), `infrastructure/external` clients, `revenue_api`,
+     `domain/service`, `chat`, and the remaining middleware. Background code with a
+     `ctx` uses `logging.FromContext(ctx)` (inherits `request_id`/`job_id` when set);
+     ctx-less spots use `zap.L()`.
+   - **Net result:** the whole non-test backend now emits ECS JSON directly. Only **two**
+     deliberate stdlib `log` calls remain — a pre-`Init` warning in `logging.go` (logger not
+     built yet) and the top-level `log.Fatalf` in `main()` (runs after `logCleanup` tears the
+     logger down). The `RedirectStdLog` bridge is now a safety net for third-party libs, not
+     a crutch for our own code.
+
+   Remaining enrichment (not blocking):
+   - ⏳ **`request_id` into the job payload:** processors correlate by `app_id`/`job_id`
+     (no HTTP request behind an async worker). To tie a sync back to the request that
+     enqueued it, carry `request_id` in `SyncJobPayload` and add it in `jobLogger`.
    - ⏳ **`org_id`/`app_id` on HTTP lines:** add to the context logger in `OrgContextMW`.
+   - ⏳ **ctx into the report-handler shared helpers** so their `zap.L()` lines regain `request_id`.
 
 **Verify:** `logging` unit tests assert ECS field names + `request_id`; end-to-end, one
 API request produces N log lines sharing one `request_id` in ES.

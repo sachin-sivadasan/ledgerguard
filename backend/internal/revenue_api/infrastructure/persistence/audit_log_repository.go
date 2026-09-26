@@ -2,12 +2,14 @@ package persistence
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
+
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/domain/entity"
 )
 
@@ -77,7 +79,7 @@ func (r *PostgresAuditLogRepository) CreateAsync(auditLog *entity.AuditLog) {
 		// Successfully queued
 	default:
 		// Channel full, log and drop
-		log.Printf("audit log channel full, dropping log for %s", auditLog.Endpoint)
+		zap.L().Warn("audit log channel full, dropping log", zap.String("endpoint", auditLog.Endpoint))
 	}
 }
 
@@ -86,7 +88,7 @@ func (r *PostgresAuditLogRepository) asyncWorker() {
 	for auditLog := range r.logChan {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		if err := r.Create(ctx, auditLog); err != nil {
-			log.Printf("failed to create audit log: %v", err)
+			logging.FromContext(ctx).Error("failed to create audit log", zap.Error(err))
 		}
 		cancel()
 	}

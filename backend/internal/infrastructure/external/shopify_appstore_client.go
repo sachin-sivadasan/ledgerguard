@@ -5,13 +5,15 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"go.uber.org/zap"
+
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 )
 
 // ScrapedReview represents a review scraped from the Shopify App Store
@@ -66,7 +68,10 @@ func (c *ShopifyAppStoreClient) ScrapeReviews(ctx context.Context, slug string, 
 
 		reviews, hasMore, err := c.scrapePage(ctx, url)
 		if err != nil {
-			log.Printf("WARNING: review scrape page %d failed for %s: %v", page, slug, err)
+			logging.FromContext(ctx).Warn("review scrape page failed",
+				zap.Int("page", page),
+				zap.String("slug", slug),
+				zap.Error(err))
 			break // stop on first error, return what we have
 		}
 

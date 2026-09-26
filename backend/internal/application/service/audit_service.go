@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 // AuditService provides audit logging functionality
@@ -44,7 +45,7 @@ func (s *AuditService) Log(
 	// Log asynchronously to avoid blocking the main request
 	go func() {
 		if err := s.repo.Create(context.Background(), auditLog); err != nil {
-			log.Printf("Failed to create audit log: %v", err)
+			logging.FromContext(ctx).Error("Failed to create audit log", zap.Error(err))
 		}
 	}()
 }

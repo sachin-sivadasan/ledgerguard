@@ -3,13 +3,14 @@ package queue
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 const dequeueTimeout = 5 * time.Second
@@ -61,7 +62,10 @@ func (wp *WorkerPool) Start(ctx context.Context) {
 		go wp.workerLoop(ctx, workerID)
 	}
 
-	log.Printf("[queue] Worker pool %q started with %d workers on queue %s", wp.name, wp.numWorkers, wp.queueKey)
+	logging.FromContext(ctx).Info("worker pool started",
+		zap.String("name", wp.name),
+		zap.Int("num_workers", wp.numWorkers),
+		zap.String("queue_key", wp.queueKey))
 }
 
 // Stop gracefully shuts down all workers
@@ -70,7 +74,7 @@ func (wp *WorkerPool) Stop() {
 		wp.cancel()
 	}
 	wp.wg.Wait()
-	log.Printf("[queue] Worker pool %q stopped", wp.name)
+	zap.L().Info("worker pool stopped", zap.String("name", wp.name))
 }
 
 func (wp *WorkerPool) workerLoop(ctx context.Context, workerID string) {
@@ -88,7 +92,9 @@ func (wp *WorkerPool) workerLoop(ctx context.Context, workerID string) {
 			if ctx.Err() != nil {
 				return // Context cancelled
 			}
-			log.Printf("[%s] dequeue error: %v", workerID, err)
+			logging.FromContext(ctx).Warn("dequeue error",
+				zap.String("worker_id", workerID),
+				zap.Error(err))
 			time.Sleep(time.Second)
 			continue
 		}
@@ -107,7 +113,10 @@ func (wp *WorkerPool) processJob(ctx context.Context, workerID string, payload *
 	// Bug 2 fix: Acquire lock BEFORE MarkStarted to avoid bouncing processing→pending
 	locked, err := wp.lockManager.AcquireLock(ctx, payload.AppID, payload.JobType, workerID)
 	if err != nil {
-		log.Printf("[%s] failed to acquire lock for job %s: %v", workerID, jobID, err)
+		logging.FromContext(ctx).Warn("failed to acquire lock, re-enqueuing with backoff",
+			zap.String("worker_id", workerID),
+			zap.String("job_id", jobID.String()),
+			zap.Error(err))
 		// Job is still pending — re-enqueue with backoff
 		wp.reEnqueueWithBackoff(ctx, workerID, jobID, payload)
 		return
@@ -126,7 +135,9 @@ func (wp *WorkerPool) processJob(ctx context.Context, workerID string, payload *
 			}
 		}
 		if !locked {
-			log.Printf("[%s] could not acquire lock for job %s, re-enqueuing with 5s backoff", workerID, jobID)
+			logging.FromContext(ctx).Warn("could not acquire lock, re-enqueuing with 5s backoff",
+				zap.String("worker_id", workerID),
+				zap.String("job_id", jobID.String()))
 			wp.reEnqueueWithBackoff(ctx, workerID, jobID, payload)
 			return
 		}
@@ -139,7 +150,10 @@ func (wp *WorkerPool) processJob(ctx context.Context, workerID string, payload *
 
 	// Now mark job as started (after lock acquired)
 	if err := wp.syncJobRepo.MarkStarted(ctx, jobID, workerID); err != nil {
-		log.Printf("[%s] failed to mark job %s started: %v", workerID, jobID, err)
+		logging.FromContext(ctx).Error("failed to mark job started",
+			zap.String("worker_id", workerID),
+			zap.String("job_id", jobID.String()),
+			zap.Error(err))
 		// Release the lock we just acquired
 		_, _ = wp.lockManager.ReleaseLockIfOwner(ctx, payload.AppID, payload.JobType, workerID)
 		_ = wp.lockManager.DeleteHeartbeat(ctx, jobID)
@@ -154,7 +168,10 @@ func (wp *WorkerPool) processJob(ctx context.Context, workerID string, payload *
 	processor, err := wp.registry.Get(payload.JobType)
 	if err != nil {
 		cancelHeartbeat()
-		log.Printf("[%s] no processor for job type %q: %v", workerID, payload.JobType, err)
+		logging.FromContext(ctx).Error("no processor for job type",
+			zap.String("worker_id", workerID),
+			zap.String("job_type", payload.JobType),
+			zap.Error(err))
 		failCtx, failCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		_ = wp.syncJobRepo.MarkFailed(failCtx, jobID, err.Error())
 		wp.cleanup(failCtx, jobID, payload, workerID)
@@ -179,15 +196,22 @@ func (wp *WorkerPool) processJob(ctx context.Context, workerID string, payload *
 		if ctx.Err() != nil {
 			// Server shutdown interrupted this job. Leave in 'processing' state
 			// so recovery re-enqueues it on next startup (no heartbeat = stale).
-			log.Printf("[queue] job %s (%s) interrupted by shutdown — will recover on restart", jobID, payload.JobType)
+			logging.FromContext(ctx).Warn("job interrupted by shutdown, will recover on restart",
+				zap.String("job_id", jobID.String()),
+				zap.String("job_type", payload.JobType))
 			wp.cleanup(cleanupCtx, jobID, payload, workerID)
 			return
 		}
 		// Bug 13 fix: Check if job was cancelled — don't overwrite with "failed"
 		if cancelled, _ := wp.lockManager.IsCancelled(cleanupCtx, jobID); cancelled {
-			log.Printf("[%s] job %s was cancelled, skipping MarkFailed", workerID, jobID)
+			logging.FromContext(ctx).Warn("job was cancelled, skipping MarkFailed",
+				zap.String("worker_id", workerID),
+				zap.String("job_id", jobID.String()))
 		} else {
-			log.Printf("[%s] job %s failed: %v", workerID, jobID, err)
+			logging.FromContext(ctx).Error("job failed",
+				zap.String("worker_id", workerID),
+				zap.String("job_id", jobID.String()),
+				zap.Error(err))
 			_ = wp.syncJobRepo.MarkFailed(cleanupCtx, jobID, err.Error())
 		}
 	} else {
@@ -205,13 +229,19 @@ func (wp *WorkerPool) reEnqueueWithBackoff(ctx context.Context, workerID string,
 	case <-ctx.Done():
 		// Bug 7 fix: On ctx cancel during backoff, best-effort enqueue before returning
 		if err := Enqueue(context.Background(), wp.client, payload); err != nil {
-			log.Printf("[%s] failed to re-enqueue job %s on shutdown: %v", workerID, jobID, err)
+			logging.FromContext(ctx).Error("failed to re-enqueue job on shutdown",
+				zap.String("worker_id", workerID),
+				zap.String("job_id", jobID.String()),
+				zap.Error(err))
 		}
 		return
 	}
 	// Bug 7 fix: Log enqueue errors
 	if err := Enqueue(ctx, wp.client, payload); err != nil {
-		log.Printf("[%s] failed to re-enqueue job %s: %v", workerID, jobID, err)
+		logging.FromContext(ctx).Error("failed to re-enqueue job",
+			zap.String("worker_id", workerID),
+			zap.String("job_id", jobID.String()),
+			zap.Error(err))
 	}
 }
 

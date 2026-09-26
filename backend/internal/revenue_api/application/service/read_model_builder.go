@@ -2,14 +2,16 @@ package service
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	domainEntity "github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/domain/entity"
 	revrepo "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/domain/repository"
 )
@@ -43,22 +45,22 @@ func NewReadModelBuilder(
 // RebuildForApp rebuilds the read model for a specific app
 // This should be called after a ledger sync completes
 func (b *ReadModelBuilder) RebuildForApp(ctx context.Context, appID uuid.UUID) error {
-	log.Printf("ReadModelBuilder: rebuilding read model for app %s", appID)
+	logging.FromContext(ctx).Info("rebuilding read model", zap.String("app_id", appID.String()))
 	start := time.Now()
 
 	// Rebuild subscription statuses
 	if err := b.rebuildSubscriptionStatuses(ctx, appID); err != nil {
-		log.Printf("ReadModelBuilder: failed to rebuild subscription statuses: %v", err)
+		logging.FromContext(ctx).Error("failed to rebuild subscription statuses", zap.String("app_id", appID.String()), zap.Error(err))
 		return err
 	}
 
 	// Rebuild usage statuses
 	if err := b.rebuildUsageStatuses(ctx, appID); err != nil {
-		log.Printf("ReadModelBuilder: failed to rebuild usage statuses: %v", err)
+		logging.FromContext(ctx).Error("failed to rebuild usage statuses", zap.String("app_id", appID.String()), zap.Error(err))
 		return err
 	}
 
-	log.Printf("ReadModelBuilder: completed rebuild for app %s in %v", appID, time.Since(start))
+	logging.FromContext(ctx).Info("completed read model rebuild", zap.String("app_id", appID.String()), zap.Duration("duration", time.Since(start)))
 	return nil
 }
 
@@ -69,7 +71,7 @@ func (b *ReadModelBuilder) rebuildSubscriptionStatuses(ctx context.Context, appI
 	if err != nil {
 		return err
 	}
-	log.Printf("ReadModelBuilder: rebuilding for app %s — %d subscriptions", appID, len(subscriptions))
+	logging.FromContext(ctx).Info("rebuilding subscription statuses", zap.String("app_id", appID.String()), zap.Int("count", len(subscriptions)))
 
 	// Convert to status entities
 	statuses := make([]*entity.SubscriptionStatus, len(subscriptions))
@@ -81,7 +83,7 @@ func (b *ReadModelBuilder) rebuildSubscriptionStatuses(ctx context.Context, appI
 	if err := b.subscriptionStatusRepo.UpsertBatch(ctx, statuses); err != nil {
 		return err
 	}
-	log.Printf("ReadModelBuilder: upserted %d subscription statuses for app %s", len(statuses), appID)
+	logging.FromContext(ctx).Info("upserted subscription statuses", zap.Int("count", len(statuses)), zap.String("app_id", appID.String()))
 	return nil
 }
 
@@ -139,7 +141,7 @@ func (b *ReadModelBuilder) rebuildUsageStatuses(ctx context.Context, appID uuid.
 			transactions = append(transactions, txn)
 		}
 	}
-	log.Printf("ReadModelBuilder: found %d usage transactions for app %s", len(transactions), appID)
+	logging.FromContext(ctx).Info("found usage transactions", zap.Int("count", len(transactions)), zap.String("app_id", appID.String()))
 
 	if len(transactions) == 0 {
 		return nil
@@ -173,7 +175,7 @@ func (b *ReadModelBuilder) rebuildUsageStatuses(ctx context.Context, appID uuid.
 	if err := b.usageStatusRepo.UpsertBatch(ctx, statuses); err != nil {
 		return err
 	}
-	log.Printf("ReadModelBuilder: upserted %d usage statuses for app %s", len(statuses), appID)
+	logging.FromContext(ctx).Info("upserted usage statuses", zap.Int("count", len(statuses)), zap.String("app_id", appID.String()))
 	return nil
 }
 

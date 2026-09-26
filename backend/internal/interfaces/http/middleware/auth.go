@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 
@@ -89,7 +88,7 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 			if errors.Is(err, ErrUserNotFound) {
 				user = entity.NewUser(claims.UID, claims.Email)
 				if err := m.userRepo.Create(r.Context(), user); err != nil {
-					log.Printf("auth: failed to create user for UID %s: %v", claims.UID, err)
+					logging.FromContext(r.Context()).Error("failed to create user", zap.String("firebase_uid", claims.UID), zap.Error(err))
 					writeError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 					return
 				}
@@ -113,11 +112,11 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 						// This runs once (new-user branch only), so a failure leaves the user
 						// org-less until the backfill (000042) is re-applied for them. Log with
 						// identity so it's actionable without a table scan.
-						log.Printf("auth: failed to provision default org for user id=%s email=%s uid=%s: %v", user.ID, user.Email, claims.UID, perr)
+						logging.FromContext(r.Context()).Warn("failed to provision default org", zap.String("user_id", user.ID.String()), zap.String("email", user.Email), zap.String("firebase_uid", claims.UID), zap.Error(perr))
 					}
 				}
 			} else {
-				log.Printf("auth: DB error looking up user for UID %s: %v", claims.UID, err)
+				logging.FromContext(r.Context()).Error("failed to look up user", zap.String("firebase_uid", claims.UID), zap.Error(err))
 				writeError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 				return
 			}

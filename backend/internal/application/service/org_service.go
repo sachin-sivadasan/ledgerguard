@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"log"
 	"strings"
 	"time"
 
@@ -14,14 +13,16 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 var (
-	ErrMemberLimitReached   = errors.New("organization member limit reached for current plan")
-	ErrAlreadyMember        = errors.New("user is already a member of this organization")
-	ErrCannotRemoveOwner    = errors.New("cannot remove the organization owner")
-	ErrCannotSuspendOwner   = errors.New("cannot suspend the organization owner")
-	ErrInsufficientRole     = errors.New("insufficient role for this action")
+	ErrMemberLimitReached      = errors.New("organization member limit reached for current plan")
+	ErrAlreadyMember           = errors.New("user is already a member of this organization")
+	ErrCannotRemoveOwner       = errors.New("cannot remove the organization owner")
+	ErrCannotSuspendOwner      = errors.New("cannot suspend the organization owner")
+	ErrInsufficientRole        = errors.New("insufficient role for this action")
 	ErrInvitationExpired       = errors.New("invitation has expired")
 	ErrInvitationNotPending    = errors.New("invitation is not in pending state")
 	ErrInvitationEmailMismatch = errors.New("invitation email does not match the authenticated user")
@@ -169,7 +170,7 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, email st
 				".\n\nAccept your invitation with this token: " + invitation.Token,
 		}
 		if err := s.emailSender.Send(ctx, msg); err != nil {
-			log.Printf("org: failed to send invitation email to %s: %v", email, err)
+			logging.FromContext(ctx).Warn("Failed to send invitation email", zap.String("email", email), zap.Error(err))
 		}
 	}
 

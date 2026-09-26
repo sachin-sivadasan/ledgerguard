@@ -2,12 +2,13 @@ package scheduler
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 // DailyCatchupScheduler syncs the last N days of transactions and events
@@ -67,10 +68,10 @@ func (s *DailyCatchupScheduler) run(ctx context.Context) {
 		case <-ticker.C:
 			s.check(ctx)
 		case <-s.stopCh:
-			log.Println("[catchup] Daily catchup scheduler stopped")
+			logging.FromContext(ctx).Info("daily catchup scheduler stopped")
 			return
 		case <-ctx.Done():
-			log.Println("[catchup] Daily catchup scheduler context cancelled")
+			logging.FromContext(ctx).Info("daily catchup scheduler context cancelled")
 			return
 		}
 	}
@@ -88,10 +89,10 @@ func (s *DailyCatchupScheduler) check(ctx context.Context) {
 	}
 
 	s.lastRunDate = today
-	log.Printf("[catchup] Running daily catchup sync (hour=%d, lookback=%d days)", s.targetHour, s.lookbackDays)
+	logging.FromContext(ctx).Info("running daily catchup sync", zap.Int("hour", s.targetHour), zap.Int("lookback_days", s.lookbackDays))
 
 	count := s.enqueueAll(ctx, s.lookbackDays)
-	log.Printf("[catchup] Daily catchup complete: enqueued %d jobs", count)
+	logging.FromContext(ctx).Info("daily catchup complete", zap.Int("count", count))
 }
 
 // RunOnce triggers the catchup sync immediately for all apps.
@@ -100,14 +101,14 @@ func (s *DailyCatchupScheduler) RunOnce(ctx context.Context, lookbackDays int) i
 	if lookbackDays <= 0 {
 		lookbackDays = s.lookbackDays
 	}
-	log.Printf("[catchup] Manual trigger: lookback=%d days", lookbackDays)
+	logging.FromContext(ctx).Info("manual trigger", zap.Int("lookback_days", lookbackDays))
 	return s.enqueueAll(ctx, lookbackDays)
 }
 
 func (s *DailyCatchupScheduler) enqueueAll(ctx context.Context, lookbackDays int) int {
 	partnerIDs, err := s.partnerRepo.GetAllIDs(ctx)
 	if err != nil {
-		log.Printf("[catchup] Failed to get partner accounts: %v", err)
+		logging.FromContext(ctx).Error("failed to get partner accounts", zap.Error(err))
 		return 0
 	}
 
@@ -115,27 +116,27 @@ func (s *DailyCatchupScheduler) enqueueAll(ctx context.Context, lookbackDays int
 	for _, partnerID := range partnerIDs {
 		partner, err := s.partnerRepo.FindByID(ctx, partnerID)
 		if err != nil {
-			log.Printf("[catchup] Failed to find partner %s: %v", partnerID, err)
+			logging.FromContext(ctx).Warn("failed to find partner", zap.String("partner_id", partnerID.String()), zap.Error(err))
 			continue
 		}
 
 		apps, err := s.appRepo.FindByPartnerAccountID(ctx, partnerID)
 		if err != nil {
-			log.Printf("[catchup] Failed to find apps for partner %s: %v", partnerID, err)
+			logging.FromContext(ctx).Warn("failed to find apps for partner", zap.String("partner_id", partnerID.String()), zap.Error(err))
 			continue
 		}
 
 		for _, app := range apps {
 			// Enqueue transaction_sync with lookback
 			if job, err := s.queueSyncSvc.EnqueueCatchupSync(ctx, app.ID, partner.UserID, partnerID, entity.SyncJobTypeTransactionSync, lookbackDays); err != nil {
-				log.Printf("[catchup] Failed to enqueue transaction_sync for app %s: %v", app.ID, err)
+				logging.FromContext(ctx).Warn("failed to enqueue transaction_sync for app", zap.String("app_id", app.ID.String()), zap.Error(err))
 			} else if job != nil {
 				jobCount++
 			}
 
 			// Enqueue event_sync with lookback
 			if job, err := s.queueSyncSvc.EnqueueCatchupSync(ctx, app.ID, partner.UserID, partnerID, entity.SyncJobTypeEventSync, lookbackDays); err != nil {
-				log.Printf("[catchup] Failed to enqueue event_sync for app %s: %v", app.ID, err)
+				logging.FromContext(ctx).Warn("failed to enqueue event_sync for app", zap.String("app_id", app.ID.String()), zap.Error(err))
 			} else if job != nil {
 				jobCount++
 			}

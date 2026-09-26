@@ -3,14 +3,16 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 	"sort"
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 )
 
 // SyncHistoryStart is the floor date for a FULL sync/rebuild — an arbitrary early date
@@ -78,22 +80,22 @@ func (s *LedgerService) RebuildFromTransactions(ctx context.Context, appID uuid.
 		return nil, err
 	}
 
-	log.Printf("LedgerService: found %d transactions for app %s (from %s to %s)", len(transactions), appID, SyncHistoryStart.Format("2006-01-02"), now.Format("2006-01-02"))
+	logging.FromContext(ctx).Info("found transactions for rebuild", zap.Int("count", len(transactions)), zap.String("app_id", appID.String()), zap.Time("from", SyncHistoryStart), zap.Time("to", now))
 
 	// Count by charge type for debugging
 	typeCounts := map[string]int{}
 	for _, tx := range transactions {
 		typeCounts[tx.ChargeType.String()]++
 	}
-	log.Printf("LedgerService: charge type breakdown: %v", typeCounts)
+	logging.FromContext(ctx).Info("charge type breakdown", zap.Any("charge_type_counts", typeCounts))
 
 	// Group transactions by domain (store)
 	byDomain := s.groupTransactionsByDomain(transactions)
-	log.Printf("LedgerService: grouped into %d unique domains", len(byDomain))
+	logging.FromContext(ctx).Info("grouped transactions by domain", zap.Int("domains", len(byDomain)))
 
 	// Rebuild subscriptions from transactions
 	subscriptions := s.rebuildSubscriptions(appID, byDomain, now)
-	log.Printf("LedgerService: rebuilt %d subscriptions", len(subscriptions))
+	logging.FromContext(ctx).Info("rebuilt subscriptions", zap.Int("count", len(subscriptions)))
 
 	// Delete existing subscriptions and insert rebuilt ones
 	if err := s.subRepo.DeleteByAppID(ctx, appID); err != nil {

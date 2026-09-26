@@ -1,9 +1,12 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
 	"time"
+
+	"go.uber.org/zap"
+
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 )
 
 // responseWriter wraps http.ResponseWriter to capture status code and bytes written.
@@ -30,8 +33,11 @@ func ResponseLogger(next http.Handler) http.Handler {
 		start := time.Now()
 		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(rw, r)
-		log.Printf("[API] %s %s → %d | %s | %d bytes",
-			r.Method, r.URL.Path, rw.statusCode,
-			time.Since(start).Round(time.Millisecond), rw.bytesWritten)
+		logging.FromContext(r.Context()).Info("request completed",
+			zap.String("method", r.Method),
+			zap.String("path", r.URL.Path),
+			zap.Int("status", rw.statusCode),
+			zap.Duration("duration", time.Since(start).Round(time.Millisecond)),
+			zap.Int("bytes", rw.bytesWritten))
 	})
 }

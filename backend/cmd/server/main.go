@@ -40,6 +40,7 @@ import (
 	apikeyhandler "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/handler"
 	revenueMiddleware "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/middleware"
 	"github.com/sachin-sivadasan/ledgerguard/pkg/crypto"
+	"go.uber.org/zap"
 )
 
 // version is the build version stamped into structured logs (override via -ldflags).
@@ -74,30 +75,30 @@ func run() error {
 	defer logCleanup()
 
 	if *configPath != "" {
-		log.Printf("Loaded config from: %s", *configPath)
+		zap.L().Info("loaded config", zap.String("path", *configPath))
 	}
 
 	// Initialize database connection
 	var db *persistence.PostgresDB
 	db, err = persistence.NewPostgresDB(ctx, cfg.Database.DSN())
 	if err != nil {
-		log.Printf("WARNING: failed to connect to database: %v", err)
-		log.Printf("Server will start without database connection")
+		zap.L().Warn("failed to connect to database", zap.Error(err))
+		zap.L().Info("Server will start without database connection")
 		db = nil
 	} else {
 		defer db.Close()
-		log.Println("Connected to PostgreSQL")
+		zap.L().Info("Connected to PostgreSQL")
 
 		// Run database migrations
 		if cfg.Database.MigrationsPath != "" {
 			migrator, err := persistence.NewMigrator(cfg.Database.DSN(), cfg.Database.MigrationsPath)
 			if err != nil {
-				log.Printf("WARNING: failed to initialize migrator: %v", err)
+				zap.L().Warn("failed to initialize migrator", zap.Error(err))
 			} else {
 				if err := migrator.Up(); err != nil {
-					log.Printf("WARNING: failed to run migrations: %v", err)
+					zap.L().Warn("failed to run migrations", zap.Error(err))
 				} else {
-					log.Println("Database migrations applied successfully")
+					zap.L().Info("Database migrations applied successfully")
 				}
 				migrator.Close()
 			}
@@ -108,10 +109,10 @@ func run() error {
 	var firebaseAuth *external.FirebaseAuthService
 	firebaseAuth, err = external.NewFirebaseAuthService(ctx, cfg.Firebase.CredentialsFile, cfg.Firebase.CheckRevoked)
 	if err != nil {
-		log.Printf("WARNING: Firebase Auth not configured: %v", err)
-		log.Printf("Authentication will not work without Firebase configuration")
+		zap.L().Warn("Firebase Auth not configured", zap.Error(err))
+		zap.L().Info("Authentication will not work without Firebase configuration")
 	} else {
-		log.Printf("Firebase Auth initialized (token revocation check: %v)", cfg.Firebase.CheckRevoked)
+		zap.L().Info("Firebase Auth initialized", zap.Bool("token_revocation_check", cfg.Firebase.CheckRevoked))
 	}
 
 	// Initialize Firebase Messaging for push notifications (optional)
@@ -119,10 +120,10 @@ func run() error {
 	if cfg.Firebase.CredentialsFile != "" {
 		firebaseMessaging, err = external.NewFirebaseMessagingService(ctx, cfg.Firebase.CredentialsFile)
 		if err != nil {
-			log.Printf("WARNING: Firebase Messaging not configured: %v", err)
-			log.Printf("Push notifications will not work")
+			zap.L().Warn("Firebase Messaging not configured", zap.Error(err))
+			zap.L().Info("Push notifications will not work")
 		} else {
-			log.Println("Firebase Messaging initialized")
+			zap.L().Info("Firebase Messaging initialized")
 		}
 	}
 
@@ -131,9 +132,9 @@ func run() error {
 	if cfg.Encryption.MasterKey != "" {
 		encryptor, err = crypto.NewAESEncryptor([]byte(cfg.Encryption.MasterKey))
 		if err != nil {
-			log.Printf("WARNING: Failed to initialize encryption: %v", err)
+			zap.L().Warn("Failed to initialize encryption", zap.Error(err))
 		} else {
-			log.Println("Encryption initialized")
+			zap.L().Info("Encryption initialized")
 		}
 	}
 
@@ -142,8 +143,8 @@ func run() error {
 	if cfg.Queue.Enabled && cfg.Redis.Addr != "" {
 		redisClient, err = queue.NewRedisClient(ctx, cfg.Redis)
 		if err != nil {
-			log.Printf("WARNING: Redis not available: %v", err)
-			log.Printf("WARNING: Queue-based sync requires Redis — install and start Redis to enable")
+			zap.L().Warn("Redis not available", zap.Error(err))
+			zap.L().Warn("Queue-based sync requires Redis — install and start Redis to enable")
 			redisClient = nil
 		}
 	}
@@ -185,10 +186,10 @@ func run() error {
 	var tracker domainservice.EventTracker
 	if cfg.Mixpanel.Token != "" {
 		tracker = external.NewMixpanelClient(cfg.Mixpanel.Token)
-		log.Println("Mixpanel event tracker initialized")
+		zap.L().Info("Mixpanel event tracker initialized")
 	} else {
 		tracker = external.NewNoopTracker()
-		log.Println("Event tracker: noop (MIXPANEL_TOKEN not set)")
+		zap.L().Info("Event tracker: noop (MIXPANEL_TOKEN not set)")
 	}
 
 	// Initialize handlers
@@ -202,13 +203,13 @@ func run() error {
 	var manualTokenHandler *handler.ManualTokenHandler
 	if encryptor != nil && partnerRepo != nil {
 		manualTokenHandler = handler.NewManualTokenHandler(encryptor, partnerRepo)
-		log.Println("Manual token handler initialized")
+		zap.L().Info("Manual token handler initialized")
 	}
 
 	var integrationStatusHandler *handler.IntegrationStatusHandler
 	if partnerRepo != nil {
 		integrationStatusHandler = handler.NewIntegrationStatusHandler(partnerRepo)
-		log.Println("Integration status handler initialized")
+		zap.L().Info("Integration status handler initialized")
 	}
 
 	// Initialize Shopify Partner client for fetching apps with rate limiting
@@ -224,7 +225,7 @@ func run() error {
 	if partnerRepo != nil && appRepo != nil && encryptor != nil {
 		appHandler = handler.NewAppHandler(partnerClient, partnerRepo, appRepo, encryptor)
 		appHandler.SetTracker(tracker)
-		log.Println("App handler initialized with Partner client")
+		zap.L().Info("App handler initialized with Partner client")
 	}
 
 	// Initialize metrics aggregation service and handler
@@ -234,11 +235,11 @@ func run() error {
 		metricsAggregator := appservice.NewMetricsAggregationService(snapshotRepo, txRepo, metricsEngine)
 		metricsHandler = handler.NewMetricsHandler(metricsAggregator, appRepo, partnerRepo)
 		metricsHandler.SetTrendProvider(metricsAggregator)
-		log.Println("Metrics handler initialized with aggregation service")
+		zap.L().Info("Metrics handler initialized with aggregation service")
 	} else {
 		// Fallback to handler without aggregator (will use mock data)
 		metricsHandler = handler.NewMetricsHandler(nil, appRepo, partnerRepo)
-		log.Println("Metrics handler initialized (without aggregator)")
+		zap.L().Info("Metrics handler initialized (without aggregator)")
 	}
 	if metricsHandler != nil {
 		metricsHandler.SetTracker(tracker)
@@ -274,28 +275,28 @@ func run() error {
 		if shopRepo != nil {
 			storefrontClient := external.NewShopifyStorefrontClient(cfg.Shopify.StorefrontBaseURL)
 			syncService = syncService.WithShopBrandFetcher(storefrontClient, shopRepo)
-			log.Println("Shop brand fetcher initialized")
+			zap.L().Info("Shop brand fetcher initialized")
 		}
 
 		// Wire review scraper for app store review sync
 		if reviewRepo != nil {
 			syncAppStoreScraper := external.NewShopifyAppStoreClient()
 			syncService = syncService.WithReviewScraper(syncAppStoreScraper, reviewRepo)
-			log.Println("Review scraper initialized for sync")
+			zap.L().Info("Review scraper initialized for sync")
 		}
 
 		syncHandler = handler.NewSyncHandler(syncService, partnerRepo, appRepo)
-		log.Println("Sync handler initialized")
+		zap.L().Info("Sync handler initialized")
 
 		// Initialize and start scheduler (skip if queue-based sync is enabled)
 		if !cfg.Queue.Enabled {
 			syncScheduler = scheduler.NewSyncScheduler(syncService, partnerRepo)
 			syncScheduler.Start(ctx)
-			log.Println("Sync scheduler started (12-hour interval)")
+			zap.L().Info("Sync scheduler started (12-hour interval)")
 		} else if redisClient == nil {
-			log.Println("WARNING: Sync scheduler skipped — queue enabled but Redis unavailable; no background sync will run")
+			zap.L().Warn("Sync scheduler skipped — queue enabled but Redis unavailable; no background sync will run")
 		} else {
-			log.Println("Sync scheduler skipped — queue-based sync handles scheduling")
+			zap.L().Info("Sync scheduler skipped — queue-based sync handles scheduling")
 		}
 	}
 
@@ -306,7 +307,7 @@ func run() error {
 		if shopRepo != nil {
 			subscriptionHandler.SetShopRepo(shopRepo)
 		}
-		log.Println("Subscription handler initialized")
+		zap.L().Info("Subscription handler initialized")
 	}
 
 	// Initialize store health handler
@@ -316,7 +317,7 @@ func run() error {
 		if shopRepo != nil {
 			storeHealthHandler.SetShopRepo(shopRepo)
 		}
-		log.Println("Store health handler initialized")
+		zap.L().Info("Store health handler initialized")
 	}
 
 	// Initialize revenue (earnings timeline) handler
@@ -325,7 +326,7 @@ func run() error {
 		revenueRepo := persistence.NewPostgresRevenueRepository(db.Pool)
 		revenueSvc := appservice.NewRevenueMetricsServiceWithTransactions(revenueRepo, txRepo)
 		revenueHandler = handler.NewRevenueHandler(revenueSvc, partnerRepo, appRepo)
-		log.Println("Revenue handler initialized")
+		zap.L().Info("Revenue handler initialized")
 	}
 
 	// Initialize fee handler
@@ -333,14 +334,14 @@ func run() error {
 	if appRepo != nil && partnerRepo != nil && txRepo != nil {
 		feeService := domainservice.NewFeeVerificationService()
 		feeHandler = handler.NewFeeHandler(appRepo, partnerRepo, txRepo, feeService)
-		log.Println("Fee handler initialized")
+		zap.L().Info("Fee handler initialized")
 	}
 
 	// Initialize transaction handler
 	var transactionHandler *handler.TransactionHandler
 	if txRepo != nil && partnerRepo != nil && appRepo != nil {
 		transactionHandler = handler.NewTransactionHandler(txRepo, partnerRepo, appRepo)
-		log.Println("Transaction handler initialized")
+		zap.L().Info("Transaction handler initialized")
 	}
 
 	// Initialize store handler
@@ -353,150 +354,150 @@ func run() error {
 			storeEventRepo = appEventRepo
 		}
 		storeHandler = handler.NewStoreHandler(subscriptionRepo, txRepo, storeEventRepo, partnerRepo, appRepo)
-		log.Println("Store handler initialized")
+		zap.L().Info("Store handler initialized")
 	}
 
 	// Initialize event handler
 	var eventHandler *handler.EventHandler
 	if appEventRepo != nil && partnerRepo != nil && appRepo != nil {
 		eventHandler = handler.NewEventHandler(appEventRepo, partnerRepo, appRepo, subscriptionRepo)
-		log.Println("Event handler initialized")
+		zap.L().Info("Event handler initialized")
 	}
 
 	// Initialize cohort handler
 	var cohortHandler *handler.CohortHandler
 	if subscriptionRepo != nil && appRepo != nil && partnerRepo != nil {
 		cohortHandler = handler.NewCohortHandler(subscriptionRepo, appRepo, partnerRepo)
-		log.Println("Cohort handler initialized")
+		zap.L().Info("Cohort handler initialized")
 	}
 
 	// Initialize forecast handler
 	var forecastHandler *handler.ForecastHandler
 	if snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
 		forecastHandler = handler.NewForecastHandler(snapshotRepo, appRepo, partnerRepo)
-		log.Println("Forecast handler initialized")
+		zap.L().Info("Forecast handler initialized")
 	}
 
 	// Initialize revenue-at-risk report handler
 	var revenueAtRiskHandler *handler.RevenueAtRiskHandler
 	if subscriptionRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
 		revenueAtRiskHandler = handler.NewRevenueAtRiskHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo)
-		log.Println("Revenue at Risk handler initialized")
+		zap.L().Info("Revenue at Risk handler initialized")
 	}
 
 	// Initialize churn report handler
 	var churnHandler *handler.ChurnHandler
 	if subscriptionRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
 		churnHandler = handler.NewChurnHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo)
-		log.Println("Churn handler initialized")
+		zap.L().Info("Churn handler initialized")
 	}
 
 	// Initialize retention/renewal report handler
 	var retentionHandler *handler.RetentionHandler
 	if subscriptionRepo != nil && snapshotRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
 		retentionHandler = handler.NewRetentionHandler(subscriptionRepo, snapshotRepo, appEventRepo, appRepo, partnerRepo)
-		log.Println("Retention handler initialized")
+		zap.L().Info("Retention handler initialized")
 	}
 
 	// Initialize MRR report handler
 	var mrrReportHandler *handler.MRRReportHandler
 	if subscriptionRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
 		mrrReportHandler = handler.NewMRRReportHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo)
-		log.Println("MRR report handler initialized")
+		zap.L().Info("MRR report handler initialized")
 	}
 
 	var activeCustomersReportHandler *handler.ActiveCustomersReportHandler
 	if subscriptionRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
 		activeCustomersReportHandler = handler.NewActiveCustomersReportHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo, planLabelRepo)
-		log.Println("Active Customers report handler initialized")
+		zap.L().Info("Active Customers report handler initialized")
 	}
 
 	// Initialize earnings report handler
 	var earningsReportHandler *handler.EarningsReportHandler
 	if txRepo != nil && appRepo != nil && partnerRepo != nil {
 		earningsReportHandler = handler.NewEarningsReportHandler(txRepo, appRepo, partnerRepo)
-		log.Println("Earnings report handler initialized")
+		zap.L().Info("Earnings report handler initialized")
 	}
 
 	// Initialize payout schedule report handler (Archetype D — schedule/timeline)
 	var payoutScheduleReportHandler *handler.PayoutScheduleReportHandler
 	if txRepo != nil && appRepo != nil && partnerRepo != nil {
 		payoutScheduleReportHandler = handler.NewPayoutScheduleReportHandler(txRepo, appRepo, partnerRepo)
-		log.Println("Payout schedule report handler initialized")
+		zap.L().Info("Payout schedule report handler initialized")
 	}
 
 	// Initialize payout history report handler (Archetype D — completed payouts)
 	var payoutHistoryReportHandler *handler.PayoutHistoryReportHandler
 	if txRepo != nil && appRepo != nil && partnerRepo != nil {
 		payoutHistoryReportHandler = handler.NewPayoutHistoryReportHandler(txRepo, appRepo, partnerRepo)
-		log.Println("Payout history report handler initialized")
+		zap.L().Info("Payout history report handler initialized")
 	}
 
 	// Initialize revenue mix report handler
 	var revenueMixReportHandler *handler.RevenueMixReportHandler
 	if txRepo != nil && appRepo != nil && partnerRepo != nil {
 		revenueMixReportHandler = handler.NewRevenueMixReportHandler(txRepo, appRepo, partnerRepo)
-		log.Println("Revenue mix report handler initialized")
+		zap.L().Info("Revenue mix report handler initialized")
 	}
 
 	// Initialize usage & one-time charges report handler
 	var usageReportHandler *handler.UsageReportHandler
 	if txRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
 		usageReportHandler = handler.NewUsageReportHandler(txRepo, snapshotRepo, appRepo, partnerRepo)
-		log.Println("Usage report handler initialized")
+		zap.L().Info("Usage report handler initialized")
 	}
 
 	// Initialize subscriptions (ARPU / LTV) report handler (Archetype B — composition)
 	var subscriptionsReportHandler *handler.SubscriptionsReportHandler
 	if subscriptionRepo != nil && snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
 		subscriptionsReportHandler = handler.NewSubscriptionsReportHandler(subscriptionRepo, snapshotRepo, appRepo, partnerRepo, planLabelRepo)
-		log.Println("Subscriptions report handler initialized")
+		zap.L().Info("Subscriptions report handler initialized")
 	}
 
 	// Initialize usage trends report handler (Archetype A — weekly momentum, no snapshot repo)
 	var usageTrendsReportHandler *handler.UsageTrendsReportHandler
 	if txRepo != nil && appRepo != nil && partnerRepo != nil {
 		usageTrendsReportHandler = handler.NewUsageTrendsReportHandler(txRepo, appRepo, partnerRepo)
-		log.Println("Usage trends report handler initialized")
+		zap.L().Info("Usage trends report handler initialized")
 	}
 
 	// Initialize uninstall context report handler
 	var uninstallContextHandler *handler.UninstallContextHandler
 	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
 		uninstallContextHandler = handler.NewUninstallContextHandler(subscriptionRepo, appEventRepo, appRepo, partnerRepo)
-		log.Println("Uninstall context handler initialized")
+		zap.L().Info("Uninstall context handler initialized")
 	}
 
 	// Initialize installs report handler (Growth, Archetype A — install/uninstall trend)
 	var installsReportHandler *handler.InstallsReportHandler
 	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
 		installsReportHandler = handler.NewInstallsReportHandler(subscriptionRepo, appEventRepo, appRepo, partnerRepo)
-		log.Println("Installs report handler initialized")
+		zap.L().Info("Installs report handler initialized")
 	}
 
 	// Initialize fee audit report handler (Guard — actual vs expected Shopify fees)
 	var feeAuditReportHandler *handler.FeeAuditReportHandler
 	if txRepo != nil && appRepo != nil && partnerRepo != nil {
 		feeAuditReportHandler = handler.NewFeeAuditReportHandler(txRepo, appRepo, partnerRepo, domainservice.NewFeeVerificationService())
-		log.Println("Fee audit report handler initialized")
+		zap.L().Info("Fee audit report handler initialized")
 	}
 
 	var ledgerReconReportHandler *handler.LedgerReconciliationReportHandler
 	if txRepo != nil && appRepo != nil && partnerRepo != nil {
 		ledgerReconReportHandler = handler.NewLedgerReconciliationReportHandler(txRepo, appRepo, partnerRepo, domainservice.NewFeeVerificationService())
-		log.Println("Ledger reconciliation report handler initialized")
+		zap.L().Info("Ledger reconciliation report handler initialized")
 	}
 
 	var customerInsightsReportHandler *handler.CustomerInsightsReportHandler
 	if subscriptionRepo != nil && appRepo != nil && partnerRepo != nil {
 		customerInsightsReportHandler = handler.NewCustomerInsightsReportHandler(subscriptionRepo, appRepo, partnerRepo, planLabelRepo)
-		log.Println("Customer insights report handler initialized")
+		zap.L().Info("Customer insights report handler initialized")
 	}
 
 	var planLabelHandler *handler.PlanLabelHandler
 	if subscriptionRepo != nil && planLabelRepo != nil && appRepo != nil && partnerRepo != nil {
 		planLabelHandler = handler.NewPlanLabelHandler(subscriptionRepo, planLabelRepo, appRepo, partnerRepo)
-		log.Println("Plan label handler initialized")
+		zap.L().Info("Plan label handler initialized")
 	}
 
 	var mobileReviewsHandler *handler.MobileReviewsHandler
@@ -504,21 +505,21 @@ func run() error {
 		mobileLinksRepo := persistence.NewPostgresMobileLinksRepository(db.Pool)
 		mobileReviewsHandler = handler.NewMobileReviewsHandler(
 			mobileLinksRepo, external.NewMobileStoreClient(), appRepo, partnerRepo)
-		log.Println("Mobile reviews handler initialized")
+		zap.L().Info("Mobile reviews handler initialized")
 	}
 
 	// Initialize activation report handler (Growth, Archetype E — install→paid funnel)
 	var activationReportHandler *handler.ActivationReportHandler
 	if subscriptionRepo != nil && appEventRepo != nil && appRepo != nil && partnerRepo != nil {
 		activationReportHandler = handler.NewActivationReportHandler(subscriptionRepo, appEventRepo, appRepo, partnerRepo)
-		log.Println("Activation report handler initialized")
+		zap.L().Info("Activation report handler initialized")
 	}
 
 	// Initialize net-new subscriptions report handler (Growth, Archetype A — new vs churned)
 	var netNewSubsReportHandler *handler.NetNewSubsReportHandler
 	if subscriptionRepo != nil && appRepo != nil && partnerRepo != nil {
 		netNewSubsReportHandler = handler.NewNetNewSubsReportHandler(subscriptionRepo, appRepo, partnerRepo, planLabelRepo)
-		log.Println("Net-new subscriptions report handler initialized")
+		zap.L().Info("Net-new subscriptions report handler initialized")
 	}
 
 	// Initialize risk handler
@@ -530,7 +531,7 @@ func run() error {
 			riskEventRepo = appEventRepo
 		}
 		riskHandler = handler.NewRiskHandler(subscriptionRepo, riskEventRepo, partnerRepo, appRepo, riskRiskEngine)
-		log.Println("Risk handler initialized")
+		zap.L().Info("Risk handler initialized")
 	}
 
 	// Initialize API key service and handler
@@ -540,7 +541,7 @@ func run() error {
 		apiKeyRepo := apikeypersist.NewPostgresAPIKeyRepository(db.Pool)
 		apiKeySvc = apikeysvc.NewAPIKeyService(apiKeyRepo)
 		apiKeyHandler = apikeyhandler.NewAPIKeyHandler(apiKeySvc)
-		log.Println("API key handler initialized")
+		zap.L().Info("API key handler initialized")
 	}
 
 	// Initialize Revenue API handlers and middleware (external API, API key auth)
@@ -572,9 +573,9 @@ func run() error {
 		var rateLimitStore revenueMiddleware.RateLimitStore = revenueMiddleware.NewInMemoryRateLimitStore()
 		if redisClient != nil {
 			rateLimitStore = revenueMiddleware.NewRedisRateLimitStore(redisClient)
-			log.Println("Revenue API rate limiter using Redis (multi-instance safe)")
+			zap.L().Info("Revenue API rate limiter using Redis (multi-instance safe)")
 		} else {
-			log.Println("Revenue API rate limiter using in-memory store (single-instance only)")
+			zap.L().Info("Revenue API rate limiter using in-memory store (single-instance only)")
 		}
 		rateLimiterMW = revenueMiddleware.NewRateLimiter(rateLimitStore, 60, 60)
 		auditLoggerMW = revenueMiddleware.NewAuditLogger(auditLogRepo)
@@ -584,7 +585,7 @@ func run() error {
 			readModelBuilder = apikeysvc.NewReadModelBuilder(subscriptionRepo, txRepo, subStatusRepo, usageStatusRepo)
 		}
 
-		log.Println("Revenue API handlers initialized (subscriptions, usages, graphql)")
+		zap.L().Info("Revenue API handlers initialized (subscriptions, usages, graphql)")
 	}
 
 	// Wire read model builder into sync service (for direct sync path)
@@ -596,7 +597,7 @@ func run() error {
 	var userPreferencesHandler *handler.UserPreferencesHandler
 	if db != nil {
 		userPreferencesHandler = handler.NewUserPreferencesHandler(db.Pool)
-		log.Println("User preferences handler initialized")
+		zap.L().Info("User preferences handler initialized")
 	}
 
 	// Initialize notification preferences handler
@@ -605,7 +606,7 @@ func run() error {
 	if db != nil {
 		notificationPrefsRepo = persistence.NewPostgresNotificationPreferencesRepository(db.Pool)
 		notificationPreferencesHandler = handler.NewNotificationPreferencesHandler(notificationPrefsRepo)
-		log.Println("Notification preferences handler initialized")
+		zap.L().Info("Notification preferences handler initialized")
 	}
 
 	// Initialize notification service and device handler
@@ -631,7 +632,7 @@ func run() error {
 		notificationService = notificationService.WithSlackNotifier(slackProvider)
 
 		deviceHandler = handler.NewDeviceHandler(notificationService)
-		log.Println("Notification service and device handler initialized")
+		zap.L().Info("Notification service and device handler initialized")
 
 		// Initialize notification scheduler for daily summaries
 		if snapshotRepo != nil && appRepo != nil && partnerRepo != nil {
@@ -643,7 +644,7 @@ func run() error {
 				partnerRepo,
 			)
 			notificationScheduler.Start(ctx)
-			log.Println("Notification scheduler started (15-minute check interval)")
+			zap.L().Info("Notification scheduler started (15-minute check interval)")
 		}
 	}
 
@@ -661,7 +662,7 @@ func run() error {
 			webhookSvc = webhookSvc.WithNotificationService(partnerRepo, notificationService)
 		}
 		webhookHandler = handler.NewWebhookHandler(webhookSvc)
-		log.Println("Webhook handler initialized")
+		zap.L().Info("Webhook handler initialized")
 	}
 
 	// Initialize insight handler
@@ -669,7 +670,7 @@ func run() error {
 	if db != nil && appRepo != nil && partnerRepo != nil {
 		dailyInsightRepo := persistence.NewPostgresDailyInsightRepository(db.Pool)
 		insightHandler = handler.NewInsightHandler(dailyInsightRepo, appRepo, partnerRepo)
-		log.Println("Insight handler initialized")
+		zap.L().Info("Insight handler initialized")
 	}
 
 	// Initialize Razorpay billing (optional — gracefully skipped if not configured)
@@ -686,7 +687,7 @@ func run() error {
 		)
 		billingService.SetTracker(tracker)
 		billingHandler = handler.NewBillingHandler(billingService)
-		log.Println("Razorpay billing handler initialized")
+		zap.L().Info("Razorpay billing handler initialized")
 	}
 
 	// Initialize organization repos, services, handlers, and middleware
@@ -713,7 +714,7 @@ func run() error {
 		orgContextMiddleware := middleware.NewOrgContextMiddleware(orgRepo, memberRepo)
 		orgContextMW = orgContextMiddleware.RequireOrg
 
-		log.Println("Organization handler initialized")
+		zap.L().Info("Organization handler initialized")
 	}
 
 	// Initialize review handler with Shopify App Store scraper
@@ -721,7 +722,7 @@ func run() error {
 	appStoreScraper := external.NewShopifyAppStoreClient()
 	if reviewRepo != nil && appRepo != nil && partnerRepo != nil {
 		reviewHandler = handler.NewReviewHandler(reviewRepo, appRepo, partnerRepo, appStoreScraper)
-		log.Println("Review handler initialized")
+		zap.L().Info("Review handler initialized")
 	}
 
 	// Initialize admin handler
@@ -734,7 +735,7 @@ func run() error {
 		if readModelBuilder != nil {
 			adminHandler.SetReadModelBuilder(readModelBuilder)
 		}
-		log.Println("Admin handler initialized")
+		zap.L().Info("Admin handler initialized")
 	}
 
 	// Initialize queue-based sync system (optional — requires Redis + Queue enabled)
@@ -827,9 +828,9 @@ func run() error {
 		// Start daily catchup scheduler
 		dailyCatchupScheduler = scheduler.NewDailyCatchupScheduler(queueSyncService, appRepo, partnerRepo)
 		dailyCatchupScheduler.Start(ctx)
-		log.Println("Daily catchup scheduler started (3 AM UTC)")
+		zap.L().Info("Daily catchup scheduler started (3 AM UTC)")
 
-		log.Println("Queue-based sync system initialized")
+		zap.L().Info("Queue-based sync system initialized")
 	}
 
 	// Audit-log retention: daily prune of org_audit_log + api_audit_log older than the
@@ -838,7 +839,7 @@ func run() error {
 	if cfg.Audit.RetentionDays > 0 && len(auditPruners) > 0 {
 		auditRetentionSvc := appservice.NewAuditRetentionService(cfg.Audit.RetentionDays, auditPruners...)
 		scheduler.NewAuditRetentionScheduler(auditRetentionSvc).Start(ctx)
-		log.Printf("Audit retention enabled: pruning %d store(s) older than %d days", len(auditPruners), cfg.Audit.RetentionDays)
+		zap.L().Info("audit retention enabled", zap.Int("stores", len(auditPruners)), zap.Int("retention_days", cfg.Audit.RetentionDays))
 	}
 
 	// Wire daily catchup scheduler into admin handler (after queue init)
@@ -864,7 +865,7 @@ func run() error {
 			MetricsEngine:         metricsEngine,
 		}
 		graphqlHandler = chatgraphql.NewHandler(chatResolver)
-		log.Println("Chat GraphQL handler initialized")
+		zap.L().Info("Chat GraphQL handler initialized")
 
 		// Set up module registry and chat handler
 		gqlExecutor := chat.NewGraphQLExecutor(graphqlHandler)
@@ -881,11 +882,11 @@ func run() error {
 		if cfg.OpenAI.APIKey != "" {
 			openaiClient := external.NewOpenAIClient(cfg.OpenAI.APIKey, cfg.OpenAI.Model)
 			aiProviders.Register("openai", openaiClient)
-			log.Println("OpenAI chat provider registered")
+			zap.L().Info("OpenAI chat provider registered")
 		}
 
 		chatHandler = chat.NewHandler(moduleRegistry, aiProviders)
-		log.Println("Chat handler initialized with", len(moduleRegistry.Modules()), "modules")
+		zap.L().Info("chat handler initialized", zap.Int("modules", len(moduleRegistry.Modules())))
 	}
 
 	// Initialize auth middleware
@@ -899,7 +900,7 @@ func run() error {
 			authMiddleware.SetOrgProvisioner(orgService)
 		}
 		authMW = authMiddleware.Authenticate
-		log.Printf("Auth middleware initialized (require email verified: %v)", cfg.Firebase.RequireEmailVerified)
+		zap.L().Info("auth middleware initialized", zap.Bool("require_email_verified", cfg.Firebase.RequireEmailVerified))
 	}
 
 	// Initialize admin middleware (requires ADMIN or OWNER role)
@@ -910,17 +911,17 @@ func run() error {
 	if cfg.Server.InternalKey != "" {
 		internalKeyMiddleware := middleware.NewInternalKeyMiddleware(cfg.Server.InternalKey)
 		internalMW = internalKeyMiddleware.Authenticate
-		log.Println("Internal key middleware initialized")
+		zap.L().Info("Internal key middleware initialized")
 	}
 
 	// Wire auto-sync trigger on app selection
 	if appHandler != nil {
 		if queueSyncService != nil {
 			appHandler.SetSyncTrigger(queueSyncService)
-			log.Println("Auto-sync trigger wired (queue mode)")
+			zap.L().Info("Auto-sync trigger wired (queue mode)")
 		} else if syncService != nil {
 			appHandler.SetSyncTrigger(syncService)
-			log.Println("Auto-sync trigger wired (direct mode)")
+			zap.L().Info("Auto-sync trigger wired (direct mode)")
 		}
 	}
 
@@ -1015,9 +1016,9 @@ func run() error {
 	}
 
 	go func() {
-		log.Printf("Server starting on port %s", cfg.Server.Port)
+		zap.L().Info("server starting", zap.String("port", cfg.Server.Port))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			zap.L().Fatal("server error", zap.Error(err))
 		}
 	}()
 
@@ -1025,20 +1026,20 @@ func run() error {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	zap.L().Info("Shutting down server...")
 
 	// Stop queue worker pools gracefully (before server shutdown)
 	if regularWorkerPool != nil {
 		regularWorkerPool.Stop()
-		log.Println("Regular worker pool stopped")
+		zap.L().Info("Regular worker pool stopped")
 	}
 	if fullSyncWorkerPool != nil {
 		fullSyncWorkerPool.Stop()
-		log.Println("Full sync worker pool stopped")
+		zap.L().Info("Full sync worker pool stopped")
 	}
 	if recoveryService != nil {
 		recoveryService.Stop()
-		log.Println("Recovery service stopped")
+		zap.L().Info("Recovery service stopped")
 	}
 
 	// Stop schedulers gracefully
@@ -1052,7 +1053,7 @@ func run() error {
 
 	if dailyCatchupScheduler != nil {
 		dailyCatchupScheduler.Stop()
-		log.Println("Daily catchup scheduler stopped")
+		zap.L().Info("Daily catchup scheduler stopped")
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -1062,6 +1063,6 @@ func run() error {
 		return fmt.Errorf("server shutdown error: %w", err)
 	}
 
-	log.Println("Server stopped")
+	zap.L().Info("Server stopped")
 	return nil
 }

@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 )
@@ -69,7 +70,7 @@ func (c *MixpanelClient) SetUserProperties(_ context.Context, userID string, pro
 func (c *MixpanelClient) send(url string, payload interface{}) {
 	data, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("mixpanel: failed to marshal payload: %v", err)
+		zap.L().Error("mixpanel payload marshal failed", zap.Error(err))
 		return
 	}
 
@@ -77,7 +78,7 @@ func (c *MixpanelClient) send(url string, payload interface{}) {
 	// or raw JSON array for POST with Content-Type application/json
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
 	if err != nil {
-		log.Printf("mixpanel: failed to create request: %v", err)
+		zap.L().Error("mixpanel request creation failed", zap.Error(err))
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -85,13 +86,15 @@ func (c *MixpanelClient) send(url string, payload interface{}) {
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		log.Printf("mixpanel: request failed: %v", err)
+		zap.L().Error("mixpanel request failed", zap.Error(err))
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("mixpanel: unexpected status %d for %s", resp.StatusCode, url)
+		zap.L().Warn("mixpanel unexpected status",
+			zap.Int("status_code", resp.StatusCode),
+			zap.String("url", url))
 	}
 }
 

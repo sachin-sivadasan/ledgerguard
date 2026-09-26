@@ -2,7 +2,8 @@ package external
 
 import (
 	"context"
-	"log"
+
+	"go.uber.org/zap"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 )
@@ -17,7 +18,9 @@ func NewNoopEmailSender() *NoopEmailSender {
 }
 
 func (s *NoopEmailSender) Send(_ context.Context, msg service.EmailMessage) error {
-	log.Printf("email(noop): would send to=%s subject=%q (no provider configured)", msg.To, msg.Subject)
+	zap.L().Info("email noop: would send (no provider configured)",
+		zap.String("to", msg.To),
+		zap.String("subject", msg.Subject))
 	return nil
 }
 

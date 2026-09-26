@@ -2,12 +2,13 @@ package scheduler
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 // SyncScheduler handles scheduled synchronization of transactions
@@ -59,42 +60,42 @@ func (s *SyncScheduler) run(ctx context.Context) {
 		case <-ticker.C:
 			s.syncAll(ctx)
 		case <-s.stopCh:
-			log.Println("Sync scheduler stopped")
+			logging.FromContext(ctx).Info("sync scheduler stopped")
 			return
 		case <-ctx.Done():
-			log.Println("Sync scheduler context cancelled")
+			logging.FromContext(ctx).Info("sync scheduler context cancelled")
 			return
 		}
 	}
 }
 
 func (s *SyncScheduler) syncAll(ctx context.Context) {
-	log.Println("Starting scheduled sync...")
+	logging.FromContext(ctx).Info("starting scheduled sync")
 
 	// Get all unique partner account IDs from apps
 	partnerAccountIDs, err := s.getPartnerAccountIDs(ctx)
 	if err != nil {
-		log.Printf("Failed to get partner accounts: %v", err)
+		logging.FromContext(ctx).Error("failed to get partner accounts", zap.Error(err))
 		return
 	}
 
 	for _, partnerAccountID := range partnerAccountIDs {
 		results, err := s.syncService.SyncAllApps(ctx, partnerAccountID)
 		if err != nil {
-			log.Printf("Failed to sync apps for partner %s: %v", partnerAccountID, err)
+			logging.FromContext(ctx).Warn("failed to sync apps for partner", zap.String("partner_id", partnerAccountID.String()), zap.Error(err))
 			continue
 		}
 
 		for _, result := range results {
 			if result.Error != nil {
-				log.Printf("Sync error for app %s: %v", result.AppName, result.Error)
+				logging.FromContext(ctx).Warn("sync error for app", zap.String("app_name", result.AppName), zap.Error(result.Error))
 			} else {
-				log.Printf("Synced %d transactions for app %s", result.TransactionCount, result.AppName)
+				logging.FromContext(ctx).Info("synced transactions for app", zap.Int("count", result.TransactionCount), zap.String("app_name", result.AppName))
 			}
 		}
 	}
 
-	log.Println("Scheduled sync completed")
+	logging.FromContext(ctx).Info("scheduled sync completed")
 }
 
 func (s *SyncScheduler) getPartnerAccountIDs(ctx context.Context) ([]uuid.UUID, error) {

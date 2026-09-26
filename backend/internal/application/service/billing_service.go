@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +12,8 @@ import (
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 // BillingService handles B2B subscription billing via Razorpay.
@@ -183,22 +184,22 @@ func (s *BillingService) HandleWebhookEvent(ctx context.Context, body []byte, si
 
 	var event RazorpayWebhookPayload
 	if err := json.Unmarshal(body, &event); err != nil {
-		log.Printf("billing webhook: failed to parse event: %v", err)
+		logging.FromContext(ctx).Error("Failed to parse billing webhook event", zap.Error(err))
 		return nil
 	}
 
 	var subPayload RazorpaySubscriptionPayload
 	if err := json.Unmarshal(event.Payload, &subPayload); err != nil {
-		log.Printf("billing webhook: failed to parse subscription payload for event %s: %v", event.Event, err)
+		logging.FromContext(ctx).Error("Failed to parse billing webhook subscription payload", zap.String("event", event.Event), zap.Error(err))
 		return nil
 	}
 
 	razorpaySub := subPayload.Subscription.Entity
-	log.Printf("billing webhook: event=%s subscription_id=%s", event.Event, razorpaySub.ID)
+	logging.FromContext(ctx).Info("Processing billing webhook", zap.String("event", event.Event), zap.String("razorpay_subscription_id", razorpaySub.ID))
 
 	bs, err := s.billingRepo.FindByRazorpaySubscriptionID(ctx, razorpaySub.ID)
 	if err != nil {
-		log.Printf("billing webhook: subscription not found for razorpay_id=%s: %v", razorpaySub.ID, err)
+		logging.FromContext(ctx).Warn("Billing subscription not found", zap.String("razorpay_subscription_id", razorpaySub.ID), zap.Error(err))
 		return nil
 	}
 
@@ -214,7 +215,7 @@ func (s *BillingService) HandleWebhookEvent(ctx context.Context, body []byte, si
 	case "subscription.cancelled":
 		s.handleCancelled(ctx, bs)
 	default:
-		log.Printf("billing webhook: unhandled event type: %s", event.Event)
+		logging.FromContext(ctx).Warn("Unhandled billing webhook event type", zap.String("event", event.Event))
 	}
 
 	return nil
@@ -225,7 +226,7 @@ func (s *BillingService) handleActivated(ctx context.Context, bs *entity.Billing
 	bs.Activate(periodStart, periodEnd)
 
 	if err := s.billingRepo.Update(ctx, bs); err != nil {
-		log.Printf("billing webhook: failed to update subscription %s on activation: %v", bs.ID, err)
+		logging.FromContext(ctx).Error("Failed to update billing subscription on activation", zap.String("subscription_id", bs.ID.String()), zap.Error(err))
 		return
 	}
 
@@ -244,21 +245,21 @@ func (s *BillingService) handleCharged(ctx context.Context, bs *entity.BillingSu
 	bs.UpdatePeriod(periodStart, periodEnd)
 
 	if err := s.billingRepo.Update(ctx, bs); err != nil {
-		log.Printf("billing webhook: failed to update subscription %s on charge: %v", bs.ID, err)
+		logging.FromContext(ctx).Error("Failed to update billing subscription on charge", zap.String("subscription_id", bs.ID.String()), zap.Error(err))
 	}
 }
 
 func (s *BillingService) handlePending(ctx context.Context, bs *entity.BillingSubscription) {
 	bs.MarkPending()
 	if err := s.billingRepo.Update(ctx, bs); err != nil {
-		log.Printf("billing webhook: failed to update subscription %s to pending: %v", bs.ID, err)
+		logging.FromContext(ctx).Error("Failed to update billing subscription to pending", zap.String("subscription_id", bs.ID.String()), zap.Error(err))
 	}
 }
 
 func (s *BillingService) handleHalted(ctx context.Context, bs *entity.BillingSubscription) {
 	bs.Halt()
 	if err := s.billingRepo.Update(ctx, bs); err != nil {
-		log.Printf("billing webhook: failed to update subscription %s to halted: %v", bs.ID, err)
+		logging.FromContext(ctx).Error("Failed to update billing subscription to halted", zap.String("subscription_id", bs.ID.String()), zap.Error(err))
 	}
 
 	if s.tracker != nil {
@@ -271,7 +272,7 @@ func (s *BillingService) handleHalted(ctx context.Context, bs *entity.BillingSub
 func (s *BillingService) handleCancelled(ctx context.Context, bs *entity.BillingSubscription) {
 	bs.Cancel()
 	if err := s.billingRepo.Update(ctx, bs); err != nil {
-		log.Printf("billing webhook: failed to update subscription %s to cancelled: %v", bs.ID, err)
+		logging.FromContext(ctx).Error("Failed to update billing subscription to cancelled", zap.String("subscription_id", bs.ID.String()), zap.Error(err))
 		return
 	}
 
@@ -288,12 +289,12 @@ func (s *BillingService) handleCancelled(ctx context.Context, bs *entity.Billing
 func (s *BillingService) updateUserPlanTier(ctx context.Context, userID uuid.UUID, tier valueobject.PlanTier) {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
-		log.Printf("billing webhook: failed to find user %s for plan update: %v", userID, err)
+		logging.FromContext(ctx).Error("Failed to find user for plan update", zap.String("user_id", userID.String()), zap.Error(err))
 		return
 	}
 	user.PlanTier = tier
 	if err := s.userRepo.Update(ctx, user); err != nil {
-		log.Printf("billing webhook: failed to update user %s plan tier to %s: %v", userID, tier, err)
+		logging.FromContext(ctx).Error("Failed to update user plan tier", zap.String("user_id", userID.String()), zap.String("tier", tier.String()), zap.Error(err))
 	}
 }
 

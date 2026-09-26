@@ -75,6 +75,11 @@ type FirebaseConfig struct {
 	// Firebase GetUser call per authenticated request; default true. Set
 	// FIREBASE_CHECK_REVOKED=false to trade the check for lower latency.
 	CheckRevoked bool `yaml:"check_revoked"`
+	// RequireEmailVerified rejects authenticated requests whose Firebase token reports
+	// an unverified email. Default false (opt-in): enabling it requires the client to
+	// send verification emails AND existing users to verify, or they lock out. Set via
+	// FIREBASE_REQUIRE_EMAIL_VERIFIED=true once those are in place.
+	RequireEmailVerified bool `yaml:"require_email_verified"`
 }
 
 type ShopifyConfig struct {
@@ -191,6 +196,11 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("FIREBASE_CHECK_REVOKED"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {
 			cfg.Firebase.CheckRevoked = b
+		}
+	}
+	if v := os.Getenv("FIREBASE_REQUIRE_EMAIL_VERIFIED"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			cfg.Firebase.RequireEmailVerified = b
 		}
 	}
 

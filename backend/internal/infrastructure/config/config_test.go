@@ -164,6 +164,30 @@ func TestLoad_EnvOnly(t *testing.T) {
 	}
 }
 
+func TestLoad_FirebaseRequireEmailVerified(t *testing.T) {
+	// Default OFF (opt-in, avoids locking out existing/unverified users).
+	os.Clearenv()
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Firebase.RequireEmailVerified {
+		t.Error("expected RequireEmailVerified to default to false")
+	}
+
+	// Env can enable it.
+	os.Clearenv()
+	os.Setenv("FIREBASE_REQUIRE_EMAIL_VERIFIED", "true")
+	defer os.Clearenv()
+	cfg, err = Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !cfg.Firebase.RequireEmailVerified {
+		t.Error("expected FIREBASE_REQUIRE_EMAIL_VERIFIED=true to enable the gate")
+	}
+}
+
 func TestLoad_FirebaseCheckRevoked(t *testing.T) {
 	// Default: secure-by-default (revocation check ON).
 	os.Clearenv()

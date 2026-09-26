@@ -58,7 +58,10 @@ curl -H "Authorization: Bearer <orgA_token>" -H "X-Org-Id: <orgA_id>" \
 **Impact:** a signed-out / compromised session's token stays valid until natural expiry (~1h); no immediate session kill.
 **Fix:** use `VerifyIDTokenAndCheckRevoked` on sensitive paths (or globally); optionally add a revoke endpoint.
 
-## S5 — No email-verification gate  ✅ **[Medium]**
+## S5 — No email-verification gate  ✅ **[Medium] — ✅ FIXED (opt-in gate)**
+**Status:** **FIXED (opt-in gate)** — `TokenClaims` now carries `EmailVerified` (from the Firebase `email_verified` claim), and `AuthMiddleware` rejects unverified callers with **403** when enabled. Configurable via `Firebase.RequireEmailVerified` / `FIREBASE_REQUIRE_EMAIL_VERIFIED`, **default false**. Tests: `TestAuthMiddleware_EmailVerificationGate` (on+unverified→403, on+verified→pass, off→pass) + `TestLoad_FirebaseRequireEmailVerified`. Stacked on S4; branch `fix/s5-email-verification`.
+**Why default OFF (important):** existing users all have `email_verified=false` (verification was never enforced or emailed), so a default-on gate would **lock out the entire current user base**. Enabling requires first: (1) the client sends verification emails on signup, and (2) existing users verify. Once those are in place, set `FIREBASE_REQUIRE_EMAIL_VERIFIED=true`. Complements S3 (an unverified invitee then also can't accept).
+
 **Component:** `middleware/auth.go` (JIT provisioning) / frontend signup.
 **Evidence:** users authenticate immediately post-signup; `email_verified` isn't checked.
 **Impact:** spam/abuse signups; **compounds S3** (unverified emails can accept invites).

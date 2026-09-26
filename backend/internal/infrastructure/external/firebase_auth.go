@@ -54,9 +54,11 @@ func (s *FirebaseAuthService) VerifyIDToken(ctx context.Context, idToken string)
 	}
 
 	email, _ := token.Claims["email"].(string)
+	emailVerified, _ := token.Claims["email_verified"].(bool)
 
 	return &service.TokenClaims{
-		UID:   token.UID,
-		Email: email,
+		UID:           token.UID,
+		Email:         email,
+		EmailVerified: emailVerified,
 	}, nil
 }

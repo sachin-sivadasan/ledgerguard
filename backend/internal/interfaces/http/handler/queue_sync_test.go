@@ -15,6 +15,7 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
@@ -542,4 +543,48 @@ var _ repository.SyncJobRepository = (*mockSyncJobRepoForHandler)(nil)
 
 func (m *mockAppRepoForQueueSync) UpdateInstallCount(ctx context.Context, appID uuid.UUID, count int) error {
 	return nil
+}
+
+// TestQueueSync_EnqueueSync_PersistsRequestID is the origin-of-correlation guard: the
+// request id on ctx (set by RequestLogger) must be written onto the enqueued Redis
+// payload, so a sync's processor logs can later be tied back to the triggering request.
+// A regression that dropped logging.RequestIDFromContext(ctx) or the RequestID json tag
+// would otherwise pass every other test.
+func TestQueueSync_EnqueueSync_PersistsRequestID(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("miniredis: %v", err)
+	}
+	t.Cleanup(mr.Close)
+	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { client.Close() })
+
+	syncJobRepo := newMockSyncJobRepoForHandler()
+	svc := service.NewQueueSyncService(
+		syncJobRepo,
+		&mockAppRepoForQueueSync{apps: make(map[uuid.UUID]*entity.App)},
+		&mockPartnerRepoForQueueSync{accounts: make(map[uuid.UUID]*entity.PartnerAccount)},
+		client,
+		queue.NewLockManager(client),
+		queue.NewProgressTracker(client, syncJobRepo, 0, 0),
+	)
+
+	const reqID = "req-corr-1"
+	ctx := logging.ContextWithRequestID(context.Background(), reqID)
+	if _, err := svc.EnqueueSync(ctx, uuid.New(), uuid.New(), uuid.New(), entity.SyncJobTypeFullSync, 1); err != nil {
+		t.Fatalf("EnqueueSync: %v", err)
+	}
+
+	// Read the enqueued payload back out of Redis and assert it carries the request id.
+	raw, err := client.LRange(context.Background(), queue.FullSyncQueueKey, 0, -1).Result()
+	if err != nil || len(raw) != 1 {
+		t.Fatalf("expected 1 enqueued payload, got %d (err=%v)", len(raw), err)
+	}
+	var payload queue.SyncJobPayload
+	if err := json.Unmarshal([]byte(raw[0]), &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.RequestID != reqID {
+		t.Errorf("enqueued RequestID = %q, want %q", payload.RequestID, reqID)
+	}
 }

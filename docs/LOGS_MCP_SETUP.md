@@ -22,7 +22,7 @@ see [[no-ssh-to-servers]]).
 
 ## Phase 0 — inventory (done, from the codebase)
 - **Deploy:** `deploy/cohost/docker-compose.cohost.yml` — `ledgerguard-api` (Go), `ledgerguard-db` (pg16), `ledgerguard-redis`, nginx front; networks `lg-internal` + `checkoutmate_default`. **FACT.**
-- **Logging:** Go **stdlib `log`** — ~376 `log.Printf`/`Println` (approx., grep-counted), **no structured logger** (`go.mod` has none). **FACT.**
+- **Logging (at inventory time, pre-migration):** Go **stdlib `log`** — ~376 `log.Printf`/`Println` (approx., grep-counted), **no structured logger**. *(Now migrated to zap/ecszap — Phase 4 below; only ~2 deliberate stdlib `log` calls remain.)* **FACT.**
 - **Correlation:** chi `RequestID` middleware + `lgmw.ResponseLogger` are wired in `router.go`, but the request ID is **not** in the `log.Printf` lines. **FACT** — this is the highest-leverage gap (Phase 4).
 - **Logs today:** default `json-file` driver → `docker logs ledgerguard-api`. No ES/Loki/Datadog. **FACT.**
 - **Tenant fields available:** every request has an org (`X-Org-Id`, `OrgContextMW`) and most an `appID` — these become the keyword fields that make "one org's / one app's story" queryable.
@@ -78,7 +78,9 @@ curl -su elastic:PASS -XPUT http://127.0.0.1:9200/_index_template/logs-ledgergua
       "service.name":{"type":"keyword"},
       "request_id":{"type":"keyword"},        // ← correlation id — the highest-leverage field
       "org_id":{"type":"keyword"},
+      "user_id":{"type":"keyword"},
       "app_id":{"type":"keyword"},
+      "job_id":{"type":"keyword"},
       "message":{"type":"text"}
     }}}}'
 ```
@@ -131,10 +133,10 @@ on upgrades). Implemented:
    attaches a request-scoped logger carrying `request_id`; handlers/services log via
    `logging.FromContext(ctx)` and get the correlation id for free. Demo conversion:
    `middleware/auth.go` token-verification failure.
-   > **Emitted vs. typed today:** only `request_id` actually flows onto log lines now (via
-   > `RequestLogger`). `org_id`/`app_id` are *typed* in the Phase-2 index template but **not
-   > yet emitted** — that enrichment lands with the point-3 migration (add them to the
-   > context logger in `OrgContextMW` / the sync-job payload).
+   > **Emitted fields (current):** `request_id` on every request line (via `RequestLogger`),
+   > `org_id` + `user_id` on org-scoped routes (via `OrgContextMW`), and `app_id`/`job_id`
+   > (+ inherited `request_id`) on sync-job lines (via `jobLogger`). All are typed in the
+   > Phase-2 index template (add `user_id` there too — see below).
 3. **Opportunistic migration:** convert hot paths off `log.Printf` to
    `logging.FromContext(ctx).Info/Error(...)`.
    - ✅ **Sync pipeline processors** (`internal/infrastructure/queue/processors/*`) — DONE.
@@ -145,9 +147,9 @@ on upgrades). Implemented:
    - ✅ **HTTP handlers** (117 sites across 33 files) — DONE. Request handlers log via
      `logging.FromContext(r.Context())` (so `request_id` flows onto every line);
      interpolated ids/errors became structured fields (`app_id`, `user_id`, `partner_id`,
-     `topic`, `zap.Error(err)`, …). Ctx-less shared helpers (repo-error / CSV writers that
-     take only `(w, …)`) log via `zap.L()` — still structured JSON, but **no `request_id`**;
-     threading `ctx` into those helper signatures to recover correlation is a follow-up.
+     `topic`, `zap.Error(err)`, …). The shared helpers (repo-error / CSV writers, some
+     `buildX`) were also ctx-threaded (follow-up, now DONE), so the handler package has
+     **zero** `zap.L()` calls left — every handler line carries `request_id`.
    - ✅ **Everything else** — DONE. `cmd/server/main.go` (startup → `zap.L()`),
      `application/service`, `application/scheduler`, `infrastructure/queue` core (worker /
      recovery / client), `infrastructure/external` clients, `revenue_api`,

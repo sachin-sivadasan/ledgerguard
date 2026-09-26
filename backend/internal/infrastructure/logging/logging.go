@@ -70,3 +70,21 @@ func FromContext(ctx context.Context) *zap.Logger {
 	}
 	return zap.L()
 }
+
+type reqIDKey struct{}
+
+// ContextWithRequestID stores the request's correlation id on ctx under a
+// framework-neutral key. Set by the HTTP layer (RequestLogger) so inner layers can read
+// the id via RequestIDFromContext without importing the web framework — e.g. to persist
+// it on an async job payload for later log correlation.
+func ContextWithRequestID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, reqIDKey{}, id)
+}
+
+// RequestIDFromContext returns the correlation id set by ContextWithRequestID, or "".
+func RequestIDFromContext(ctx context.Context) string {
+	if id, ok := ctx.Value(reqIDKey{}).(string); ok {
+		return id
+	}
+	return ""
+}

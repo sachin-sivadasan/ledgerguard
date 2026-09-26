@@ -15,7 +15,12 @@ import (
 // you reconstruct one request's whole story in the logs. Use AFTER chi's RequestID.
 func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		l := logging.FromContext(r.Context()).With(zap.String("request_id", chimw.GetReqID(r.Context())))
-		next.ServeHTTP(w, r.WithContext(logging.ContextWithLogger(r.Context(), l)))
+		reqID := chimw.GetReqID(r.Context())
+		l := logging.FromContext(r.Context()).With(zap.String("request_id", reqID))
+		ctx := logging.ContextWithLogger(r.Context(), l)
+		// Also stash the raw id under a framework-neutral key so inner layers (e.g. the
+		// sync enqueuer) can carry it onto async job payloads without importing chi.
+		ctx = logging.ContextWithRequestID(ctx, reqID)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

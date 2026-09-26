@@ -40,8 +40,10 @@ func (m *mockStatusRepo) GetByDomain(_ context.Context, appID uuid.UUID, domain 
 	}
 	return nil, errors.New("not found")
 }
-func (m *mockStatusRepo) Upsert(context.Context, *reventity.SubscriptionStatus) error      { return nil }
-func (m *mockStatusRepo) UpsertBatch(context.Context, []*reventity.SubscriptionStatus) error { return nil }
+func (m *mockStatusRepo) Upsert(context.Context, *reventity.SubscriptionStatus) error { return nil }
+func (m *mockStatusRepo) UpsertBatch(context.Context, []*reventity.SubscriptionStatus) error {
+	return nil
+}
 func (m *mockStatusRepo) GetByDomains(context.Context, uuid.UUID, []string) ([]*reventity.SubscriptionStatus, error) {
 	return nil, nil
 }
@@ -74,9 +76,9 @@ func (m *mockAppRepo) FindByPartnerAppID(context.Context, uuid.UUID, string) (*d
 func (m *mockAppRepo) FindAllByPartnerAppID(context.Context, string) ([]*domainentity.App, error) {
 	return nil, nil
 }
-func (m *mockAppRepo) Update(context.Context, *domainentity.App) error                 { return nil }
-func (m *mockAppRepo) UpdateInstallCount(context.Context, uuid.UUID, int) error        { return nil }
-func (m *mockAppRepo) Delete(context.Context, uuid.UUID) error                         { return nil }
+func (m *mockAppRepo) Update(context.Context, *domainentity.App) error          { return nil }
+func (m *mockAppRepo) UpdateInstallCount(context.Context, uuid.UUID, int) error { return nil }
+func (m *mockAppRepo) Delete(context.Context, uuid.UUID) error                  { return nil }
 
 type mockPartnerRepo struct {
 	byUser map[uuid.UUID]*domainentity.PartnerAccount
@@ -99,8 +101,8 @@ func (m *mockPartnerRepo) FindByPartnerID(context.Context, string) (*domainentit
 	return nil, errors.New("not found")
 }
 func (m *mockPartnerRepo) Update(context.Context, *domainentity.PartnerAccount) error { return nil }
-func (m *mockPartnerRepo) Delete(context.Context, uuid.UUID) error                   { return nil }
-func (m *mockPartnerRepo) GetAllIDs(context.Context) ([]uuid.UUID, error)            { return nil, nil }
+func (m *mockPartnerRepo) Delete(context.Context, uuid.UUID) error                    { return nil }
+func (m *mockPartnerRepo) GetAllIDs(context.Context) ([]uuid.UUID, error)             { return nil, nil }
 
 // --- test fixture: two orgs (A owns appA, B owns appB) sharing the status store ---
 

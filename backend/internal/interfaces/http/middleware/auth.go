@@ -112,7 +112,7 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 						// This runs once (new-user branch only), so a failure leaves the user
 						// org-less until the backfill (000042) is re-applied for them. Log with
 						// identity so it's actionable without a table scan.
-						logging.FromContext(r.Context()).Warn("failed to provision default org", zap.String("user_id", user.ID.String()), zap.String("email", user.Email), zap.String("firebase_uid", claims.UID), zap.Error(perr))
+						logging.FromContext(r.Context()).Error("failed to provision default org", zap.String("user_id", user.ID.String()), zap.String("email", user.Email), zap.String("firebase_uid", claims.UID), zap.Error(perr))
 					}
 				}
 			} else {

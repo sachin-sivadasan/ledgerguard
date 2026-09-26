@@ -69,11 +69,16 @@ func (m *RateLimiter) Middleware(next http.Handler) http.Handler {
 		// Increment the counter
 		count, err := m.store.Increment(r.Context(), windowKey, window)
 		if err != nil {
-			logging.FromContext(r.Context()).Warn("rate limiter store error", zap.String("window_key", windowKey), zap.Error(err), zap.Bool("fail_open", m.failOpen))
+			lg := logging.FromContext(r.Context())
+			fields := []zap.Field{zap.String("window_key", windowKey), zap.Error(err), zap.Bool("fail_open", m.failOpen)}
 			if m.failOpen {
+				// Degraded but serving — the request proceeds, so Warn.
+				lg.Warn("rate limiter store error", fields...)
 				next.ServeHTTP(w, r)
 				return
 			}
+			// Fail-closed: the store being down 503s every request — a real outage, so Error.
+			lg.Error("rate limiter store error", fields...)
 			writeJSONError(w, http.StatusServiceUnavailable, "rate limiter unavailable")
 			return
 		}

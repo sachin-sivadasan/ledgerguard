@@ -78,8 +78,9 @@ func (r *PostgresAuditLogRepository) CreateAsync(auditLog *entity.AuditLog) {
 	case r.logChan <- auditLog:
 		// Successfully queued
 	default:
-		// Channel full, log and drop
-		zap.L().Warn("audit log channel full, dropping log", zap.String("endpoint", auditLog.Endpoint))
+		// Channel full: we're dropping a compliance audit record — Error so it alerts,
+		// not Warn (a silently-dropped audit row leaves a reconciliation gap).
+		zap.L().Error("audit log channel full, dropping log", zap.String("endpoint", auditLog.Endpoint))
 	}
 }
 

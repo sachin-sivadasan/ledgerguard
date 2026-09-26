@@ -66,6 +66,18 @@ func TestNewLogger_LevelFiltering(t *testing.T) {
 	}
 }
 
+// TestNewLogger_InvalidLevelDefaultsToInfo pins the incident-safety branch: a typo'd,
+// non-empty LOG_LEVEL must fall back to Info (not silently downgrade to a level that
+// swallows Info/Warn during an outage).
+func TestNewLogger_InvalidLevelDefaultsToInfo(t *testing.T) {
+	var b strings.Builder
+	l := newLogger(bufSyncer{&b}, "debgu", "dev") // unparseable level
+	l.Info("kept")
+	if !strings.Contains(b.String(), "kept") {
+		t.Error("invalid LOG_LEVEL should default to Info (info line must be emitted)")
+	}
+}
+
 var _ zapcore.WriteSyncer = bufSyncer{}
 
 func keys(m map[string]any) []string {

@@ -47,7 +47,7 @@ func (s *stubMemberRepo) FindByUserID(context.Context, uuid.UUID) ([]*entity.Org
 }
 func (s *stubMemberRepo) CountByOrgID(context.Context, uuid.UUID) (int, error) { return 1, nil }
 func (s *stubMemberRepo) Update(context.Context, *entity.OrgMember) error      { return nil }
-func (s *stubMemberRepo) Delete(context.Context, uuid.UUID) error             { return nil }
+func (s *stubMemberRepo) Delete(context.Context, uuid.UUID) error              { return nil }
 
 // TestRequireOrg_EnrichesLoggerWithTenant is the "one org's story" guard: once RequireOrg
 // resolves the tenant, every downstream handler log line must carry org_id + user_id.
@@ -89,5 +89,33 @@ func TestRequireOrg_EnrichesLoggerWithTenant(t *testing.T) {
 	}
 	if got := fields["user_id"]; got != user.ID.String() {
 		t.Errorf("user_id = %v, want %s", got, user.ID)
+	}
+}
+
+// TestRequireOrg_NoTenantLeakWithoutOrg is the negative guard for tenant isolation: a
+// request that goes through RequestLogger but NOT RequireOrg must carry request_id but
+// must NOT carry org_id/user_id — so enrichment can never leak one tenant's identity onto
+// an unauthenticated or non-org-scoped line.
+func TestRequireOrg_NoTenantLeakWithoutOrg(t *testing.T) {
+	core, recorded := observer.New(zapcore.InfoLevel)
+	base := zap.New(core)
+
+	handler := RequestLogger(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logging.FromContext(r.Context()).Info("handled")
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req = req.WithContext(logging.ContextWithLogger(req.Context(), base))
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	fields := recorded.All()[0].ContextMap()
+	if _, ok := fields["request_id"]; !ok {
+		t.Error("expected request_id to be present via RequestLogger")
+	}
+	if _, ok := fields["org_id"]; ok {
+		t.Errorf("org_id must NOT be present without RequireOrg, got %v", fields["org_id"])
+	}
+	if _, ok := fields["user_id"]; ok {
+		t.Errorf("user_id must NOT be present without RequireOrg, got %v", fields["user_id"])
 	}
 }

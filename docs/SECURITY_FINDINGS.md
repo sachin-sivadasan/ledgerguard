@@ -14,7 +14,9 @@ fixes, not a rearchitecture.
 
 ---
 
-## S1 — App-scoped endpoints don't verify `appID` belongs to the caller's org  ✅ **[High — confirmed authenticated cross-tenant IDOR]**
+## S1 — App-scoped endpoints don't verify `appID` belongs to the caller's org  ✅ **[High — confirmed authenticated cross-tenant IDOR] — ✅ FIXED**
+**Status:** **FIXED** — `resolveAppFromRequest` now resolves the caller's partner account and returns 404 when `app.PartnerAccountID != account.ID`, closing the leak for all callers (reports/forecast/dashboard/subscriptions/stores) at one chokepoint. Regression tests added: `TestResolveAppFromRequest_CrossOrg_Returns404` (leak guard) + `TestResolveAppFromRequest_SameOrg_Succeeds` (legit-flow guard), `app_lookup_test.go`. Branch `fix/s1-app-org-ownership`.
+
 **Component:** `internal/interfaces/http/handler/app_lookup.go:54` (`resolveAppFromRequest`) — used by reports, forecast, dashboard, subscriptions, stores.
 
 **Confirmed evidence chain (all verified):**
@@ -43,10 +45,7 @@ curl -H "Authorization: Bearer <orgA_token>" -H "X-Org-Id: <orgA_id>" \
 **Impact:** any org member (incl. VIEWER) may perform admin/owner-only actions or read another member's data via guessed UUIDs — privilege escalation.
 **Fix:** apply `RequireOrgRole(OWNER)` / `RequireOrgRole(ADMIN,OWNER)` to privileged routes; gate `UpdateNotificationPrefs` to self-or-admin. Add per-route RBAC tests.
 
-## S3 — Invitation acceptance doesn't verify the accepting user's email  ✅ **[High] — ✅ FIXED (email-binding)**
-**Status:** **FIXED (email-binding)** — `AcceptInvitation` now takes the authenticated user's email and rejects with `ErrInvitationEmailMismatch` → **403** unless it matches `invitation.Email` (case-insensitive, trimmed). Checked **first**, so a wrong-email caller can't probe invite state. Tests: `TestAcceptInvitation_EmailMismatch` (hijack blocked, no member created; case-insensitive match still succeeds) + existing accept tests updated. Branch `fix/s3-invite-email-binding`.
-**Remaining (separate follow-up, NOT done here):** server-side email *delivery* of the token (it's still returned in the API response) — a feature that overlaps the #9 email stub; tracked as its own item.
-
+## S3 — Invitation acceptance doesn't verify the accepting user's email  ✅ **[High]**
 **Component:** `application/service/org_service.go` (`AcceptInvitation`).
 **Evidence:** email referenced only in `InviteMember`, never compared in `AcceptInvitation`; the token is **returned in the API response** (no backend email delivery).
 **Impact:** anyone who obtains the invite token can join the org **as the invited role** (invite-hijack), regardless of their email.

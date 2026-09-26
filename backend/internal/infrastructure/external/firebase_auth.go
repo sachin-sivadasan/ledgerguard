@@ -12,9 +12,13 @@ import (
 
 type FirebaseAuthService struct {
 	client *auth.Client
+	// checkRevoked additionally rejects revoked/disabled sessions (signed-out users,
+	// disabled accounts) instead of trusting a token until its ~1h natural expiry.
+	// Costs one Firebase GetUser call per verification.
+	checkRevoked bool
 }
 
-func NewFirebaseAuthService(ctx context.Context, credentialsFile string) (*FirebaseAuthService, error) {
+func NewFirebaseAuthService(ctx context.Context, credentialsFile string, checkRevoked bool) (*FirebaseAuthService, error) {
 	var app *firebase.App
 	var err error
 
@@ -34,19 +38,27 @@ func NewFirebaseAuthService(ctx context.Context, credentialsFile string) (*Fireb
 		return nil, fmt.Errorf("failed to get firebase auth client: %w", err)
 	}
 
-	return &FirebaseAuthService{client: client}, nil
+	return &FirebaseAuthService{client: client, checkRevoked: checkRevoked}, nil
 }
 
 func (s *FirebaseAuthService) VerifyIDToken(ctx context.Context, idToken string) (*service.TokenClaims, error) {
-	token, err := s.client.VerifyIDToken(ctx, idToken)
+	var token *auth.Token
+	var err error
+	if s.checkRevoked {
+		token, err = s.client.VerifyIDTokenAndCheckRevoked(ctx, idToken)
+	} else {
+		token, err = s.client.VerifyIDToken(ctx, idToken)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify token: %w", err)
 	}
 
 	email, _ := token.Claims["email"].(string)
+	emailVerified, _ := token.Claims["email_verified"].(bool)
 
 	return &service.TokenClaims{
-		UID:   token.UID,
-		Email: email,
+		UID:           token.UID,
+		Email:         email,
+		EmailVerified: emailVerified,
 	}, nil
 }

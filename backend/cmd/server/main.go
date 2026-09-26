@@ -97,12 +97,12 @@ func run() error {
 
 	// Initialize Firebase Auth (optional - will fail gracefully if not configured)
 	var firebaseAuth *external.FirebaseAuthService
-	firebaseAuth, err = external.NewFirebaseAuthService(ctx, cfg.Firebase.CredentialsFile)
+	firebaseAuth, err = external.NewFirebaseAuthService(ctx, cfg.Firebase.CredentialsFile, cfg.Firebase.CheckRevoked)
 	if err != nil {
 		log.Printf("WARNING: Firebase Auth not configured: %v", err)
 		log.Printf("Authentication will not work without Firebase configuration")
 	} else {
-		log.Println("Firebase Auth initialized")
+		log.Printf("Firebase Auth initialized (token revocation check: %v)", cfg.Firebase.CheckRevoked)
 	}
 
 	// Initialize Firebase Messaging for push notifications (optional)
@@ -554,7 +554,15 @@ func run() error {
 		revenueAPIGraphQLHandler = revenueGraphQL.NewHandler(revenueGraphQL.NewResolver(subStatusSvc, usageStatusSvc))
 
 		apiKeyAuthMW = revenueMiddleware.NewAPIKeyAuth(apiKeySvc)
-		rateLimitStore := revenueMiddleware.NewInMemoryRateLimitStore()
+		// Prefer the shared Redis store so per-key limits hold across instances;
+		// fall back to in-memory (single-instance only) when Redis isn't configured.
+		var rateLimitStore revenueMiddleware.RateLimitStore = revenueMiddleware.NewInMemoryRateLimitStore()
+		if redisClient != nil {
+			rateLimitStore = revenueMiddleware.NewRedisRateLimitStore(redisClient)
+			log.Println("Revenue API rate limiter using Redis (multi-instance safe)")
+		} else {
+			log.Println("Revenue API rate limiter using in-memory store (single-instance only)")
+		}
 		rateLimiterMW = revenueMiddleware.NewRateLimiter(rateLimitStore, 60, 60)
 		auditLoggerMW = revenueMiddleware.NewAuditLogger(auditLogRepo)
 
@@ -868,12 +876,13 @@ func run() error {
 	if firebaseAuth != nil && userRepo != nil {
 		authMiddleware := middleware.NewAuthMiddleware(firebaseAuth, userRepo)
 		authMiddleware.SetTracker(tracker)
+		authMiddleware.SetRequireEmailVerified(cfg.Firebase.RequireEmailVerified)
 		if orgService != nil {
 			// Provision a default org for each new user on first login.
 			authMiddleware.SetOrgProvisioner(orgService)
 		}
 		authMW = authMiddleware.Authenticate
-		log.Println("Auth middleware initialized")
+		log.Printf("Auth middleware initialized (require email verified: %v)", cfg.Firebase.RequireEmailVerified)
 	}
 
 	// Initialize admin middleware (requires ADMIN or OWNER role)

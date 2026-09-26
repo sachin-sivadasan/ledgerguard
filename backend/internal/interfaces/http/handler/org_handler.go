@@ -261,7 +261,7 @@ func (h *OrgHandler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	member, err := h.orgService.AcceptInvitation(r.Context(), token, user.ID)
+	member, err := h.orgService.AcceptInvitation(r.Context(), token, user.ID, user.Email)
 	if err != nil {
 		status := http.StatusInternalServerError
 		msg := "failed to accept invitation"
@@ -274,6 +274,9 @@ func (h *OrgHandler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 			msg = err.Error()
 		case service.ErrAlreadyMember:
 			status = http.StatusConflict
+			msg = err.Error()
+		case service.ErrInvitationEmailMismatch:
+			status = http.StatusForbidden
 			msg = err.Error()
 		}
 		writeJSONError(w, status, msg)
@@ -396,6 +399,19 @@ func (h *OrgHandler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Requ
 	memberID, err := uuid.Parse(chi.URLParam(r, "userId"))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid member ID")
+		return
+	}
+
+	// Self-or-admin: a member may edit only their own notification preferences;
+	// managing another member's requires ADMIN/OWNER. Without this any member
+	// could overwrite another member's prefs by passing their member ID.
+	caller := middleware.OrgMemberFromContext(r.Context())
+	if caller == nil {
+		writeJSONError(w, http.StatusForbidden, "org context required")
+		return
+	}
+	if caller.ID != memberID && !caller.Role.CanManageMembers() {
+		writeJSONError(w, http.StatusForbidden, "cannot modify another member's notification preferences")
 		return
 	}
 

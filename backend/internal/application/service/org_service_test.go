@@ -388,7 +388,7 @@ func TestAcceptInvitation_Success(t *testing.T) {
 	inv, _ := svc.InviteMember(ctx, org.ID, "invitee@example.com", valueobject.OrgRoleViewer, creatorID)
 
 	// Accept
-	member, err := svc.AcceptInvitation(ctx, inv.Token, inviteeID)
+	member, err := svc.AcceptInvitation(ctx, inv.Token, inviteeID, "invitee@example.com")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -421,7 +421,7 @@ func TestAcceptInvitation_Expired(t *testing.T) {
 	invRepo.invitations[inv.ID] = inv
 
 	// Accept should fail
-	_, err := svc.AcceptInvitation(ctx, inv.Token, uuid.New())
+	_, err := svc.AcceptInvitation(ctx, inv.Token, uuid.New(), "expired@example.com")
 	if !errors.Is(err, ErrInvitationExpired) {
 		t.Errorf("expected ErrInvitationExpired, got %v", err)
 	}
@@ -439,9 +439,44 @@ func TestAcceptInvitation_AlreadyMember(t *testing.T) {
 	inv, _ := svc.InviteMember(ctx, org.ID, "dupe@example.com", valueobject.OrgRoleViewer, creatorID)
 
 	// Accept with the creator's own ID (already an OWNER member)
-	_, err := svc.AcceptInvitation(ctx, inv.Token, creatorID)
+	_, err := svc.AcceptInvitation(ctx, inv.Token, creatorID, "dupe@example.com")
 	if !errors.Is(err, ErrAlreadyMember) {
 		t.Errorf("expected ErrAlreadyMember, got %v", err)
+	}
+}
+
+// TestAcceptInvitation_EmailMismatch is the S3 invite-hijack guard: a logged-in user
+// whose email does not match the invitation must not be able to accept it, even with
+// a valid token, and no member may be created.
+func TestAcceptInvitation_EmailMismatch(t *testing.T) {
+	svc, _, memberRepo, _, _ := setupOrgService()
+	ctx := context.Background()
+	creatorID := uuid.New()
+	attackerID := uuid.New()
+
+	org, _ := svc.CreateOrganization(ctx, "Test", creatorID)
+	org.PlanTier = valueobject.PlanTierStarter
+	_ = svc.orgRepo.(*mockOrgRepo).Update(ctx, org)
+
+	inv, _ := svc.InviteMember(ctx, org.ID, "invitee@example.com", valueobject.OrgRoleViewer, creatorID)
+
+	// A different user (wrong email) tries to accept with the valid token.
+	before := len(memberRepo.members)
+	_, err := svc.AcceptInvitation(ctx, inv.Token, attackerID, "attacker@evil.com")
+	if !errors.Is(err, ErrInvitationEmailMismatch) {
+		t.Fatalf("expected ErrInvitationEmailMismatch, got %v", err)
+	}
+	if len(memberRepo.members) != before {
+		t.Error("no member should be created on an email-mismatched accept")
+	}
+
+	// Case-insensitive match on the correct email still succeeds.
+	member, err := svc.AcceptInvitation(ctx, inv.Token, uuid.New(), "INVITEE@example.com")
+	if err != nil {
+		t.Fatalf("case-insensitive email match should succeed, got %v", err)
+	}
+	if member.Role != valueobject.OrgRoleViewer {
+		t.Errorf("expected VIEWER, got %s", member.Role)
 	}
 }
 
@@ -478,7 +513,7 @@ func TestSuspendMember_Success(t *testing.T) {
 	_ = svc.orgRepo.(*mockOrgRepo).Update(ctx, org)
 
 	inv, _ := svc.InviteMember(ctx, org.ID, "viewer@test.com", valueobject.OrgRoleViewer, creatorID)
-	member, _ := svc.AcceptInvitation(ctx, inv.Token, viewerID)
+	member, _ := svc.AcceptInvitation(ctx, inv.Token, viewerID, "viewer@test.com")
 
 	// Suspend
 	err := svc.SuspendMember(ctx, org.ID, member.ID, creatorID)
@@ -528,7 +563,7 @@ func TestUnsuspendMember(t *testing.T) {
 	_ = svc.orgRepo.(*mockOrgRepo).Update(ctx, org)
 
 	inv, _ := svc.InviteMember(ctx, org.ID, "v@test.com", valueobject.OrgRoleViewer, creatorID)
-	member, _ := svc.AcceptInvitation(ctx, inv.Token, viewerID)
+	member, _ := svc.AcceptInvitation(ctx, inv.Token, viewerID, "v@test.com")
 
 	// Suspend then unsuspend
 	_ = svc.SuspendMember(ctx, org.ID, member.ID, creatorID)
@@ -557,7 +592,7 @@ func TestChangeRole(t *testing.T) {
 	_ = svc.orgRepo.(*mockOrgRepo).Update(ctx, org)
 
 	inv, _ := svc.InviteMember(ctx, org.ID, "v@test.com", valueobject.OrgRoleViewer, creatorID)
-	member, _ := svc.AcceptInvitation(ctx, inv.Token, viewerID)
+	member, _ := svc.AcceptInvitation(ctx, inv.Token, viewerID, "v@test.com")
 
 	// Change VIEWER → ADMIN
 	err := svc.ChangeRole(ctx, org.ID, member.ID, creatorID, valueobject.OrgRoleAdmin)

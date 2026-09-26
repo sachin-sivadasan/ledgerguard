@@ -164,6 +164,64 @@ func TestLoad_EnvOnly(t *testing.T) {
 	}
 }
 
+func TestLoad_FirebaseRequireEmailVerified(t *testing.T) {
+	// Default OFF (opt-in, avoids locking out existing/unverified users).
+	os.Clearenv()
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Firebase.RequireEmailVerified {
+		t.Error("expected RequireEmailVerified to default to false")
+	}
+
+	// Env can enable it.
+	os.Clearenv()
+	os.Setenv("FIREBASE_REQUIRE_EMAIL_VERIFIED", "true")
+	defer os.Clearenv()
+	cfg, err = Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !cfg.Firebase.RequireEmailVerified {
+		t.Error("expected FIREBASE_REQUIRE_EMAIL_VERIFIED=true to enable the gate")
+	}
+}
+
+func TestLoad_FirebaseCheckRevoked(t *testing.T) {
+	// Default: secure-by-default (revocation check ON).
+	os.Clearenv()
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !cfg.Firebase.CheckRevoked {
+		t.Error("expected CheckRevoked to default to true")
+	}
+
+	// Env can disable it (latency trade-off).
+	os.Clearenv()
+	os.Setenv("FIREBASE_CHECK_REVOKED", "false")
+	defer os.Clearenv()
+	cfg, err = Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Firebase.CheckRevoked {
+		t.Error("expected FIREBASE_CHECK_REVOKED=false to disable the check")
+	}
+
+	// And re-enable explicitly.
+	os.Setenv("FIREBASE_CHECK_REVOKED", "true")
+	cfg, err = Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !cfg.Firebase.CheckRevoked {
+		t.Error("expected FIREBASE_CHECK_REVOKED=true to enable the check")
+	}
+}
+
 func TestLoad_AuditRetentionDays(t *testing.T) {
 	// Default: keep forever (0), never auto-delete compliance data.
 	os.Clearenv()

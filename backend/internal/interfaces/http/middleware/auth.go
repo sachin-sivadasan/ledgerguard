@@ -28,10 +28,11 @@ type OrgProvisioner interface {
 }
 
 type AuthMiddleware struct {
-	tokenVerifier  service.AuthTokenVerifier
-	userRepo       repository.UserRepository
-	tracker        service.EventTracker
-	orgProvisioner OrgProvisioner
+	tokenVerifier        service.AuthTokenVerifier
+	userRepo             repository.UserRepository
+	tracker              service.EventTracker
+	orgProvisioner       OrgProvisioner
+	requireEmailVerified bool
 }
 
 func NewAuthMiddleware(tokenVerifier service.AuthTokenVerifier, userRepo repository.UserRepository) *AuthMiddleware {
@@ -44,6 +45,13 @@ func NewAuthMiddleware(tokenVerifier service.AuthTokenVerifier, userRepo reposit
 // SetTracker sets the event tracker for lifecycle events.
 func (m *AuthMiddleware) SetTracker(t service.EventTracker) {
 	m.tracker = t
+}
+
+// SetRequireEmailVerified toggles rejecting authenticated requests whose Firebase
+// token reports an unverified email. Default false (opt-in) — enabling it requires
+// the client to send verification emails and existing users to verify, or they lock out.
+func (m *AuthMiddleware) SetRequireEmailVerified(v bool) {
+	m.requireEmailVerified = v
 }
 
 // SetOrgProvisioner sets the provisioner used to create a default org for new users.
@@ -63,6 +71,11 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 		if err != nil {
 			log.Printf("Token verification failed: %v", err)
 			writeError(w, http.StatusUnauthorized, "invalid token")
+			return
+		}
+
+		if m.requireEmailVerified && !claims.EmailVerified {
+			writeError(w, http.StatusForbidden, "email not verified")
 			return
 		}
 

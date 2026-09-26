@@ -89,7 +89,7 @@ func (e *executor) compareStores(ctx context.Context, call chat.ToolCall) chat.T
 		var parsed struct {
 			StoreHealth any `json:"storeHealth"`
 		}
-		json.Unmarshal(data, &parsed)
+		_ = json.Unmarshal(data, &parsed)
 		results = append(results, storeResult{Domain: domain, Data: parsed.StoreHealth})
 	}
 

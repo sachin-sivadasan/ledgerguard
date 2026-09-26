@@ -119,26 +119,6 @@ func createSnapshot(appID uuid.UUID, date time.Time, activeMRR, revenueAtRisk, u
 	return s
 }
 
-// Helper to create transactions for a period
-func createTransactions(appID uuid.UUID, date time.Time, usageAmount, recurringAmount int64) []*entity.Transaction {
-	return []*entity.Transaction{
-		{
-			ID:              uuid.New(),
-			AppID:           appID,
-			ChargeType:      valueobject.ChargeTypeUsage,
-			NetAmountCents:  usageAmount,
-			TransactionDate: date,
-		},
-		{
-			ID:              uuid.New(),
-			AppID:           appID,
-			ChargeType:      valueobject.ChargeTypeRecurring,
-			NetAmountCents:  recurringAmount,
-			TransactionDate: date,
-		},
-	}
-}
-
 func TestGetPeriodMetrics_CurrentPeriodOnly(t *testing.T) {
 	appID := uuid.New()
 

@@ -1,0 +1,17 @@
+# golangci-lint configuration (v1.64.x format).
+# CI builds golangci-lint from source with the module's Go toolchain (see
+# .github/workflows/ci.yml, install-mode: goinstall) so its embedded Go version
+# matches go.mod's target — the prebuilt binary is compiled with an older Go and
+# refuses a newer module.
+#
+# No `linters:` block, so golangci-lint's default set stays enabled
+# (errcheck, gosimple, govet, ineffassign, staticcheck, unused).
+
+linters-settings:
+  errcheck:
+    # Writing the HTTP response body is unactionable once the status/headers have
+    # been sent, so these two calls are intentionally left unchecked across the
+    # handler layer. Request decoding (Decode/Unmarshal) is still checked.
+    exclude-functions:
+      - (*encoding/json.Encoder).Encode
+      - (net/http.ResponseWriter).Write

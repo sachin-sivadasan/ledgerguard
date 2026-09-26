@@ -113,8 +113,7 @@ func TestEventHandler_List_DefaultPage(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	eventList := resp["events"].([]interface{})
 	if len(eventList) != 20 {
 		t.Errorf("expected 20 events (default pageSize), got %d", len(eventList))
@@ -160,8 +159,7 @@ func TestEventHandler_List_CustomPage(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	eventList := resp["events"].([]interface{})
 	if len(eventList) != 10 {
 		t.Errorf("expected 10 events, got %d", len(eventList))

@@ -21,7 +21,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          # Read the Go version from go.mod so CI always matches the module's toolchain
+          # (go.mod targets 1.25; pinning an older version broke `covdata` and golangci-lint).
+          go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
       - name: Download dependencies
@@ -60,13 +62,19 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          # Read the Go version from go.mod so CI always matches the module's toolchain
+          # (go.mod targets 1.25; pinning an older version broke `covdata` and golangci-lint).
+          go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          # Pin the version (was "latest" — nondeterministic) and build it from source
+          # with the Go set up above, so its embedded Go matches go.mod's 1.25 target
+          # (the prebuilt binary is compiled with go1.24 and refuses a 1.25 module).
+          version: v1.64.8
+          install-mode: goinstall
           working-directory: backend
           args: --timeout=5m
 

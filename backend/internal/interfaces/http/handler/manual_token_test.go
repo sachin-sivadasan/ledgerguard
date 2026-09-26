@@ -138,8 +138,7 @@ func TestManualTokenHandler_AddToken_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	if resp["message"] != "Manual token added successfully" {
 		t.Errorf("unexpected message: %v", resp["message"])
 	}
@@ -259,8 +258,7 @@ func TestManualTokenHandler_GetToken_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	if resp["masked_token"] != "***...cdef" {
 		t.Errorf("expected masked token '***...cdef', got %v", resp["masked_token"])
 	}
@@ -330,8 +328,7 @@ func TestManualTokenHandler_RevokeToken_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	if resp["message"] != "Token revoked successfully" {
 		t.Errorf("unexpected message: %v", resp["message"])
 	}

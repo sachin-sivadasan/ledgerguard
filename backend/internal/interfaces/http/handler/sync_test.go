@@ -236,8 +236,7 @@ func TestSyncHandler_SyncAllApps_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	results, ok := resp["results"].([]interface{})
 	if !ok {
 		t.Fatal("expected results array in response")
@@ -328,8 +327,7 @@ func TestSyncHandler_SyncApp_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	if resp["app_name"] != "Test App" {
 		t.Errorf("expected app_name 'Test App', got %v", resp["app_name"])
 	}

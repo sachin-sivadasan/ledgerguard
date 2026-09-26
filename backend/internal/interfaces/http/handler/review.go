@@ -133,7 +133,7 @@ func (h *ReviewHandler) Scrape(w http.ResponseWriter, r *http.Request) {
 
 	var req scrapeRequest
 	if r.Body != nil {
-		json.NewDecoder(r.Body).Decode(&req) // ignore decode errors, use defaults
+		_ = json.NewDecoder(r.Body).Decode(&req) // ignore decode errors, use defaults
 	}
 	if req.MaxPages <= 0 {
 		req.MaxPages = 5

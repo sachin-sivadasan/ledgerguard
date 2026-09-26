@@ -97,7 +97,7 @@ func TestBillingHandler_CreateCheckout_Success(t *testing.T) {
 	}
 
 	var resp appservice.CheckoutResult
-	json.NewDecoder(rec.Body).Decode(&resp)
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	if resp.SubscriptionID != "sub_1" {
 		t.Errorf("SubscriptionID = %q, want sub_1", resp.SubscriptionID)
 	}

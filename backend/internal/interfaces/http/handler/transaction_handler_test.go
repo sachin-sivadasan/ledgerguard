@@ -135,8 +135,7 @@ func TestTransactionHandler_List_DefaultPage(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	txList := resp["transactions"].([]interface{})
 	if len(txList) != 20 {
 		t.Errorf("expected 20 transactions (default pageSize), got %d", len(txList))
@@ -185,8 +184,7 @@ func TestTransactionHandler_List_CustomPageSize(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	txList := resp["transactions"].([]interface{})
 	if len(txList) != 10 {
 		t.Errorf("expected 10 transactions on page 2, got %d", len(txList))
@@ -229,8 +227,7 @@ func TestTransactionHandler_List_OutOfRangePage(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	txList := resp["transactions"].([]interface{})
 	if len(txList) != 0 {
 		t.Errorf("expected 0 transactions for out-of-range page, got %d", len(txList))

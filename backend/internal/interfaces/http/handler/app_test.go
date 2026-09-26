@@ -161,7 +161,7 @@ func TestAppHandler_GetAvailableApps_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 
 	apps, ok := resp["apps"].([]interface{})
 	if !ok {
@@ -358,7 +358,7 @@ func TestAppHandler_SelectApp_StarterAtLimit(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	errObj, _ := resp["error"].(map[string]interface{})
 	if errObj == nil {
 		t.Fatal("expected error object in response")
@@ -445,7 +445,7 @@ func TestAppHandler_ListApps_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 
 	appsResp, ok := resp["apps"].([]interface{})
 	if !ok {

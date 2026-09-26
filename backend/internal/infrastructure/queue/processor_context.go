@@ -49,10 +49,9 @@ func PrepareProcessorContext(
 		return nil, fmt.Errorf("failed to decrypt token: %w", err)
 	}
 
-	// Normalize GID casing (Shopify requires "App" not "app")
-	if strings.Contains(app.PartnerAppID, "gid://partners/app/") {
-		app.PartnerAppID = strings.Replace(app.PartnerAppID, "gid://partners/app/", "gid://partners/App/", 1)
-	}
+	// Normalize GID casing (Shopify requires "App" not "app"). Replace is a no-op when the
+	// lowercase form is absent, so no guard is needed.
+	app.PartnerAppID = strings.Replace(app.PartnerAppID, "gid://partners/app/", "gid://partners/App/", 1)
 
 	return &ProcessorContext{
 		App:            app,

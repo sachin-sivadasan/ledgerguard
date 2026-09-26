@@ -163,11 +163,7 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 			Content: resp.Content,
 		}
 		for _, tc := range resp.ToolCalls {
-			assistantMsg.ToolCalls = append(assistantMsg.ToolCalls, ToolCall{
-				ID:        tc.ID,
-				Name:      tc.Name,
-				Arguments: tc.Arguments,
-			})
+			assistantMsg.ToolCalls = append(assistantMsg.ToolCalls, ToolCall(tc))
 		}
 		messages = append(messages, assistantMsg)
 
@@ -183,7 +179,7 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 			})
 
 			// Execute tool
-			call := ToolCall{ID: tc.ID, Name: tc.Name, Arguments: tc.Arguments}
+			call := ToolCall(tc)
 			result := h.registry.RouteToolCall(ctx, call)
 
 			// Determine module name from tool name

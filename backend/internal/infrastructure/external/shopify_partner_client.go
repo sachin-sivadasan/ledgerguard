@@ -10,7 +10,6 @@ import (
 	"math"
 	"net/http"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -327,13 +326,6 @@ func (c *ShopifyPartnerClient) backoff(ctx context.Context, attempt int) {
 	case <-ctx.Done():
 	case <-time.After(backoff):
 	}
-}
-
-// isRateLimitError checks if an error indicates rate limiting
-func isRateLimitError(err error) bool {
-	return errors.Is(err, ErrRateLimited) ||
-		strings.Contains(err.Error(), "429") ||
-		strings.Contains(err.Error(), "rate limit")
 }
 
 // FetchApps retrieves all apps for the given partner organization
@@ -745,7 +737,7 @@ func (c *ShopifyPartnerClient) parseTransaction(node transactionNode, appID uuid
 	// report and enables the Fee Guard (actual vs expected per revenue-share tier).
 	if node.ShopifyFee != nil {
 		var dollars float64
-		fmt.Sscanf(node.ShopifyFee.Amount, "%f", &dollars)
+		_, _ = fmt.Sscanf(node.ShopifyFee.Amount, "%f", &dollars)
 		tx.ShopifyFeeCents = int64(dollars * 100)
 	}
 
@@ -804,14 +796,14 @@ func (c *ShopifyPartnerClient) parseAmounts(node transactionNode) (grossCents, n
 
 	if node.GrossAmount != nil {
 		var dollars float64
-		fmt.Sscanf(node.GrossAmount.Amount, "%f", &dollars)
+		_, _ = fmt.Sscanf(node.GrossAmount.Amount, "%f", &dollars)
 		grossCents = int64(dollars * 100)
 		currency = node.GrossAmount.CurrencyCode
 	}
 
 	if node.NetAmount != nil {
 		var dollars float64
-		fmt.Sscanf(node.NetAmount.Amount, "%f", &dollars)
+		_, _ = fmt.Sscanf(node.NetAmount.Amount, "%f", &dollars)
 		netCents = int64(dollars * 100)
 		if currency == "USD" && node.NetAmount.CurrencyCode != "" {
 			currency = node.NetAmount.CurrencyCode

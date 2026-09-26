@@ -125,7 +125,7 @@ func (e *executor) getAggregateMetrics(ctx context.Context, call chat.ToolCall) 
 		var m struct {
 			Metrics any `json:"metrics"`
 		}
-		json.Unmarshal(mData, &m)
+		_ = json.Unmarshal(mData, &m)
 		results = append(results, appMetrics{AppID: app.ID, AppName: app.Name, Metrics: m.Metrics})
 	}
 

@@ -318,7 +318,6 @@ func (r *PostgresTransactionRepository) GetTransactionSummary(ctx context.Contex
 	if filters.ChargeType != "" {
 		conditions = append(conditions, fmt.Sprintf("charge_type = $%d", argNum))
 		args = append(args, filters.ChargeType)
-		argNum++
 	}
 
 	query := fmt.Sprintf(`

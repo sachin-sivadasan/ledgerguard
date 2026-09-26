@@ -269,7 +269,7 @@ func TestGetLockHolder(t *testing.T) {
 	}
 
 	// After acquire
-	lm.AcquireLock(ctx, appID, syncType, "worker-1")
+	_, _ = lm.AcquireLock(ctx, appID, syncType, "worker-1")
 	holder, _ = lm.GetLockHolder(ctx, appID, syncType)
 	if holder != "worker-1" {
 		t.Errorf("Expected worker-1, got %q", holder)

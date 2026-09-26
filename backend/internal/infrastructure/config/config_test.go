@@ -164,6 +164,40 @@ func TestLoad_EnvOnly(t *testing.T) {
 	}
 }
 
+func TestLoad_FirebaseCheckRevoked(t *testing.T) {
+	// Default: secure-by-default (revocation check ON).
+	os.Clearenv()
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !cfg.Firebase.CheckRevoked {
+		t.Error("expected CheckRevoked to default to true")
+	}
+
+	// Env can disable it (latency trade-off).
+	os.Clearenv()
+	os.Setenv("FIREBASE_CHECK_REVOKED", "false")
+	defer os.Clearenv()
+	cfg, err = Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Firebase.CheckRevoked {
+		t.Error("expected FIREBASE_CHECK_REVOKED=false to disable the check")
+	}
+
+	// And re-enable explicitly.
+	os.Setenv("FIREBASE_CHECK_REVOKED", "true")
+	cfg, err = Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !cfg.Firebase.CheckRevoked {
+		t.Error("expected FIREBASE_CHECK_REVOKED=true to enable the check")
+	}
+}
+
 func TestDatabaseConfig_DSN(t *testing.T) {
 	cfg := DatabaseConfig{
 		Host:     "localhost",

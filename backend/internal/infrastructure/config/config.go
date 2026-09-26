@@ -70,6 +70,11 @@ type DatabaseConfig struct {
 
 type FirebaseConfig struct {
 	CredentialsFile string `yaml:"credentials_file"`
+	// CheckRevoked verifies ID tokens against Firebase revocation on every request
+	// (rejects signed-out/disabled sessions before natural ~1h expiry). Costs one
+	// Firebase GetUser call per authenticated request; default true. Set
+	// FIREBASE_CHECK_REVOKED=false to trade the check for lower latency.
+	CheckRevoked bool `yaml:"check_revoked"`
 }
 
 type ShopifyConfig struct {
@@ -115,6 +120,9 @@ func Load(configPath string) (*Config, error) {
 			RecoveryInterval:      "10m",
 			ProgressRedisInterval: "2s",
 			ProgressDBInterval:    "30s",
+		},
+		Firebase: FirebaseConfig{
+			CheckRevoked: true, // secure by default; disable via FIREBASE_CHECK_REVOKED=false
 		},
 	}
 
@@ -179,6 +187,11 @@ func applyEnvOverrides(cfg *Config) {
 	// Firebase
 	if v := os.Getenv("FIREBASE_CREDENTIALS_FILE"); v != "" {
 		cfg.Firebase.CredentialsFile = v
+	}
+	if v := os.Getenv("FIREBASE_CHECK_REVOKED"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			cfg.Firebase.CheckRevoked = b
+		}
 	}
 
 	// Shopify

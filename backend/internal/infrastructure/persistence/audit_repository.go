@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -15,6 +16,16 @@ type PostgresOrgAuditRepository struct {
 
 func NewPostgresOrgAuditRepository(pool *pgxpool.Pool) *PostgresOrgAuditRepository {
 	return &PostgresOrgAuditRepository{pool: pool}
+}
+
+// DeleteOlderThan removes org audit entries created before cutoff (retention prune)
+// and returns the number of rows deleted.
+func (r *PostgresOrgAuditRepository) DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM org_audit_log WHERE created_at < $1`, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
 }
 
 func (r *PostgresOrgAuditRepository) Append(ctx context.Context, entry *entity.OrgAuditEntry) error {

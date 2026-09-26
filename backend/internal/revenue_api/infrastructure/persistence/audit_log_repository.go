@@ -31,6 +31,16 @@ func NewPostgresAuditLogRepository(pool *pgxpool.Pool) *PostgresAuditLogReposito
 }
 
 // Create creates a new audit log entry
+// DeleteOlderThan removes api audit entries created before cutoff (retention prune)
+// and returns the number of rows deleted.
+func (r *PostgresAuditLogRepository) DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM api_audit_log WHERE created_at < $1`, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}
+
 func (r *PostgresAuditLogRepository) Create(ctx context.Context, auditLog *entity.AuditLog) error {
 	query := `
 		INSERT INTO api_audit_log (

@@ -222,6 +222,30 @@ func TestLoad_FirebaseCheckRevoked(t *testing.T) {
 	}
 }
 
+func TestLoad_AuditRetentionDays(t *testing.T) {
+	// Default: keep forever (0), never auto-delete compliance data.
+	os.Clearenv()
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Audit.RetentionDays != 0 {
+		t.Errorf("expected default RetentionDays 0 (keep forever), got %d", cfg.Audit.RetentionDays)
+	}
+
+	// Env can set a window.
+	os.Clearenv()
+	os.Setenv("AUDIT_RETENTION_DAYS", "90")
+	defer os.Clearenv()
+	cfg, err = Load("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Audit.RetentionDays != 90 {
+		t.Errorf("expected RetentionDays 90 from env, got %d", cfg.Audit.RetentionDays)
+	}
+}
+
 func TestDatabaseConfig_DSN(t *testing.T) {
 	cfg := DatabaseConfig{
 		Host:     "localhost",

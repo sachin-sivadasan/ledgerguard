@@ -399,6 +399,19 @@ func (h *OrgHandler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Self-or-admin: a member may edit only their own notification preferences;
+	// managing another member's requires ADMIN/OWNER. Without this any member
+	// could overwrite another member's prefs by passing their member ID.
+	caller := middleware.OrgMemberFromContext(r.Context())
+	if caller == nil {
+		writeJSONError(w, http.StatusForbidden, "org context required")
+		return
+	}
+	if caller.ID != memberID && !caller.Role.CanManageMembers() {
+		writeJSONError(w, http.StatusForbidden, "cannot modify another member's notification preferences")
+		return
+	}
+
 	var prefs json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&prefs); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")

@@ -120,9 +120,25 @@ func RequireOrgRole(minRoles ...valueobject.OrgRole) func(http.Handler) http.Han
 	}
 }
 
+// RequireOrgOwner allows only the org OWNER through. Must be used AFTER RequireOrg.
+func RequireOrgOwner() func(http.Handler) http.Handler {
+	return RequireOrgRole(valueobject.OrgRoleOwner)
+}
+
+// RequireOrgAdmin allows ADMIN and OWNER through (OWNER always passes inside
+// RequireOrgRole). Must be used AFTER RequireOrg.
+func RequireOrgAdmin() func(http.Handler) http.Handler {
+	return RequireOrgRole(valueobject.OrgRoleAdmin)
+}
+
 // SetOrgContext sets the organization in context (exported for testing).
 func SetOrgContext(ctx context.Context, org *entity.Organization) context.Context {
 	return context.WithValue(ctx, orgContextKey, org)
+}
+
+// SetOrgMemberContext sets the org member in context (exported for testing).
+func SetOrgMemberContext(ctx context.Context, member *entity.OrgMember) context.Context {
+	return context.WithValue(ctx, orgMemberContextKey, member)
 }
 
 // OrgFromContext retrieves the organization from the request context.

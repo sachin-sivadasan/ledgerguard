@@ -37,7 +37,9 @@ curl -H "Authorization: Bearer <orgA_token>" -H "X-Org-Id: <orgA_id>" \
 
 **Fix (single chokepoint):** use the already-passed `partnerRepo` in `resolveAppFromRequest` — after `FindByID`, resolve the caller's partner account for the context org and assert `app.PartnerAccountID == callerPartnerAccount.ID` (else **404**, to avoid confirming existence). Mirrors the Revenue API's `verifyAppAccess`; fixes all callers at once. Add a cross-org regression test.
 
-## S2 — `RequireOrgRole` middleware exists but is unused → privileged org ops ungated  ✅ **[High]**
+## S2 — `RequireOrgRole` middleware exists but is unused → privileged org ops ungated  ✅ **[High] — ✅ FIXED**
+**Status:** **FIXED** — added `RequireOrgOwner()` / `RequireOrgAdmin()` helpers (`middleware/org_context.go`) and wired them in `router.go`: OWNER-only for UpdateOrg/DeleteOrg/ChangeRole/ConfigureWebhook; ADMIN-or-OWNER for RemoveMember/Suspend/Unsuspend/InviteMember/RevokeInvitation/ListAuditLog. `UpdateNotificationPrefs` now enforces **self-or-admin** in the handler (a member may edit only their own prefs). Tests: `org_role_test.go` (owner/admin/viewer/no-member matrix) + `org_notification_prefs_test.go` (viewer-edits-other → 403). Branch `fix/s2-rbac-privileged-routes`.
+
 **Component:** `middleware/org_context.go:96` (defined) vs `router.go` (never applied); `handler/audit_handler.go:22`, `handler/org_handler.go` (UpdateOrg/DeleteOrg/RevokeInvitation/UpdateNotificationPrefs).
 **Evidence:** grep of `router.go` shows `OrgContextMW` wired but **zero `RequireOrgRole`** usages. `ListAuditLog` has no role check despite `CanViewAuditLog` being ADMIN/OWNER-only; `UpdateNotificationPrefs` trusts a `memberID` URL param.
 **Impact:** any org member (incl. VIEWER) may perform admin/owner-only actions or read another member's data via guessed UUIDs — privilege escalation.

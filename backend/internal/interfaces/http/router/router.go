@@ -428,28 +428,30 @@ func New(cfg Config) *chi.Mux {
 				if cfg.OrgContextMW != nil {
 					r.Route("/{orgId}", func(r chi.Router) {
 						r.Use(cfg.OrgContextMW)
+						// Reads: any active member.
 						r.Get("/", cfg.OrgHandler.GetOrg)
-						r.Put("/", cfg.OrgHandler.UpdateOrg)
-						r.Delete("/", cfg.OrgHandler.DeleteOrg)
-
-						// Members
 						r.Get("/members", cfg.OrgHandler.ListMembers)
-						r.Delete("/members/{userId}", cfg.OrgHandler.RemoveMember)
-						r.Put("/members/{userId}/role", cfg.OrgHandler.ChangeRole)
-						r.Put("/members/{userId}/suspend", cfg.OrgHandler.SuspendMember)
-						r.Put("/members/{userId}/unsuspend", cfg.OrgHandler.UnsuspendMember)
+
+						// Org settings: OWNER only.
+						r.With(lgmw.RequireOrgOwner()).Put("/", cfg.OrgHandler.UpdateOrg)
+						r.With(lgmw.RequireOrgOwner()).Delete("/", cfg.OrgHandler.DeleteOrg)
+						r.With(lgmw.RequireOrgOwner()).Put("/webhooks", cfg.OrgHandler.ConfigureWebhook)
+
+						// Member management: ADMIN or OWNER (role changes: OWNER only).
+						r.With(lgmw.RequireOrgAdmin()).Delete("/members/{userId}", cfg.OrgHandler.RemoveMember)
+						r.With(lgmw.RequireOrgOwner()).Put("/members/{userId}/role", cfg.OrgHandler.ChangeRole)
+						r.With(lgmw.RequireOrgAdmin()).Put("/members/{userId}/suspend", cfg.OrgHandler.SuspendMember)
+						r.With(lgmw.RequireOrgAdmin()).Put("/members/{userId}/unsuspend", cfg.OrgHandler.UnsuspendMember)
+						// Notification prefs: self-or-admin enforced in the handler.
 						r.Put("/members/{userId}/notifications", cfg.OrgHandler.UpdateNotificationPrefs)
 
-						// Invitations
-						r.Post("/invitations", cfg.OrgHandler.InviteMember)
-						r.Delete("/invitations/{id}", cfg.OrgHandler.RevokeInvitation)
+						// Invitations: ADMIN or OWNER.
+						r.With(lgmw.RequireOrgAdmin()).Post("/invitations", cfg.OrgHandler.InviteMember)
+						r.With(lgmw.RequireOrgAdmin()).Delete("/invitations/{id}", cfg.OrgHandler.RevokeInvitation)
 
-						// Webhooks
-						r.Put("/webhooks", cfg.OrgHandler.ConfigureWebhook)
-
-						// Audit log
+						// Audit log: ADMIN or OWNER (CanViewAuditLog).
 						if cfg.OrgAuditHandler != nil {
-							r.Get("/audit-log", cfg.OrgAuditHandler.ListAuditLog)
+							r.With(lgmw.RequireOrgAdmin()).Get("/audit-log", cfg.OrgAuditHandler.ListAuditLog)
 						}
 					})
 				}

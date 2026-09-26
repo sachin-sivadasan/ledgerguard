@@ -43,7 +43,10 @@ curl -H "Authorization: Bearer <orgA_token>" -H "X-Org-Id: <orgA_id>" \
 **Impact:** any org member (incl. VIEWER) may perform admin/owner-only actions or read another member's data via guessed UUIDs — privilege escalation.
 **Fix:** apply `RequireOrgRole(OWNER)` / `RequireOrgRole(ADMIN,OWNER)` to privileged routes; gate `UpdateNotificationPrefs` to self-or-admin. Add per-route RBAC tests.
 
-## S3 — Invitation acceptance doesn't verify the accepting user's email  ✅ **[High]**
+## S3 — Invitation acceptance doesn't verify the accepting user's email  ✅ **[High] — ✅ FIXED (email-binding)**
+**Status:** **FIXED (email-binding)** — `AcceptInvitation` now takes the authenticated user's email and rejects with `ErrInvitationEmailMismatch` → **403** unless it matches `invitation.Email` (case-insensitive, trimmed). Checked **first**, so a wrong-email caller can't probe invite state. Tests: `TestAcceptInvitation_EmailMismatch` (hijack blocked, no member created; case-insensitive match still succeeds) + existing accept tests updated. Branch `fix/s3-invite-email-binding`.
+**Remaining (separate follow-up, NOT done here):** server-side email *delivery* of the token (it's still returned in the API response) — a feature that overlaps the #9 email stub; tracked as its own item.
+
 **Component:** `application/service/org_service.go` (`AcceptInvitation`).
 **Evidence:** email referenced only in `InviteMember`, never compared in `AcceptInvitation`; the token is **returned in the API response** (no backend email delivery).
 **Impact:** anyone who obtains the invite token can join the org **as the invited role** (invite-hijack), regardless of their email.

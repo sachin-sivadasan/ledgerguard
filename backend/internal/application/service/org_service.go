@@ -20,9 +20,10 @@ var (
 	ErrCannotRemoveOwner    = errors.New("cannot remove the organization owner")
 	ErrCannotSuspendOwner   = errors.New("cannot suspend the organization owner")
 	ErrInsufficientRole     = errors.New("insufficient role for this action")
-	ErrInvitationExpired    = errors.New("invitation has expired")
-	ErrInvitationNotPending = errors.New("invitation is not in pending state")
-	ErrMemberSuspended      = errors.New("member account is suspended")
+	ErrInvitationExpired       = errors.New("invitation has expired")
+	ErrInvitationNotPending    = errors.New("invitation is not in pending state")
+	ErrInvitationEmailMismatch = errors.New("invitation email does not match the authenticated user")
+	ErrMemberSuspended         = errors.New("member account is suspended")
 )
 
 // OrgService handles organization management: create, invite, accept, suspend, remove.
@@ -150,11 +151,18 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, email st
 	return invitation, nil
 }
 
-// AcceptInvitation processes an invitation token, creating a new member.
-func (s *OrgService) AcceptInvitation(ctx context.Context, token string, userID uuid.UUID) (*entity.OrgMember, error) {
+// AcceptInvitation processes an invitation token, creating a new member. The
+// authenticated user's email must match the invited address — without this binding
+// anyone holding the token could join the org as the invited role (invite-hijack).
+func (s *OrgService) AcceptInvitation(ctx context.Context, token string, userID uuid.UUID, userEmail string) (*entity.OrgMember, error) {
 	invitation, err := s.invitationRepo.FindByToken(ctx, token)
 	if err != nil {
 		return nil, err
+	}
+
+	// Email binding, checked first so a wrong-email caller can't probe invite state.
+	if !strings.EqualFold(strings.TrimSpace(invitation.Email), strings.TrimSpace(userEmail)) {
+		return nil, ErrInvitationEmailMismatch
 	}
 
 	if !invitation.Status.IsPending() {

@@ -261,7 +261,7 @@ func (h *OrgHandler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	member, err := h.orgService.AcceptInvitation(r.Context(), token, user.ID)
+	member, err := h.orgService.AcceptInvitation(r.Context(), token, user.ID, user.Email)
 	if err != nil {
 		status := http.StatusInternalServerError
 		msg := "failed to accept invitation"
@@ -274,6 +274,9 @@ func (h *OrgHandler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 			msg = err.Error()
 		case service.ErrAlreadyMember:
 			status = http.StatusConflict
+			msg = err.Error()
+		case service.ErrInvitationEmailMismatch:
+			status = http.StatusForbidden
 			msg = err.Error()
 		}
 		writeJSONError(w, status, msg)

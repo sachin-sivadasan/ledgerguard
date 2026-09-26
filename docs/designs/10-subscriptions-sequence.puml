@@ -1,0 +1,39 @@
+@startuml
+title Subscriptions — as-built read paths: list/filter/search, detail, ARPU/LTV report
+
+actor Partner as U
+participant "subscriptions screens\n(list / detail)" as Screen
+participant "SubscriptionHandler\n(subscription.go)" as H
+participant "SubscriptionRepo\n(FindWithFilters — DB-side)" as Repo
+database "subscriptions / transactions /\nsubscription_event / snapshot" as DB
+
+== List / filter / search (DB-side) ==
+U -> Screen : open list, apply filters/search/sort, page
+Screen -> H : GET /apps/{appID}/subscriptions?page&pageSize&status&subscription_status&plan&priceMin/Max&billingInterval&search&sortBy&sortOrder
+H -> Repo : FindWithFilters(dynamic WHERE + LIKE + LIMIT/OFFSET)
+Repo -> DB : single paginated query (deleted_at IS NULL)
+Repo -> DB : batch FindByDomains (shop logos/names — N+1 mitigated)
+Repo --> H : rows + total
+H --> Screen : {subscriptions, total, page, pageSize, totalPages}
+Screen -> H : GET /subscriptions/summary -> KPI cards (active/at-risk/churned/avg)
+
+== Detail ==
+U -> Screen : open a subscription
+Screen -> H : GET /subscriptions/{id}  (+ /history, /risk-timeline)
+H -> DB : detail + last ~12mo payments + subscription_event transitions
+note right of H : MRRCents = annual? BasePrice/12 (FLOOR) : BasePrice\nStartDate = ActivatedAt else CreatedAt (business start)
+H --> Screen : billing + status + payment history + risk timeline
+
+== ARPU / LTV report ==
+U -> Screen : open Subscriptions report
+Screen -> H : GET /apps/{appID}/reports/subscriptions[?format=csv]
+H -> DB : all subs (FindByAppID) + latest snapshot (churn denom)
+H -> H : ARPU = Σ MRR(SAFE) / count(SAFE) [floor]\nchurn = churned / snapshot.total (90d window)\nLTV = ARPU / churn [round; 0 if churn=0 -> UI "—"]\nper-plan LTV uses APP-level churn (approx, D1)
+H --> Screen : {activeSubs, activeMrrCents, arpuCents, ltvCents, churnRate, plans[]}
+
+note over H,DB
+  DIVERGENCES: per-plan LTV uses app-level churn (D1) ; annual MRR floor vs
+  frontend round (D2, 1c) ; churn window 90d here vs 30d in Churn report (D3) ;
+  report collapses to one currency (D4) ; systemic org-check on resolveAppFromRequest (D5)
+end note
+@enduml

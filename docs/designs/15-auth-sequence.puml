@@ -1,0 +1,41 @@
+@startuml
+title Authentication — as-built: Firebase client + backend verify + JIT provisioning
+
+actor User as U
+participant "auth screens\n(login/signup/reset)" as Screen
+participant "AuthProvider\n(FirebaseAuth SDK)" as FB
+participant "Dio _AuthInterceptor\n(api_client.dart)" as Dio
+participant "AuthMiddleware\n(auth.go)" as MW
+participant "FirebaseAuthService\n(Admin SDK)" as Admin
+database "users" as DB
+
+== Client auth (email/password) ==
+U -> Screen : sign up / log in / reset
+Screen -> FB : createUser / signIn / sendPasswordResetEmail
+FB --> Screen : Firebase user (session persisted by SDK)\nno email-verification gate (D2)
+
+== Every API request ==
+Screen -> Dio : call API
+Dio -> FB : getIdToken() (SDK silently refreshes ~1h token)
+Dio -> MW : Authorization: Bearer <token>
+MW -> MW : extract Bearer (401 if missing/malformed)
+MW -> Admin : VerifyIDToken(token)
+note right of Admin : uses VerifyIDToken, NOT ...AndCheckRevoked\n-> revoked/signed-out token valid until expiry ~1h (D1)
+Admin --> MW : {UID, email} (401 on failure)
+MW -> DB : FindByFirebaseUID(uid)
+alt new user (JIT)
+  MW -> DB : NewUser(uid, email) Role=OWNER PlanTier=FREE
+  MW -> MW : provision personal org (non-blocking, #14)
+else DB error (non-notfound)
+  MW --> Dio : 503 (logged only, D3)
+end
+MW -> MW : put *User in context
+MW --> Screen : handler runs ; GET /api/v1/me returns current user
+Dio -> Dio : on 401 -> FirebaseAuth.signOut()
+
+note over MW
+  Route protection is FAIL-CLOSED (verified): every route group guarded by
+  `&& cfg.AuthMW != nil` with registration INSIDE -> if Firebase unconfigured,
+  routes are NOT registered (404), never open. (positive finding)
+end note
+@enduml

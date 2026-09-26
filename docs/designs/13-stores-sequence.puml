@@ -1,0 +1,35 @@
+@startuml
+title Stores — as-built read paths: list (domain-aggregated) + detail (enriched)
+
+actor Partner as U
+participant "store_list / store_detail\n(+ StoreProvider)" as Screen
+participant "StoreHandler / StoreHealthHandler" as H
+database "SubscriptionRepo / AppEventRepo /\nTransactionRepo / ShopRepo" as DB
+participant "Storefront API\n(FetchBrand)" as SH
+
+== Store list (first-class nav) ==
+U -> Screen : open Stores (search/paginate)
+Screen -> H : GET /apps/{appID}/stores?page&pageSize&search
+H -> DB : subscriptions (PERSISTED risk_state — STORE-1) + app_events
+H -> H : dedupe by domain -> priority risk_state\nhealthScore = risk map (SAFE90/1c50/2c25/churned10)\nLTV = 3y from transactions\nfirst_install/last_interaction = EVENT-sourced (STORE-2)\n(UpdatedAt = rebuild ts, last resort only)
+H --> Screen : {stores:[{shop_domain, health_score, lifetime_value_cents, first_install_date, last_interaction, risk_state, installed_app_ids}], total, page...}
+
+== Store detail (by domain, cold-link safe) ==
+U -> Screen : open a store
+Screen -> H : GET /apps/{appID}/stores/{domain}/health
+H -> DB : subscription(s) + 3-month transactions + earnings
+opt shop repo present
+  H -> DB : ShopRepo lookup (logo/name)
+  note right of H : enrichment nil-tolerant — renders without logo
+end
+H --> Screen : {subscription, transactions, earnings, shop brand?}
+Screen -> Screen : linked subscriptions clickable -> subscription detail (#10)
+
+== Enrichment (opportunistic, during sync) ==
+SH -> DB : FetchBrand(domain) -> upsert shops (logo/name; no refresh cadence, D2)
+
+note over H,DB
+  DIVERGENCES: health = 4-value lookup, not composite (D1) ; logo staleness (D2) ;
+  LTV 3y window incl. refund-negative handling (D3) ; systemic org-check on resolveApp (D4)
+end note
+@enduml

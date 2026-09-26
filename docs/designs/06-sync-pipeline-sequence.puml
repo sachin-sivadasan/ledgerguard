@@ -1,0 +1,58 @@
+@startuml
+title Sync & Ledger Rebuild — happy path (as-built): enqueue -> waves -> rebuild -> snapshot
+
+actor "Partner / Scheduler" as U
+participant "queue_sync handler\n(POST /sync/enqueue)" as H
+participant "EnqueueSyncService" as ENQ
+queue "Redis queues\n(regular + orchestrator)" as RQ
+participant "WorkerPool\n(worker.go)" as W
+participant "LockManager\n(SETNX + Lua)" as Lock
+participant "FullSyncProcessor" as FSP
+participant "child processors\n(txn/review/event/status/store/snapshot)" as CH
+participant "LedgerService\n(RebuildFromTransactions)" as LS
+database "Postgres\n(sync_jobs, transactions, subscriptions, snapshots)" as DB
+participant "Shopify Partner API" as SH
+
+U -> H : POST /sync/enqueue/{appID}?type=full
+H -> ENQ : EnqueueSync
+ENQ -> DB : insert sync_job (pending)
+ENQ -> ENQ : duplicate active? -> 409
+ENQ -> RQ : LPUSH payload
+H --> U : 202 {job_id}
+
+W -> RQ : BRPOP
+W -> Lock : AcquireLock lg:sync:lock:{app}:{type} (2h TTL)
+alt lock contended
+  W -> RQ : re-enqueue (5s backoff)
+end
+W -> DB : MarkStarted (pending->processing)
+W -> FSP : process(full_sync)  [heartbeat loop running]
+
+group Wave 1 (parallel)
+  FSP -> CH : transaction_sync + review_sync
+  CH -> SH : fetch (full history from 2010-01-01, or LookbackDays delta)
+  CH -> DB : UpsertBatch raw transactions (immutable)
+  CH -> LS : RebuildFromTransactions(appID, now)
+  LS -> DB : DeleteByAppID(subs) then Upsert rebuilt subs
+  note right of LS : delete+reinsert NOT in one txn\n-> crash window = partial subs (D3)
+end
+FSP -> FSP : waitForChildren(transaction_sync)
+group Wave 2 (parallel, after txns)
+  FSP -> CH : event_sync + status_sync + store_sync
+end
+group Wave 3 (after status reconciliation, RISK-1)
+  FSP -> CH : snapshot_sync -> daily_metrics_snapshot
+end
+
+alt any child failed
+  FSP -> DB : UpdateStatus = partial_failure (no auto-retry, D1)
+else all ok
+  FSP --> W : nil ; W -> DB : MarkCompleted
+end
+W -> Lock : ReleaseLockIfOwner
+
+note over W,DB
+  Crash recovery (recovery.go): startup + periodic re-enqueue of
+  heartbeat-less 'processing' jobs (2min grace). Requires Redis (D2).
+end note
+@enduml

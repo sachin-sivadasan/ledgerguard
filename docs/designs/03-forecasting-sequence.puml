@@ -1,0 +1,42 @@
+@startuml
+title Forecasting — happy path (as-built): GET /api/v1/apps/{appID}/forecast
+
+actor Partner as U
+participant "ForecastingTab\n(analytics/forecasting_tab.dart)" as Tab
+participant "AnalyticsProvider" as Prov
+participant "MetricsService\n(fetchForecast, Dio)" as Svc
+participant "Router\n(chi + Auth/Org MW)" as Router
+participant "ForecastHandler\n(forecast_handler.go)" as H
+participant "app_lookup.go" as Lookup
+participant "ForecastingEngine\n(forecasting_engine.go)" as Eng
+database "SnapshotRepo\n(daily_metrics_snapshot)" as Repo
+
+U -> Tab : open Forecasting (pick model / alpha)
+Tab -> Prov : loadForecast(appId, model, alpha)
+Prov -> Svc : GET reports? no -> /apps/{appID}/forecast?months=12&model&alpha
+Svc -> Router : HTTPS + Firebase token
+Router -> H : GetForecast
+H -> H : auth check (UserFromContext) ; validate model (400) ; months 1..36 else 12
+H -> Lookup : resolveAppFromRequest(appID)
+note right of Lookup : appRepo.FindByID(appID)\nNO org-ownership check (systemic, see D3)
+Lookup --> H : *entity.App
+H -> Repo : FindByAppIDRange(app.ID, now-12mo, now)
+Repo --> H : snapshots
+alt len(snapshots) < 90
+  H --> Svc : 422 {error, data_points, required:90}
+  Svc --> Prov : forecastError -> empty state
+else >= 90
+  H -> Eng : Linear (OLS) OR Exponential (Holt's, alpha clamped 0.1-0.9)
+  Eng -> Eng : project m=1..months ; step = m*30 days\nexpected +/-15% bands, floored 0
+  Eng --> H : ForecastResult{points[]}
+  H --> Svc : 200 {model, generated_at, data_points_used, forecast[]}
+  Svc --> Prov : ForecastResult.fromJson
+  Prov -> Tab : notifyListeners()
+  Tab --> U : cards + 12-month band chart
+end
+
+note over H,Repo
+  Error paths: 401 no auth · 400 bad model · 404 app not found
+  500 on snapshot repo error (note: reports use 503) · 422 insufficient data
+end note
+@enduml

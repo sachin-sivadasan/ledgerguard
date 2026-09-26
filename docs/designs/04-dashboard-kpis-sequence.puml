@@ -1,0 +1,43 @@
+@startuml
+title Dashboard & KPIs — happy path (as-built): GET /api/v1/apps/{appID}/metrics
+
+actor Partner as U
+participant "DashboardScreen\n(dashboard_screen.dart)" as Screen
+participant "DashboardProvider" as Prov
+participant "MetricsService\n(Dio)" as Svc
+participant "Router\n(chi + Auth/Org MW)" as Router
+participant "MetricsHandler\n(metrics.go)" as H
+participant "MetricsAggregationService\n(GetPeriodMetrics)" as Agg
+participant "MetricsEngine\n(usage/total revenue)" as Eng
+database "SnapshotRepo + TxRepo" as Repo
+
+U -> Screen : open dashboard / pick date-range chip
+Screen -> Prov : setTimeRange(chip) -> periodRangeFor(chip, now)
+Prov -> Svc : GET /apps/{appID}/metrics?start&end
+Svc -> Router : HTTPS + Firebase token
+Router -> H : GetMetrics (auth check)
+H -> Agg : GetPeriodMetrics(appID, DateRange)
+Agg -> Repo : FindByAppIDRange(current) + FindByAppIDRange(PreviousPeriod)
+Agg -> Repo : Tx FindByAppID(current) + (previous)  [end + 24h]
+Repo --> Agg : snapshots + transactions
+Agg -> Agg : point-in-time KPIs = end-of-period snapshot
+Agg -> Eng : CalculateUsageRevenue / CalculateTotalRevenue (txns)
+Eng --> Agg : period revenue
+Agg --> H : PeriodMetrics{current, previous}
+H -> H : build delta = (cur-prev)/prev*100 (inverted for risk/churn)
+H --> Svc : 200 {period, current, previous, delta}
+Svc --> Prov : parse; kpiTrend(id) exposes real %
+Prov -> Screen : notifyListeners()
+Screen --> U : KPI cards + delta badges
+
+par period-independent, fetched in parallel on load
+  Prov -> Svc : GET /metrics/trend (12-mo line)
+  Prov -> Svc : GET /apps/{id}/forecast (gated 90 snapshots)
+end
+
+note over H
+  Divergences: /metrics/latest still returns HARDCODED sample data (TODO)
+  resolveAppFromRequest has no org-ownership check (systemic)
+  no snapshots in period -> nil summary -> delta degrades
+end note
+@enduml

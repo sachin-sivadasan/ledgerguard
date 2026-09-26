@@ -1,0 +1,43 @@
+@startuml
+title Connect & Onboard — happy path (as-built): token -> discover -> select -> auto-sync
+
+actor "Admin" as U
+participant "connect_shopify_screen\n(+ apps_provider)" as Screen
+participant "manual_token / app handlers" as H
+participant "AESEncryptor\n(crypto/aes.go)" as Enc
+participant "Shopify Partner API\n(FetchApps)" as SH
+participant "QueueSyncService\n(TriggerSync)" as Sync
+database "partner_accounts / apps" as DB
+
+U -> Screen : enter token + partner_id (+ name)
+Screen -> H : POST /integrations/shopify/token  (ADMIN + OrgContext)
+H -> Enc : Encrypt(token)  [AES-256-GCM, nonce prepended]
+H -> DB : upsert partner_account (encrypted_access_token, org-scoped)
+note right of H : NO probe validation — bad token not caught here (D1)
+H --> Screen : {id, partner_id, masked_token}
+
+Screen -> H : GET /apps/available
+H -> DB : load partner_account ; Decrypt token
+H -> SH : FetchApps(orgID, token)
+alt token invalid
+  SH --> H : error -> 502 (first place a bad token surfaces)
+end
+SH --> H : apps[]
+H --> Screen : {apps:[{id,name}]}  -> multi-select UI
+
+U -> Screen : select apps
+Screen -> H : POST /apps/select {partner_app_id, name}
+H -> H : enforce plan app-limit (upsell nav = TODO, D3)
+alt already tracked
+  H --> Screen : 409 Conflict
+end
+H -> DB : appRepo.Create(app)
+H -> Sync : TriggerSync(app, user, partnerAccount)  [synchronous enqueue]
+note right of Sync : enqueue error -> sync_triggered=false (client sees the enqueue result,\nNOT the sync outcome, D2)
+H --> Screen : 201 {uuid, revenue_share_tier, sync_triggered}
+Screen -> Screen : DemoModeCoordinator.setDemoMode(false)  [frontend-only, D4]
+
+note over Screen,DB
+  Disconnect: DELETE /integrations/shopify/token -> revoke, revert all providers to demo
+end note
+@enduml

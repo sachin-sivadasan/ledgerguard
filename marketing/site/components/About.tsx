@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 const features = [
   {
     title: "Revenue Tracking",
@@ -194,12 +196,12 @@ export default function About() {
           <p className="text-blue-100 text-lg mb-8">
             Connect your Shopify Partner account and get insights in minutes.
           </p>
-          <a
+          <Link
             href="/#pricing"
             className="inline-flex items-center justify-center px-8 py-3 text-lg font-semibold text-blue-600 bg-white rounded-lg hover:bg-blue-50 transition-colors"
           >
             Get Started
-          </a>
+          </Link>
         </div>
       </section>
     </div>

@@ -142,10 +142,6 @@ export default function GCPStagingVisualization() {
     return () => clearInterval(interval);
   }, [isPlaying, nextStep]);
 
-  useEffect(() => {
-    setActiveStep(0);
-  }, [activeFlow]);
-
   const isStepActive = (stepIndex: number) => stepIndex <= activeStep;
   const isConnectionActive = (connectionIndex: number) => connectionIndex < activeStep;
 
@@ -163,7 +159,7 @@ export default function GCPStagingVisualization() {
         {flowTabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveFlow(tab.key)}
+            onClick={() => { setActiveFlow(tab.key); setActiveStep(0); }}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
               activeFlow === tab.key
                 ? 'bg-indigo-500/20 text-indigo-400 border-b-2 border-indigo-500'

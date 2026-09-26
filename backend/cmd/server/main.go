@@ -538,11 +538,13 @@ func run() error {
 	var rateLimiterMW *revenueMiddleware.RateLimiter
 	var auditLoggerMW *revenueMiddleware.AuditLogger
 	var readModelBuilder *apikeysvc.ReadModelBuilder
+	var auditPruners []appservice.NamedAuditPruner // S7: audit-retention prune targets
 
 	if db != nil && apiKeySvc != nil && appRepo != nil && partnerRepo != nil {
 		subStatusRepo := apikeypersist.NewPostgresSubscriptionStatusRepository(db.Pool)
 		usageStatusRepo := apikeypersist.NewPostgresUsageStatusRepository(db.Pool)
 		auditLogRepo := apikeypersist.NewPostgresAuditLogRepository(db.Pool)
+		auditPruners = append(auditPruners, appservice.NamedAuditPruner{Name: "api_audit_log", Prune: auditLogRepo.DeleteOlderThan})
 
 		subStatusSvc := apikeysvc.NewSubscriptionStatusService(subStatusRepo, appRepo, partnerRepo)
 		usageStatusSvc := apikeysvc.NewUsageStatusService(usageStatusRepo, subStatusRepo, appRepo, partnerRepo)
@@ -676,6 +678,7 @@ func run() error {
 		memberRepo := persistence.NewPostgresMemberRepository(db.Pool)
 		invitationRepo := persistence.NewPostgresInvitationRepository(db.Pool)
 		orgAuditRepo := persistence.NewPostgresOrgAuditRepository(db.Pool)
+		auditPruners = append(auditPruners, appservice.NamedAuditPruner{Name: "org_audit_log", Prune: orgAuditRepo.DeleteOlderThan})
 
 		orgAuditService := appservice.NewOrgAuditService(orgAuditRepo)
 		orgService = appservice.NewOrgService(orgRepo, memberRepo, invitationRepo, orgAuditService)
@@ -802,6 +805,15 @@ func run() error {
 		log.Println("Daily catchup scheduler started (3 AM UTC)")
 
 		log.Println("Queue-based sync system initialized")
+	}
+
+	// Audit-log retention: daily prune of org_audit_log + api_audit_log older than the
+	// configured window. Opt-in (default 0 = keep forever); audit logs are compliance
+	// records, so nothing is auto-deleted unless AUDIT_RETENTION_DAYS is set.
+	if cfg.Audit.RetentionDays > 0 && len(auditPruners) > 0 {
+		auditRetentionSvc := appservice.NewAuditRetentionService(cfg.Audit.RetentionDays, auditPruners...)
+		scheduler.NewAuditRetentionScheduler(auditRetentionSvc).Start(ctx)
+		log.Printf("Audit retention enabled: pruning %d store(s) older than %d days", len(auditPruners), cfg.Audit.RetentionDays)
 	}
 
 	// Wire daily catchup scheduler into admin handler (after queue init)

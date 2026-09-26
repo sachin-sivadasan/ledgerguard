@@ -19,6 +19,14 @@ type Config struct {
 	Redis      RedisConfig      `yaml:"redis"`
 	Queue      QueueConfig      `yaml:"queue"`
 	Mixpanel   MixpanelConfig   `yaml:"mixpanel"`
+	Audit      AuditConfig      `yaml:"audit"`
+}
+
+type AuditConfig struct {
+	// RetentionDays prunes audit-log rows (org_audit_log, api_audit_log) older than
+	// this many days on a daily schedule. Default 0 = keep forever (audit logs are
+	// compliance records; pruning is opt-in). Set via AUDIT_RETENTION_DAYS.
+	RetentionDays int `yaml:"retention_days"`
 }
 
 type MixpanelConfig struct {
@@ -249,6 +257,13 @@ func applyEnvOverrides(cfg *Config) {
 	// Mixpanel
 	if v := os.Getenv("MIXPANEL_TOKEN"); v != "" {
 		cfg.Mixpanel.Token = v
+	}
+
+	// Audit retention
+	if v := os.Getenv("AUDIT_RETENTION_DAYS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			cfg.Audit.RetentionDays = n
+		}
 	}
 
 	// Queue

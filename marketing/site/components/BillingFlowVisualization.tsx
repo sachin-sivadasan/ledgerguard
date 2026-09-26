@@ -184,11 +184,6 @@ export default function BillingFlowVisualization() {
   const config = FLOW_CONFIGS[selectedFlow];
 
   useEffect(() => {
-    setCurrentStep(0);
-    lastTimeRef.current = 0;
-  }, [selectedFlow]);
-
-  useEffect(() => {
     if (!isPlaying) {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       return;
@@ -215,7 +210,7 @@ export default function BillingFlowVisualization() {
         {(Object.keys(FLOW_CONFIGS) as FlowType[]).map((flowType) => (
           <button
             key={flowType}
-            onClick={() => { setSelectedFlow(flowType); setIsPlaying(true); }}
+            onClick={() => { setSelectedFlow(flowType); setCurrentStep(0); lastTimeRef.current = 0; setIsPlaying(true); }}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
               selectedFlow === flowType
                 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'

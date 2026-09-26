@@ -84,10 +84,6 @@ export default function DeploymentFlowVisualization() {
     return () => clearInterval(interval);
   }, [isPlaying, nextStep]);
 
-  useEffect(() => {
-    setActiveStep(0);
-  }, [activeFlow]);
-
   const isStepActive = (stepIndex: number) => {
     return stepIndex <= activeStep;
   };
@@ -103,7 +99,7 @@ export default function DeploymentFlowVisualization() {
         {(['architecture', 'cicd', 'request'] as FlowType[]).map((flowType) => (
           <button
             key={flowType}
-            onClick={() => setActiveFlow(flowType)}
+            onClick={() => { setActiveFlow(flowType); setActiveStep(0); }}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
               activeFlow === flowType
                 ? 'bg-cyan-500/20 text-cyan-400 border-b-2 border-cyan-500'

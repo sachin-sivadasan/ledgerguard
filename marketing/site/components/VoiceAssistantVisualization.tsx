@@ -471,7 +471,7 @@ function VoiceWaveform() {
           key={i}
           className="w-1 bg-purple-500 rounded-full animate-pulse"
           style={{
-            height: `${20 + Math.random() * 30}px`,
+            height: `${20 + ((i * 37) % 30)}px`,
             animationDelay: `${i * 0.1}s`,
             animationDuration: '0.5s',
           }}

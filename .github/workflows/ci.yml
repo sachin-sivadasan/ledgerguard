@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend/app
+        working-directory: frontend-flutter
 
     steps:
       - name: Checkout code
@@ -92,7 +92,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.38.7'
           channel: 'stable'
           cache: true
 
@@ -108,7 +108,7 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
-          file: frontend/app/coverage/lcov.info
+          file: frontend-flutter/coverage/lcov.info
           flags: frontend
           fail_ci_if_error: false
 
@@ -118,7 +118,7 @@ jobs:
     needs: frontend-test
     defaults:
       run:
-        working-directory: frontend/app
+        working-directory: frontend-flutter
 
     steps:
       - name: Checkout code
@@ -127,7 +127,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.38.7'
           channel: 'stable'
           cache: true
 

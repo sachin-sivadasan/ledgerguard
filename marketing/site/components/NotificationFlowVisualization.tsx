@@ -184,12 +184,6 @@ export default function NotificationFlowVisualization() {
     };
   }, [isPlaying, config.steps.length]);
 
-  // Reset step when flow changes
-  useEffect(() => {
-    setCurrentStep(0);
-    lastTimeRef.current = 0;
-  }, [selectedFlow]);
-
   return (
     <div className="space-y-6">
       {/* Flow Type Selector */}
@@ -197,7 +191,7 @@ export default function NotificationFlowVisualization() {
         {(Object.keys(FLOW_CONFIGS) as FlowType[]).map((flowType) => (
           <button
             key={flowType}
-            onClick={() => setSelectedFlow(flowType)}
+            onClick={() => { setSelectedFlow(flowType); setCurrentStep(0); lastTimeRef.current = 0; }}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               selectedFlow === flowType
                 ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'

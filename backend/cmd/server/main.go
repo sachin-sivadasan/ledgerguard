@@ -185,6 +185,10 @@ func run() error {
 	// Initialize handlers
 	healthHandler := handler.NewHealthHandler(db)
 	meHandler := handler.NewMeHandler()
+	var logoutHandler *handler.LogoutHandler
+	if firebaseAuth != nil {
+		logoutHandler = handler.NewLogoutHandler(firebaseAuth)
+	}
 
 	var manualTokenHandler *handler.ManualTokenHandler
 	if encryptor != nil && partnerRepo != nil {
@@ -911,6 +915,7 @@ func run() error {
 	routerCfg := router.Config{
 		HealthHandler:                  healthHandler,
 		MeHandler:                      meHandler,
+		LogoutHandler:                  logoutHandler,
 		ManualTokenHandler:             manualTokenHandler,
 		IntegrationStatusHandler:       integrationStatusHandler,
 		AppHandler:                     appHandler,

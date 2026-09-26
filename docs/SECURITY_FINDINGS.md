@@ -54,8 +54,8 @@ curl -H "Authorization: Bearer <orgA_token>" -H "X-Org-Id: <orgA_id>" \
 **Impact:** anyone who obtains the invite token can join the org **as the invited role** (invite-hijack), regardless of their email.
 **Fix:** on accept, require the authenticated user's (verified) email == `invitation.email`; deliver the token via server-side email rather than returning it.
 
-## S4 — No Firebase token-revocation check; no server-side logout  ✅ **[Medium] — ✅ FIXED (revocation check)**
-**Status:** **FIXED** — `VerifyIDToken` calls `VerifyIDTokenAndCheckRevoked` when enabled; configurable via `Firebase.CheckRevoked` / `FIREBASE_CHECK_REVOKED`, default true. Server-side logout/revoke endpoint remains an optional follow-up. (PR #91)
+## S4 — No Firebase token-revocation check; no server-side logout  ✅ **[Medium] — ✅ FIXED (revocation check + logout endpoint)**
+**Status:** **FIXED** — `VerifyIDToken` calls `VerifyIDTokenAndCheckRevoked` when enabled; configurable via `Firebase.CheckRevoked` / `FIREBASE_CHECK_REVOKED`, default true (PR #91). Server-side force-logout added: `POST /api/v1/auth/logout` revokes the caller's refresh tokens (`RevokeRefreshTokens`); with the revocation check on, existing sessions are rejected within the ID-token TTL. Tests: `TestLogout_*`. (follow-up per #96)
 **Component:** `infrastructure/external/firebase_auth.go:41`.
 **Evidence:** uses `client.VerifyIDToken`, **not** `VerifyIDTokenAndCheckRevoked`; no revocation endpoint.
 **Impact:** a signed-out / compromised session's token stays valid until natural expiry (~1h); no immediate session kill.

@@ -22,7 +22,7 @@ see [[no-ssh-to-servers]]).
 
 ## Phase 0 — inventory (done, from the codebase)
 - **Deploy:** `deploy/cohost/docker-compose.cohost.yml` — `ledgerguard-api` (Go), `ledgerguard-db` (pg16), `ledgerguard-redis`, nginx front; networks `lg-internal` + `checkoutmate_default`. **FACT.**
-- **Logging:** Go **stdlib `log`** — 376 `log.Printf`/`Println`, **no structured logger** (`go.mod` has none). **FACT.**
+- **Logging:** Go **stdlib `log`** — ~376 `log.Printf`/`Println` (approx., grep-counted), **no structured logger** (`go.mod` has none). **FACT.**
 - **Correlation:** chi `RequestID` middleware + `lgmw.ResponseLogger` are wired in `router.go`, but the request ID is **not** in the `log.Printf` lines. **FACT** — this is the highest-leverage gap (Phase 4).
 - **Logs today:** default `json-file` driver → `docker logs ledgerguard-api`. No ES/Loki/Datadog. **FACT.**
 - **Tenant fields available:** every request has an org (`X-Org-Id`, `OrgContextMW`) and most an `appID` — these become the keyword fields that make "one org's / one app's story" queryable.
@@ -124,13 +124,17 @@ Pins: `zap v1.27.0`, `ecszap v1.0.2` (ecszap maintenance lags zap — smoke-test
 on upgrades). Implemented:
 
 1. **`internal/infrastructure/logging`** — `New`/`Init` build the ECS logger; `Init`
-   installs it globally **and calls `zap.RedirectStdLog`** so the **376 existing
+   installs it globally **and calls `zap.RedirectStdLog`** so the **remaining stdlib
    `log.Printf` sites emit structured JSON immediately** (no big-bang rewrite). Wired in
    `cmd/server/main.go` (level from `LOG_LEVEL` / `cfg.Log.Level`).
 2. **`request_id` context logger** — `lgmw.RequestLogger` (added after `chimw.RequestID`)
    attaches a request-scoped logger carrying `request_id`; handlers/services log via
    `logging.FromContext(ctx)` and get the correlation id for free. Demo conversion:
    `middleware/auth.go` token-verification failure.
+   > **Emitted vs. typed today:** only `request_id` actually flows onto log lines now (via
+   > `RequestLogger`). `org_id`/`app_id` are *typed* in the Phase-2 index template but **not
+   > yet emitted** — that enrichment lands with the point-3 migration (add them to the
+   > context logger in `OrgContextMW` / the sync-job payload).
 3. **Opportunistic migration (remaining):** convert hot paths off `log.Printf` to
    `logging.FromContext(ctx).Info/Error(...)` — HTTP handlers, then the **sync pipeline
    processors** (`internal/infrastructure/queue/processors/*`): carry `request_id`/`app_id`

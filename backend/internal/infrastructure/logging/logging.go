@@ -5,6 +5,7 @@ package logging
 
 import (
 	"context"
+	"log"
 	"os"
 
 	"go.elastic.co/ecszap"
@@ -17,7 +18,15 @@ type ctxKey struct{}
 // newLogger builds an ECS-encoded zap logger writing to w. Exposed (unexported) for tests.
 func newLogger(w zapcore.WriteSyncer, level, version string) *zap.Logger {
 	lvl := zapcore.InfoLevel
-	_ = lvl.UnmarshalText([]byte(level)) // invalid/empty → stays Info
+	// Empty → default Info silently. A non-empty but unparseable level is an operator
+	// mistake (e.g. LOG_LEVEL=debgu) — warn so it isn't silently downgraded to Info
+	// during an incident. (Logger not built yet, so warn via stdlib to stderr.)
+	if level != "" {
+		if err := lvl.UnmarshalText([]byte(level)); err != nil {
+			log.Printf("logging: invalid LOG_LEVEL %q, defaulting to info", level)
+			lvl = zapcore.InfoLevel
+		}
+	}
 	core := ecszap.NewCore(ecszap.NewDefaultEncoderConfig(), w, lvl)
 	return zap.New(core, zap.AddCaller()).With(
 		zap.String("service.name", "ledgerguard-api"),
@@ -32,12 +41,16 @@ func New(level, version string) *zap.Logger {
 
 // Init builds the logger and installs it globally: zap.L() returns it, and — via
 // RedirectStdLog — every existing stdlib log.Printf/Println emits structured JSON too
-// (so the 376 legacy call sites become structured immediately, migrating to the
-// context logger opportunistically). Returns a cleanup func; call once at startup.
+// (so the remaining stdlib log call sites become structured immediately, migrating to
+// the context logger opportunistically). Returns a cleanup func; call once at startup.
+//
+// The stdlib bridge uses a caller-disabled logger: for bridged log.Printf lines the
+// only visible caller frame would be zap's internal bridge, not the real call site, so
+// advertising it would be misleading. Direct zap calls keep accurate AddCaller info.
 func Init(level, version string) (*zap.Logger, func()) {
 	l := New(level, version)
 	undoGlobals := zap.ReplaceGlobals(l)
-	undoStd := zap.RedirectStdLog(l)
+	undoStd := zap.RedirectStdLog(l.WithOptions(zap.WithCaller(false)))
 	return l, func() {
 		undoStd()
 		undoGlobals()

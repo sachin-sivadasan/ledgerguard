@@ -47,31 +47,36 @@ curl -H "Authorization: Bearer <orgA_token>" -H "X-Org-Id: <orgA_id>" \
 **Impact:** any org member (incl. VIEWER) may perform admin/owner-only actions or read another member's data via guessed UUIDs — privilege escalation.
 **Fix:** apply `RequireOrgRole(OWNER)` / `RequireOrgRole(ADMIN,OWNER)` to privileged routes; gate `UpdateNotificationPrefs` to self-or-admin. Add per-route RBAC tests.
 
-## S3 — Invitation acceptance doesn't verify the accepting user's email  ✅ **[High]**
+## S3 — Invitation acceptance doesn't verify the accepting user's email  ✅ **[High] — ✅ FIXED (email-binding)**
+**Status:** **FIXED (email-binding)** — `AcceptInvitation` takes the authenticated user's email and returns `ErrInvitationEmailMismatch` → 403 unless it matches `invitation.Email` (case-insensitive, checked first). Tests: `TestAcceptInvitation_EmailMismatch`. Server-side token email *delivery* remains a separate follow-up. (PR #90)
 **Component:** `application/service/org_service.go` (`AcceptInvitation`).
 **Evidence:** email referenced only in `InviteMember`, never compared in `AcceptInvitation`; the token is **returned in the API response** (no backend email delivery).
 **Impact:** anyone who obtains the invite token can join the org **as the invited role** (invite-hijack), regardless of their email.
 **Fix:** on accept, require the authenticated user's (verified) email == `invitation.email`; deliver the token via server-side email rather than returning it.
 
-## S4 — No Firebase token-revocation check; no server-side logout  ✅ **[Medium]**
+## S4 — No Firebase token-revocation check; no server-side logout  ✅ **[Medium] — ✅ FIXED (revocation check)**
+**Status:** **FIXED** — `VerifyIDToken` calls `VerifyIDTokenAndCheckRevoked` when enabled; configurable via `Firebase.CheckRevoked` / `FIREBASE_CHECK_REVOKED`, default true. Server-side logout/revoke endpoint remains an optional follow-up. (PR #91)
 **Component:** `infrastructure/external/firebase_auth.go:41`.
 **Evidence:** uses `client.VerifyIDToken`, **not** `VerifyIDTokenAndCheckRevoked`; no revocation endpoint.
 **Impact:** a signed-out / compromised session's token stays valid until natural expiry (~1h); no immediate session kill.
 **Fix:** use `VerifyIDTokenAndCheckRevoked` on sensitive paths (or globally); optionally add a revoke endpoint.
 
-## S5 — No email-verification gate  ✅ **[Medium]**
+## S5 — No email-verification gate  ✅ **[Medium] — ✅ FIXED (opt-in gate)**
+**Status:** **FIXED** — `TokenClaims.EmailVerified` + `AuthMiddleware` 403 when enabled via `Firebase.RequireEmailVerified` / `FIREBASE_REQUIRE_EMAIL_VERIFIED`, **default false** (enabling requires verification emails + existing users to verify, else lockout). Tests: `TestAuthMiddleware_EmailVerificationGate`. (PR #95, supersedes auto-closed #92)
 **Component:** `middleware/auth.go` (JIT provisioning) / frontend signup.
 **Evidence:** users authenticate immediately post-signup; `email_verified` isn't checked.
 **Impact:** spam/abuse signups; **compounds S3** (unverified emails can accept invites).
 **Fix:** require `email_verified` before granting access (or before privileged actions).
 
-## S6 — External Revenue API: no tests + in-memory, fail-open rate limiter  ✅ **[Medium]**
+## S6 — External Revenue API: no tests + in-memory, fail-open rate limiter  ✅ **[Medium] — ✅ FIXED**
+**Status:** **FIXED (both parts)** — (a) isolation-first test suite (cross-org read → `ErrAppAccessDenied`, batch → `not_found`, no leak) + rate-limiter tests; (b) `RedisRateLimitStore` (INCR+EXPIRE, miniredis-tested) used when Redis is configured → per-key limits hold across instances; store errors logged, fail-open/closed configurable via `SetFailOpen` (default fail-open). (PR #93)
 **Component:** `internal/revenue_api/...` (no `_test.go`); `revenue_api/.../middleware/rate_limiter.go:59-63`.
 **Evidence:** the entire external subtree is untested; the limiter **allows the request on store error** (fail-open) and is in-memory (per-instance on scale).
 **Impact:** auth/isolation/limit behavior on a public, credentialed API is unverified by CI; a store error disables rate limiting. (Isolation itself *is* implemented via `verifyAppAccess` — this is about verification + limiter robustness.)
 **Fix:** add an isolation-first test suite (cross-org key → `not_found`/403); move the limiter to the shared Redis store; decide fail-closed.
 
-## S7 — Audit logs unbounded + store IP (PII)  ✅ **[Low]**
+## S7 — Audit logs unbounded + store IP (PII)  ✅ **[Low] — ✅ FIXED (opt-in retention) + documented**
+**Status:** **FIXED** — `DeleteOlderThan` on both audit repos + `AuditRetentionService.PruneOnce` + daily `AuditRetentionScheduler`; `Audit.RetentionDays` / `AUDIT_RETENTION_DAYS`, **default 0 = keep forever** (opt-in). IP/DPA: both tables store request IP (GDPR personal data) — set retention to the DPA-committed period, record IP in the privacy notice/RoPA. Tests: `TestAuditRetention_*`. (PR #94)
 **Component:** `org_audit_log`, `api_audit_log` (no TTL); IP captured.
 **Fix:** retention/rollup policy; document IP capture for DPA/GDPR.
 

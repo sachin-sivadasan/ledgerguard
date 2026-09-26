@@ -47,9 +47,33 @@ func TestJobLogger_AttachesJobFields(t *testing.T) {
 		t.Errorf("count = %v, want 3", fields["count"])
 	}
 
+	// request_id is omitted when the payload carries none (background/recovery job).
+	if _, ok := fields["request_id"]; ok {
+		t.Errorf("request_id should be absent when payload.RequestID is empty, got %v", fields["request_id"])
+	}
+
 	// The scoped logger must also flow via ctx to downstream FromContext callers.
 	logging.FromContext(ctx).Info("downstream")
 	if got := recorded.All()[1].ContextMap()["app_id"]; got != appID.String() {
 		t.Errorf("ctx-propagated app_id = %v, want %s", got, appID)
+	}
+}
+
+// TestJobLogger_IncludesRequestID: when the payload carries the enqueuing request's id
+// (threaded through Redis), it must appear on the processor's log lines so a sync can be
+// tied back to the HTTP request that triggered it.
+func TestJobLogger_IncludesRequestID(t *testing.T) {
+	core, recorded := observer.New(zapcore.InfoLevel)
+	base := zap.New(core)
+
+	const reqID = "req-enqueue-42"
+	payload := &queue.SyncJobPayload{AppID: uuid.New(), JobID: uuid.New(), RequestID: reqID}
+
+	ctx := logging.ContextWithLogger(context.Background(), base)
+	_, lg := jobLogger(ctx, "TransactionProcessor", payload)
+	lg.Info("synced")
+
+	if got := recorded.All()[0].ContextMap()["request_id"]; got != reqID {
+		t.Errorf("request_id = %v, want %q", got, reqID)
 	}
 }

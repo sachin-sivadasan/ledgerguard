@@ -77,6 +77,7 @@ func (p *FullSyncProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 			Priority:         childJob.Priority,
 			EntityType:       childJob.EntityType,
 			EnqueuedAt:       time.Now().UTC(),
+			RequestID:        payload.RequestID, // inherit parent sync's request id
 		}
 
 		if err := queue.Enqueue(ctx, p.redisClient, childPayload); err != nil {
@@ -133,6 +134,7 @@ func (p *FullSyncProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 			Priority:         childJob.Priority,
 			EntityType:       childJob.EntityType,
 			EnqueuedAt:       time.Now().UTC(),
+			RequestID:        payload.RequestID, // inherit parent sync's request id
 		}
 
 		if err := queue.Enqueue(ctx, p.redisClient, childPayload); err != nil {
@@ -171,6 +173,7 @@ func (p *FullSyncProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 		Priority:         snapshotJob.Priority,
 		EntityType:       snapshotJob.EntityType,
 		EnqueuedAt:       time.Now().UTC(),
+		RequestID:        payload.RequestID, // inherit parent sync's request id
 	}
 	if err := queue.Enqueue(ctx, p.redisClient, snapshotPayload); err != nil {
 		_ = p.syncJobRepo.MarkFailed(ctx, snapshotJob.ID, err.Error())

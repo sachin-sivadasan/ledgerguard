@@ -97,12 +97,12 @@ func run() error {
 
 	// Initialize Firebase Auth (optional - will fail gracefully if not configured)
 	var firebaseAuth *external.FirebaseAuthService
-	firebaseAuth, err = external.NewFirebaseAuthService(ctx, cfg.Firebase.CredentialsFile)
+	firebaseAuth, err = external.NewFirebaseAuthService(ctx, cfg.Firebase.CredentialsFile, cfg.Firebase.CheckRevoked)
 	if err != nil {
 		log.Printf("WARNING: Firebase Auth not configured: %v", err)
 		log.Printf("Authentication will not work without Firebase configuration")
 	} else {
-		log.Println("Firebase Auth initialized")
+		log.Printf("Firebase Auth initialized (token revocation check: %v)", cfg.Firebase.CheckRevoked)
 	}
 
 	// Initialize Firebase Messaging for push notifications (optional)

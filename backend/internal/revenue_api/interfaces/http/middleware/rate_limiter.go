@@ -2,12 +2,14 @@ package middleware
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 // RateLimitStore is an interface for rate limit storage
@@ -22,16 +24,24 @@ type RateLimiter struct {
 	store         RateLimitStore
 	defaultLimit  int
 	windowSeconds int
+	// failOpen decides behavior when the store errors: true = allow the request
+	// (default — a store blip shouldn't take down the whole API); false = reject
+	// with 503 (never let the limit be silently bypassed).
+	failOpen bool
 }
 
-// NewRateLimiter creates a new RateLimiter
+// NewRateLimiter creates a new RateLimiter. Defaults to fail-open on store errors.
 func NewRateLimiter(store RateLimitStore, defaultLimit int, windowSeconds int) *RateLimiter {
 	return &RateLimiter{
 		store:         store,
 		defaultLimit:  defaultLimit,
 		windowSeconds: windowSeconds,
+		failOpen:      true,
 	}
 }
+
+// SetFailOpen sets the store-error behavior (true = allow, false = 503).
+func (m *RateLimiter) SetFailOpen(v bool) { m.failOpen = v }
 
 // Middleware returns the HTTP middleware handler
 func (m *RateLimiter) Middleware(next http.Handler) http.Handler {
@@ -57,9 +67,12 @@ func (m *RateLimiter) Middleware(next http.Handler) http.Handler {
 		// Increment the counter
 		count, err := m.store.Increment(r.Context(), windowKey, window)
 		if err != nil {
-			// On error, allow the request but log it
-			// In production, you might want to fail closed instead
-			next.ServeHTTP(w, r)
+			log.Printf("rate limiter: store error for key %s: %v (failOpen=%v)", windowKey, err, m.failOpen)
+			if m.failOpen {
+				next.ServeHTTP(w, r)
+				return
+			}
+			writeJSONError(w, http.StatusServiceUnavailable, "rate limiter unavailable")
 			return
 		}
 
@@ -155,26 +168,27 @@ func (s *InMemoryRateLimitStore) cleanup() {
 	}
 }
 
-// RedisRateLimitStore is a Redis-backed implementation of RateLimitStore
-// This is a placeholder - actual implementation would use go-redis
+// RedisRateLimitStore is a Redis-backed implementation of RateLimitStore. Unlike the
+// in-memory store, counters are shared across instances — required for correct rate
+// limiting under horizontal scaling.
 type RedisRateLimitStore struct {
-	// client *redis.Client
-	// In production, inject redis.Client here
+	client *redis.Client
 }
 
-// NewRedisRateLimitStore creates a new Redis rate limit store
-// func NewRedisRateLimitStore(client *redis.Client) *RedisRateLimitStore {
-// 	return &RedisRateLimitStore{client: client}
-// }
+// NewRedisRateLimitStore creates a new Redis rate limit store.
+func NewRedisRateLimitStore(client *redis.Client) *RedisRateLimitStore {
+	return &RedisRateLimitStore{client: client}
+}
 
-// Increment increments the counter for a key using Redis INCR + EXPIRE
-// func (s *RedisRateLimitStore) Increment(ctx context.Context, key string, window time.Duration) (int64, error) {
-// 	pipe := s.client.Pipeline()
-// 	incr := pipe.Incr(ctx, key)
-// 	pipe.Expire(ctx, key, window)
-// 	_, err := pipe.Exec(ctx)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	return incr.Val(), nil
-// }
+// Increment atomically increments the counter for a key (INCR) and sets its TTL to
+// the window (EXPIRE), returning the post-increment count. The window key already
+// encodes the current time-window, so EXPIRE bounds each key's lifetime.
+func (s *RedisRateLimitStore) Increment(ctx context.Context, key string, window time.Duration) (int64, error) {
+	pipe := s.client.Pipeline()
+	incr := pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, window)
+	if _, err := pipe.Exec(ctx); err != nil {
+		return 0, err
+	}
+	return incr.Val(), nil
+}

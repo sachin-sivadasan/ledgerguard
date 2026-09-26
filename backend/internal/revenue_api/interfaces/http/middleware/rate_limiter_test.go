@@ -63,13 +63,23 @@ func TestRateLimiter_NoKey_Skips(t *testing.T) {
 	}
 }
 
-// TestRateLimiter_StoreError_FailsOpen documents the CURRENT fail-open behavior: on a
-// store error the request is allowed. (S6 follow-up: a Redis-backed store may choose
-// fail-closed; this test pins today's behavior so a change is deliberate.)
+// TestRateLimiter_StoreError_FailsOpen: default (fail-open) — a store error allows
+// the request so a store blip can't take down the whole API.
 func TestRateLimiter_StoreError_FailsOpen(t *testing.T) {
 	rl := NewRateLimiter(erroringStore{}, 1, 60)
 	key := &ValidatedAPIKey{ID: uuid.New(), RateLimitPerMinute: 1}
 	if rec := runLimiter(rl, key); rec.Code != http.StatusOK {
 		t.Fatalf("store error: expected fail-open 200, got %d", rec.Code)
+	}
+}
+
+// TestRateLimiter_StoreError_FailClosed: with SetFailOpen(false) a store error is
+// rejected (503) rather than silently bypassing the limit.
+func TestRateLimiter_StoreError_FailClosed(t *testing.T) {
+	rl := NewRateLimiter(erroringStore{}, 1, 60)
+	rl.SetFailOpen(false)
+	key := &ValidatedAPIKey{ID: uuid.New(), RateLimitPerMinute: 1}
+	if rec := runLimiter(rl, key); rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("store error fail-closed: expected 503, got %d", rec.Code)
 	}
 }

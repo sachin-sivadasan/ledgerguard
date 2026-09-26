@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,7 +13,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 type ReviewHandler struct {
@@ -140,7 +141,7 @@ func (h *ReviewHandler) Scrape(w http.ResponseWriter, r *http.Request) {
 
 	scraped, err := h.scraper.ScrapeReviews(r.Context(), app.AppStoreSlug, req.MaxPages)
 	if err != nil {
-		log.Printf("WARNING: scrape failed for app %s (slug: %s): %v", app.ID, app.AppStoreSlug, err)
+		logging.FromContext(r.Context()).Error("scrape failed", zap.String("app_id", app.ID.String()), zap.String("slug", app.AppStoreSlug), zap.Error(err))
 		writeJSONError(w, http.StatusBadGateway, "scrape failed: "+err.Error())
 		return
 	}
@@ -171,7 +172,7 @@ func (h *ReviewHandler) Scrape(w http.ResponseWriter, r *http.Request) {
 
 	if len(reviews) > 0 {
 		if err := h.reviewRepo.UpsertBatch(r.Context(), reviews); err != nil {
-			log.Printf("WARNING: failed to upsert reviews for app %s: %v", app.ID, err)
+			logging.FromContext(r.Context()).Error("failed to upsert reviews", zap.String("app_id", app.ID.String()), zap.Error(err))
 			writeJSONError(w, http.StatusInternalServerError, "failed to store reviews")
 			return
 		}

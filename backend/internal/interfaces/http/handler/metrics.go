@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,7 +12,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // MetricsAggregator interface for aggregating metrics across periods
@@ -149,7 +150,7 @@ func (h *MetricsHandler) GetMetricsTrend(w http.ResponseWriter, r *http.Request)
 
 	snapshots, err := h.trendProvider.GetTrendSnapshots(r.Context(), app.ID, from, now, granularity)
 	if err != nil {
-		log.Printf("Failed to get trend snapshots for app %s: %v", app.ID, err)
+		logging.FromContext(r.Context()).Error("failed to get trend snapshots", zap.String("app_id", app.ID.String()), zap.Error(err))
 		writeJSONError(w, http.StatusInternalServerError, "failed to fetch trend data")
 		return
 	}
@@ -250,15 +251,17 @@ func (h *MetricsHandler) GetMetricsByPeriod(w http.ResponseWriter, r *http.Reque
 	// Get period metrics
 	periodMetrics, err := h.aggregator.GetPeriodMetrics(r.Context(), app.ID, dateRange)
 	if err != nil {
-		log.Printf("Failed to get period metrics for app %s: %v", app.ID, err)
+		logging.FromContext(r.Context()).Error("failed to get period metrics", zap.String("app_id", app.ID.String()), zap.Error(err))
 		writeJSONError(w, http.StatusInternalServerError, "failed to fetch metrics")
 		return
 	}
 
 	// If no data found for the period, fall back to mock data
 	if periodMetrics.Current == nil && periodMetrics.Previous == nil {
-		log.Printf("No metrics data found for app %s in period %s to %s, returning mock data",
-			app.ID, dateRange.Start.Format("2006-01-02"), dateRange.End.Format("2006-01-02"))
+		logging.FromContext(r.Context()).Warn("no metrics data found, returning mock data",
+			zap.String("app_id", app.ID.String()),
+			zap.String("from", dateRange.Start.Format("2006-01-02")),
+			zap.String("to", dateRange.End.Format("2006-01-02")))
 		h.writeMockPeriodMetrics(w, dateRange)
 		return
 	}

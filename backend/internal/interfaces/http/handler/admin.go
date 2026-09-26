@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -12,6 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/scheduler"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 // ReadModelRebuilder rebuilds CQRS read model tables for a given app.
@@ -116,7 +117,7 @@ func (h *AdminHandler) ResetAppData(w http.ResponseWriter, r *http.Request) {
 
 	deleted, err := h.adminRepo.ResetAppData(r.Context(), appID)
 	if err != nil {
-		log.Printf("[admin] ResetAppData error for app %s: %v", appID, err)
+		logging.FromContext(r.Context()).Error("reset app data failed", zap.String("app_id", appID.String()), zap.Error(err))
 		writeJSONError(w, http.StatusInternalServerError, "failed to reset app data")
 		return
 	}
@@ -181,7 +182,7 @@ func (h *AdminHandler) RebuildReadModel(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := h.readModelBuilder.RebuildForApp(r.Context(), appID); err != nil {
-		log.Printf("[admin] RebuildReadModel error for app %s: %v", appID, err)
+		logging.FromContext(r.Context()).Error("rebuild read model failed", zap.String("app_id", appID.String()), zap.Error(err))
 		writeJSONError(w, http.StatusInternalServerError, "failed to rebuild read model")
 		return
 	}

@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -13,7 +12,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // NetNewSubsReportHandler serves the "Net-New Subscriptions" report (REPORTS.md — Growth,
@@ -117,14 +118,14 @@ func (h *NetNewSubsReportHandler) GetNetNewSubs(w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("net-new-subs: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("net-new-subs encode report failed", zap.Error(err))
 	}
 }
 
 // writeNetNewSubsRepoError logs a repository failure and responds 503. The subscription
 // repo has no not-found sentinel — every error is an infrastructure failure (ADR-042).
 func writeNetNewSubsRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("net-new-subs: repo error in %s: %v", op, err)
+	zap.L().Error("net-new-subs repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -190,10 +191,10 @@ func buildNetNewSubsReport(subs []*entity.Subscription, from, to time.Time, labe
 		}
 	}
 	if noChurnDate > 0 {
-		log.Printf("net-new-subs: %d churned subscription(s) had no charge date — used UpdatedAt as the churn date (cancelled before first charge?)", noChurnDate)
+		zap.L().Warn("net-new-subs churned subscriptions had no charge date — used UpdatedAt as the churn date (cancelled before first charge?)", zap.Int("count", noChurnDate))
 	}
 	if noStartDate > 0 {
-		log.Printf("net-new-subs: %d new subscription(s) had no activated_at — dated by the CreatedAt (ingestion) fallback, may be misdated", noStartDate)
+		zap.L().Warn("net-new-subs new subscriptions had no activated_at — dated by the CreatedAt (ingestion) fallback, may be misdated", zap.Int("count", noStartDate))
 	}
 
 	// Trend: only days with activity, ascending (YYYY-MM-DD keys sort chronologically).
@@ -259,6 +260,6 @@ func writeNewSubsCSV(w http.ResponseWriter, rows []newSubRow) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("net-new-subs: write CSV: %v", err)
+		zap.L().Error("net-new-subs write CSV failed", zap.Error(err))
 	}
 }

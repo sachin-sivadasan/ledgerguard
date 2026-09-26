@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -14,7 +13,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // ActiveCustomersReportHandler serves the "Active Customers" report (REPORTS.md,
@@ -121,14 +122,14 @@ func (h *ActiveCustomersReportHandler) GetActiveCustomersReport(w http.ResponseW
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("active-customers: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
 // writeActiveCustomersRepoError logs a repository failure and responds 503. These
 // repos have no not-found sentinel — every error is an infra failure (ADR-042).
 func writeActiveCustomersRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("active-customers: repo error in %s: %v", op, err)
+	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -292,6 +293,6 @@ func writeActiveCustomersPlansCSV(w http.ResponseWriter, plans []activeCustomers
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("active-customers: write CSV: %v", err)
+		zap.L().Error("write CSV failed", zap.Error(err))
 	}
 }

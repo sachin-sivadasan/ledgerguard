@@ -3,15 +3,17 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
@@ -107,7 +109,7 @@ func (h *PayoutHistoryReportHandler) GetPayoutHistory(w http.ResponseWriter, r *
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("payout-history: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
@@ -115,7 +117,7 @@ func (h *PayoutHistoryReportHandler) GetPayoutHistory(w http.ResponseWriter, r *
 // transaction repo has no not-found sentinel — every error is an infrastructure
 // failure (ADR-042).
 func writePayoutHistoryRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("payout-history: repo error in %s: %v", op, err)
+	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -178,7 +180,7 @@ func buildPayoutHistoryReport(txs []*entity.Transaction) payoutHistoryReport {
 	}
 
 	if noChargeDate > 0 {
-		log.Printf("payout-history: %d PAID_OUT transaction(s) had no charge date (CreatedDate/TransactionDate) — bucketed under 0001-01", noChargeDate)
+		zap.L().Warn("PAID_OUT transactions had no charge date (CreatedDate/TransactionDate) — bucketed under 0001-01", zap.Int("count", noChargeDate))
 	}
 
 	rows := make([]payoutHistoryRow, 0, len(byPeriod))
@@ -231,6 +233,6 @@ func writePayoutHistoryCSV(w http.ResponseWriter, rows []payoutHistoryRow) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("payout-history: write CSV: %v", err)
+		zap.L().Error("write CSV failed", zap.Error(err))
 	}
 }

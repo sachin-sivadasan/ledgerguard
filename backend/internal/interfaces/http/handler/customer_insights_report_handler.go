@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -12,7 +11,9 @@ import (
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // CustomerInsightsReportHandler serves the "Customer Insights" report (REPORTS.md,
@@ -126,7 +127,7 @@ func (h *CustomerInsightsReportHandler) GetCustomerInsights(w http.ResponseWrite
 	subs, err := h.subRepo.FindByAppID(r.Context(), app.ID)
 	if err != nil {
 		// No not-found sentinel on this repo — every error is an infra failure (ADR-042).
-		log.Printf("customer-insights: repo error in FindByAppID: %v", err)
+		logging.FromContext(r.Context()).Error("repo error in FindByAppID", zap.Error(err))
 		writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 		return
 	}
@@ -141,7 +142,7 @@ func (h *CustomerInsightsReportHandler) GetCustomerInsights(w http.ResponseWrite
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("customer-insights: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
@@ -339,6 +340,6 @@ func writeCustomerInsightsCSV(w http.ResponseWriter, report customerInsightsRepo
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("customer-insights: write CSV: %v", err)
+		zap.L().Error("write CSV failed", zap.Error(err))
 	}
 }

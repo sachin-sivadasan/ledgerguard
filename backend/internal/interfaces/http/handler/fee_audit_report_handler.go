@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,7 +11,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // FeeAuditReportHandler serves the "Fee Audit" report (REPORTS.md — Guard): does what
@@ -129,7 +130,7 @@ func (h *FeeAuditReportHandler) GetFeeAudit(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("fee-audit: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
@@ -153,6 +154,6 @@ func writeFeeAuditCSV(w http.ResponseWriter, report feeAuditReport) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("fee-audit: write CSV: %v", err)
+		zap.L().Error("write CSV failed", zap.Error(err))
 	}
 }

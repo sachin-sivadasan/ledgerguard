@@ -3,16 +3,18 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
@@ -93,7 +95,7 @@ func (h *EarningsReportHandler) GetEarningsReport(w http.ResponseWriter, r *http
 	// filtering here keeps the table consistent with it and logs any drops.
 	txs, skipped := filterKnownEarningsStatus(txs)
 	if skipped > 0 {
-		log.Printf("earnings: excluded %d transaction(s) with an unrecognized EarningsStatus (would not reconcile with KPIs)", skipped)
+		logging.FromContext(r.Context()).Warn("excluded transactions with unrecognized EarningsStatus (would not reconcile with KPIs)", zap.Int("count", skipped))
 	}
 
 	calc := service.NewEarningsCalculator()
@@ -122,14 +124,14 @@ func (h *EarningsReportHandler) GetEarningsReport(w http.ResponseWriter, r *http
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("earnings: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
 // writeEarningsRepoError logs a repository failure and responds 503. The transaction
 // repo has no not-found sentinel — every error is an infrastructure failure (ADR-042).
 func writeEarningsRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("earnings: repo error in %s: %v", op, err)
+	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -240,6 +242,6 @@ func writeEarningsChargesCSV(w http.ResponseWriter, charges []earningsCharge) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("earnings: write CSV: %v", err)
+		zap.L().Error("write CSV failed", zap.Error(err))
 	}
 }

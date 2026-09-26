@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -13,7 +12,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // RetentionHandler serves the "Retention/Renewal" report (REPORTS.md — renewal
@@ -120,14 +121,14 @@ func (h *RetentionHandler) GetRetention(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("retention: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("retention encode report failed", zap.Error(err))
 	}
 }
 
 // writeRetentionRepoError logs a repository failure and responds 503. These repos
 // have no not-found sentinel — every error is an infrastructure failure (ADR-042).
 func writeRetentionRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("retention: repo error in %s: %v", op, err)
+	zap.L().Error("retention repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -173,7 +174,7 @@ func buildRetentionReport(subs []*entity.Subscription, plans []retentionPlan, la
 		// corrupt/stale snapshot value stays diagnosable rather than silently capped
 		// (parity with the churn drift log).
 		if latest.RenewalSuccessRate < 0 || latest.RenewalSuccessRate > 1 {
-			log.Printf("retention: snapshot RenewalSuccessRate %.4f outside [0,1] — clamping (stale/corrupt snapshot?)", latest.RenewalSuccessRate)
+			zap.L().Warn("retention snapshot RenewalSuccessRate outside [0,1] — clamping (stale/corrupt snapshot?)", zap.Float64("renewal_success_rate", latest.RenewalSuccessRate))
 		}
 		rate = renewalRate(latest.RenewalSuccessRate)
 	}
@@ -284,6 +285,6 @@ func writeRetentionPlansCSV(w http.ResponseWriter, plans []retentionPlan) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("retention: write CSV: %v", err)
+		zap.L().Error("retention write CSV failed", zap.Error(err))
 	}
 }

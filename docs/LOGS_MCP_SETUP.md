@@ -142,7 +142,12 @@ on upgrades). Implemented:
      `processor` / `app_id` / `job_id` structured fields (the "one sync's story"
      correlation keys) and puts it on ctx; all 17 processor `log.Printf` sites now log
      via it. Hand-interpolated `"for app %s (job %s)"` suffixes became queryable fields.
-   - ⏳ **HTTP handlers** (117 sites) — next.
+   - ✅ **HTTP handlers** (117 sites across 33 files) — DONE. Request handlers log via
+     `logging.FromContext(r.Context())` (so `request_id` flows onto every line);
+     interpolated ids/errors became structured fields (`app_id`, `user_id`, `partner_id`,
+     `topic`, `zap.Error(err)`, …). Ctx-less shared helpers (repo-error / CSV writers that
+     take only `(w, …)`) log via `zap.L()` — still structured JSON, but **no `request_id`**;
+     threading `ctx` into those helper signatures to recover correlation is a follow-up.
    - ⏳ **`request_id` into the job payload:** processors currently correlate by
      `app_id`/`job_id` (there's no HTTP request behind an async worker). To tie a sync
      back to the request that enqueued it, carry `request_id` in `SyncJobPayload` and add

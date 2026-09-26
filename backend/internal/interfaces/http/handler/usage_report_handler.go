@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -13,7 +12,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // UsageReportHandler serves the "Usage & One-Time Charges" report (REPORTS.md —
@@ -126,7 +127,7 @@ func (h *UsageReportHandler) GetUsageReport(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("usage: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
@@ -134,7 +135,7 @@ func (h *UsageReportHandler) GetUsageReport(w http.ResponseWriter, r *http.Reque
 // transaction nor the snapshot repo has a not-found sentinel — every error is an
 // infrastructure failure (ADR-042).
 func writeUsageRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("usage: repo error in %s: %v", op, err)
+	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -259,6 +260,6 @@ func writeUsageStoresCSV(w http.ResponseWriter, stores []usageStore) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("usage: write CSV: %v", err)
+		zap.L().Error("write CSV failed", zap.Error(err))
 	}
 }

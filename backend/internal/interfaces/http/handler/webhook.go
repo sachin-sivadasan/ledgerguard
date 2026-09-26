@@ -3,11 +3,13 @@ package handler
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 )
 
 // WebhookHandler handles incoming Shopify webhooks
@@ -27,7 +29,7 @@ func (h *WebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	// Read the body for HMAC validation
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("Webhook: failed to read body: %v", err)
+		logging.FromContext(r.Context()).Error("failed to read webhook body", zap.Error(err))
 		writeJSONError(w, http.StatusBadRequest, "failed to read request body")
 		return
 	}
@@ -39,7 +41,7 @@ func (h *WebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	appID := r.Header.Get("X-Shopify-API-Version") // We'll use shop domain to look up app
 
 	if topic == "" {
-		log.Printf("Webhook: missing X-Shopify-Topic header")
+		logging.FromContext(r.Context()).Warn("missing X-Shopify-Topic header")
 		writeJSONError(w, http.StatusBadRequest, "missing topic header")
 		return
 	}
@@ -47,7 +49,7 @@ func (h *WebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	// Note: In production, validate HMAC using the webhook secret
 	// For now, we log but don't reject to support development
 	if hmacSignature == "" {
-		log.Printf("Webhook: warning - missing HMAC signature for topic %s", topic)
+		logging.FromContext(r.Context()).Warn("missing HMAC signature", zap.String("topic", topic))
 	}
 
 	// Build webhook event
@@ -61,14 +63,14 @@ func (h *WebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Process the webhook
 	if err := h.webhookService.ProcessEvent(r.Context(), event); err != nil {
-		log.Printf("Webhook: failed to process event (topic=%s): %v", topic, err)
+		logging.FromContext(r.Context()).Error("failed to process event", zap.String("topic", topic), zap.Error(err))
 		// Return 200 to prevent Shopify from retrying
 		// Log the error for investigation
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	log.Printf("Webhook: processed event (topic=%s, shop=%s)", topic, shopID)
+	logging.FromContext(r.Context()).Info("processed event", zap.String("topic", topic), zap.String("shop", shopID))
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -90,7 +92,7 @@ func (h *WebhookHandler) HandleAppInstalled(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := h.webhookService.ProcessAppInstalled(r.Context(), event); err != nil {
-		log.Printf("Webhook: app installed failed: %v", err)
+		logging.FromContext(r.Context()).Error("app installed processing failed", zap.Error(err))
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -114,7 +116,7 @@ func (h *WebhookHandler) HandleSubscriptionUpdate(w http.ResponseWriter, r *http
 	}
 
 	if err := h.webhookService.ProcessSubscriptionUpdate(r.Context(), event); err != nil {
-		log.Printf("Webhook: subscription update failed: %v", err)
+		logging.FromContext(r.Context()).Error("subscription update processing failed", zap.Error(err))
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -138,7 +140,7 @@ func (h *WebhookHandler) HandleAppUninstalled(w http.ResponseWriter, r *http.Req
 	}
 
 	if err := h.webhookService.ProcessAppUninstalled(r.Context(), event); err != nil {
-		log.Printf("Webhook: app uninstalled failed: %v", err)
+		logging.FromContext(r.Context()).Error("app uninstalled processing failed", zap.Error(err))
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -162,7 +164,7 @@ func (h *WebhookHandler) HandleBillingFailure(w http.ResponseWriter, r *http.Req
 	}
 
 	if err := h.webhookService.ProcessBillingFailure(r.Context(), event); err != nil {
-		log.Printf("Webhook: billing failure processing failed: %v", err)
+		logging.FromContext(r.Context()).Error("billing failure processing failed", zap.Error(err))
 	}
 
 	w.WriteHeader(http.StatusOK)

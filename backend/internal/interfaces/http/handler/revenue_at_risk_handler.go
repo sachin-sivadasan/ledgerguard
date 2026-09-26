@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"math"
 	"net/http"
 	"sort"
@@ -14,7 +13,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // Recovery rates used to estimate recoverable revenue from at-risk subscriptions.
@@ -154,14 +155,14 @@ func (h *RevenueAtRiskHandler) GetRevenueAtRisk(w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("revenue_at_risk: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
 // writeRepoError logs a repository failure and responds 503. These repos have no
 // not-found sentinel — every error is an infrastructure failure (ADR-042).
 func writeRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("revenue_at_risk: repo error in %s: %v", op, err)
+	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -326,6 +327,6 @@ func writeStoresCSV(w http.ResponseWriter, stores []revenueAtRiskStore) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("revenue_at_risk: write CSV: %v", err)
+		zap.L().Error("write CSV failed", zap.Error(err))
 	}
 }

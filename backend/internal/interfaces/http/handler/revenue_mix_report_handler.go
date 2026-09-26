@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,7 +11,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // RevenueMixReportHandler serves the "Revenue Mix" report (REPORTS.md — Archetype B,
@@ -93,7 +94,7 @@ func (h *RevenueMixReportHandler) GetRevenueMix(w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("revenue-mix: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("revenue-mix encode report failed", zap.Error(err))
 	}
 }
 
@@ -125,7 +126,7 @@ func buildRevenueMixReport(txs []*entity.Transaction) revenueMixReport {
 		}
 	}
 	if unknownCount > 0 {
-		log.Printf("revenue-mix: %d transaction(s) with unrecognized ChargeType (%d cents) excluded from gross — total under-reports true revenue", unknownCount, unknownCents)
+		zap.L().Warn("revenue-mix transactions with unrecognized ChargeType excluded from gross — total under-reports true revenue", zap.Int("count", unknownCount), zap.Int64("cents", unknownCents))
 	}
 
 	// Gross is the sum of the three positive streams; net subtracts refunds.
@@ -182,7 +183,7 @@ func revenueMixCurrency(txs []*entity.Transaction) string {
 // writeRevenueMixRepoError logs a repository failure and responds 503. The transaction
 // repo has no not-found sentinel — every error is an infrastructure failure (ADR-042).
 func writeRevenueMixRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("revenue-mix: repo error in %s: %v", op, err)
+	zap.L().Error("revenue-mix repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -209,6 +210,6 @@ func writeRevenueMixCSV(w http.ResponseWriter, report revenueMixReport) {
 	_ = cw.Write([]string{"Net", strconv.FormatInt(report.NetCents, 10), ""})
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("revenue-mix: write CSV: %v", err)
+		zap.L().Error("revenue-mix write CSV failed", zap.Error(err))
 	}
 }

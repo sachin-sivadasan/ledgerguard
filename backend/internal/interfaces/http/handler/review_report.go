@@ -3,13 +3,14 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // reviewDistributionBucket is the count of reviews at a single star rating.
@@ -81,14 +82,14 @@ func (h *ReviewHandler) GetReviewsReport(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("reviews: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("reviews encode report failed", zap.Error(err))
 	}
 }
 
 // writeReviewRepoError logs a repository failure and responds 503. The review repo
 // has no not-found sentinel — every error is an infrastructure failure (ADR-042).
 func writeReviewRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("reviews: repo error in %s: %v", op, err)
+	zap.L().Error("reviews repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -108,7 +109,7 @@ func buildReviewsReport(reviews []*entity.AppReview) reviewsReport {
 
 	for _, rev := range reviews {
 		if !validRating(rev.Rating) {
-			log.Printf("reviews: skipping out-of-range rating %d (review %s)", rev.Rating, rev.ID)
+			zap.L().Warn("reviews skipping out-of-range rating", zap.Int("rating", rev.Rating), zap.String("review_id", rev.ID.String()))
 			continue
 		}
 		validCount++
@@ -190,6 +191,6 @@ func writeReviewsCSV(w http.ResponseWriter, reviews []*entity.AppReview) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("reviews: write CSV: %v", err)
+		zap.L().Error("reviews write CSV failed", zap.Error(err))
 	}
 }

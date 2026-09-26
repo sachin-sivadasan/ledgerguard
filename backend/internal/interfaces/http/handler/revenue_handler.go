@@ -2,13 +2,14 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // RevenueHandler handles earnings timeline endpoints
@@ -52,7 +53,7 @@ func (h *RevenueHandler) GetEarningsStatus(w http.ResponseWriter, r *http.Reques
 	// Get earnings status
 	status, err := h.revenueService.GetEarningsStatus(ctx, app.ID)
 	if err != nil {
-		log.Printf("GetEarningsStatus: failed for app %s: %v", app.ID, err)
+		logging.FromContext(r.Context()).Error("GetEarningsStatus failed", zap.String("app_id", app.ID.String()), zap.Error(err))
 		writeJSONErrorResponse(w, http.StatusInternalServerError, "failed to fetch earnings status")
 		return
 	}
@@ -114,7 +115,7 @@ func (h *RevenueHandler) GetEarnings(w http.ResponseWriter, r *http.Request) {
 			writeJSONErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		log.Printf("GetEarnings: failed for app %s: %v", app.ID, err)
+		logging.FromContext(r.Context()).Error("GetEarnings failed", zap.String("app_id", app.ID.String()), zap.Error(err))
 		writeJSONErrorResponse(w, http.StatusInternalServerError, "failed to fetch earnings")
 		return
 	}
@@ -167,7 +168,7 @@ func (h *RevenueHandler) GetEarningPeriods(w http.ResponseWriter, r *http.Reques
 			writeJSONErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		log.Printf("GetEarningPeriods: failed for app %s: %v", app.ID, err)
+		logging.FromContext(r.Context()).Error("GetEarningPeriods failed", zap.String("app_id", app.ID.String()), zap.Error(err))
 		writeJSONErrorResponse(w, http.StatusInternalServerError, "failed to fetch earning periods")
 		return
 	}
@@ -219,7 +220,7 @@ func (h *RevenueHandler) GetRevenueConcentration(w http.ResponseWriter, r *http.
 
 	result, err := h.revenueService.GetRevenueConcentration(ctx, app.ID, start, end, limit)
 	if err != nil {
-		log.Printf("GetRevenueConcentration: failed for app %s: %v", app.ID, err)
+		logging.FromContext(r.Context()).Error("GetRevenueConcentration failed", zap.String("app_id", app.ID.String()), zap.Error(err))
 		writeJSONErrorResponse(w, http.StatusInternalServerError, "failed to compute revenue concentration")
 		return
 	}

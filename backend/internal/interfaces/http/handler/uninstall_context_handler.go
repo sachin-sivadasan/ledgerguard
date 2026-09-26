@@ -3,16 +3,18 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
@@ -103,14 +105,14 @@ func (h *UninstallContextHandler) GetUninstallContext(w http.ResponseWriter, r *
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("uninstall_context: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report", zap.Error(err))
 	}
 }
 
 // writeUninstallRepoError logs a repository failure and responds 503. These repos
 // have no not-found sentinel — every error is an infrastructure failure (ADR-042).
 func writeUninstallRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("uninstall_context: repo error in %s: %v", op, err)
+	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -183,7 +185,7 @@ func wereAtRiskRate(atRisk, correlated int) float64 {
 	}
 	rate := float64(atRisk) / float64(correlated)
 	if rate < 0 || rate > 1 {
-		log.Printf("uninstall_context: wereAtRiskPct %.4f outside [0,1] — clamping (unexpected counts atRisk=%d correlated=%d)", rate, atRisk, correlated)
+		zap.L().Warn("wereAtRiskPct outside [0,1] — clamping (unexpected counts)", zap.Float64("rate", rate), zap.Int("at_risk", atRisk), zap.Int("correlated", correlated))
 	}
 	if rate < 0 {
 		return 0
@@ -249,7 +251,7 @@ func buildUninstallReport(events []*entity.AppEvent, subsByShop map[string]*enti
 	if skippedEmptyGID > 0 {
 		// One aggregate line so a GID-less ingestion regression stays diagnosable
 		// rather than silently under-counting uninstalls.
-		log.Printf("uninstall_context: skipped %d uninstall event(s) with empty ShopifyShopGID (uncorrelatable)", skippedEmptyGID)
+		zap.L().Warn("skipped uninstall event(s) with empty ShopifyShopGID (uncorrelatable)", zap.Int("skipped", skippedEmptyGID))
 	}
 
 	stores := make([]uninstallStore, 0, len(latestByShop))
@@ -337,6 +339,6 @@ func writeUninstallStoresCSV(w http.ResponseWriter, stores []uninstallStore) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("uninstall_context: write CSV: %v", err)
+		zap.L().Error("write CSV", zap.Error(err))
 	}
 }

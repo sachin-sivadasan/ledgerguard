@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,7 +10,9 @@ import (
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 // LedgerReconciliationReportHandler serves the "Ledger Reconciliation" report
@@ -171,7 +172,7 @@ func (h *LedgerReconciliationReportHandler) GetLedgerReconciliation(w http.Respo
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("ledger-reconciliation: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
@@ -197,6 +198,6 @@ func writeReconCSV(w http.ResponseWriter, report reconReport) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("ledger-reconciliation: write CSV: %v", err)
+		zap.L().Error("write CSV failed", zap.Error(err))
 	}
 }

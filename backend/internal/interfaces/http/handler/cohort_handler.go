@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -14,7 +13,9 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
+	"go.uber.org/zap"
 )
 
 type CohortHandler struct {
@@ -76,7 +77,7 @@ func (h *CohortHandler) GetCohorts(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(map[string]any{
 		"cohorts": cohorts,
 	}); err != nil {
-		log.Printf("cohorts: encode response: %v", err)
+		logging.FromContext(r.Context()).Error("encode response failed", zap.Error(err))
 	}
 }
 
@@ -84,7 +85,7 @@ func (h *CohortHandler) GetCohorts(w http.ResponseWriter, r *http.Request) {
 // not-found sentinel — every error is an infrastructure failure (ADR-042), matching
 // writeRetentionRepoError.
 func writeCohortRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("cohorts: repo error in %s: %v", op, err)
+	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -125,7 +126,7 @@ func writeCohortsCSV(w http.ResponseWriter, cohorts []entity.CohortData) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("cohorts: write CSV: %v", err)
+		zap.L().Error("write CSV failed", zap.Error(err))
 	}
 }
 

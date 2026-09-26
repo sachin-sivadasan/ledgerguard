@@ -3,16 +3,18 @@ package handler
 import (
 	"encoding/csv"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/interfaces/http/middleware"
 )
 
@@ -120,14 +122,14 @@ func (h *ChurnHandler) GetChurn(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(report); err != nil {
-		log.Printf("churn: encode report: %v", err)
+		logging.FromContext(r.Context()).Error("encode report failed", zap.Error(err))
 	}
 }
 
 // writeChurnRepoError logs a repository failure and responds 503. These repos have
 // no not-found sentinel — every error is an infrastructure failure (ADR-042).
 func writeChurnRepoError(w http.ResponseWriter, op string, err error) {
-	log.Printf("churn: repo error in %s: %v", op, err)
+	zap.L().Error("repo error", zap.String("op", op), zap.Error(err))
 	writeJSONError(w, http.StatusServiceUnavailable, "service temporarily unavailable")
 }
 
@@ -227,7 +229,7 @@ func buildChurnReport(subs []*entity.Subscription, stores []churnStore, latest *
 	// churnRate clamps this to 1.0 for the UI — log it so the data drift stays
 	// diagnosable rather than silently capped.
 	if total > 0 && len(subs) > total {
-		log.Printf("churn: live churned count %d exceeds latest snapshot total %d — clamping rate to 1.0 (stale snapshot?)", len(subs), total)
+		zap.L().Warn("live churned count exceeds latest snapshot total — clamping rate to 1.0 (stale snapshot?)", zap.Int("churned_count", len(subs)), zap.Int("snapshot_total", total))
 	}
 
 	return churnReport{
@@ -275,6 +277,6 @@ func writeChurnStoresCSV(w http.ResponseWriter, stores []churnStore) {
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
-		log.Printf("churn: write CSV: %v", err)
+		zap.L().Error("write CSV failed", zap.Error(err))
 	}
 }

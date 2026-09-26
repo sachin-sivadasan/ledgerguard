@@ -135,11 +135,19 @@ on upgrades). Implemented:
    > `RequestLogger`). `org_id`/`app_id` are *typed* in the Phase-2 index template but **not
    > yet emitted** — that enrichment lands with the point-3 migration (add them to the
    > context logger in `OrgContextMW` / the sync-job payload).
-3. **Opportunistic migration (remaining):** convert hot paths off `log.Printf` to
-   `logging.FromContext(ctx).Info/Error(...)` — HTTP handlers, then the **sync pipeline
-   processors** (`internal/infrastructure/queue/processors/*`): carry `request_id`/`app_id`
-   in the job payload and re-attach at each processor top for the "one sync's story".
-   `org_id`/`app_id` enrichment: add to the context logger in `OrgContextMW`.
+3. **Opportunistic migration:** convert hot paths off `log.Printf` to
+   `logging.FromContext(ctx).Info/Error(...)`.
+   - ✅ **Sync pipeline processors** (`internal/infrastructure/queue/processors/*`) — DONE.
+     A `jobLogger(ctx, name, payload)` helper attaches a job-scoped logger carrying
+     `processor` / `app_id` / `job_id` structured fields (the "one sync's story"
+     correlation keys) and puts it on ctx; all 17 processor `log.Printf` sites now log
+     via it. Hand-interpolated `"for app %s (job %s)"` suffixes became queryable fields.
+   - ⏳ **HTTP handlers** (117 sites) — next.
+   - ⏳ **`request_id` into the job payload:** processors currently correlate by
+     `app_id`/`job_id` (there's no HTTP request behind an async worker). To tie a sync
+     back to the request that enqueued it, carry `request_id` in `SyncJobPayload` and add
+     it in `jobLogger`.
+   - ⏳ **`org_id`/`app_id` on HTTP lines:** add to the context logger in `OrgContextMW`.
 
 **Verify:** `logging` unit tests assert ECS field names + `request_id`; end-to-end, one
 API request produces N log lines sharing one `request_id` in ES.

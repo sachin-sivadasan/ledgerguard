@@ -3,7 +3,6 @@ package processors
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -39,6 +38,8 @@ func NewFullSyncProcessor(
 func (p *FullSyncProcessor) Type() string { return entity.SyncJobTypeFullSync }
 
 func (p *FullSyncProcessor) Process(ctx context.Context, payload *queue.SyncJobPayload) error {
+	ctx, lg := jobLogger(ctx, "FullSyncProcessor", payload)
+
 	parentJob, err := p.syncJobRepo.FindByID(ctx, payload.JobID)
 	if err != nil {
 		return fmt.Errorf("failed to find parent job: %w", err)
@@ -207,7 +208,7 @@ func (p *FullSyncProcessor) Process(ctx context.Context, payload *queue.SyncJobP
 		Message:   "Full sync complete",
 	})
 
-	log.Printf("FullSyncProcessor: completed for app %s", payload.AppID)
+	lg.Info("full sync completed")
 	return nil
 }
 

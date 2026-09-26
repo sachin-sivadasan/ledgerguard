@@ -3,9 +3,10 @@ package processors
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"sync/atomic"
+
+	"go.uber.org/zap"
 
 	"github.com/sachin-sivadasan/ledgerguard/internal/application/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -58,6 +59,8 @@ func NewStoreProcessor(
 func (p *StoreProcessor) Type() string { return entity.SyncJobTypeStoreSync }
 
 func (p *StoreProcessor) Process(ctx context.Context, payload *queue.SyncJobPayload) error {
+	ctx, lg := jobLogger(ctx, "StoreProcessor", payload)
+
 	// Existence guard: fail fast if the app is gone (brand fetch below has no app dep).
 	if _, err := p.appRepo.FindByID(ctx, payload.AppID); err != nil {
 		return fmt.Errorf("failed to find app %s: %w", payload.AppID, err)
@@ -168,6 +171,8 @@ func (p *StoreProcessor) Process(ctx context.Context, payload *queue.SyncJobPayl
 		Message:   fmt.Sprintf("Fetched %d shop brands", totalFetched),
 	})
 
-	log.Printf("[queue] StoreProcessor: fetched %d/%d brands for app %s (job %s)", totalFetched, len(newDomains), payload.AppID, payload.JobID)
+	lg.Info("fetched brands",
+		zap.Int("fetched", totalFetched),
+		zap.Int("total", len(newDomains)))
 	return nil
 }

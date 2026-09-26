@@ -134,7 +134,7 @@ func TestRazorpayClient_CancelSubscription(t *testing.T) {
 func TestRazorpayClient_APIError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"error":{"code":"BAD_REQUEST_ERROR","description":"Invalid plan_id"}}`))
+		_, _ = w.Write([]byte(`{"error":{"code":"BAD_REQUEST_ERROR","description":"Invalid plan_id"}}`))
 	}))
 	defer server.Close()
 

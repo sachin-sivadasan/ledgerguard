@@ -103,12 +103,12 @@ func TestBillingService_CreateCheckout(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/customers":
-			json.NewEncoder(w).Encode(external.RazorpayCustomer{
+			_ = json.NewEncoder(w).Encode(external.RazorpayCustomer{
 				ID:    "cust_test",
 				Email: "test@example.com",
 			})
 		case "/subscriptions":
-			json.NewEncoder(w).Encode(external.RazorpaySubscription{
+			_ = json.NewEncoder(w).Encode(external.RazorpaySubscription{
 				ID:       "sub_test",
 				PlanID:   "plan_starter_test",
 				ShortURL: "https://rzp.io/i/checkout",

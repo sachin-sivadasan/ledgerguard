@@ -41,11 +41,16 @@ func cancelKey(jobID uuid.UUID) string {
 // AcquireLock attempts to acquire a distributed lock via SETNX
 func (lm *LockManager) AcquireLock(ctx context.Context, appID uuid.UUID, syncType, workerID string) (bool, error) {
 	key := lockKey(appID, syncType)
-	ok, err := lm.client.SetNX(ctx, key, workerID, lockTTL).Result()
+	// Set with NX (only-if-absent) + TTL — the non-deprecated form of SetNX. On contention
+	// the key already exists, so SetArgs returns redis.Nil (not an error): lock not acquired.
+	res, err := lm.client.SetArgs(ctx, key, workerID, redis.SetArgs{Mode: "NX", TTL: lockTTL}).Result()
+	if err == redis.Nil {
+		return false, nil // key already held — lock not acquired
+	}
 	if err != nil {
 		return false, fmt.Errorf("failed to acquire lock %s: %w", key, err)
 	}
-	return ok, nil
+	return res == "OK", nil
 }
 
 // ReleaseLockIfOwner releases a lock only if the current value matches ownerID (Lua atomic)

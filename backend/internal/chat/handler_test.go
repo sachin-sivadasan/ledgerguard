@@ -63,7 +63,7 @@ func TestHandleChat_SimpleResponse(t *testing.T) {
 
 	var respData responseEvent
 	raw, _ := json.Marshal(events[0].Data)
-	json.Unmarshal(raw, &respData)
+	_ = json.Unmarshal(raw, &respData)
 	if respData.Message != "Your MRR is $1,500.00" {
 		t.Errorf("expected message 'Your MRR is $1,500.00', got '%s'", respData.Message)
 	}
@@ -177,7 +177,7 @@ func TestHandleListModules(t *testing.T) {
 		Name      string `json:"name"`
 		ToolCount int    `json:"tool_count"`
 	}
-	json.NewDecoder(rec.Body).Decode(&modules)
+	_ = json.NewDecoder(rec.Body).Decode(&modules)
 
 	if len(modules) != 2 {
 		t.Fatalf("expected 2 modules, got %d", len(modules))

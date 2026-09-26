@@ -2,7 +2,6 @@ package service
 
 import (
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
@@ -191,18 +190,5 @@ func TestFeeVerificationService_CalculateTierSavings_LargeDev(t *testing.T) {
 	expectedSavings := int64(50000) // $500
 	if result.SavingsCents != expectedSavings {
 		t.Errorf("SavingsCents = %d, want %d", result.SavingsCents, expectedSavings)
-	}
-}
-
-// Helper to create transaction with date
-func createTransaction(grossCents, shopifyFeeCents, processingFeeCents, taxCents, netCents int64, date time.Time) *entity.Transaction {
-	return &entity.Transaction{
-		ID:                 uuid.New(),
-		GrossAmountCents:   grossCents,
-		ShopifyFeeCents:    shopifyFeeCents,
-		ProcessingFeeCents: processingFeeCents,
-		TaxOnFeesCents:     taxCents,
-		NetAmountCents:     netCents,
-		TransactionDate:    date,
 	}
 }

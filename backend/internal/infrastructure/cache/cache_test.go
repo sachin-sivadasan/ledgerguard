@@ -82,7 +82,7 @@ func TestInMemoryCache_Delete(t *testing.T) {
 	value := []byte("delete-value")
 
 	// Set a value
-	cache.Set(ctx, key, value, time.Minute)
+	_ = cache.Set(ctx, key, value, time.Minute)
 
 	// Delete it
 	err := cache.Delete(ctx, key)
@@ -115,7 +115,7 @@ func TestInMemoryCache_Exists(t *testing.T) {
 	}
 
 	// Set a value
-	cache.Set(ctx, key, value, time.Minute)
+	_ = cache.Set(ctx, key, value, time.Minute)
 
 	// Should exist
 	exists, err = cache.Exists(ctx, key)

@@ -313,7 +313,6 @@ func (m *mockPartnerRepoForSub) GetAllIDs(ctx context.Context) ([]uuid.UUID, err
 type mockAppRepoForSub struct {
 	app                   *entity.App
 	findErr               error
-	expectedPartnerID     uuid.UUID // If set, only return app if partnerAccountID matches
 	checkPartnerOwnership bool
 }
 
@@ -423,8 +422,7 @@ func TestSubscriptionHandler_List_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	subs, ok := resp["subscriptions"].([]interface{})
 	if !ok {
 		t.Fatal("expected subscriptions array in response")
@@ -502,8 +500,7 @@ func TestSubscriptionHandler_List_FilterByRiskState(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	subs, ok := resp["subscriptions"].([]interface{})
 	if !ok {
 		t.Fatal("expected subscriptions array in response")
@@ -548,7 +545,7 @@ func TestSubscriptionHandler_List_FilterByStatusAndPlan(t *testing.T) {
 			t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 		}
 		var resp map[string]interface{}
-		json.NewDecoder(rec.Body).Decode(&resp)
+		_ = json.NewDecoder(rec.Body).Decode(&resp)
 		return len(resp["subscriptions"].([]interface{}))
 	}
 
@@ -687,8 +684,7 @@ func TestSubscriptionHandler_GetByID_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	sub, ok := resp["subscription"].(map[string]interface{})
 	if !ok {
 		t.Fatal("expected subscription object in response")
@@ -840,8 +836,7 @@ func TestSubscriptionHandler_Summary_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	if int(resp["activeCount"].(float64)) != 2 {
 		t.Errorf("expected activeCount 2, got %v", resp["activeCount"])
 	}
@@ -903,8 +898,7 @@ func TestSubscriptionHandler_PriceStats_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	// Verify price stats fields
 	if _, ok := resp["minCents"]; !ok {
 		t.Error("expected minCents in response")
@@ -995,8 +989,7 @@ func TestSubscriptionHandler_List_MultipleStatusFilter(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	total := int(resp["total"].(float64))
 	if total != 2 {
 		t.Errorf("expected total 2 (filtered), got %d", total)
@@ -1043,8 +1036,7 @@ func TestSubscriptionHandler_List_PriceRangeFilter(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	total := int(resp["total"].(float64))
 	if total != 2 {
 		t.Errorf("expected total 2 (filtered by price), got %d", total)
@@ -1090,8 +1082,7 @@ func TestSubscriptionHandler_List_BillingIntervalFilter(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	total := int(resp["total"].(float64))
 	if total != 1 {
 		t.Errorf("expected total 1 (ANNUAL only), got %d", total)
@@ -1137,8 +1128,7 @@ func TestSubscriptionHandler_List_SearchFilter(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	total := int(resp["total"].(float64))
 	if total != 1 {
 		t.Errorf("expected total 1 (search 'acme'), got %d", total)
@@ -1188,8 +1178,7 @@ func TestSubscriptionHandler_List_Pagination(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	page := int(resp["page"].(float64))
 	pageSize := int(resp["pageSize"].(float64))
 	total := int(resp["total"].(float64))
@@ -1254,8 +1243,7 @@ func TestSubscriptionHandler_List_CombinedFilters(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	total := int(resp["total"].(float64))
 	if total != 1 {
 		t.Errorf("expected total 1 (combined filters), got %d", total)

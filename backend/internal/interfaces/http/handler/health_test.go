@@ -99,7 +99,7 @@ func TestHealthHandler_SchemaMigrated(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 	var resp HealthResponse
-	json.NewDecoder(rec.Body).Decode(&resp)
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	if resp.Status != "ok" || resp.Schema != "migrated (v40)" {
 		t.Errorf("expected ok + 'migrated (v40)', got '%s' / '%s'", resp.Status, resp.Schema)
 	}
@@ -114,7 +114,7 @@ func TestHealthHandler_SchemaDirty(t *testing.T) {
 		t.Fatalf("expected 503 for dirty schema, got %d", rec.Code)
 	}
 	var resp HealthResponse
-	json.NewDecoder(rec.Body).Decode(&resp)
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	if resp.Status != "degraded" || resp.Schema != "dirty at version 17" {
 		t.Errorf("expected degraded + 'dirty at version 17', got '%s' / '%s'", resp.Status, resp.Schema)
 	}
@@ -129,7 +129,7 @@ func TestHealthHandler_SchemaNotApplied(t *testing.T) {
 		t.Fatalf("expected 503 when migrations not applied, got %d", rec.Code)
 	}
 	var resp HealthResponse
-	json.NewDecoder(rec.Body).Decode(&resp)
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
 	if resp.Status != "degraded" || resp.Schema != "migrations not applied" {
 		t.Errorf("expected degraded + 'migrations not applied', got '%s' / '%s'", resp.Status, resp.Schema)
 	}

@@ -209,7 +209,7 @@ func (r *PostgresAdminRepository) ResetAppData(ctx context.Context, appID uuid.U
 	if err != nil {
 		return nil, fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	tables := []string{
 		"sync_jobs",

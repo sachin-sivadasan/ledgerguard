@@ -419,15 +419,6 @@ func (s *WebhookService) ProcessEvent(ctx context.Context, event WebhookEvent) e
 	}
 }
 
-// Helper to get app internal ID from Shopify GID
-func (s *WebhookService) getAppByPartnerID(ctx context.Context, partnerAppID string) (*entity.App, error) {
-	apps, err := s.appRepo.FindAllByPartnerAppID(ctx, partnerAppID)
-	if err != nil || len(apps) == 0 {
-		return nil, fmt.Errorf("app not found for partner ID %s", partnerAppID)
-	}
-	return apps[0], nil
-}
-
 // sendRiskChangeNotification sends a critical alert when risk state changes
 func (s *WebhookService) sendRiskChangeNotification(
 	ctx context.Context,

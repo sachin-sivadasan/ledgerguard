@@ -110,7 +110,7 @@ func (c *ShopifyAppStoreClient) scrapePage(ctx context.Context, url string) ([]S
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		io.Copy(io.Discard, resp.Body)
+		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil, false, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 

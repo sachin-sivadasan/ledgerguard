@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -33,6 +34,10 @@ func (m *mockProcessor) Process(ctx context.Context, payload *SyncJobPayload) er
 
 type workerMockRepo struct {
 	mockSyncJobRepo
+	// mu guards jobs/startedIDs/failedIDs — the worker pool drives MarkStarted/
+	// MarkCompleted/MarkFailed/FindActiveByAppIDAndType from multiple worker goroutines
+	// concurrently. Run under -race.
+	mu         sync.Mutex
 	jobs       map[uuid.UUID]*entity.SyncJob
 	startedIDs []uuid.UUID
 	failedIDs  []uuid.UUID
@@ -46,11 +51,15 @@ func newWorkerMockRepo() *workerMockRepo {
 }
 
 func (m *workerMockRepo) Create(_ context.Context, job *entity.SyncJob) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.jobs[job.ID] = job
 	return nil
 }
 
 func (m *workerMockRepo) FindByID(_ context.Context, id uuid.UUID) (*entity.SyncJob, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if j, ok := m.jobs[id]; ok {
 		return j, nil
 	}
@@ -58,6 +67,8 @@ func (m *workerMockRepo) FindByID(_ context.Context, id uuid.UUID) (*entity.Sync
 }
 
 func (m *workerMockRepo) FindByStatus(_ context.Context, status entity.SyncJobStatus) ([]*entity.SyncJob, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	var result []*entity.SyncJob
 	for _, j := range m.jobs {
 		if j.Status == status {
@@ -68,6 +79,8 @@ func (m *workerMockRepo) FindByStatus(_ context.Context, status entity.SyncJobSt
 }
 
 func (m *workerMockRepo) FindActiveByAppIDAndType(_ context.Context, appID uuid.UUID, jobType string) (*entity.SyncJob, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	for _, j := range m.jobs {
 		if j.AppID == appID && j.JobType == jobType && !j.IsTerminal() {
 			return j, nil
@@ -81,6 +94,8 @@ func (m *workerMockRepo) FindByParentJobID(_ context.Context, _ uuid.UUID) ([]*e
 }
 
 func (m *workerMockRepo) UpdateStatus(_ context.Context, id uuid.UUID, status entity.SyncJobStatus) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if j, ok := m.jobs[id]; ok {
 		j.Status = status
 	}
@@ -88,6 +103,8 @@ func (m *workerMockRepo) UpdateStatus(_ context.Context, id uuid.UUID, status en
 }
 
 func (m *workerMockRepo) MarkStarted(_ context.Context, id uuid.UUID, workerID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.startedIDs = append(m.startedIDs, id)
 	if j, ok := m.jobs[id]; ok {
 		j.Status = entity.SyncJobStatusProcessing
@@ -99,6 +116,8 @@ func (m *workerMockRepo) MarkStarted(_ context.Context, id uuid.UUID, workerID s
 }
 
 func (m *workerMockRepo) MarkCompleted(_ context.Context, id uuid.UUID) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if j, ok := m.jobs[id]; ok {
 		j.Status = entity.SyncJobStatusCompleted
 		now := time.Now().UTC()
@@ -108,6 +127,8 @@ func (m *workerMockRepo) MarkCompleted(_ context.Context, id uuid.UUID) error {
 }
 
 func (m *workerMockRepo) MarkFailed(_ context.Context, id uuid.UUID, errMsg string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.failedIDs = append(m.failedIDs, id)
 	if j, ok := m.jobs[id]; ok {
 		j.Status = entity.SyncJobStatusFailed
@@ -121,6 +142,8 @@ func (m *workerMockRepo) ListByAppID(_ context.Context, _ uuid.UUID, _ string, _
 }
 
 func (m *workerMockRepo) MarkPendingIfProcessing(_ context.Context, id uuid.UUID) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if j, ok := m.jobs[id]; ok {
 		if j.Status == entity.SyncJobStatusProcessing {
 			j.Status = entity.SyncJobStatusPending

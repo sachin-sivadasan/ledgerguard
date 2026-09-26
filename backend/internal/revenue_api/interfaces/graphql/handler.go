@@ -68,7 +68,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(GraphQLResponse{Data: result})
+	_ = json.NewEncoder(w).Encode(GraphQLResponse{Data: result})
 }
 
 // executeQuery executes a GraphQL query

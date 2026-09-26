@@ -285,8 +285,7 @@ func TestQueueSync_EnqueueSync_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rr.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rr.Body).Decode(&resp)
 	if resp["job_type"] != entity.SyncJobTypeFullSync {
 		t.Errorf("Expected job_type %q, got %q", entity.SyncJobTypeFullSync, resp["job_type"])
 	}
@@ -367,8 +366,7 @@ func TestQueueSync_GetJobStatus_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rr.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rr.Body).Decode(&resp)
 	if resp["id"] != job.ID.String() {
 		t.Errorf("Expected job ID %s, got %s", job.ID, resp["id"])
 	}
@@ -410,8 +408,7 @@ func TestQueueSync_GetJobProgress_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rr.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rr.Body).Decode(&resp)
 	if int(resp["total"].(float64)) != 100 {
 		t.Errorf("Expected total 100, got %v", resp["total"])
 	}
@@ -439,8 +436,7 @@ func TestQueueSync_ListJobs_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(rr.Body).Decode(&resp)
-
+	_ = json.NewDecoder(rr.Body).Decode(&resp)
 	jobs := resp["jobs"].([]interface{})
 	if len(jobs) != 3 {
 		t.Errorf("Expected 3 jobs, got %d", len(jobs))
@@ -529,8 +525,7 @@ func TestQueueSync_EnqueueSync_TypeMapping(t *testing.T) {
 			}
 
 			var resp map[string]interface{}
-			json.NewDecoder(rr.Body).Decode(&resp)
-
+			_ = json.NewDecoder(rr.Body).Decode(&resp)
 			if resp["job_type"] != tt.wantJobType {
 				t.Errorf("Expected job_type %q, got %q", tt.wantJobType, resp["job_type"])
 			}

@@ -48,7 +48,8 @@ curl -H "Authorization: Bearer <orgA_token>" -H "X-Org-Id: <orgA_id>" \
 **Fix:** apply `RequireOrgRole(OWNER)` / `RequireOrgRole(ADMIN,OWNER)` to privileged routes; gate `UpdateNotificationPrefs` to self-or-admin. Add per-route RBAC tests.
 
 ## S3 — Invitation acceptance doesn't verify the accepting user's email  ✅ **[High] — ✅ FIXED (email-binding)**
-**Status:** **FIXED (email-binding)** — `AcceptInvitation` takes the authenticated user's email and returns `ErrInvitationEmailMismatch` → 403 unless it matches `invitation.Email` (case-insensitive, checked first). Tests: `TestAcceptInvitation_EmailMismatch`. Server-side token email *delivery* remains a separate follow-up. (PR #90)
+**Status:** **FIXED (email-binding)** — `AcceptInvitation` takes the authenticated user's email and returns `ErrInvitationEmailMismatch` → 403 unless it matches `invitation.Email` (case-insensitive, checked first). Tests: `TestAcceptInvitation_EmailMismatch`. (PR #90)
+**Delivery seam (skeleton, per #96):** an `EmailSender` interface (`domain/service`) + default `NoopEmailSender` (logs) are wired into `InviteMember` (best-effort send, nil-safe). Test: `TestInviteMember_SendsEmailWhenSenderSet`. Currently the token is **still returned in the API response** (frontend delivers). **To finish:** implement a real `EmailSender` (SMTP/SendGrid), swap `NewNoopEmailSender` in `main`, then stop returning the token. The same interface unblocks the #9 notifications email stub.
 **Component:** `application/service/org_service.go` (`AcceptInvitation`).
 **Evidence:** email referenced only in `InviteMember`, never compared in `AcceptInvitation`; the token is **returned in the API response** (no backend email delivery).
 **Impact:** anyone who obtains the invite token can join the org **as the invited role** (invite-hijack), regardless of their email.

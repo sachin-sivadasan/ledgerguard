@@ -10,8 +10,44 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
+	domainservice "github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 )
+
+type mockEmailSender struct {
+	sent []domainservice.EmailMessage
+}
+
+func (m *mockEmailSender) Send(_ context.Context, msg domainservice.EmailMessage) error {
+	m.sent = append(m.sent, msg)
+	return nil
+}
+
+// TestInviteMember_SendsEmailWhenSenderSet is the S3-delivery skeleton guard: when an
+// EmailSender is wired, InviteMember delivers the invite to the invited address. (With
+// no sender wired — the default — no send happens; covered by the other invite tests.)
+func TestInviteMember_SendsEmailWhenSenderSet(t *testing.T) {
+	svc, _, _, _, _ := setupOrgService()
+	ctx := context.Background()
+	creatorID := uuid.New()
+	org, _ := svc.CreateOrganization(ctx, "Acme", creatorID)
+	org.PlanTier = valueobject.PlanTierStarter
+	_ = svc.orgRepo.(*mockOrgRepo).Update(ctx, org)
+
+	sender := &mockEmailSender{}
+	svc.SetEmailSender(sender)
+
+	_, err := svc.InviteMember(ctx, org.ID, "invitee@example.com", valueobject.OrgRoleViewer, creatorID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(sender.sent) != 1 {
+		t.Fatalf("expected 1 invite email sent, got %d", len(sender.sent))
+	}
+	if sender.sent[0].To != "invitee@example.com" {
+		t.Errorf("invite email To = %q, want invitee@example.com", sender.sent[0].To)
+	}
+}
 
 // --- Mock Repositories ---
 

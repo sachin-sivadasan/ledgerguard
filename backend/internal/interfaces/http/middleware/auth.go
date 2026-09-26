@@ -9,9 +9,12 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/entity"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/repository"
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/service"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 )
 
 var ErrUserNotFound = errors.New("user not found")
@@ -69,7 +72,9 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 
 		claims, err := m.tokenVerifier.VerifyIDToken(r.Context(), token)
 		if err != nil {
-			log.Printf("Token verification failed: %v", err)
+			// Structured + request-scoped (carries request_id via RequestLogger) — the
+			// migration pattern for the remaining stdlib log.Printf call sites.
+			logging.FromContext(r.Context()).Warn("token verification failed", zap.Error(err))
 			writeError(w, http.StatusUnauthorized, "invalid token")
 			return
 		}

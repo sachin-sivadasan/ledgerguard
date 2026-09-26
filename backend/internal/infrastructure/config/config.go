@@ -20,6 +20,12 @@ type Config struct {
 	Queue      QueueConfig      `yaml:"queue"`
 	Mixpanel   MixpanelConfig   `yaml:"mixpanel"`
 	Audit      AuditConfig      `yaml:"audit"`
+	Log        LogConfig        `yaml:"log"`
+}
+
+type LogConfig struct {
+	// Level: debug|info|warn|error (default info). Set via LOG_LEVEL.
+	Level string `yaml:"level"`
 }
 
 type AuditConfig struct {
@@ -136,6 +142,9 @@ func Load(configPath string) (*Config, error) {
 		},
 		Firebase: FirebaseConfig{
 			CheckRevoked: true, // secure by default; disable via FIREBASE_CHECK_REVOKED=false
+		},
+		Log: LogConfig{
+			Level: "info",
 		},
 	}
 
@@ -287,6 +296,11 @@ func applyEnvOverrides(cfg *Config) {
 		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
 			cfg.Audit.RetentionDays = n
 		}
+	}
+
+	// Logging
+	if v := os.Getenv("LOG_LEVEL"); v != "" {
+		cfg.Log.Level = v
 	}
 
 	// Queue

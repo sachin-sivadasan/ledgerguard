@@ -27,6 +27,7 @@ import (
 	"github.com/sachin-sivadasan/ledgerguard/internal/domain/valueobject"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/config"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/external"
+	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/logging"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/persistence"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue"
 	"github.com/sachin-sivadasan/ledgerguard/internal/infrastructure/queue/processors"
@@ -40,6 +41,9 @@ import (
 	revenueMiddleware "github.com/sachin-sivadasan/ledgerguard/internal/revenue_api/interfaces/http/middleware"
 	"github.com/sachin-sivadasan/ledgerguard/pkg/crypto"
 )
+
+// version is the build version stamped into structured logs (override via -ldflags).
+var version = "dev"
 
 func main() {
 	if err := run(); err != nil {
@@ -63,6 +67,11 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
+
+	// Structured logging: install zap globally + redirect the stdlib log into it, so
+	// every existing log.Printf becomes structured JSON (ECS fields) immediately.
+	_, logCleanup := logging.Init(cfg.Log.Level, version)
+	defer logCleanup()
 
 	if *configPath != "" {
 		log.Printf("Loaded config from: %s", *configPath)

@@ -32,13 +32,31 @@ func NewFirebaseMessagingService(ctx context.Context, credentialsFile string) (*
 }
 
 // SendPush sends a push notification to a device
-func (s *FirebaseMessagingService) SendPush(ctx context.Context, deviceToken string, platform entity.Platform, title string, body string) error {
+func (s *FirebaseMessagingService) SendPush(ctx context.Context, deviceToken string, platform entity.Platform, title string, body string, data map[string]string) error {
+	_, err := s.client.Send(ctx, buildMessage(deviceToken, platform, title, body, data))
+	if err != nil {
+		// A dead/expired token is not a transient send failure — surface it so the
+		// caller prunes the token rather than retrying it forever.
+		if messaging.IsUnregistered(err) {
+			return entity.ErrPushTokenUnregistered
+		}
+		return fmt.Errorf("failed to send push notification: %w", err)
+	}
+
+	return nil
+}
+
+// buildMessage assembles the FCM message. The data payload rides alongside the
+// notification block (clients that ignore data still get the alert) and carries
+// the keys the mobile client deep-links on (type / app_id / subscription_id).
+func buildMessage(deviceToken string, platform entity.Platform, title, body string, data map[string]string) *messaging.Message {
 	message := &messaging.Message{
 		Token: deviceToken,
 		Notification: &messaging.Notification{
 			Title: title,
 			Body:  body,
 		},
+		Data: data,
 	}
 
 	// Add platform-specific configuration
@@ -62,12 +80,7 @@ func (s *FirebaseMessagingService) SendPush(ctx context.Context, deviceToken str
 		}
 	}
 
-	_, err := s.client.Send(ctx, message)
-	if err != nil {
-		return fmt.Errorf("failed to send push notification: %w", err)
-	}
-
-	return nil
+	return message
 }
 
 // SendMulticast sends a notification to multiple devices

@@ -157,6 +157,7 @@ type sentNotification struct {
 	platform    entity.Platform
 	title       string
 	body        string
+	data        map[string]string
 }
 
 func newMockPushNotificationProvider() *mockPushNotificationProvider {
@@ -165,7 +166,7 @@ func newMockPushNotificationProvider() *mockPushNotificationProvider {
 	}
 }
 
-func (m *mockPushNotificationProvider) SendPush(ctx context.Context, deviceToken string, platform entity.Platform, title string, body string) error {
+func (m *mockPushNotificationProvider) SendPush(ctx context.Context, deviceToken string, platform entity.Platform, title string, body string, data map[string]string) error {
 	if m.sendErr != nil {
 		return m.sendErr
 	}
@@ -174,6 +175,7 @@ func (m *mockPushNotificationProvider) SendPush(ctx context.Context, deviceToken
 		platform:    platform,
 		title:       title,
 		body:        body,
+		data:        data,
 	})
 	return nil
 }
@@ -372,7 +374,7 @@ func TestNotificationService_SendCriticalAlert(t *testing.T) {
 		_ = svc.RegisterDevice(ctx, userID, "token-2", entity.PlatformAndroid)
 
 		// Send critical alert
-		err := svc.SendCriticalAlert(ctx, userID, "MyApp", "store.myshopify.com",
+		err := svc.SendCriticalAlert(ctx, userID, uuid.New(), uuid.New(), "MyApp", "store.myshopify.com",
 			valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -408,7 +410,7 @@ func TestNotificationService_SendCriticalAlert(t *testing.T) {
 		_ = prefsRepo.Upsert(ctx, prefs)
 
 		// Send critical alert
-		err := svc.SendCriticalAlert(ctx, userID, "MyApp", "store.myshopify.com",
+		err := svc.SendCriticalAlert(ctx, userID, uuid.New(), uuid.New(), "MyApp", "store.myshopify.com",
 			valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -426,7 +428,7 @@ func TestNotificationService_SendCriticalAlert(t *testing.T) {
 		pushProvider := newMockPushNotificationProvider()
 		svc := NewNotificationService(tokenRepo, prefsRepo, pushProvider)
 
-		err := svc.SendCriticalAlert(ctx, userID, "MyApp", "store.myshopify.com",
+		err := svc.SendCriticalAlert(ctx, userID, uuid.New(), uuid.New(), "MyApp", "store.myshopify.com",
 			valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
 		if err != nil {
 			t.Fatalf("expected no error when no devices, got %v", err)
@@ -611,7 +613,7 @@ func TestNotificationService_SlackIntegration(t *testing.T) {
 		_ = prefsRepo.Upsert(ctx, prefs)
 
 		// Send critical alert
-		err := svc.SendCriticalAlert(ctx, userID, "MyApp", "store.myshopify.com",
+		err := svc.SendCriticalAlert(ctx, userID, uuid.New(), uuid.New(), "MyApp", "store.myshopify.com",
 			valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -645,7 +647,7 @@ func TestNotificationService_SlackIntegration(t *testing.T) {
 		prefs := entity.NewNotificationPreferences(userID)
 		_ = prefsRepo.Upsert(ctx, prefs)
 
-		err := svc.SendCriticalAlert(ctx, userID, "MyApp", "store.myshopify.com",
+		err := svc.SendCriticalAlert(ctx, userID, uuid.New(), uuid.New(), "MyApp", "store.myshopify.com",
 			valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -712,7 +714,7 @@ func TestNotificationService_SlackIntegration(t *testing.T) {
 		prefs.SlackWebhookURL = "https://hooks.slack.com/services/xxx/yyy/zzz"
 		_ = prefsRepo.Upsert(ctx, prefs)
 
-		err := svc.SendCriticalAlert(ctx, userID, "MyApp", "store.myshopify.com",
+		err := svc.SendCriticalAlert(ctx, userID, uuid.New(), uuid.New(), "MyApp", "store.myshopify.com",
 			valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -743,7 +745,7 @@ func TestNotificationService_SlackIntegration(t *testing.T) {
 		prefs.SlackWebhookURL = "https://hooks.slack.com/services/xxx/yyy/zzz"
 		_ = prefsRepo.Upsert(ctx, prefs)
 
-		err := svc.SendCriticalAlert(ctx, userID, "MyApp", "store.myshopify.com",
+		err := svc.SendCriticalAlert(ctx, userID, uuid.New(), uuid.New(), "MyApp", "store.myshopify.com",
 			valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
 
 		// Error should be returned but push should still be sent
@@ -754,4 +756,74 @@ func TestNotificationService_SlackIntegration(t *testing.T) {
 			t.Errorf("expected 1 push notification despite slack failure, got %d", len(pushProvider.sentNotifications))
 		}
 	})
+}
+
+// TestNotificationService_PushDeepLinkData asserts the deep-link payload rides on
+// the push (Task A2) — risk alerts carry type/app_id/subscription_id, daily summaries
+// carry type/app_id.
+func TestNotificationService_PushDeepLinkData(t *testing.T) {
+	ctx := context.Background()
+	userID := uuid.New()
+
+	t.Run("risk alert carries type/app_id/subscription_id", func(t *testing.T) {
+		tokenRepo := newMockDeviceTokenRepository()
+		prefsRepo := newMockNotificationPreferencesRepository()
+		push := newMockPushNotificationProvider()
+		svc := NewNotificationService(tokenRepo, prefsRepo, push)
+		_ = svc.RegisterDevice(ctx, userID, "tok-1", entity.PlatformIOS)
+
+		appID, subID := uuid.New(), uuid.New()
+		if err := svc.SendCriticalAlert(ctx, userID, appID, subID, "MyApp", "s.myshopify.com",
+			valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed); err != nil {
+			t.Fatalf("unexpected: %v", err)
+		}
+		if len(push.sentNotifications) != 1 {
+			t.Fatalf("expected 1 push, got %d", len(push.sentNotifications))
+		}
+		d := push.sentNotifications[0].data
+		if d["type"] != "risk_alert" || d["app_id"] != appID.String() || d["subscription_id"] != subID.String() {
+			t.Fatalf("bad deep-link data: %#v", d)
+		}
+	})
+
+	t.Run("daily summary carries type/app_id", func(t *testing.T) {
+		tokenRepo := newMockDeviceTokenRepository()
+		prefsRepo := newMockNotificationPreferencesRepository()
+		push := newMockPushNotificationProvider()
+		svc := NewNotificationService(tokenRepo, prefsRepo, push)
+		_ = svc.RegisterDevice(ctx, userID, "tok-2", entity.PlatformAndroid)
+
+		appID := uuid.New()
+		snap := &entity.DailyMetricsSnapshot{ID: uuid.New(), AppID: appID, Date: time.Now().UTC()}
+		if err := svc.SendDailySummary(ctx, userID, "MyApp", snap); err != nil {
+			t.Fatalf("unexpected: %v", err)
+		}
+		d := push.sentNotifications[0].data
+		if d["type"] != "daily_summary" || d["app_id"] != appID.String() {
+			t.Fatalf("bad daily-summary data: %#v", d)
+		}
+	})
+}
+
+// TestNotificationService_PrunesDeadToken asserts a token FCM reports as
+// unregistered is deleted, and that pruning is not reported as a send failure (Task A3).
+func TestNotificationService_PrunesDeadToken(t *testing.T) {
+	ctx := context.Background()
+	userID := uuid.New()
+
+	tokenRepo := newMockDeviceTokenRepository()
+	prefsRepo := newMockNotificationPreferencesRepository()
+	push := newMockPushNotificationProvider()
+	push.sendErr = entity.ErrPushTokenUnregistered // every send says "dead token"
+	svc := NewNotificationService(tokenRepo, prefsRepo, push)
+	_ = svc.RegisterDevice(ctx, userID, "dead-token", entity.PlatformIOS)
+
+	err := svc.SendCriticalAlert(ctx, userID, uuid.New(), uuid.New(), "MyApp", "s.myshopify.com",
+		valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
+	if err != nil {
+		t.Fatalf("pruning must not surface as a send error, got %v", err)
+	}
+	if _, err := tokenRepo.FindByToken(ctx, "dead-token"); err == nil {
+		t.Fatal("expected dead token to be pruned via DeleteByToken")
+	}
 }

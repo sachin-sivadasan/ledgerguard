@@ -1,8 +1,11 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'app.dart';
+import 'services/push_notification_service.dart';
 import 'core/config/app_config.dart';
 import 'core/demo_mode_coordinator.dart';
 import 'core/navigation/navigation_refresh_notifier.dart';
@@ -92,6 +95,23 @@ void main() async {
   await mixpanel.init();
 
   final apiClient = ApiClient(baseUrl: AppConfig.apiBaseUrl);
+
+  // Push notifications: register this device's FCM token with the backend after
+  // login, refresh it on rotation, and unregister on logout. Plugin calls are
+  // wrapped so the service stays unit-testable (see PushNotificationService).
+  final pushService = PushNotificationService(
+    api: apiClient,
+    platform: kIsWeb
+        ? 'web'
+        : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
+    requestPermission: () async {
+      final settings = await FirebaseMessaging.instance.requestPermission();
+      return settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+    },
+    getToken: () => FirebaseMessaging.instance.getToken(),
+    onTokenRefresh: () => FirebaseMessaging.instance.onTokenRefresh,
+  );
 
   // Create services
   final appService = AppService(apiClient);
@@ -215,9 +235,14 @@ void main() async {
       providers: [
         Provider<MixpanelService>.value(value: mixpanel),
         Provider<ApiClient>.value(value: apiClient),
+        Provider<PushNotificationService>.value(value: pushService),
         Provider<DemoModeCoordinator>.value(value: demoCoordinator),
         ChangeNotifierProvider(create: (_) => NavigationRefreshNotifier()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) {
+          final auth = AuthProvider();
+          auth.setPushService(pushService);
+          return auth;
+        }),
         ChangeNotifierProvider.value(value: dashboardProvider),
         ChangeNotifierProvider.value(value: subscriptionProvider),
         ChangeNotifierProvider.value(value: storeProvider),

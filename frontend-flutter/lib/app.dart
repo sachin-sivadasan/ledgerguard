@@ -1,7 +1,9 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'services/push_deep_link.dart';
 import 'providers/apps_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/organization_provider.dart';
@@ -380,6 +382,20 @@ class _AppState extends State<App> {
         ),
       ],
     );
+
+    _wirePushDeepLinks();
+  }
+
+  /// Route notification taps (cold-start via getInitialMessage, background via
+  /// onMessageOpenedApp) to the screen named by the message data payload; unknown
+  /// or malformed data falls back to the Dashboard (see routeForData).
+  void _wirePushDeepLinks() {
+    FirebaseMessaging.instance.getInitialMessage().then((message) {
+      if (message != null) _router.go(routeForData(message.data));
+    });
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      _router.go(routeForData(message.data));
+    });
   }
 
   void _onAuthChanged() {

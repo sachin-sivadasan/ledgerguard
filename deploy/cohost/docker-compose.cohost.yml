@@ -98,6 +98,40 @@ services:
       timeout: 5s
       retries: 3
 
+  # Logs-over-MCP store (Phase 1 — docs/LOGS_MCP_SETUP.md). Single-node, loopback-only:
+  # never bind 0.0.0.0. Heap capped + mem_limit because this box is shared with
+  # checkoutmate. Auth ON; a read-only API key (Phase 5) is the only access, over an
+  # SSH tunnel. TLS off is safe: the boundary is 127.0.0.1 + the tunnel, not HTTP.
+  elasticsearch:
+    container_name: ledgerguard-es
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    restart: unless-stopped
+    mem_limit: 1200m
+    environment:
+      # Bootstrap the elastic superuser password on first init (from .env). Avoids the
+      # manual elasticsearch-reset-password step and lets the healthcheck authenticate.
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:?Set ELASTIC_PASSWORD}
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.license.self_generated.type=basic
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - lg_esdata:/usr/share/elasticsearch/data
+    ports:
+      - "127.0.0.1:9200:9200"   # NEVER 0.0.0.0
+    networks:
+      - lg-internal
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:$ELASTIC_PASSWORD http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
 networks:
   lg-internal:
     driver: bridge
@@ -107,3 +141,4 @@ networks:
 volumes:
   lg_pgdata:
   lg_redisdata:
+  lg_esdata:

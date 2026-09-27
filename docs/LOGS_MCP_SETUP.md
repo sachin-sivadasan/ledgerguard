@@ -29,31 +29,34 @@ see [[no-ssh-to-servers]]).
 
 ---
 
-## Phase 1 — Store (single-node ES, loopback only)
-Add to `deploy/cohost/docker-compose.cohost.yml` (on `lg-internal`, bound to **127.0.0.1**):
+## Phase 1 — Store (single-node ES, loopback only) — ✅ SHIPPED IN COMPOSE
+The `elasticsearch` service + `lg_esdata` volume are committed in
+`deploy/cohost/docker-compose.cohost.yml` (on `lg-internal`, bound to **127.0.0.1:9200**,
+heap capped at 512 MB + `mem_limit: 1200m` for the shared box, auth ON, TLS off behind the
+loopback + SSH-tunnel boundary). It **bootstraps the `elastic` password from `.env`**
+(`ELASTIC_PASSWORD=${ELASTIC_PASSWORD:?…}`) — no manual `elasticsearch-reset-password` step —
+and has an auth'd `_cluster/health` healthcheck.
 
-```yaml
-  elasticsearch:
-    container_name: ledgerguard-es
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3   # pin; 8.x line
-    restart: unless-stopped
-    environment:
-      - discovery.type=single-node
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m          # heap cap — shared box
-      - xpack.security.enabled=true              # auth ON (read-only API key below)
-      - xpack.security.http.ssl.enabled=false    # TLS off on loopback HTTP (127.0.0.1 + SSH tunnel is the boundary)
-      - xpack.license.self_generated.type=basic
-    ulimits: { memlock: { soft: -1, hard: -1 } }
-    volumes:
-      - lg_esdata:/usr/share/elasticsearch/data
-    ports:
-      - "127.0.0.1:9200:9200"                    # NEVER 0.0.0.0
-    networks: [lg-internal]
+**Run on the Hetzner box (you run these — I don't SSH in; [[no-ssh-to-servers]]):**
+```bash
+# 1. add a strong password to the compose env file (once)
+echo "ELASTIC_PASSWORD=$(openssl rand -hex 24)" >> /path/to/deploy/cohost/.env
+# 2. pull the new compose + start ONLY elasticsearch first
+git pull
+docker compose --env-file .env -f deploy/cohost/docker-compose.cohost.yml up -d elasticsearch
+# 3. disk hygiene on the shared box (per DECISIONS ADR-049)
+docker builder prune -f && docker image prune -f
 ```
-Add `lg_esdata:` under `volumes:`. Set the `elastic` bootstrap password once:
-`docker exec -it ledgerguard-es bin/elasticsearch-reset-password -u elastic` (save it to the cred file below).
 
-**Verify:** `curl -su elastic:PASS http://127.0.0.1:9200/_cluster/health` → `status` green/yellow (yellow is fine, single node).
+**Verify:**
+```bash
+source deploy/cohost/.env
+docker ps --filter name=ledgerguard-es          # State = healthy after ~30-60s
+curl -su elastic:$ELASTIC_PASSWORD http://127.0.0.1:9200/_cluster/health   # status green/yellow (yellow is fine, single node)
+ss -ltnp | grep 9200                             # bound to 127.0.0.1 ONLY — never 0.0.0.0
+```
+Keep the same `ELASTIC_PASSWORD` — it's the elastic superuser; the read-only MCP key (Phase 5)
+is derived from it and never leaves the box.
 
 ---
 

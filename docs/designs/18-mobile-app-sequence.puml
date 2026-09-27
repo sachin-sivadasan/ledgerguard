@@ -1,0 +1,40 @@
+@startuml
+title Mobile push client — register + deliver + deep-link (happy path)
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+
+actor Partner
+participant "Mobile app\n(frontend-flutter)" as App
+participant "Firebase\n(Auth + FCM)" as FB
+participant "Backend API\n(Go, api.ledgerspear.com)" as API
+participant "NotificationService\n+ sync" as Svc
+
+== Registration (after sign-in) ==
+Partner -> App : sign in
+App -> FB : FirebaseAuth sign-in
+App -> App : request notification permission
+App -> FB : getToken() (FCM)
+FB --> App : fcmToken
+App -> API : POST /api/v1/devices\n{device_token, platform}
+API -> Svc : RegisterDevice(userID, token, platform)
+Svc --> API : ok (upsert)
+API --> App : 200
+
+== Token refresh ==
+FB -> App : onTokenRefresh(newToken)
+App -> API : POST /api/v1/devices {newToken, platform}
+
+== Delivery + deep-link ==
+Svc -> Svc : risk-state change (sync)
+Svc -> FB : SendPush(token, title, body,\n data{type, app_id, subscription_id})
+FB -> App : push (foreground/background/tap)
+Partner -> App : taps notification
+App -> App : go_router.go(route from data payload)
+note right of App : missing/invalid data -> Dashboard fallback
+
+== Logout ==
+Partner -> App : sign out
+App -> API : DELETE device (unregister) then FirebaseAuth.signOut
+@enduml

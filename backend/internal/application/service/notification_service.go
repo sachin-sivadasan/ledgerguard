@@ -20,8 +20,10 @@ var ErrInvalidPlatform = errors.New("invalid platform")
 
 // PushNotificationProvider defines the interface for sending push notifications
 type PushNotificationProvider interface {
-	// SendPush sends a push notification to a device
-	SendPush(ctx context.Context, deviceToken string, platform entity.Platform, title string, body string) error
+	// SendPush sends a push notification to a device. data is an optional key/value
+	// payload delivered alongside the notification for client-side deep-linking
+	// (e.g. {"type","app_id","subscription_id"}); nil is acceptable.
+	SendPush(ctx context.Context, deviceToken string, platform entity.Platform, title string, body string, data map[string]string) error
 }
 
 // SlackNotifier defines the interface for sending Slack notifications
@@ -141,6 +143,8 @@ func (s *NotificationService) UnregisterDevice(ctx context.Context, userID uuid.
 func (s *NotificationService) SendCriticalAlert(
 	ctx context.Context,
 	userID uuid.UUID,
+	appID uuid.UUID,
+	subscriptionID uuid.UUID,
 	appName string,
 	storeDomain string,
 	oldState valueobject.RiskState,
@@ -170,19 +174,40 @@ func (s *NotificationService) SendCriticalAlert(
 		}
 	}
 
+	// Deep-link payload: tap opens the affected subscription.
+	data := map[string]string{
+		"type":            "risk_alert",
+		"app_id":          appID.String(),
+		"subscription_id": subscriptionID.String(),
+	}
+
 	// Get user's device tokens
 	tokens, err := s.deviceTokenRepo.FindByUserID(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to get device tokens: %w", err)
 	}
 
-	// Send to all devices
+	if pushErr := s.pushToTokens(ctx, tokens, title, body, data); pushErr != nil {
+		lastErr = pushErr
+	}
+
+	return lastErr
+}
+
+// pushToTokens sends one notification to every token, pruning any token FCM reports
+// as unregistered (dead) instead of treating it as a send failure. Returns the last
+// genuine send error, or nil.
+func (s *NotificationService) pushToTokens(ctx context.Context, tokens []*entity.DeviceToken, title, body string, data map[string]string) error {
+	var lastErr error
 	for _, token := range tokens {
-		if err := s.pushProvider.SendPush(ctx, token.DeviceToken, token.Platform, title, body); err != nil {
+		if err := s.pushProvider.SendPush(ctx, token.DeviceToken, token.Platform, title, body, data); err != nil {
+			if errors.Is(err, entity.ErrPushTokenUnregistered) {
+				_ = s.deviceTokenRepo.DeleteByToken(ctx, token.DeviceToken) // prune dead token
+				continue
+			}
 			lastErr = err
 		}
 	}
-
 	return lastErr
 }
 
@@ -220,17 +245,20 @@ func (s *NotificationService) SendDailySummary(
 		}
 	}
 
+	// Deep-link payload: tap opens the app's dashboard (no single subscription).
+	data := map[string]string{
+		"type":   "daily_summary",
+		"app_id": snapshot.AppID.String(),
+	}
+
 	// Get user's device tokens
 	tokens, err := s.deviceTokenRepo.FindByUserID(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to get device tokens: %w", err)
 	}
 
-	// Send to all devices
-	for _, token := range tokens {
-		if err := s.pushProvider.SendPush(ctx, token.DeviceToken, token.Platform, title, body); err != nil {
-			lastErr = err
-		}
+	if pushErr := s.pushToTokens(ctx, tokens, title, body, data); pushErr != nil {
+		lastErr = pushErr
 	}
 
 	return lastErr

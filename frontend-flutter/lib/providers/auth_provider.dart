@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../services/mixpanel_service.dart';
+import '../services/push_notification_service.dart';
 
 class AuthUser {
   final String uid;
@@ -35,6 +36,9 @@ class AuthProvider extends ChangeNotifier {
 
   void setMixpanel(MixpanelService mixpanel) => _mixpanel = mixpanel;
 
+  PushNotificationService? _pushService;
+  void setPushService(PushNotificationService push) => _pushService = push;
+
   AuthUser? get user => _user;
   bool get isAuthenticated => _user != null;
   bool get isLoading => _isLoading;
@@ -44,6 +48,7 @@ class AuthProvider extends ChangeNotifier {
     if (firebaseUser != null) {
       _user = AuthUser.fromFirebase(firebaseUser);
       _mixpanel?.identify(firebaseUser.uid, email: firebaseUser.email ?? '');
+      _pushService?.registerToken(); // fire-and-forget: register this device for push
     } else {
       _user = null;
     }
@@ -121,6 +126,9 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    // Unregister the device token BEFORE signing out so a shared device stops
+    // receiving the previous user's push alerts (Review Focus #4).
+    await _pushService?.unregister();
     _mixpanel?.trackLogout();
     _mixpanel?.reset();
     await FirebaseAuth.instance.signOut();

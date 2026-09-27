@@ -1,10 +1,18 @@
 package entity
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+// ErrPushTokenUnregistered signals that a device token is no longer valid (app
+// uninstalled / token expired). Push providers return it so the notification
+// service prunes the token instead of retrying. Lives here (domain) so both the
+// application service and the infrastructure FCM client can reference it without
+// an import cycle.
+var ErrPushTokenUnregistered = errors.New("push token unregistered")
 
 // Platform represents the device platform
 type Platform string

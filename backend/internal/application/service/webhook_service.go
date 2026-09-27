@@ -448,6 +448,8 @@ func (s *WebhookService) sendRiskChangeNotification(
 	if err := s.notificationSvc.SendCriticalAlert(
 		ctx,
 		partnerAccount.UserID,
+		app.ID,
+		sub.ID,
 		app.Name,
 		sub.MyshopifyDomain,
 		oldRiskState,

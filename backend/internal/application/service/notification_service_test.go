@@ -150,6 +150,7 @@ func (m *mockNotificationPreferencesRepository) FindUsersWithDailySummaryAtHour(
 type mockPushNotificationProvider struct {
 	sentNotifications []sentNotification
 	sendErr           error
+	errForToken       map[string]error // per-token error override (e.g. dead token)
 }
 
 type sentNotification struct {
@@ -167,6 +168,9 @@ func newMockPushNotificationProvider() *mockPushNotificationProvider {
 }
 
 func (m *mockPushNotificationProvider) SendPush(ctx context.Context, deviceToken string, platform entity.Platform, title string, body string, data map[string]string) error {
+	if err, ok := m.errForToken[deviceToken]; ok {
+		return err
+	}
 	if m.sendErr != nil {
 		return m.sendErr
 	}
@@ -825,5 +829,64 @@ func TestNotificationService_PrunesDeadToken(t *testing.T) {
 	}
 	if _, err := tokenRepo.FindByToken(ctx, "dead-token"); err == nil {
 		t.Fatal("expected dead token to be pruned via DeleteByToken")
+	}
+}
+
+// TestNotificationService_TransientSendError_NotPruned: a transient (non-unregistered)
+// send error must NOT prune the token and MUST be surfaced as an error.
+func TestNotificationService_TransientSendError_NotPruned(t *testing.T) {
+	ctx := context.Background()
+	userID := uuid.New()
+
+	tokenRepo := newMockDeviceTokenRepository()
+	prefsRepo := newMockNotificationPreferencesRepository()
+	push := newMockPushNotificationProvider()
+	push.sendErr = errors.New("network timeout") // transient, not ErrPushTokenUnregistered
+	svc := NewNotificationService(tokenRepo, prefsRepo, push)
+	_ = svc.RegisterDevice(ctx, userID, "live-token", entity.PlatformIOS)
+
+	err := svc.SendCriticalAlert(ctx, userID, uuid.New(), uuid.New(), "MyApp", "s.myshopify.com",
+		valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
+	if err == nil {
+		t.Fatal("expected transient send error to be surfaced, got nil")
+	}
+	if _, e := tokenRepo.FindByToken(ctx, "live-token"); e != nil {
+		t.Fatal("transient error must NOT prune the token")
+	}
+}
+
+// TestNotificationService_MixedDeadAndLiveTokens: a dead token is pruned while a live
+// token still receives the push; pruning alone is not surfaced as an error.
+func TestNotificationService_MixedDeadAndLiveTokens(t *testing.T) {
+	ctx := context.Background()
+	userID := uuid.New()
+
+	tokenRepo := newMockDeviceTokenRepository()
+	prefsRepo := newMockNotificationPreferencesRepository()
+	push := newMockPushNotificationProvider()
+	push.errForToken = map[string]error{"dead": entity.ErrPushTokenUnregistered}
+	svc := NewNotificationService(tokenRepo, prefsRepo, push)
+	_ = svc.RegisterDevice(ctx, userID, "dead", entity.PlatformIOS)
+	_ = svc.RegisterDevice(ctx, userID, "live", entity.PlatformAndroid)
+
+	err := svc.SendCriticalAlert(ctx, userID, uuid.New(), uuid.New(), "MyApp", "s.myshopify.com",
+		valueobject.RiskStateSafe, valueobject.RiskStateOneCycleMissed)
+	if err != nil {
+		t.Fatalf("pruning a dead token must not surface as an error, got %v", err)
+	}
+	if _, e := tokenRepo.FindByToken(ctx, "dead"); e == nil {
+		t.Error("dead token should have been pruned")
+	}
+	if _, e := tokenRepo.FindByToken(ctx, "live"); e != nil {
+		t.Error("live token should remain")
+	}
+	delivered := false
+	for _, n := range push.sentNotifications {
+		if n.deviceToken == "live" {
+			delivered = true
+		}
+	}
+	if !delivered {
+		t.Error("live token should still have received the push")
 	}
 }

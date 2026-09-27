@@ -99,18 +99,23 @@ void main() async {
   // Push notifications: register this device's FCM token with the backend after
   // login, refresh it on rotation, and unregister on logout. Plugin calls are
   // wrapped so the service stays unit-testable (see PushNotificationService).
+  // Push is mobile-only for now: web FCM needs a service worker + VAPID key that
+  // aren't configured, so the web build no-ops the plugin (requestPermission -> false
+  // means registerToken early-returns: no permission prompt, no getToken() call).
   final pushService = PushNotificationService(
     api: apiClient,
     platform: kIsWeb
         ? 'web'
         : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
-    requestPermission: () async {
-      final settings = await FirebaseMessaging.instance.requestPermission();
-      return settings.authorizationStatus == AuthorizationStatus.authorized ||
-          settings.authorizationStatus == AuthorizationStatus.provisional;
-    },
-    getToken: () => FirebaseMessaging.instance.getToken(),
-    onTokenRefresh: () => FirebaseMessaging.instance.onTokenRefresh,
+    requestPermission: kIsWeb
+        ? () async => false
+        : () async {
+            final settings = await FirebaseMessaging.instance.requestPermission();
+            return settings.authorizationStatus == AuthorizationStatus.authorized ||
+                settings.authorizationStatus == AuthorizationStatus.provisional;
+          },
+    getToken: kIsWeb ? () async => null : () => FirebaseMessaging.instance.getToken(),
+    onTokenRefresh: kIsWeb ? null : () => FirebaseMessaging.instance.onTokenRefresh,
   );
 
   // Create services

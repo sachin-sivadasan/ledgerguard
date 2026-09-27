@@ -32,18 +32,23 @@ class PushNotificationService {
   /// and subscribes to token refreshes. Safe to call when already registered.
   /// No-ops (does not register) if permission is denied.
   Future<void> registerToken() async {
-    if (!await requestPermission()) return; // permission denied -> no push, app still works
-    final token = await getToken();
-    if (token == null || token.isEmpty) return;
-    await _register(token);
-
-    _refreshSub ??= onTokenRefresh?.call().listen(_register);
+    try {
+      if (!await requestPermission()) return; // denied -> no push, app still works
+      final token = await getToken();
+      if (token == null || token.isEmpty) return;
+      await _register(token);
+      _refreshSub ??= onTokenRefresh?.call().listen(_register);
+    } catch (_) {
+      // Push is best-effort and this runs fire-and-forget after login: any platform
+      // /plugin failure (e.g. web without a configured service worker + VAPID key)
+      // must never surface. main.dart also no-ops the plugin on web.
+    }
   }
 
   /// Unregisters the current token (call before signing out so a shared device
   /// stops receiving the previous user's alerts).
   Future<void> unregister() async {
-    _refreshSub?.cancel();
+    await _refreshSub?.cancel();
     _refreshSub = null;
     final token = _token;
     if (token == null) return;

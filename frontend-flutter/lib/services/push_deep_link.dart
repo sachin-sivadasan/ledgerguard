@@ -6,6 +6,8 @@ String routeForData(Map<String, dynamic> data) {
     case 'risk_alert':
       final id = data['subscription_id'];
       if (id is String && id.isNotEmpty) {
+        // Safe to route directly: tokens are per-user (unregistered on logout) and the
+        // subscription screen enforces access server-side, so this can't expose cross-org data.
         return '/subscriptions/$id';
       }
       return '/'; // risk alert without a subscription id -> dashboard

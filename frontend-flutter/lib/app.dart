@@ -1,4 +1,5 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -390,6 +391,7 @@ class _AppState extends State<App> {
   /// onMessageOpenedApp) to the screen named by the message data payload; unknown
   /// or malformed data falls back to the Dashboard (see routeForData).
   void _wirePushDeepLinks() {
+    if (kIsWeb) return; // push is mobile-only; web FCM isn't configured
     FirebaseMessaging.instance.getInitialMessage().then((message) {
       if (message != null) _router.go(routeForData(message.data));
     });
